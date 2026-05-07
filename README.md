@@ -39,5 +39,3 @@ HireFlux aims to demonstrate real-world backend and product engineering skills t
 - Scalable full-stack structure ready for deployment
 
 ---
-
-If you'd like, I can also give you a **second variant** with a slightly more “startup/product” tone, so you can choose the one that best fits your GitHub profile style.
