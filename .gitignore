@@ -1,0 +1,35 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+backend/.venv/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+coverage/
+*.tsbuildinfo
+
+# Local data and tools
+.dynamodb/
+dynamodb-data/
+.tools/
+tmp/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+

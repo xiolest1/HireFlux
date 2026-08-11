@@ -1,0 +1,68 @@
+import { http, HttpResponse } from "msw";
+import { screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { API_ORIGIN, server } from "../test/server";
+import { makeApplication } from "../test/fixtures";
+import { renderApp } from "../test/renderApp";
+
+describe("application status flow", () => {
+  it("archives and restores to the exact backend-provided prior status", async () => {
+    const initial = makeApplication({
+      status: "APPLIED",
+      version: 1,
+      allowed_transitions: ["INTERVIEW", "ARCHIVED"],
+    });
+    const requests: Array<Record<string, unknown>> = [];
+
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
+        HttpResponse.json(initial),
+      ),
+      http.post(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/status`,
+        async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          requests.push(body);
+          if (body.status === "ARCHIVED") {
+            return HttpResponse.json(
+              makeApplication({
+                status: "ARCHIVED",
+                version: 2,
+                allowed_transitions: ["APPLIED"],
+              }),
+            );
+          }
+          return HttpResponse.json(
+            makeApplication({
+              status: "APPLIED",
+              version: 3,
+              allowed_transitions: ["INTERVIEW", "ARCHIVED"],
+            }),
+          );
+        },
+      ),
+    );
+
+    const { user } = renderApp(
+      "/applications/11111111-1111-4111-8111-111111111111",
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Frontend Engineer" }),
+    ).toBeVisible();
+
+    await user.selectOptions(screen.getByLabelText("New status"), "ARCHIVED");
+    await user.click(screen.getByRole("button", { name: "Archive application" }));
+
+    expect(await screen.findByText("This application is archived.")).toBeVisible();
+    expect(screen.getByRole("option", { name: "Restore to Applied" })).toBeVisible();
+
+    await user.selectOptions(screen.getByLabelText("New status"), "APPLIED");
+    await user.click(screen.getByRole("button", { name: "Restore to Applied" }));
+
+    expect(await screen.findByText("Status changed to Applied.")).toBeVisible();
+    expect(requests).toEqual([
+      { status: "ARCHIVED", expected_version: 1 },
+      { status: "APPLIED", expected_version: 2 },
+    ]);
+  });
+});

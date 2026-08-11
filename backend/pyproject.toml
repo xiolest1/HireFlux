@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hireflux-backend"
+version = "0.1.0"
+description = "HireFlux FastAPI backend"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "boto3==1.43.53",
+  "fastapi==0.139.2",
+  "mangum==0.21.0",
+  "pydantic[email]==2.13.4",
+  "pydantic-settings==2.14.2",
+  "uvicorn[standard]==0.52.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "boto3-stubs[dynamodb]==1.43.53",
+  "httpx==0.28.1",
+  "moto[dynamodb]==5.2.2",
+  "mypy==2.3.0",
+  "pytest==9.1.1",
+  "ruff==0.15.22",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+packages = ["hireflux_backend"]
+
