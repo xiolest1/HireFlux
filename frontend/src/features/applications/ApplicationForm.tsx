@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useBlocker } from "react-router-dom";
 import type { Application } from "../../api/schemas";
 import { Button } from "../../components/ui/Button";
 import { buttonClassName } from "../../components/ui/buttonStyles";
@@ -41,26 +41,80 @@ export function ApplicationForm({
   onSubmit,
 }: ApplicationFormProps) {
   const errorSummaryRef = useRef<HTMLDivElement>(null);
+  const allowNavigationRef = useRef(false);
+  const [allowNavigation, setAllowNavigation] = useState(false);
   const {
     register,
     handleSubmit,
     watch,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<ApplicationFormInput, unknown, ApplicationFormValues>({
     resolver: zodResolver(applicationFormSchema(mode)),
     defaultValues: applicationFormDefaults(application),
   });
   const selectedStatus = watch("status");
   const hasErrors = Object.keys(errors).length > 0;
+  const blocker = useBlocker(
+    () => isDirty && !isSubmitting && !allowNavigationRef.current,
+  );
+
+  useEffect(() => {
+    if (!isDirty || allowNavigation) return;
+    function warnBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+    }
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [allowNavigation, isDirty]);
+
+  async function submit(values: ApplicationFormValues) {
+    allowNavigationRef.current = true;
+    setAllowNavigation(true);
+    try {
+      await onSubmit(values);
+    } finally {
+      allowNavigationRef.current = false;
+      setAllowNavigation(false);
+    }
+  }
 
   return (
     <form
       noValidate
       className="space-y-6"
-      onSubmit={handleSubmit(onSubmit, () => {
+      onSubmit={handleSubmit(submit, () => {
         window.setTimeout(() => errorSummaryRef.current?.focus(), 0);
       })}
     >
+      {blocker.state === "blocked" ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          role="presentation"
+        >
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="unsaved-title"
+            aria-describedby="unsaved-description"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+          >
+            <h2 id="unsaved-title" className="text-xl font-bold text-slate-950">
+              Leave without saving?
+            </h2>
+            <p id="unsaved-description" className="mt-3 text-sm leading-6 text-slate-600">
+              Your changes on this form will be lost.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button variant="secondary" onClick={() => blocker.reset()}>
+                Keep editing
+              </Button>
+              <Button variant="danger" onClick={() => blocker.proceed()}>
+                Leave page
+              </Button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {hasErrors ? (
         <div
           ref={errorSummaryRef}

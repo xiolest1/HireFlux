@@ -6,10 +6,10 @@ HireFlux uses one table with string partition and sort keys named `PK` and `SK`.
 
 Milestone 1 creates two sparse indexes:
 
-- `GSI1` (`GSI1PK`, `GSI1SK`) lists all of an owner's applications by most recent update.
+- `GSI1` (`GSI1PK`, `GSI1SK`) lists an owner's active applications by most recent update.
 - `GSI2` (`GSI2PK`, `GSI2SK`) lists an owner's applications by status.
 
-Both Milestone 1 indexes use `ALL` projection. Archived items remain on GSI1 so the default list can show them clearly and the UI can filter to `ARCHIVED`; archiving never makes a record undiscoverable.
+Both Milestone 1 indexes use `ALL` projection. Archived items are removed from GSI1 so active pages remain full; they remain discoverable through the `ARCHIVED` partition on GSI2.
 
 Later milestones may add `GSI3` for scheduled work and a tightly controlled sparse admin index. Adding an index is a schema migration decision, not an application-startup behavior.
 
@@ -18,7 +18,8 @@ Later milestones may add `GSI3` for scheduled work and a tightly controlled spar
 | Entity | Primary key | Sort key | Relevant index keys |
 | --- | --- | --- | --- |
 | User profile | `USER#<user_id>` | `PROFILE` | none |
-| Application | `USER#<owner>#APPLICATION#<application_id>` | `METADATA` | `GSI1PK=USER#<owner>#APPLICATIONS`, `GSI1SK=<updated_at>#<id>`; `GSI2PK=USER#<owner>#STATUS#<status>`, `GSI2SK=<updated_at>#<id>` |
+| Workspace quota | `USER#<user_id>` | `WORKSPACE_QUOTA` | none |
+| Application | `USER#<owner>#APPLICATION#<application_id>` | `METADATA` | active only: `GSI1PK=USER#<owner>#APPLICATIONS`, `GSI1SK=<updated_at>#<id>`; all statuses: `GSI2PK=USER#<owner>#STATUS#<status>`, `GSI2SK=<updated_at>#<id>` |
 | Activity | same application partition | `ACTIVITY#<created_at>#<activity_id>` | optional owner recent-activity projection later |
 | Note | same application partition | `NOTE#<note_id>` | creation time in a timeline index later |
 | Interview | same application partition | `INTERVIEW#<interview_id>` | scheduled time in sparse schedule/timeline indexes later |
@@ -28,12 +29,14 @@ Later milestones may add `GSI3` for scheduled work and a tightly controlled spar
 
 Every child item repeats `owner_user_id` as a defense-in-depth assertion and useful projection. Because the application partition includes the authenticated owner, a guessed application UUID cannot address another user's items.
 
+Temporary demo profile, quota, application, and activity items carry the numeric `expires_at` DynamoDB TTL attribute. Token expiry ends authorization immediately; TTL only performs eventual physical cleanup.
+
 ## Access-pattern inventory
 
 | # | Query | Key condition / operation | Index | Pagination | Authorization check |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Get profile by Cognito `sub` | `GetItem PK=USER#sub, SK=PROFILE` | table | none | `sub` comes from verified identity |
-| 2 | Create an application | conditional transaction put of metadata plus activity in owner-qualified partition | table | none | owner is derived from identity; body has no owner field |
+| 1 | Get profile by verified identity | `GetItem PK=USER#owner, SK=PROFILE` | table | none | owner comes from the verified identity dependency |
+| 2 | Create an application | conditional transaction update of the owner quota plus puts of metadata and activity | table | none | owner is derived from identity; body has no owner field; quota bounds lifetime writes |
 | 3 | Get one application | `GetItem PK=USER#sub#APPLICATION#id, SK=METADATA` | table | none | absent under that owner is `404`, avoiding existence disclosure |
 | 4 | List an owner's applications | `Query GSI1PK=USER#sub#APPLICATIONS`, descending | GSI1 | signed opaque cursor from a logical last key | index partition is rebuilt from identity |
 | 5 | Query an owner's applications by status | `Query GSI2PK=USER#sub#STATUS#status`, descending | GSI2 | cursor is bound to owner and status | owner comes from identity; status is a validated enum |
@@ -67,4 +70,4 @@ GSI reads are eventually consistent. Mutations return the canonical base-table r
 
 ## Local versus AWS clients
 
-Local configuration explicitly provides `DYNAMODB_ENDPOINT_URL` plus obviously fake SDK credentials. The table initializer refuses non-loopback endpoints and validates an existing table's key/index schema instead of silently accepting drift. In AWS, the endpoint and explicit credentials are omitted; boto3 uses the configured region and the Lambda execution role.
+Local configuration explicitly provides `DYNAMODB_ENDPOINT_URL` plus obviously fake SDK credentials. The table initializer refuses non-loopback endpoints, validates an existing table's key/index schema instead of silently accepting drift, and enables TTL on `expires_at`. In AWS, the endpoint and explicit credentials are omitted; boto3 uses the configured region and the Lambda execution role.

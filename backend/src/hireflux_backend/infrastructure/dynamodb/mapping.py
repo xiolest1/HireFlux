@@ -79,8 +79,17 @@ def application_to_item(application: Application) -> dict[str, Any]:
         "archived_from_status": (
             application.archived_from_status.value if application.archived_from_status else None
         ),
-        "GSI1PK": owner_applications_key(application.owner_user_id),
-        "GSI1SK": application_sort_key(updated_at, application.application_id),
+        "expires_at": application.expires_at,
+        "GSI1PK": (
+            owner_applications_key(application.owner_user_id)
+            if application.status is not ApplicationStatus.ARCHIVED
+            else None
+        ),
+        "GSI1SK": (
+            application_sort_key(updated_at, application.application_id)
+            if application.status is not ApplicationStatus.ARCHIVED
+            else None
+        ),
         "GSI2PK": owner_status_key(application.owner_user_id, application.status),
         "GSI2SK": application_sort_key(updated_at, application.application_id),
     }
@@ -113,6 +122,7 @@ def application_from_item(item: dict[str, Any]) -> Application:
             if item.get("archived_from_status")
             else None
         ),
+        expires_at=int(item["expires_at"]) if item.get("expires_at") is not None else None,
     )
 
 
@@ -129,6 +139,7 @@ def activity_to_item(activity: Activity) -> dict[str, Any]:
         "summary": activity.summary,
         "metadata": activity.metadata,
         "created_at": created_at,
+        "expires_at": activity.expires_at,
     }
 
 
@@ -142,6 +153,7 @@ def activity_from_item(item: dict[str, Any]) -> Activity:
         summary=str(item["summary"]),
         metadata={str(key): str(value) for key, value in dict(metadata).items()},
         created_at=parse_timestamp(str(item["created_at"])),
+        expires_at=int(item["expires_at"]) if item.get("expires_at") is not None else None,
     )
 
 
@@ -156,6 +168,7 @@ def profile_to_item(profile: UserProfile) -> dict[str, Any]:
         "role": profile.role.value,
         "created_at": format_timestamp(profile.created_at),
         "last_login_at": format_timestamp(profile.last_login_at),
+        "expires_at": profile.expires_at,
     }
 
 
@@ -167,6 +180,7 @@ def profile_from_item(item: dict[str, Any]) -> UserProfile:
         role=UserRole(str(item["role"])),
         created_at=parse_timestamp(str(item["created_at"])),
         last_login_at=parse_timestamp(str(item["last_login_at"])),
+        expires_at=int(item["expires_at"]) if item.get("expires_at") is not None else None,
     )
 
 

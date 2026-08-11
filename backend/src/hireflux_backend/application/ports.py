@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 
 from hireflux_backend.domain.enums import ApplicationStatus
@@ -41,3 +42,13 @@ class ApplicationRepository(Protocol):
     ) -> None: ...
 
     def list_activity(self, owner_user_id: str, application_id: str) -> tuple[Activity, ...]: ...
+
+
+class DemoSessionTokenIssuer(Protocol):
+    def issue(
+        self,
+        *,
+        workspace_id: str,
+        issued_at: datetime,
+        expires_at: datetime,
+    ) -> str: ...

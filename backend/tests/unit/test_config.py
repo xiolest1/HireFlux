@@ -61,3 +61,26 @@ def test_short_or_deployed_local_cursor_key_is_rejected() -> None:
             auth_mode="cognito",
             cursor_signing_key="local-only-signing-key-change-before-deployment",
         )
+
+
+def test_demo_auth_is_supported_locally_and_fails_closed_when_deployed() -> None:
+    configured = settings(
+        environment="local",
+        auth_mode="demo",
+        dynamodb_endpoint_url="http://127.0.0.1:8001",
+        aws_access_key_id="LOCALTESTACCESSKEY",
+        aws_secret_access_key="LOCALTESTSECRETKEY",
+    )
+    assert configured.auth_mode.value == "demo"
+
+    with pytest.raises(ValidationError, match="demo-session signing key"):
+        settings(
+            environment="production",
+            auth_mode="demo",
+            cursor_signing_key="production-cursor-signing-key-that-is-safe",
+        )
+
+
+def test_demo_auth_rejects_short_signing_key() -> None:
+    with pytest.raises(ValidationError, match="DEMO_SESSION_SIGNING_KEY"):
+        settings(auth_mode="demo", demo_session_signing_key="too-short")

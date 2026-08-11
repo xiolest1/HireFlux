@@ -33,6 +33,8 @@ def test_initializer_creates_then_validates_idempotently(dynamodb_client: Any) -
         initialize_local_table(configured, client=dynamodb_client)
         is TableInitializationResult.ALREADY_VALID
     )
+    ttl = dynamodb_client.describe_time_to_live(TableName="InitializerTest")
+    assert ttl["TimeToLiveDescription"]["AttributeName"] == "expires_at"
 
 
 def test_initializer_refuses_schema_drift(dynamodb_client: Any) -> None:

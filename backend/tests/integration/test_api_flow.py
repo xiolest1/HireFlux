@@ -125,6 +125,14 @@ def test_status_workflow_archive_restore_and_filter(client: TestClient) -> None:
         path, json={"status": "ARCHIVED", "expected_version": rejected["version"]}
     ).json()
     assert archived["allowed_transitions"] == ["REJECTED"]
+    active_ids = {
+        item["application_id"] for item in client.get("/api/v1/applications").json()["items"]
+    }
+    assert created["application_id"] not in active_ids
+    archived_items = client.get("/api/v1/applications", params={"status": "ARCHIVED"}).json()[
+        "items"
+    ]
+    assert [item["application_id"] for item in archived_items] == [created["application_id"]]
     restored = client.post(
         path, json={"status": "REJECTED", "expected_version": archived["version"]}
     ).json()

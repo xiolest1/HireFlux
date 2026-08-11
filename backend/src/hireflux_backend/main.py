@@ -6,8 +6,10 @@ from fastapi import FastAPI, Request, Response
 from starlette.middleware.cors import CORSMiddleware
 
 from hireflux_backend.api.error_handlers import register_exception_handlers
-from hireflux_backend.api.routes import applications, health, me
+from hireflux_backend.api.routes import applications, demo_sessions, health, me
+from hireflux_backend.application.demo_sessions import DemoSessionService
 from hireflux_backend.application.services import ApplicationService, UserService
+from hireflux_backend.auth.demo import DemoSessionCodec
 from hireflux_backend.config import Settings, get_settings
 from hireflux_backend.infrastructure.dynamodb.client import build_dynamodb_client
 from hireflux_backend.infrastructure.dynamodb.cursor import CursorCodec
@@ -34,11 +36,24 @@ def create_app(
         description="Local Milestone 1 API for the HireFlux application tracker.",
     )
     app.state.settings = configured
-    app.state.user_service = UserService(
-        DynamoUserRepository(client, configured.dynamodb_table_name)
+    user_service = UserService(DynamoUserRepository(client, configured.dynamodb_table_name))
+    application_service = ApplicationService(
+        DynamoApplicationRepository(
+            client,
+            configured.dynamodb_table_name,
+            cursor_codec,
+            max_applications=configured.max_applications_per_workspace,
+        )
     )
-    app.state.application_service = ApplicationService(
-        DynamoApplicationRepository(client, configured.dynamodb_table_name, cursor_codec)
+    demo_session_codec = DemoSessionCodec(configured.demo_session_signing_key.get_secret_value())
+    app.state.user_service = user_service
+    app.state.application_service = application_service
+    app.state.demo_session_codec = demo_session_codec
+    app.state.demo_session_service = DemoSessionService(
+        user_service,
+        application_service,
+        demo_session_codec,
+        ttl_hours=configured.demo_session_ttl_hours,
     )
 
     app.add_middleware(
@@ -61,6 +76,7 @@ def create_app(
 
     register_exception_handlers(app)
     app.include_router(health.router)
+    app.include_router(demo_sessions.router)
     app.include_router(me.router)
     app.include_router(applications.router)
     return app

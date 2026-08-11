@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { clearDemoSession, getDemoSession } from "../auth/sessionStore";
 
 const DEFAULT_API_BASE_URL = "http://localhost:8000";
 
@@ -112,6 +113,10 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
+  const session = getDemoSession();
+  if (session && !headers.has("Authorization")) {
+    headers.set("Authorization", `${session.token_type} ${session.access_token}`);
+  }
 
   let body: string | undefined;
   if (options.json !== undefined) {
@@ -128,7 +133,16 @@ export async function apiRequest<T>(
     const payload = await readJson(response);
 
     if (!response.ok) {
-      throw errorFromResponse(response, payload);
+      const apiError = errorFromResponse(response, payload);
+      if (
+        response.status === 401 &&
+        ["DEMO_SESSION_EXPIRED", "DEMO_SESSION_REQUIRED"].includes(apiError.code)
+      ) {
+        clearDemoSession(
+          apiError.code === "DEMO_SESSION_EXPIRED" ? "expired" : "cleared",
+        );
+      }
+      throw apiError;
     }
 
     const parsed = schema.safeParse(payload);

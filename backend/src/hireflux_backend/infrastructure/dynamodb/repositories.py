@@ -45,6 +45,7 @@ class DynamoUserRepository:
             role=identity.role,
             created_at=now,
             last_login_at=now,
+            expires_at=identity.expires_at,
         )
         try:
             self._client.put_item(
@@ -72,15 +73,53 @@ class DynamoUserRepository:
 
 
 class DynamoApplicationRepository:
-    def __init__(self, client: Any, table_name: str, cursor_codec: CursorCodec) -> None:
+    def __init__(
+        self,
+        client: Any,
+        table_name: str,
+        cursor_codec: CursorCodec,
+        *,
+        max_applications: int = 100,
+    ) -> None:
         self._client = client
         self._table_name = table_name
         self._cursor_codec = cursor_codec
+        self._max_applications = max_applications
 
     def create(self, application: Application, activity: Activity) -> None:
+        quota_values: dict[str, object] = {
+            ":entity_type": "WORKSPACE_QUOTA",
+            ":limit": self._max_applications,
+            ":one": 1,
+            ":zero": 0,
+        }
+        quota_expression = (
+            "SET entity_type = :entity_type, "
+            "application_count = if_not_exists(application_count, :zero) + :one"
+        )
+        if application.expires_at is not None:
+            quota_values[":expires_at"] = application.expires_at
+            quota_expression += ", expires_at = :expires_at"
         try:
             self._client.transact_write_items(
                 TransactItems=[
+                    {
+                        "Update": {
+                            "TableName": self._table_name,
+                            "Key": serialize_item(
+                                {
+                                    "PK": user_partition(application.owner_user_id),
+                                    "SK": "WORKSPACE_QUOTA",
+                                }
+                            ),
+                            "UpdateExpression": quota_expression,
+                            "ConditionExpression": (
+                                "attribute_not_exists(application_count) "
+                                "OR application_count < :limit"
+                            ),
+                            "ExpressionAttributeValues": serialize_item(quota_values),
+                        }
+                    },
                     {
                         "Put": {
                             "TableName": self._table_name,
@@ -104,7 +143,8 @@ class DynamoApplicationRepository:
         except ClientError as error:
             if _error_code(error) == "TransactionCanceledException":
                 raise ConflictError(
-                    "The application could not be created because it already exists."
+                    "The application could not be created because the workspace limit was "
+                    "reached or the record already exists."
                 ) from error
             raise PersistenceError("Unable to create the application.") from error
 

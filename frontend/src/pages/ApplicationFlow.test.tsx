@@ -107,4 +107,24 @@ describe("application critical flow", () => {
     expect(patchBody).not.toHaveProperty("status");
     expect(patchBody).not.toHaveProperty("owner_user_id");
   });
+
+  it("warns before abandoning an edited form", async () => {
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
+        HttpResponse.json(makeApplication()),
+      ),
+    );
+    const { user } = renderApp(
+      "/applications/11111111-1111-4111-8111-111111111111/edit",
+    );
+    const companyInput = await screen.findByLabelText(/Company name/);
+    await user.type(companyInput, " changed");
+    await user.click(screen.getByRole("link", { name: /Back to application/ }));
+
+    expect(
+      screen.getByRole("alertdialog", { name: "Leave without saving?" }),
+    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeVisible();
+  });
 });

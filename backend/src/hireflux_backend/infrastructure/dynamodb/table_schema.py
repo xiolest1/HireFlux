@@ -9,6 +9,7 @@ from hireflux_backend.infrastructure.dynamodb.client import build_dynamodb_clien
 
 GSI1_NAME = "GSI1"
 GSI2_NAME = "GSI2"
+TTL_ATTRIBUTE = "expires_at"
 
 
 class TableInitializationResult(StrEnum):
@@ -69,6 +70,7 @@ def initialize_local_table(
     response = _describe_with_startup_retry(dynamodb, settings.dynamodb_table_name)
     if response is not None:
         validate_table_schema(response["Table"])
+        _ensure_ttl_enabled(dynamodb, settings.dynamodb_table_name)
         return TableInitializationResult.ALREADY_VALID
 
     dynamodb.create_table(**create_table_request(settings.dynamodb_table_name))
@@ -78,7 +80,25 @@ def initialize_local_table(
     )
     description = dynamodb.describe_table(TableName=settings.dynamodb_table_name)
     validate_table_schema(description["Table"])
+    _ensure_ttl_enabled(dynamodb, settings.dynamodb_table_name)
     return TableInitializationResult.CREATED
+
+
+def _ensure_ttl_enabled(client: Any, table_name: str) -> None:
+    response = client.describe_time_to_live(TableName=table_name)
+    description = response.get("TimeToLiveDescription", {})
+    status = description.get("TimeToLiveStatus")
+    attribute = description.get("AttributeName")
+    if status in {"ENABLED", "ENABLING"}:
+        if attribute != TTL_ATTRIBUTE:
+            raise TableSchemaMismatchError(
+                f"Existing table TTL uses {attribute!r}; expected {TTL_ATTRIBUTE!r}."
+            )
+        return
+    client.update_time_to_live(
+        TableName=table_name,
+        TimeToLiveSpecification={"Enabled": True, "AttributeName": TTL_ATTRIBUTE},
+    )
 
 
 def _describe_with_startup_retry(

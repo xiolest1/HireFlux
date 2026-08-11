@@ -15,6 +15,7 @@ class CurrentIdentity:
     name: str
     email: str
     role: UserRole
+    expires_at: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +26,7 @@ class UserProfile:
     role: UserRole
     created_at: datetime
     last_login_at: datetime
+    expires_at: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +48,7 @@ class Application:
     updated_at: datetime
     version: int
     archived_from_status: ApplicationStatus | None = None
+    expires_at: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,3 +60,4 @@ class Activity:
     summary: str
     created_at: datetime
     metadata: dict[str, str] = field(default_factory=dict)
+    expires_at: int | None = None

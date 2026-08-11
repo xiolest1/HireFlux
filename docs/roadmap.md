@@ -15,21 +15,25 @@ Acceptance criteria:
 - The responsive React UI exercises the full application flow with accessible loading, empty, validation, and error states.
 - Isolated backend/frontend tests cover configuration failure, ownership, transitions, pagination, API errors, validation, and critical UI flows; lint, type checks, and production build pass; a local smoke test is attempted when Docker is available.
 
+## Milestone 1.1 - isolated recruiter demo (implemented)
+
+Acceptance criteria: public recruiter landing page; one-click signed 24-hour workspace; uniquely derived owner identity; fictional seeded applications and activity; protected application routes; bearer-token API calls; reset/exit and expiry behavior; query-cache clearing on identity changes; unsaved-form navigation warning; DynamoDB TTL metadata; and isolation, tamper, expiry, routing, and reset tests.
+
 ## Milestone 2 - richer workflow and dashboard
 
 Dependencies: stable Milestone 1 keys and service boundaries.
 
 Acceptance criteria: owner-scoped notes and interviews, dashboard status-counter projections with an idempotent existing-data backfill, upcoming follow-ups/interviews, richer activity timeline, status/search filters and sorting, profile/settings UI, and transactional projection maintenance. No scans in request paths.
 
-## Milestone 3 - Cognito authentication
+## Milestone 3 - optional persistent accounts with Cognito
 
 Dependencies: stable identity port and deployed-environment configuration design.
 
-Acceptance criteria: signup, verification, login, reset flows; server-side JWT signature/issuer/audience/token-use/expiry validation; Cognito `sub` profile linking; role claims; and proof that local auth cannot start in deployed environments.
+This milestone is needed only if HireFlux expands beyond the temporary recruiter demo. Acceptance criteria: signup, verification, login, reset flows; server-side JWT signature/issuer/audience/token-use/expiry validation; Cognito `sub` profile linking; role claims; and proof that local auth cannot start in deployed environments.
 
 ## Milestone 4 - private attachments
 
-Dependencies: Cognito ownership and application child-record authorization.
+Dependencies: stable owner identity and application child-record authorization; persistent personal uploads additionally require persistent accounts.
 
 Acceptance criteria: private S3, short-lived presigned operations, metadata-only DynamoDB items, content-type/size/key restrictions, ownership checks, blocked public access, encryption, lifecycle cleanup, and clear UI errors.
 
@@ -37,7 +41,7 @@ Acceptance criteria: private S3, short-lived presigned operations, metadata-only
 
 Dependencies: local functional baseline and configuration contracts.
 
-Acceptance criteria: TypeScript CDK for Amplify, Cognito, HTTP API, one Lambda/Mangum API, DynamoDB on-demand, S3, and CloudWatch; structured logs, alarms, and 7-14 day demo log retention; least-privilege IAM; explicit retention/deletion decisions; no NAT Gateway or embedded credentials.
+Acceptance criteria: TypeScript CDK for separate staging/production Amplify branches, HTTP API, one Lambda/Mangum API, separate DynamoDB tables, secrets, and CloudWatch; SPA rewrite rules; structured logs, alarms, throttling, constrained concurrency, and 7-14 day demo log retention; least-privilege IAM; explicit retention/deletion decisions; no NAT Gateway or embedded credentials. Cognito and S3 are included only when their optional product milestones are selected.
 
 ## Milestone 6 - reminders and email
 

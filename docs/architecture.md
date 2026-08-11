@@ -4,21 +4,22 @@
 
 HireFlux is a modular monolith optimized for a low-traffic portfolio demo. A React single-page application calls a versioned FastAPI REST API. The API owns authorization and business rules and persists an access-pattern-first single-table model in DynamoDB.
 
-The source UML and DFDs remain useful domain input, but this document and the bootstrap requirements are authoritative where they differ. Cognito owns credentials, integer identifiers become UUIDs, the logical DFD stores become item types in one DynamoDB table, and `Company` remains denormalized as `company_name` until an access pattern justifies a separate entity.
+The source UML and DFDs remain useful domain input, but this document and the bootstrap requirements are authoritative where they differ. The recruiter demo has no passwords; future persistent accounts may use Cognito. Integer identifiers become UUIDs, the logical DFD stores become item types in one DynamoDB table, and `Company` remains denormalized as `company_name` until an access pattern justifies a separate entity.
 
 ## Local Milestone 1
 
 ```mermaid
 flowchart LR
-    Browser["React + TypeScript"] -->|"JSON over HTTP"| API["FastAPI routes"]
-    API --> Auth["Local identity dependency"]
+    Browser["Public landing + protected React routes"] -->|"Start demo"| Session["Signed 24-hour workspace"]
+    Session -->|"Bearer token"| API["FastAPI routes"]
+    API --> Auth["Verified temporary identity"]
     API --> Services["Application/domain services"]
     Services --> Ports["Repository protocols"]
     Ports --> Adapter["DynamoDB adapter"]
     Adapter --> LocalDB["DynamoDB Local in Docker"]
 ```
 
-The API process and frontend run directly on the host for fast reloads. Docker Compose runs only DynamoDB Local. Table creation is an explicit operator command, never an application-startup side effect. Tests substitute a Moto-backed table and do not require Docker.
+The API process and frontend run directly on the host for fast reloads. Docker Compose runs only DynamoDB Local. A demo launch creates a unique owner UUID, seeds fictional records through the normal services, and returns a signed bearer token. Table creation and TTL enablement are an explicit operator command, never an application-startup side effect. Tests substitute a Moto-backed table and do not require Docker.
 
 ## Backend boundaries
 
@@ -32,7 +33,7 @@ The dependency direction points inward. React never decides whether a transition
 ## Request flow
 
 1. Request middleware creates or accepts a safe correlation ID and returns it as `X-Request-ID`.
-2. The auth dependency creates the fixed local identity only in a validated local/test environment. Cognito JWT verification replaces this dependency later.
+2. The auth dependency verifies the signed demo token and derives the owner identity. Fixed local identity remains an explicit test/development mode; Cognito may plug into the same dependency for future persistent accounts.
 3. Pydantic validates untrusted request data.
 4. A service applies domain rules and calls an owner-scoped repository method.
 5. The adapter issues `GetItem`, `Query`, conditional writes, or a transaction.
@@ -51,8 +52,8 @@ Edits and transitions carry an expected version. Conditional writes reject stale
 ```mermaid
 flowchart LR
     User["Browser"] --> Amplify["Amplify Hosting"]
-    User --> Cognito["Cognito User Pool"]
-    User -->|"Bearer token"| APIGW["API Gateway HTTP API"]
+    User -->|"Create signed demo workspace"| APIGW["API Gateway HTTP API"]
+    User -->|"Temporary bearer token"| APIGW
     APIGW --> Lambda["FastAPI on Lambda + Mangum"]
     Lambda --> DynamoDB["DynamoDB on-demand"]
     Lambda --> S3["Private S3 attachments"]
@@ -68,12 +69,13 @@ EventBridge Scheduler cannot invoke a Mangum/API Gateway entry point as though i
 
 ## Security and cost posture
 
-- Cognito will own passwords, verification, reset, MFA options, and tokens. DynamoDB never stores passwords or hashes.
+- The recruiter demo stores no passwords or password hashes. If persistent accounts are added, Cognito will own password, verification, reset, MFA, and account tokens.
 - Ordinary queries are owner-scoped before touching child records. Admin access will use separate role checks and repository methods.
-- Cognito groups/custom claims will be authoritative for the deployed role. The profile role is a read projection, never client-editable, and a later reconciliation path must only move it from a verified Cognito claim.
+- Demo tokens always create standard-user identities. If Cognito is added, its verified groups/custom claims will become authoritative for deployed persistent-account roles.
 - CORS is configured from a concrete allowlist.
 - Logs carry request IDs but not tokens, credentials, or attachment contents.
-- DynamoDB on-demand, one Lambda, HTTP API, short log retention, private S3 lifecycle rules, and low budget alerts fit the intended low-traffic cost posture. Costs remain usage-dependent, and budgets are alerts rather than hard caps.
+- Temporary records carry DynamoDB TTL timestamps, but access stops at token expiry rather than waiting for asynchronous deletion.
+- DynamoDB on-demand, one Lambda, HTTP API throttling, constrained concurrency, short log retention, and low budget alerts fit the intended low-traffic cost posture. Costs remain usage-dependent, and budgets are alerts rather than hard caps.
 
 ## Explicitly excluded initial architecture
 

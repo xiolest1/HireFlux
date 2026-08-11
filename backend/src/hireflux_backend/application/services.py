@@ -118,6 +118,7 @@ class ApplicationService:
             created_at=now,
             updated_at=now,
             version=1,
+            expires_at=identity.expires_at,
         )
         activity = Activity(
             activity_id=self._id_factory(),
@@ -127,6 +128,7 @@ class ApplicationService:
             summary=f"Application created as {application.status.value}.",
             created_at=now,
             metadata={"status": application.status.value},
+            expires_at=identity.expires_at,
         )
         self._repository.create(application, activity)
         return application
@@ -241,6 +243,7 @@ class ApplicationService:
             summary=f"Status changed from {current.status.value} to {updated.status.value}.",
             created_at=now,
             metadata={"from_status": current.status.value, "to_status": updated.status.value},
+            expires_at=identity.expires_at,
         )
         self._repository.replace_with_activity(
             updated,

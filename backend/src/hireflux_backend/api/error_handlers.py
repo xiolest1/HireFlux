@@ -9,6 +9,8 @@ from starlette.exceptions import HTTPException
 from hireflux_backend.application.errors import (
     AuthenticationUnavailableError,
     ConflictError,
+    DemoSessionExpiredError,
+    DemoSessionRequiredError,
     InvalidCursorError,
     NotFoundError,
     PersistenceError,
@@ -26,6 +28,8 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(InvalidCursorError, invalid_cursor_handler)
     app.add_exception_handler(PersistenceError, persistence_handler)
     app.add_exception_handler(AuthenticationUnavailableError, authentication_handler)
+    app.add_exception_handler(DemoSessionRequiredError, demo_session_required_handler)
+    app.add_exception_handler(DemoSessionExpiredError, demo_session_expired_handler)
     app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(Exception, unexpected_exception_handler)
 
@@ -87,6 +91,20 @@ async def authentication_handler(request: Request, error: Exception) -> JSONResp
         "AUTHENTICATION_UNAVAILABLE",
         "Authentication is not configured for this environment.",
     )
+
+
+async def demo_session_required_handler(request: Request, error: Exception) -> JSONResponse:
+    assert isinstance(error, DemoSessionRequiredError)
+    response = _response(request, 401, "DEMO_SESSION_REQUIRED", str(error))
+    response.headers["WWW-Authenticate"] = "Bearer"
+    return response
+
+
+async def demo_session_expired_handler(request: Request, error: Exception) -> JSONResponse:
+    assert isinstance(error, DemoSessionExpiredError)
+    response = _response(request, 401, "DEMO_SESSION_EXPIRED", str(error))
+    response.headers["WWW-Authenticate"] = "Bearer"
+    return response
 
 
 async def http_exception_handler(request: Request, error: Exception) -> JSONResponse:

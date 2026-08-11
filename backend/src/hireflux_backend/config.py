@@ -5,7 +5,7 @@ from ipaddress import ip_address
 from urllib.parse import urlparse
 from uuid import UUID
 
-from pydantic import EmailStr, SecretStr, field_validator, model_validator
+from pydantic import EmailStr, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from hireflux_backend.domain.enums import UserRole
@@ -20,6 +20,7 @@ class Environment(StrEnum):
 
 class AuthMode(StrEnum):
     LOCAL = "local"
+    DEMO = "demo"
     COGNITO = "cognito"
 
 
@@ -46,6 +47,11 @@ class Settings(BaseSettings):
     environment: Environment
     auth_mode: AuthMode
     cursor_signing_key: SecretStr
+    demo_session_signing_key: SecretStr = SecretStr(
+        "local-only-demo-session-signing-key-change-before-deployment"
+    )
+    demo_session_ttl_hours: int = Field(default=24, ge=1, le=168)
+    max_applications_per_workspace: int = Field(default=100, ge=5, le=500)
 
     local_user_id: UUID = UUID("00000000-0000-4000-8000-000000000001")
     local_user_name: str = "Local Demo User"
@@ -105,6 +111,17 @@ class Settings(BaseSettings):
             raise ValueError("CURSOR_SIGNING_KEY must contain at least 32 bytes.")
         if self.environment not in local_environments and signing_key.startswith("local-only-"):
             raise ValueError("The local cursor signing key is forbidden in deployed environments.")
+
+        if self.auth_mode is AuthMode.DEMO:
+            demo_signing_key = self.demo_session_signing_key.get_secret_value()
+            if len(demo_signing_key.encode("utf-8")) < 32:
+                raise ValueError("DEMO_SESSION_SIGNING_KEY must contain at least 32 bytes.")
+            if self.environment not in local_environments and demo_signing_key.startswith(
+                "local-only-"
+            ):
+                raise ValueError(
+                    "The local demo-session signing key is forbidden in deployed environments."
+                )
         return self
 
     @property

@@ -24,3 +24,11 @@ class PersistenceError(HireFluxError):
 
 class AuthenticationUnavailableError(HireFluxError):
     pass
+
+
+class DemoSessionRequiredError(HireFluxError):
+    pass
+
+
+class DemoSessionExpiredError(HireFluxError):
+    pass

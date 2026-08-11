@@ -74,6 +74,12 @@ export const activityListResponseSchema = z.object({
   items: z.array(activitySchema),
 });
 
+export const demoSessionSchema = z.object({
+  access_token: z.string().min(20),
+  token_type: z.literal("Bearer"),
+  expires_at: timestampSchema,
+});
+
 export type ApplicationStatus = z.infer<typeof applicationStatusSchema>;
 export type WorkMode = z.infer<typeof workModeSchema>;
 export type User = z.infer<typeof userSchema>;
@@ -82,3 +88,4 @@ export type ApplicationListResponse = z.infer<
   typeof applicationListResponseSchema
 >;
 export type Activity = z.infer<typeof activitySchema>;
+export type DemoSession = z.infer<typeof demoSessionSchema>;

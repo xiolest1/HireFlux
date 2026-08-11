@@ -1,11 +1,16 @@
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import {
   APPLICATION_STATUSES,
   type Application,
   type ApplicationStatus,
 } from "../api/schemas";
 import { buttonClassName } from "../components/ui/buttonStyles";
-import { EmptyState, ErrorPanel, LoadingState } from "../components/ui/Feedback";
+import {
+  EmptyState,
+  ErrorPanel,
+  LoadingState,
+  SuccessBanner,
+} from "../components/ui/Feedback";
 import { ApplicationCard } from "../features/applications/ApplicationCard";
 import { formatStatus } from "../features/applications/format";
 import { useApplications } from "../features/applications/queries";
@@ -23,12 +28,20 @@ function deduplicateApplications(applications: Application[]): Application[] {
 }
 
 export function ApplicationListPage() {
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const status = statusFromSearchParam(searchParams.get("status"));
   const applicationsQuery = useApplications(status);
   const applications = deduplicateApplications(
     applicationsQuery.data?.pages.flatMap((page) => page.items) ?? [],
   );
+  const notice =
+    location.state &&
+    typeof location.state === "object" &&
+    "notice" in location.state &&
+    typeof location.state.notice === "string"
+      ? location.state.notice
+      : null;
 
   function setStatus(nextStatus: string) {
     const next = new URLSearchParams(searchParams);
@@ -42,6 +55,11 @@ export function ApplicationListPage() {
 
   return (
     <div>
+      {notice ? (
+        <div className="mb-6">
+          <SuccessBanner>{notice}</SuccessBanner>
+        </div>
+      ) : null}
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">
