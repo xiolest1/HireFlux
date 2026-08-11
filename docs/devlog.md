@@ -20,7 +20,7 @@ The repository contained a short vision README and eight UML/DFD PDFs. It did no
 
 Important conflicts were resolved in favor of the current architecture requirements:
 
-- Cognito will own passwords and sessions; HireFlux never stores password hashes.
+- The initial target assumed Cognito would own passwords and sessions; the later recruiter-demo decision replaced that requirement with temporary signed workspaces while preserving the rule that HireFlux never stores password hashes.
 - UUIDs and Cognito `sub` replace integer user/application identifiers.
 - The logical DFD data stores become item types in one DynamoDB table.
 - `company_name` remains on the application instead of introducing a relational Company table.
@@ -155,22 +155,104 @@ The reproducible commands remain in the repository [README](../README.md). The l
 
 ## 2026-08-11 - Isolated recruiter demo workspace
 
-Implemented the recruiter-facing demo plan discussed during the frontend review:
+### Objective
 
-- replaced the root redirect with a public, responsive landing page and one-click demo launch;
-- added HMAC-signed 24-hour temporary sessions with a random owner UUID per launch;
-- seeded five fictional applications across Draft, Applied, Interview, Offer, and Rejected through the ordinary domain services, including transition activity;
-- protected application routes and attached the bearer token centrally to API requests;
-- added explicit missing/expired-session screens, cache clearing on identity changes, an expiry warning, and reset/exit controls;
-- added an unsaved-form navigation warning;
-- marked every temporary profile, quota, application, and activity item with DynamoDB `expires_at` TTL metadata and enabled TTL in the explicit initializer;
-- enforced an atomic lifetime application limit per workspace to bound database writes;
-- documented separate local, staging, and production environments plus the Amplify SPA rewrite and promotion checks;
-- added a HireFlux social-preview image and matching metadata.
+Turn the fixed-user local application into a recruiter-facing experience that still feels like a one-click shared demo while giving every visitor a private, temporary owner identity. Two recruiters entering at the same time must never see or modify one another's records.
 
-Security remains server-enforced: request bodies do not accept owners, guessed IDs in another workspace return the same `404` as missing records, token tampering returns `401`, reset changes identity immediately, and cleanup does not depend on asynchronous TTL deletion.
+### Backend session implementation
 
-Completion validation passed: Ruff lint/format, strict mypy, and 67 backend tests; frontend lint, TypeScript, 15 tests, and production build; plus a live DynamoDB Local smoke check proving five seeded records and cross-workspace `404` isolation.
+Added `POST /api/v1/demo-sessions` as the only public workspace-creation endpoint. A successful launch:
+
+1. generates a random workspace UUID;
+2. creates the temporary user profile;
+3. seeds five fictional applications through the existing application service;
+4. creates realistic transition activity for Interview, Offer, and Rejected examples;
+5. returns an HMAC-SHA256-signed bearer token and its expiration time.
+
+The token contains a version, token kind, workspace subject, issued time, and expiry. Verification uses constant-time signature comparison and rejects malformed, oversized, tampered, unsupported, or expired tokens. API errors distinguish `DEMO_SESSION_REQUIRED` from `DEMO_SESSION_EXPIRED` without exposing signing or persistence details.
+
+`AUTH_MODE=demo` is separate from fixed `local` auth and future `cognito` auth. Demo signing keys must contain at least 32 bytes, and deployed environments reject the visibly local-only example key. Existing safeguards still reject local auth in staging, production, or a Lambda runtime.
+
+### Seeded workspace and cost bounds
+
+Every new workspace starts with fictional applications across:
+
+- Draft;
+- Applied;
+- Interview;
+- Offer;
+- Rejected.
+
+The seed path deliberately uses ordinary application creation and transition services instead of bypassing domain rules. The examples therefore produce the same transactionally written activity history, versions, allowed transitions, and ownership behavior as recruiter-created records.
+
+Application creation now transactionally increments a workspace quota item. The configured lifetime limit defaults to 100 applications, and the same DynamoDB transaction rolls the increment back if the application/activity write fails. This bounds database growth within one temporary identity without using `Scan` or trusting a browser-side count.
+
+### Temporary-data lifecycle
+
+Temporary profile, quota, application, and activity items carry the numeric DynamoDB `expires_at` attribute. The explicit table initializer enables TTL on that attribute and remains idempotent.
+
+DynamoDB TTL deletion is asynchronous, so it is not treated as authorization. Access ends when the signed token expires. Reset creates a different owner identity and replaces the browser token immediately; old records become unreachable from that browser before DynamoDB physically removes them.
+
+Archived applications were also removed from the active GSI projection. They remain queryable through the `ARCHIVED` status index, which keeps default active pages full without a filter expression.
+
+### Frontend experience
+
+Replaced the root redirect with a public, responsive recruiter landing page. **Explore the Demo** requests a workspace, stores the validated token in tab-scoped session storage, clears identity-specific TanStack Query data, and redirects to `/applications`.
+
+Application list, create, detail, and edit routes now require an active demo session. Opening one directly without a token returns to the landing page with an explanation. The centralized API client attaches `Authorization: Bearer ...` and clears the token/cache when the API reports a missing or expired session.
+
+The application header now provides:
+
+- remaining workspace lifetime;
+- a visible warning near expiration;
+- a confirmed **Reset demo** flow;
+- an **Exit demo** action;
+- a success notice after reset.
+
+Create and edit forms now block client-side navigation when fields are dirty and register a browser unload warning. Successful submissions bypass that guard so normal post-save navigation is not interrupted.
+
+The interface retains semantic headings, labels, keyboard-visible focus, explicit loading/error states, reduced-motion support, and responsive layouts. A branded Open Graph image and matching social metadata were added for link previews.
+
+### Security and ownership checks
+
+- Request bodies still cannot set `owner_user_id`, IDs, timestamps, roles, or status through the general edit route.
+- Every protected request derives its owner from the verified token.
+- A valid token from a second workspace receives the same `404` for another workspace's application as it would for a missing record.
+- Token tampering and invalid bearer formats return `401`.
+- Reset and expiration clear user-specific query data so one identity's cached records cannot appear in another workspace.
+- No passwords, password hashes, real AWS credentials, or session tokens are written to Git or logs.
+
+### Environment and deployment preparation
+
+Updated the default local configuration to use demo auth and documented separate local, staging, and production values. Staging and production must use different APIs, DynamoDB tables, signing keys, CORS origins, logs, alarms, and throttles.
+
+The deployment guide now records the required Amplify single-page application rewrite, direct-route refresh tests, missing-asset `404` check, staging-to-production promotion sequence, and release gates for API throttling, Lambda concurrency, monitoring, log retention, and budget alerts. No AWS resources were provisioned during this work.
+
+### Tests and validation
+
+Added coverage for:
+
+- token round-trip, malformed input, tampering, and expiration;
+- deployed demo-key configuration failures;
+- unauthenticated protected requests;
+- five-record seed contents and activity history;
+- separate-workspace ownership isolation;
+- TTL metadata and initializer behavior;
+- atomic workspace application limits;
+- archive removal from the active index and archived-status discovery;
+- protected frontend route redirects;
+- bearer attachment, reset, expiry cleanup, and unsaved-form warnings.
+
+Completion results:
+
+- Ruff lint and formatting passed across 40 backend files.
+- Strict mypy passed across 31 backend source files.
+- Pytest passed: 67 tests. One upstream FastAPI/Starlette TestClient deprecation warning remains non-blocking.
+- Frontend ESLint and TypeScript checks passed.
+- Vitest passed: 15 tests across 6 files.
+- The Vite production build passed.
+- Live DynamoDB Local smoke testing returned five seeded statuses and a cross-workspace `404`.
+- The local root page, direct application-route fallback, and social image returned `200`.
 
 ## Next recommended work
 
