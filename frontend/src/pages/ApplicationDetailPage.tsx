@@ -13,6 +13,9 @@ import { ApplicationDetails } from "../features/applications/ApplicationDetails"
 import { StatusTransitionForm } from "../features/applications/StatusTransitionForm";
 import { formatTimestamp } from "../features/applications/format";
 import { useApplication } from "../features/applications/queries";
+import { InterviewsPanel } from "../features/resources/InterviewsPanel";
+import { NotesPanel } from "../features/resources/NotesPanel";
+import { useSettings } from "../features/resources/queries";
 
 interface LocationState {
   notice?: string;
@@ -26,6 +29,8 @@ export function ApplicationDetailPage() {
     () => (location.state as LocationState | null)?.notice ?? null,
   );
   const applicationQuery = useApplication(applicationId);
+  const settingsQuery = useSettings();
+  const timeZone = settingsQuery.data?.time_zone ?? "UTC";
 
   useEffect(() => {
     if (location.state) {
@@ -82,7 +87,7 @@ export function ApplicationDetailPage() {
             {application.job_title}
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Updated <time dateTime={application.updated_at}>{formatTimestamp(application.updated_at)}</time>
+            Updated <time dateTime={application.updated_at}>{formatTimestamp(application.updated_at, timeZone)}</time>
           </p>
         </div>
         <Link
@@ -110,6 +115,11 @@ export function ApplicationDetailPage() {
         />
       </div>
 
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
+        <NotesPanel applicationId={application.application_id} timeZone={timeZone} />
+        <InterviewsPanel applicationId={application.application_id} timeZone={timeZone} />
+      </div>
+
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6">
         <div className="mb-5">
           <h2 className="text-lg font-bold text-slate-950">Activity</h2>
@@ -117,7 +127,7 @@ export function ApplicationDetailPage() {
             A record of creation and status changes for this application.
           </p>
         </div>
-        <ActivityTimeline applicationId={application.application_id} />
+        <ActivityTimeline applicationId={application.application_id} timeZone={timeZone} />
       </section>
     </div>
   );

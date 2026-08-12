@@ -3,7 +3,13 @@ import type { Application } from "../../api/schemas";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { formatDateOnly, formatTimestamp } from "./format";
 
-export function ApplicationCard({ application }: { application: Application }) {
+export function ApplicationCard({
+  application,
+  timeZone,
+}: {
+  application: Application;
+  timeZone: string;
+}) {
   return (
     <article className="group h-full rounded-xl border border-slate-200 bg-white p-5 shadow-panel transition-colors hover:border-slate-300">
       <div className="flex items-start justify-between gap-4">
@@ -44,7 +50,7 @@ export function ApplicationCard({ application }: { application: Application }) {
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <p className="text-xs text-slate-500">
-          Updated {formatTimestamp(application.updated_at)}
+          Updated {formatTimestamp(application.updated_at, timeZone)}
         </p>
         <Link
           to={`/applications/${application.application_id}`}

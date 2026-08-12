@@ -19,11 +19,13 @@ Acceptance criteria:
 
 Acceptance criteria: public recruiter landing page; one-click signed 24-hour workspace; uniquely derived owner identity; fictional seeded applications and activity; protected application routes; bearer-token API calls; reset/exit and expiry behavior; query-cache clearing on identity changes; unsaved-form navigation warning; DynamoDB TTL metadata; and isolation, tamper, expiry, routing, and reset tests.
 
-## Milestone 2 - richer workflow and dashboard
+## Milestone 2 - local workspace home and richer workflow (implemented)
 
 Dependencies: stable Milestone 1 keys and service boundaries.
 
-Acceptance criteria: owner-scoped notes and interviews, dashboard status-counter projections with an idempotent existing-data backfill, upcoming follow-ups/interviews, richer activity timeline, status/search filters and sorting, profile/settings UI, and transactional projection maintenance. No scans in request paths.
+Acceptance criteria: production-style protected workspace Home at `/dashboard`; expanded nine-status workflow; deterministic 16-application recruiter dataset; owner-scoped notes and interviews; actionable follow-ups; dashboard and filterable analytics with server-owned historical milestones and explicit denominators; dashboard status/funnel counters; GSI3 scheduling; status/search/source/work-mode filters and sorting; persisted temporary-workspace settings; richer activity history; idempotent local reconciliation; and transactional projection maintenance. No scans in request paths.
+
+AWS infrastructure, persistent accounts, attachments, email delivery, and real notification delivery remain outside this local milestone.
 
 ## Milestone 3 - optional persistent accounts with Cognito
 

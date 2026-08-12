@@ -1,5 +1,5 @@
 import type { Application } from "../../api/schemas";
-import { formatDateOnly } from "./format";
+import { formatDateOnly, formatSource } from "./format";
 
 function DetailItem({ label, value }: { label: string; value: string }) {
   return (
@@ -30,7 +30,7 @@ export function ApplicationDetails({ application }: { application: Application }
               : "Not set"
           }
         />
-        <DetailItem label="Source" value={application.source ?? "Not set"} />
+        <DetailItem label="Source" value={application.source ? `${formatSource(application.source)}${application.source_detail ? ` · ${application.source_detail}` : ""}` : "Not set"} />
         <DetailItem label="Salary" value={application.salary_text ?? "Not set"} />
         <div className="sm:col-span-2">
           <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">

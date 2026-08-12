@@ -12,9 +12,12 @@ class StatusPolicyError(ValueError):
 ACTIVE_STATUSES_REQUIRING_APPLIED_DATE = frozenset(
     {
         ApplicationStatus.APPLIED,
+        ApplicationStatus.SCREENING,
         ApplicationStatus.INTERVIEW,
         ApplicationStatus.OFFER,
+        ApplicationStatus.ACCEPTED,
         ApplicationStatus.REJECTED,
+        ApplicationStatus.WITHDRAWN,
     }
 )
 
@@ -22,8 +25,20 @@ _ALLOWED: dict[ApplicationStatus, frozenset[ApplicationStatus]] = {
     ApplicationStatus.DRAFT: frozenset({ApplicationStatus.APPLIED, ApplicationStatus.ARCHIVED}),
     ApplicationStatus.APPLIED: frozenset(
         {
+            ApplicationStatus.SCREENING,
             ApplicationStatus.INTERVIEW,
+            ApplicationStatus.OFFER,
             ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
+            ApplicationStatus.ARCHIVED,
+        }
+    ),
+    ApplicationStatus.SCREENING: frozenset(
+        {
+            ApplicationStatus.INTERVIEW,
+            ApplicationStatus.OFFER,
+            ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
             ApplicationStatus.ARCHIVED,
         }
     ),
@@ -31,11 +46,21 @@ _ALLOWED: dict[ApplicationStatus, frozenset[ApplicationStatus]] = {
         {
             ApplicationStatus.OFFER,
             ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
             ApplicationStatus.ARCHIVED,
         }
     ),
-    ApplicationStatus.OFFER: frozenset({ApplicationStatus.REJECTED, ApplicationStatus.ARCHIVED}),
+    ApplicationStatus.OFFER: frozenset(
+        {
+            ApplicationStatus.ACCEPTED,
+            ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
+            ApplicationStatus.ARCHIVED,
+        }
+    ),
+    ApplicationStatus.ACCEPTED: frozenset({ApplicationStatus.ARCHIVED}),
     ApplicationStatus.REJECTED: frozenset({ApplicationStatus.OFFER, ApplicationStatus.ARCHIVED}),
+    ApplicationStatus.WITHDRAWN: frozenset({ApplicationStatus.ARCHIVED}),
     ApplicationStatus.ARCHIVED: frozenset(),
 }
 

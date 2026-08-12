@@ -5,10 +5,13 @@ import {
   type ApplicationFormValues,
 } from "../features/applications/formSchema";
 import { useCreateApplication } from "../features/applications/queries";
+import { useSettings } from "../features/resources/queries";
+import { LoadingState } from "../components/ui/Feedback";
 
 export function ApplicationCreatePage() {
   const navigate = useNavigate();
   const createMutation = useCreateApplication();
+  const settingsQuery = useSettings();
 
   async function submit(values: ApplicationFormValues) {
     try {
@@ -22,6 +25,10 @@ export function ApplicationCreatePage() {
     } catch {
       return;
     }
+  }
+
+  if (settingsQuery.isPending) {
+    return <LoadingState label="Preparing application defaults…" />;
   }
 
   return (
@@ -43,6 +50,14 @@ export function ApplicationCreatePage() {
 
       <ApplicationForm
         mode="create"
+        defaultPreferences={
+          settingsQuery.data
+            ? {
+                defaultFollowUpDays: settingsQuery.data.default_follow_up_days,
+                timeZone: settingsQuery.data.time_zone,
+              }
+            : undefined
+        }
         isSubmitting={createMutation.isPending}
         serverError={createMutation.error}
         onSubmit={submit}

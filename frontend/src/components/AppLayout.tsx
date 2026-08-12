@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useDemoSession } from "../auth/demoSessionContext";
 import { useMe } from "../features/applications/queries";
 import { Button } from "./ui/Button";
 import { ThemeToggle } from "./ui/ThemeToggle";
+import { setColorThemePreference } from "./ui/themePreference";
 import { useModalFocus } from "./ui/useModalFocus";
+import { useSettings, useUpdateSettings } from "../features/resources/queries";
 
 function navClassName({ isActive }: { isActive: boolean }): string {
-  return `inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold transition-colors ${
+  return `inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg px-1 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
     isActive
       ? "bg-brand-50 text-brand-700"
       : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
@@ -45,12 +47,18 @@ function useExpiryLabel(expiresAt: string | undefined): {
 export function AppLayout() {
   const navigate = useNavigate();
   const meQuery = useMe();
+  const settingsQuery = useSettings();
+  const updateSettingsMutation = useUpdateSettings();
   const { session, reset, exit, isCreating, error } = useDemoSession();
   const [confirmingReset, setConfirmingReset] = useState(false);
   const resetTriggerRef = useRef<HTMLButtonElement>(null);
   const resetDialogRef = useRef<HTMLElement>(null);
   const resetButtonRef = useRef<HTMLButtonElement>(null);
   const expiry = useExpiryLabel(session?.expires_at);
+
+  useEffect(() => {
+    if (settingsQuery.data) setColorThemePreference(settingsQuery.data.theme);
+  }, [settingsQuery.data]);
 
   function closeResetDialog() {
     if (!isCreating) setConfirmingReset(false);
@@ -67,7 +75,7 @@ export function AppLayout() {
     try {
       await reset();
       setConfirmingReset(false);
-      navigate("/applications", {
+      navigate("/dashboard", {
         replace: true,
         state: { notice: "Demo workspace reset." },
       });
@@ -81,6 +89,14 @@ export function AppLayout() {
     navigate("/", { replace: true });
   }
 
+  async function persistHeaderTheme(theme: "LIGHT" | "DARK") {
+    if (!settingsQuery.data) return;
+    await updateSettingsMutation.mutateAsync({
+      expected_version: settingsQuery.data.version,
+      theme,
+    });
+  }
+
   return (
     <div className="min-h-screen">
       <a
@@ -91,11 +107,11 @@ export function AppLayout() {
       </a>
 
       <header className="border-b border-slate-200/90 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex min-h-16 max-w-6xl items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-3 px-4 py-2 sm:gap-4 sm:px-6 lg:px-8">
           <NavLink
-            to="/applications"
+            to="/dashboard"
             className="flex items-center gap-2.5 rounded-lg font-bold tracking-tight text-slate-950"
-            aria-label="HireFlux applications"
+            aria-label="HireFlux home"
           >
             <span
               aria-hidden="true"
@@ -106,14 +122,36 @@ export function AppLayout() {
             <span className="hidden sm:inline">HireFlux</span>
           </NavLink>
 
-          <nav className="sm:ml-2" aria-label="Primary navigation">
-            <NavLink to="/applications" className={navClassName}>
-              Applications
+          <nav className="order-3 grid w-full grid-cols-3 gap-1 min-[360px]:grid-cols-5 sm:order-none sm:ml-2 sm:flex sm:w-auto" aria-label="Primary navigation">
+            <NavLink to="/dashboard" className={navClassName}>
+              Home
+            </NavLink>
+            <NavLink to="/applications" className={navClassName} aria-label="Applications">
+              <span className="sm:hidden" aria-hidden="true">Apps</span>
+              <span className="hidden sm:inline">Applications</span>
+            </NavLink>
+            <NavLink to="/interviews" className={navClassName}>
+              Interviews
+            </NavLink>
+            <NavLink to="/analytics" className={navClassName}>
+              Analytics
+            </NavLink>
+            <NavLink to="/settings" className={navClassName}>
+              Settings
             </NavLink>
           </nav>
 
           <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
-            <ThemeToggle />
+            <Link
+              to="/applications/new"
+              className="hidden min-h-11 items-center rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 md:inline-flex"
+            >
+              Add application
+            </Link>
+            <ThemeToggle
+              disabled={settingsQuery.isPending || updateSettingsMutation.isPending}
+              onPreferenceChange={settingsQuery.data ? persistHeaderTheme : undefined}
+            />
             <span
               className={`hidden rounded-full border px-2.5 py-1 text-xs font-bold md:inline-flex ${
                 expiry.isExpiringSoon
@@ -165,7 +203,7 @@ export function AppLayout() {
 
       <main
         id="main-content"
-        className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8"
+        className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8"
       >
         <Outlet />
       </main>

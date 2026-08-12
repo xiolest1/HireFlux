@@ -5,6 +5,7 @@ import type {
 } from "../../api/applications";
 import {
   applicationStatusSchema,
+  applicationSourceSchema,
   workModeSchema,
   type Application,
 } from "../../api/schemas";
@@ -74,7 +75,8 @@ const applicationFormSchemaBase = z.object({
   work_mode: z
     .union([workModeSchema, z.literal("")])
     .transform((value) => value || null),
-  source: optionalText("Source", 120),
+  source: z.union([applicationSourceSchema, z.literal("")]).transform((value) => value || null),
+  source_detail: optionalText("Source detail", 120),
   salary_text: optionalText("Salary", 120),
   description: optionalText("Description", 5000),
 });
@@ -85,6 +87,31 @@ export type ApplicationFormInput = z.input<
 export type ApplicationFormValues = z.output<
   typeof applicationFormSchemaBase
 >;
+
+export interface ApplicationFormDefaultPreferences {
+  defaultFollowUpDays: number;
+  timeZone: string;
+  now?: Date;
+}
+
+export function preferredFollowUpDate({
+  defaultFollowUpDays,
+  timeZone,
+  now = new Date(),
+}: ApplicationFormDefaultPreferences): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const value = (type: "year" | "month" | "day") =>
+    Number(parts.find((part) => part.type === type)?.value);
+  const preferred = new Date(
+    Date.UTC(value("year"), value("month") - 1, value("day") + defaultFollowUpDays),
+  );
+  return preferred.toISOString().slice(0, 10);
+}
 
 export function applicationFormSchema(mode: "create" | "edit") {
   return applicationFormSchemaBase.superRefine((values, context) => {
@@ -104,17 +131,21 @@ export function applicationFormSchema(mode: "create" | "edit") {
 
 export function applicationFormDefaults(
   application?: Application,
+  preferences?: ApplicationFormDefaultPreferences,
 ): ApplicationFormInput {
   return {
     company_name: application?.company_name ?? "",
     job_title: application?.job_title ?? "",
     status: application?.status ?? "DRAFT",
     applied_date: application?.applied_date ?? "",
-    follow_up_date: application?.follow_up_date ?? "",
+    follow_up_date:
+      application?.follow_up_date ??
+      (application ? "" : preferences ? preferredFollowUpDate(preferences) : ""),
     job_url: application?.job_url ?? "",
     location: application?.location ?? "",
     work_mode: application?.work_mode ?? "",
     source: application?.source ?? "",
+    source_detail: application?.source_detail ?? "",
     salary_text: application?.salary_text ?? "",
     description: application?.description ?? "",
   };
@@ -132,6 +163,7 @@ export function toApplicationFields(
     location: values.location,
     work_mode: values.work_mode,
     source: values.source,
+    source_detail: values.source_detail,
     salary_text: values.salary_text,
     description: values.description,
   };

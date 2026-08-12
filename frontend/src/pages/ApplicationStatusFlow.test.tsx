@@ -33,9 +33,13 @@ describe("application status flow", () => {
       ),
     );
 
-    const { user } = renderApp(
+    const { user, queryClient } = renderApp(
       "/applications/11111111-1111-4111-8111-111111111111",
     );
+    const dashboardKey = ["dashboard", "30d"] as const;
+    const analyticsKey = ["analytics", { range: "30d" }] as const;
+    queryClient.setQueryData(dashboardKey, { seeded: true });
+    queryClient.setQueryData(analyticsKey, { seeded: true });
     expect(
       await screen.findByRole("heading", { name: "Frontend Engineer" }),
     ).toBeVisible();
@@ -45,6 +49,8 @@ describe("application status flow", () => {
 
     expect(await screen.findByText("Status changed to Offer.")).toBeVisible();
     expect(requestBody).toEqual({ status: "OFFER", expected_version: 4 });
+    expect(queryClient.getQueryState(dashboardKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(analyticsKey)?.isInvalidated).toBe(true);
   });
 
   it("archives and restores to the exact backend-provided prior status", async () => {

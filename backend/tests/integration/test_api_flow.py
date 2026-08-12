@@ -18,7 +18,8 @@ def draft_payload(company: str = "Acme") -> dict[str, Any]:
         "job_url": "https://example.com/jobs/123",
         "location": "New York, NY",
         "work_mode": "HYBRID",
-        "source": "Company site",
+        "source": "COMPANY_WEBSITE",
+        "source_detail": "Company site",
         "salary_text": "$120k-$140k",
         "description": "Build reliable services.",
     }
@@ -156,6 +157,151 @@ def test_delete_alias_archives(client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json()["status"] == "ARCHIVED"
     assert response.json()["allowed_transitions"] == ["DRAFT"]
+
+
+def test_follow_up_actions_are_versioned_and_append_activity(client: TestClient) -> None:
+    payload = draft_payload() | {"follow_up_date": "2026-08-14"}
+    created = client.post("/api/v1/applications", json=payload).json()
+    path = f"/api/v1/applications/{created['application_id']}"
+
+    rescheduled = client.post(
+        f"{path}/follow-up/reschedule",
+        json={"expected_version": 1, "follow_up_date": "2026-08-20"},
+    )
+    assert rescheduled.status_code == 200
+    assert rescheduled.json()["follow_up_date"] == "2026-08-20"
+    assert rescheduled.json()["version"] == 2
+
+    stale = client.post(f"{path}/follow-up/complete", json={"expected_version": 1})
+    assert stale.status_code == 409
+    completed = client.post(f"{path}/follow-up/complete", json={"expected_version": 2})
+    assert completed.status_code == 200
+    assert completed.json()["follow_up_date"] is None
+    assert completed.json()["version"] == 3
+    activity_types = [
+        item["activity_type"] for item in client.get(f"{path}/activity").json()["items"]
+    ]
+    assert activity_types[-2:] == ["FOLLOW_UP_RESCHEDULED", "FOLLOW_UP_COMPLETED"]
+
+
+def test_application_list_search_filters_sort_and_cursor_scope(client: TestClient) -> None:
+    first = draft_payload("Alpha Systems") | {
+        "source": "LINKEDIN",
+        "source_detail": "Recruiter post",
+        "work_mode": "REMOTE",
+    }
+    second = draft_payload("Beta Health") | {
+        "source": "REFERRAL",
+        "source_detail": "Former colleague",
+        "work_mode": "HYBRID",
+    }
+    client.post("/api/v1/applications", json=first)
+    client.post("/api/v1/applications", json=second)
+
+    filtered = client.get(
+        "/api/v1/applications",
+        params={"q": "alpha", "source": "LINKEDIN", "work_mode": "REMOTE"},
+    )
+    assert filtered.status_code == 200
+    assert [item["company_name"] for item in filtered.json()["items"]] == ["Alpha Systems"]
+
+    ascending = client.get("/api/v1/applications", params={"sort": "updated_asc", "limit": 1})
+    assert ascending.status_code == 200
+    cursor = ascending.json()["next_cursor"]
+    assert cursor
+    wrong_scope = client.get(
+        "/api/v1/applications",
+        params={"sort": "updated_desc", "limit": 1, "cursor": cursor},
+    )
+    assert wrong_scope.status_code == 400
+    assert wrong_scope.json()["error"]["code"] == "INVALID_CURSOR"
+
+
+def test_application_list_views_are_server_owned_complete_and_cursor_bound(
+    client: TestClient,
+) -> None:
+    created: dict[str, dict[str, Any]] = {}
+    for company in ("Draft One", "Draft Two"):
+        created[company] = client.post("/api/v1/applications", json=draft_payload(company)).json()
+
+    for company, status in (
+        ("Applied", "APPLIED"),
+        ("Screening", "SCREENING"),
+        ("Interview", "INTERVIEW"),
+        ("Offer", "OFFER"),
+        ("Rejected", "REJECTED"),
+    ):
+        application = client.post("/api/v1/applications", json=draft_payload(company)).json()
+        path = f"/api/v1/applications/{application['application_id']}/status"
+        application = client.post(
+            path,
+            json={
+                "status": "APPLIED",
+                "expected_version": application["version"],
+                "applied_date": "2026-08-10",
+            },
+        ).json()
+        if status != "APPLIED":
+            application = client.post(
+                path,
+                json={"status": status, "expected_version": application["version"]},
+            ).json()
+        created[company] = application
+
+    archived = client.post("/api/v1/applications", json=draft_payload("Archived")).json()
+    archived = client.post(
+        f"/api/v1/applications/{archived['application_id']}/status",
+        json={"status": "ARCHIVED", "expected_version": archived["version"]},
+    ).json()
+    created["Archived"] = archived
+
+    active = client.get("/api/v1/applications", params={"view": "ACTIVE", "limit": 2})
+    assert active.status_code == 200
+    active_page_one = active.json()
+    assert len(active_page_one["items"]) == 2
+    assert active_page_one["next_cursor"] is not None
+    active_page_two = client.get(
+        "/api/v1/applications",
+        params={
+            "view": "ACTIVE",
+            "limit": 2,
+            "cursor": active_page_one["next_cursor"],
+        },
+    )
+    assert active_page_two.status_code == 200
+    assert active_page_two.json()["next_cursor"] is None
+    assert {
+        item["status"] for item in active_page_one["items"] + active_page_two.json()["items"]
+    } == {"APPLIED", "SCREENING", "INTERVIEW", "OFFER"}
+
+    all_items = client.get("/api/v1/applications", params={"view": "ALL", "limit": 100})
+    assert all_items.status_code == 200
+    assert {item["application_id"] for item in all_items.json()["items"]} == {
+        item["application_id"] for item in created.values()
+    }
+    assert any(item["status"] == "ARCHIVED" for item in all_items.json()["items"])
+
+    archived_items = client.get("/api/v1/applications", params={"view": "ARCHIVED"})
+    assert [item["application_id"] for item in archived_items.json()["items"]] == [
+        created["Archived"]["application_id"]
+    ]
+
+    explicit_status = client.get(
+        "/api/v1/applications",
+        params={"view": "ARCHIVED", "status": "DRAFT"},
+    )
+    assert {item["status"] for item in explicit_status.json()["items"]} == {"DRAFT"}
+
+    wrong_view = client.get(
+        "/api/v1/applications",
+        params={
+            "view": "ALL",
+            "limit": 2,
+            "cursor": active_page_one["next_cursor"],
+        },
+    )
+    assert wrong_view.status_code == 400
+    assert wrong_view.json()["error"]["code"] == "INVALID_CURSOR"
 
 
 def test_foreign_owner_resources_are_indistinguishable_from_missing(

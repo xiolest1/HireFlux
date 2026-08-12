@@ -1,6 +1,6 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from uuid import uuid4
 
 from hireflux_backend.application.errors import ConflictError, NotFoundError, ValidationError
@@ -9,8 +9,15 @@ from hireflux_backend.application.ports import (
     ApplicationRepository,
     UserRepository,
 )
-from hireflux_backend.domain.enums import ActivityType, ApplicationStatus, WorkMode
+from hireflux_backend.domain.enums import (
+    ActivityType,
+    ApplicationSort,
+    ApplicationSource,
+    ApplicationStatus,
+    WorkMode,
+)
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity, UserProfile
+from hireflux_backend.domain.resources import DefaultApplicationView
 from hireflux_backend.domain.status_policy import (
     ACTIVE_STATUSES_REQUIRING_APPLIED_DATE,
     StatusPolicyError,
@@ -37,9 +44,11 @@ class CreateApplicationCommand:
     job_url: str | None = None
     location: str | None = None
     work_mode: WorkMode | None = None
-    source: str | None = None
+    source: ApplicationSource | None = None
+    source_detail: str | None = None
     salary_text: str | None = None
     description: str | None = None
+    trusted_created_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +62,18 @@ class TransitionApplicationCommand:
     status: ApplicationStatus
     expected_version: int
     applied_date: date | None = None
+    trusted_transitioned_at: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CompleteFollowUpCommand:
+    expected_version: int
+
+
+@dataclass(frozen=True, slots=True)
+class RescheduleFollowUpCommand:
+    expected_version: int
+    follow_up_date: date
 
 
 class UserService:
@@ -78,6 +99,7 @@ class ApplicationService:
             "location",
             "work_mode",
             "source",
+            "source_detail",
             "salary_text",
             "description",
         }
@@ -100,7 +122,13 @@ class ApplicationService:
         except StatusPolicyError as error:
             raise ValidationError(str(error)) from error
 
-        now = self._clock()
+        now = command.trusted_created_at or self._clock()
+        _require_aware(now)
+        submitted_at = (
+            _date_as_timestamp(command.applied_date)
+            if command.status is ApplicationStatus.APPLIED and command.applied_date
+            else None
+        )
         application = Application(
             application_id=self._id_factory(),
             owner_user_id=identity.user_id,
@@ -113,11 +141,14 @@ class ApplicationService:
             location=command.location,
             work_mode=command.work_mode,
             source=command.source,
+            source_detail=command.source_detail,
             salary_text=command.salary_text,
             description=command.description,
             created_at=now,
             updated_at=now,
             version=1,
+            submitted_at=submitted_at,
+            stage_entered_at=now,
             expires_at=identity.expires_at,
         )
         activity = Activity(
@@ -146,12 +177,22 @@ class ApplicationService:
         status: ApplicationStatus | None,
         limit: int,
         cursor: str | None,
+        q: str | None = None,
+        source: ApplicationSource | None = None,
+        work_mode: WorkMode | None = None,
+        sort: ApplicationSort = ApplicationSort.UPDATED_DESC,
+        view: DefaultApplicationView | None = None,
     ) -> ApplicationPage:
         return self._repository.list(
             identity.user_id,
             status=status,
             limit=limit,
             cursor=cursor,
+            q=q,
+            source=source,
+            work_mode=work_mode,
+            sort=sort,
+            view=view,
         )
 
     def update(
@@ -188,7 +229,10 @@ class ApplicationService:
             job_url=_optional_string_change(effective_changes, "job_url", current.job_url),
             location=_optional_string_change(effective_changes, "location", current.location),
             work_mode=_optional_work_mode_change(effective_changes, "work_mode", current.work_mode),
-            source=_optional_string_change(effective_changes, "source", current.source),
+            source=_optional_source_change(effective_changes, "source", current.source),
+            source_detail=_optional_string_change(
+                effective_changes, "source_detail", current.source_detail
+            ),
             salary_text=_optional_string_change(
                 effective_changes, "salary_text", current.salary_text
             ),
@@ -207,7 +251,25 @@ class ApplicationService:
             updated_at=self._clock(),
             version=current.version + 1,
         )
-        self._repository.replace_details(updated, expected_version=command.expected_version)
+        if "follow_up_date" in effective_changes:
+            activity = self._follow_up_activity(
+                identity,
+                current,
+                updated,
+                activity_type=ActivityType.FOLLOW_UP_RESCHEDULED,
+                summary=(
+                    f"Follow-up rescheduled for {updated.follow_up_date.isoformat()}."
+                    if updated.follow_up_date
+                    else "Follow-up removed."
+                ),
+            )
+            self._repository.replace_details_with_activity(
+                updated,
+                expected_version=command.expected_version,
+                activity=activity,
+            )
+        else:
+            self._repository.replace_details(updated, expected_version=command.expected_version)
         return updated
 
     def transition(
@@ -226,7 +288,9 @@ class ApplicationService:
         if not decision.changed:
             return current
 
-        now = self._clock()
+        now = command.trusted_transitioned_at or self._clock()
+        _require_aware(now)
+        milestones = _milestones_for_transition(current, decision.status, now)
         updated = replace(
             current,
             status=decision.status,
@@ -234,6 +298,13 @@ class ApplicationService:
             archived_from_status=decision.archived_from_status,
             updated_at=now,
             version=current.version + 1,
+            submitted_at=milestones[0],
+            stage_entered_at=milestones[1],
+            first_response_at=milestones[2],
+            first_screening_at=milestones[3],
+            first_interview_at=milestones[4],
+            first_offer_at=milestones[5],
+            first_acceptance_at=milestones[6],
         )
         activity = Activity(
             activity_id=self._id_factory(),
@@ -247,11 +318,54 @@ class ApplicationService:
         )
         self._repository.replace_with_activity(
             updated,
-            prior_status=current.status,
+            prior_application=current,
             expected_version=command.expected_version,
             activity=activity,
         )
         return updated
+
+    def complete_follow_up(
+        self,
+        identity: CurrentIdentity,
+        application_id: str,
+        command: CompleteFollowUpCommand,
+    ) -> Application:
+        current = self.get(identity, application_id)
+        self._require_version(current, command.expected_version)
+        if current.follow_up_date is None:
+            return current
+        updated = replace(
+            current,
+            follow_up_date=None,
+            updated_at=self._clock(),
+            version=current.version + 1,
+        )
+        activity = self._follow_up_activity(
+            identity,
+            current,
+            updated,
+            activity_type=ActivityType.FOLLOW_UP_COMPLETED,
+            summary="Follow-up completed.",
+        )
+        self._repository.replace_details_with_activity(
+            updated, expected_version=command.expected_version, activity=activity
+        )
+        return updated
+
+    def reschedule_follow_up(
+        self,
+        identity: CurrentIdentity,
+        application_id: str,
+        command: RescheduleFollowUpCommand,
+    ) -> Application:
+        return self.update(
+            identity,
+            application_id,
+            UpdateApplicationCommand(
+                expected_version=command.expected_version,
+                changes={"follow_up_date": command.follow_up_date},
+            ),
+        )
 
     def archive(
         self, identity: CurrentIdentity, application_id: str, *, expected_version: int
@@ -268,6 +382,32 @@ class ApplicationService:
     def list_activity(self, identity: CurrentIdentity, application_id: str) -> tuple[Activity, ...]:
         self.get(identity, application_id)
         return self._repository.list_activity(identity.user_id, application_id)
+
+    def list_all(self, identity: CurrentIdentity) -> tuple[Application, ...]:
+        return self._repository.list_all(identity.user_id)
+
+    def _follow_up_activity(
+        self,
+        identity: CurrentIdentity,
+        before: Application,
+        after: Application,
+        *,
+        activity_type: ActivityType,
+        summary: str,
+    ) -> Activity:
+        return Activity(
+            activity_id=self._id_factory(),
+            application_id=before.application_id,
+            owner_user_id=identity.user_id,
+            activity_type=activity_type,
+            summary=summary,
+            created_at=after.updated_at,
+            metadata={
+                "from_date": before.follow_up_date.isoformat() if before.follow_up_date else "",
+                "to_date": after.follow_up_date.isoformat() if after.follow_up_date else "",
+            },
+            expires_at=identity.expires_at,
+        )
 
     @staticmethod
     def _require_version(application: Application, expected_version: int) -> None:
@@ -323,3 +463,62 @@ def _optional_work_mode_change(
     if value is not None and not isinstance(value, WorkMode):
         raise ValidationError(f"{key} must be a valid work mode or null.")
     return value
+
+
+def _optional_source_change(
+    changes: Mapping[str, object], key: str, current: ApplicationSource | None
+) -> ApplicationSource | None:
+    if key not in changes:
+        return current
+    value = changes[key]
+    if value is not None and not isinstance(value, ApplicationSource):
+        raise ValidationError(f"{key} must be a valid application source or null.")
+    return value
+
+
+def _require_aware(value: datetime) -> None:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError("Trusted timestamps and clock values must be timezone-aware.")
+
+
+def _date_as_timestamp(value: date) -> datetime:
+    return datetime.combine(value, time(hour=12), tzinfo=UTC)
+
+
+def _milestones_for_transition(
+    application: Application, target: ApplicationStatus, now: datetime
+) -> tuple[
+    datetime | None,
+    datetime | None,
+    datetime | None,
+    datetime | None,
+    datetime | None,
+    datetime | None,
+    datetime | None,
+]:
+    submitted_at = application.submitted_at
+    if submitted_at is None and target not in {ApplicationStatus.DRAFT, ApplicationStatus.ARCHIVED}:
+        submitted_at = (
+            _date_as_timestamp(application.applied_date) if application.applied_date else now
+        )
+    response_statuses = {
+        ApplicationStatus.SCREENING,
+        ApplicationStatus.INTERVIEW,
+        ApplicationStatus.OFFER,
+        ApplicationStatus.ACCEPTED,
+        ApplicationStatus.REJECTED,
+    }
+    return (
+        submitted_at,
+        (
+            application.stage_entered_at
+            if target is ApplicationStatus.ARCHIVED
+            or application.status is ApplicationStatus.ARCHIVED
+            else now
+        ),
+        (application.first_response_at or (now if target in response_statuses else None)),
+        application.first_screening_at or (now if target is ApplicationStatus.SCREENING else None),
+        application.first_interview_at or (now if target is ApplicationStatus.INTERVIEW else None),
+        application.first_offer_at or (now if target is ApplicationStatus.OFFER else None),
+        application.first_acceptance_at or (now if target is ApplicationStatus.ACCEPTED else None),
+    )

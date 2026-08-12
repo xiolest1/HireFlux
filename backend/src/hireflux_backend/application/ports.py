@@ -1,9 +1,15 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Protocol
 
-from hireflux_backend.domain.enums import ApplicationStatus
+from hireflux_backend.domain.enums import (
+    ApplicationSort,
+    ApplicationSource,
+    ApplicationStatus,
+    WorkMode,
+)
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity, UserProfile
+from hireflux_backend.domain.resources import DefaultApplicationView
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,15 +34,38 @@ class ApplicationRepository(Protocol):
         status: ApplicationStatus | None,
         limit: int,
         cursor: str | None,
+        q: str | None = None,
+        source: ApplicationSource | None = None,
+        work_mode: WorkMode | None = None,
+        sort: ApplicationSort = ApplicationSort.UPDATED_DESC,
+        view: DefaultApplicationView | None = None,
     ) -> ApplicationPage: ...
 
+    def list_all(self, owner_user_id: str) -> tuple[Application, ...]: ...
+
+    def get_status_counts(self, owner_user_id: str) -> dict[ApplicationStatus, int]: ...
+
+    def get_funnel_counts(self, owner_user_id: str) -> dict[str, int]: ...
+
+    def list_follow_ups_due(
+        self, owner_user_id: str, *, due_on_or_before: date, limit: int
+    ) -> tuple[Application, ...]: ...
+
     def replace_details(self, application: Application, *, expected_version: int) -> None: ...
+
+    def replace_details_with_activity(
+        self,
+        application: Application,
+        *,
+        expected_version: int,
+        activity: Activity,
+    ) -> None: ...
 
     def replace_with_activity(
         self,
         application: Application,
         *,
-        prior_status: ApplicationStatus,
+        prior_application: Application,
         expected_version: int,
         activity: Activity,
     ) -> None: ...

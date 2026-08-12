@@ -113,6 +113,10 @@ class Settings(BaseSettings):
             raise ValueError("The local cursor signing key is forbidden in deployed environments.")
 
         if self.auth_mode is AuthMode.DEMO:
+            if self.max_applications_per_workspace < 16:
+                raise ValueError(
+                    "Demo authentication requires capacity for the 16-application seed."
+                )
             demo_signing_key = self.demo_session_signing_key.get_secret_value()
             if len(demo_signing_key.encode("utf-8")) < 32:
                 raise ValueError("DEMO_SESSION_SIGNING_KEY must contain at least 32 bytes.")

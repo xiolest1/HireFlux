@@ -1,0 +1,142 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  createInterview,
+  createNote,
+  deleteNote,
+  getSettings,
+  listApplicationInterviews,
+  listNotes,
+  listUpcomingInterviews,
+  transitionInterview,
+  updateInterview,
+  updateNote,
+  updateSettings,
+  type InterviewFields,
+  type UpdateSettingsRequest,
+} from "../../api/resources";
+import type { InterviewStatus } from "../../api/schemas";
+import { applicationKeys } from "../applications/queries";
+
+export const resourceKeys = {
+  settings: ["settings"] as const,
+  notes: (applicationId: string) => ["applications", applicationId, "notes"] as const,
+  applicationInterviews: (applicationId: string) => ["applications", applicationId, "interviews"] as const,
+  upcomingInterviews: ["interviews", "upcoming"] as const,
+};
+
+export function useSettings() {
+  return useQuery({ queryKey: resourceKeys.settings, queryFn: ({ signal }) => getSettings(signal) });
+}
+
+export function useUpdateSettings() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: UpdateSettingsRequest) => updateSettings(request),
+    onSuccess: (settings) => client.setQueryData(resourceKeys.settings, settings),
+  });
+}
+
+export function useNotes(applicationId: string) {
+  return useQuery({
+    queryKey: resourceKeys.notes(applicationId),
+    queryFn: ({ signal }) => listNotes(applicationId, signal),
+    enabled: Boolean(applicationId),
+  });
+}
+
+function useResourceInvalidation(applicationId: string) {
+  const client = useQueryClient();
+  return () => {
+    void client.invalidateQueries({ queryKey: applicationKeys.activity(applicationId) });
+    void client.invalidateQueries({ queryKey: ["dashboard"] });
+  };
+}
+
+export function useCreateNote(applicationId: string) {
+  const client = useQueryClient();
+  const invalidateRelated = useResourceInvalidation(applicationId);
+  return useMutation({
+    mutationFn: (content: string) => createNote(applicationId, content),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: resourceKeys.notes(applicationId) });
+      invalidateRelated();
+    },
+  });
+}
+
+export function useUpdateNote(applicationId: string) {
+  const client = useQueryClient();
+  const invalidateRelated = useResourceInvalidation(applicationId);
+  return useMutation({
+    mutationFn: ({ noteId, version, content }: { noteId: string; version: number; content: string }) =>
+      updateNote(applicationId, noteId, version, content),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: resourceKeys.notes(applicationId) });
+      invalidateRelated();
+    },
+  });
+}
+
+export function useDeleteNote(applicationId: string) {
+  const client = useQueryClient();
+  const invalidateRelated = useResourceInvalidation(applicationId);
+  return useMutation({
+    mutationFn: ({ noteId, version }: { noteId: string; version: number }) =>
+      deleteNote(applicationId, noteId, version),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: resourceKeys.notes(applicationId) });
+      invalidateRelated();
+    },
+  });
+}
+
+export function useApplicationInterviews(applicationId: string) {
+  return useQuery({
+    queryKey: resourceKeys.applicationInterviews(applicationId),
+    queryFn: ({ signal }) => listApplicationInterviews(applicationId, signal),
+    enabled: Boolean(applicationId),
+  });
+}
+
+export function useUpcomingInterviews() {
+  return useQuery({
+    queryKey: resourceKeys.upcomingInterviews,
+    queryFn: ({ signal }) => listUpcomingInterviews(signal),
+  });
+}
+
+function useInterviewInvalidation(applicationId: string) {
+  const client = useQueryClient();
+  return () => {
+    void client.invalidateQueries({ queryKey: resourceKeys.applicationInterviews(applicationId) });
+    void client.invalidateQueries({ queryKey: resourceKeys.upcomingInterviews });
+    void client.invalidateQueries({ queryKey: applicationKeys.activity(applicationId) });
+    void client.invalidateQueries({ queryKey: ["dashboard"] });
+  };
+}
+
+export function useCreateInterview(applicationId: string) {
+  const invalidate = useInterviewInvalidation(applicationId);
+  return useMutation({
+    mutationFn: (fields: InterviewFields) => createInterview(applicationId, fields),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateInterview(applicationId: string) {
+  const invalidate = useInterviewInvalidation(applicationId);
+  return useMutation({
+    mutationFn: ({ interviewId, version, fields }: { interviewId: string; version: number; fields: Partial<InterviewFields> }) =>
+      updateInterview(applicationId, interviewId, version, fields),
+    onSuccess: invalidate,
+  });
+}
+
+export function useTransitionInterview(applicationId: string) {
+  const invalidate = useInterviewInvalidation(applicationId);
+  return useMutation({
+    mutationFn: ({ interviewId, version, status }: { interviewId: string; version: number; status: Extract<InterviewStatus, "COMPLETED" | "CANCELED"> }) =>
+      transitionInterview(applicationId, interviewId, version, status),
+    onSuccess: invalidate,
+  });
+}

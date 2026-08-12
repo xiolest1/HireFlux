@@ -5,6 +5,9 @@ import {
   type Application,
   type ApplicationListResponse,
   type ApplicationStatus,
+  type ApplicationSource,
+  type ApplicationSort,
+  type ApplicationView,
   type WorkMode,
   type Activity,
   userSchema,
@@ -20,7 +23,8 @@ export interface ApplicationFields {
   job_url: string | null;
   location: string | null;
   work_mode: WorkMode | null;
-  source: string | null;
+  source: ApplicationSource | null;
+  source_detail: string | null;
   salary_text: string | null;
   description: string | null;
 }
@@ -39,6 +43,14 @@ export interface TransitionApplicationRequest {
   applied_date?: string;
 }
 
+export interface ApplicationListFilters {
+  q?: string;
+  source?: ApplicationSource;
+  workMode?: WorkMode;
+  sort?: ApplicationSort;
+  view?: ApplicationView;
+}
+
 export function getMe(signal?: AbortSignal): Promise<User> {
   return apiRequest("/api/v1/me", userSchema, { signal });
 }
@@ -48,6 +60,7 @@ export function listApplications(
   signal?: AbortSignal,
   limit = 20,
   status?: ApplicationStatus,
+  filters: ApplicationListFilters = {},
 ): Promise<ApplicationListResponse> {
   const search = new URLSearchParams({ limit: String(limit) });
   if (cursor) {
@@ -56,10 +69,41 @@ export function listApplications(
   if (status) {
     search.set("status", status);
   }
+  if (filters.q) search.set("q", filters.q);
+  if (filters.source) search.set("source", filters.source);
+  if (filters.workMode) search.set("work_mode", filters.workMode);
+  if (filters.sort) search.set("sort", filters.sort);
+  if (filters.view) search.set("view", filters.view);
   return apiRequest(
     `/api/v1/applications?${search.toString()}`,
     applicationListResponseSchema,
     { signal },
+  );
+}
+
+export function completeFollowUp(
+  applicationId: string,
+  expectedVersion: number,
+): Promise<Application> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/follow-up/complete`,
+    applicationSchema,
+    { method: "POST", json: { expected_version: expectedVersion } },
+  );
+}
+
+export function rescheduleFollowUp(
+  applicationId: string,
+  expectedVersion: number,
+  followUpDate: string,
+): Promise<Application> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/follow-up/reschedule`,
+    applicationSchema,
+    {
+      method: "POST",
+      json: { expected_version: expectedVersion, follow_up_date: followUpDate },
+    },
   );
 }
 

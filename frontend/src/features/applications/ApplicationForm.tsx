@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useBlocker } from "react-router-dom";
-import type { Application } from "../../api/schemas";
+import { APPLICATION_SOURCES, type Application } from "../../api/schemas";
 import { Button } from "../../components/ui/Button";
 import { buttonClassName } from "../../components/ui/buttonStyles";
 import { ErrorPanel } from "../../components/ui/Feedback";
@@ -10,9 +10,11 @@ import { useModalFocus } from "../../components/ui/useModalFocus";
 import {
   applicationFormDefaults,
   applicationFormSchema,
+  type ApplicationFormDefaultPreferences,
   type ApplicationFormInput,
   type ApplicationFormValues,
 } from "./formSchema";
+import { formatSource } from "./format";
 
 const fieldClassName =
   "mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:cursor-not-allowed disabled:bg-slate-100";
@@ -29,6 +31,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 interface ApplicationFormProps {
   mode: "create" | "edit";
   application?: Application;
+  defaultPreferences?: ApplicationFormDefaultPreferences;
   isSubmitting: boolean;
   serverError?: unknown;
   onSubmit: (values: ApplicationFormValues) => void | Promise<void>;
@@ -37,6 +40,7 @@ interface ApplicationFormProps {
 export function ApplicationForm({
   mode,
   application,
+  defaultPreferences,
   isSubmitting,
   serverError,
   onSubmit,
@@ -53,7 +57,7 @@ export function ApplicationForm({
     formState: { errors, isDirty },
   } = useForm<ApplicationFormInput, unknown, ApplicationFormValues>({
     resolver: zodResolver(applicationFormSchema(mode)),
-    defaultValues: applicationFormDefaults(application),
+    defaultValues: applicationFormDefaults(application, defaultPreferences),
   });
   const selectedStatus = watch("status");
   const hasErrors = Object.keys(errors).length > 0;
@@ -315,16 +319,35 @@ export function ApplicationForm({
             <label htmlFor="source" className="text-sm font-semibold text-slate-800">
               Source <span className="font-normal text-slate-500">(optional)</span>
             </label>
-            <input
+            <select
               id="source"
-              placeholder="Company site, referral, job board…"
-              maxLength={120}
               aria-invalid={Boolean(errors.source)}
               aria-describedby={errors.source ? "source-error" : undefined}
               className={fieldClassName}
               {...register("source")}
-            />
+            >
+              <option value="">Not specified</option>
+              {APPLICATION_SOURCES.map((source) => (
+                <option key={source} value={source}>{formatSource(source)}</option>
+              ))}
+            </select>
             <FieldError id="source-error" message={errors.source?.message} />
+          </div>
+
+          <div>
+            <label htmlFor="source_detail" className="text-sm font-semibold text-slate-800">
+              Source detail <span className="font-normal text-slate-500">(optional)</span>
+            </label>
+            <input
+              id="source_detail"
+              placeholder="Recruiter name, event, or job board detail"
+              maxLength={120}
+              aria-invalid={Boolean(errors.source_detail)}
+              aria-describedby={errors.source_detail ? "source_detail-error" : undefined}
+              className={fieldClassName}
+              {...register("source_detail")}
+            />
+            <FieldError id="source_detail-error" message={errors.source_detail?.message} />
           </div>
 
           <div>

@@ -13,13 +13,23 @@ from hireflux_backend.api.schemas import (
     ApplicationResponse,
     ApplicationStatusRequest,
     ApplicationUpdateRequest,
+    FollowUpCompleteRequest,
+    FollowUpRescheduleRequest,
 )
 from hireflux_backend.application.services import (
+    CompleteFollowUpCommand,
     CreateApplicationCommand,
+    RescheduleFollowUpCommand,
     TransitionApplicationCommand,
     UpdateApplicationCommand,
 )
-from hireflux_backend.domain.enums import ApplicationStatus
+from hireflux_backend.domain.enums import (
+    ApplicationSort,
+    ApplicationSource,
+    ApplicationStatus,
+    WorkMode,
+)
+from hireflux_backend.domain.resources import DefaultApplicationView
 
 router = APIRouter(prefix="/api/v1/applications", tags=["applications"])
 
@@ -42,6 +52,7 @@ def create_application(
             location=request.location,
             work_mode=request.work_mode,
             source=request.source,
+            source_detail=request.source_detail,
             salary_text=request.salary_text,
             description=request.description,
         ),
@@ -56,8 +67,23 @@ def list_applications(
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     cursor: str | None = None,
     status: ApplicationStatus | None = None,
+    q: Annotated[str | None, Query(min_length=1, max_length=120)] = None,
+    source: ApplicationSource | None = None,
+    work_mode: WorkMode | None = None,
+    sort: ApplicationSort = ApplicationSort.UPDATED_DESC,
+    view: DefaultApplicationView | None = None,
 ) -> ApplicationListResponse:
-    page = service.list(identity, status=status, limit=limit, cursor=cursor)
+    page = service.list(
+        identity,
+        status=status,
+        limit=limit,
+        cursor=cursor,
+        q=q,
+        source=source,
+        work_mode=work_mode,
+        sort=sort,
+        view=view,
+    )
     return ApplicationListResponse(
         items=[ApplicationResponse.from_domain(item) for item in page.items],
         next_cursor=page.next_cursor,
@@ -134,3 +160,36 @@ def list_application_activity(
 ) -> ActivityListResponse:
     activities = service.list_activity(identity, str(application_id))
     return ActivityListResponse(items=[ActivityResponse.from_domain(item) for item in activities])
+
+
+@router.post("/{application_id}/follow-up/complete", response_model=ApplicationResponse)
+def complete_application_follow_up(
+    application_id: UUID,
+    request: FollowUpCompleteRequest,
+    identity: IdentityDependency,
+    service: ApplicationServiceDependency,
+) -> ApplicationResponse:
+    application = service.complete_follow_up(
+        identity,
+        str(application_id),
+        CompleteFollowUpCommand(expected_version=request.expected_version),
+    )
+    return ApplicationResponse.from_domain(application)
+
+
+@router.post("/{application_id}/follow-up/reschedule", response_model=ApplicationResponse)
+def reschedule_application_follow_up(
+    application_id: UUID,
+    request: FollowUpRescheduleRequest,
+    identity: IdentityDependency,
+    service: ApplicationServiceDependency,
+) -> ApplicationResponse:
+    application = service.reschedule_follow_up(
+        identity,
+        str(application_id),
+        RescheduleFollowUpCommand(
+            expected_version=request.expected_version,
+            follow_up_date=request.follow_up_date,
+        ),
+    )
+    return ApplicationResponse.from_domain(application)

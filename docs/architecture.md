@@ -10,7 +10,7 @@ The source UML and DFDs remain useful domain input, but this document and the bo
 
 ```mermaid
 flowchart LR
-    Browser["Public landing + protected React routes"] -->|"Start demo"| Session["Signed 24-hour workspace"]
+    Browser["Public landing + protected workspace Home"] -->|"Start demo"| Session["Signed 24-hour workspace"]
     Session -->|"Bearer token"| API["FastAPI routes"]
     API --> Auth["Verified temporary identity"]
     API --> Services["Application/domain services"]
@@ -19,7 +19,7 @@ flowchart LR
     Adapter --> LocalDB["DynamoDB Local in Docker"]
 ```
 
-The API process and frontend run directly on the host for fast reloads. Docker Compose runs only DynamoDB Local. A demo launch creates a unique owner UUID, seeds fictional records through the normal services, and returns a signed bearer token. Table creation and TTL enablement are an explicit operator command, never an application-startup side effect. Tests substitute a Moto-backed table and do not require Docker.
+The API process and frontend run directly on the host for fast reloads. Docker Compose runs only DynamoDB Local. A demo launch creates a unique owner UUID, seeds a deterministic 16-application fictional scenario through trusted service paths, and returns a signed bearer token. The protected `/dashboard` route is the workspace Home; applications, interviews, analytics, and settings remain dedicated destinations. Table creation and TTL enablement are explicit operator commands, never application-startup side effects. Tests substitute a Moto-backed table and do not require Docker.
 
 ## Backend boundaries
 
@@ -43,9 +43,13 @@ The error contract is `{"error":{"code":"...","message":"...","request_id":"..."
 
 ## Aggregate and consistency choices
 
-Application is the central aggregate. The application metadata and its activity records share an owner-qualified application partition. Notes, interviews, and attachment metadata will join that partition later. Sparse indexes support ordered owner lists and status queries without scans.
+Application is the central aggregate. Application metadata, append-only activity, notes, and interviews share an owner-qualified application partition. Workspace settings and aggregate counters use the owner's user partition. Sparse indexes support ordered owner lists, status queries, and scheduled work without scans.
 
 Edits and transitions carry an expected version. Conditional writes reject stale updates rather than silently overwriting a newer change. Application creation and status changes persist their append-only activity records in the same transaction.
+
+Dashboard and analytics rules live in backend services. Server-owned first-milestone timestamps preserve historical response, screening, interview, offer, and acceptance facts after the current status changes. The API includes metric counts and denominators so React renders rather than reinterprets rates. Status and funnel counters are maintained transactionally; bounded owner-scoped queries provide the richer local analytics needed for a workspace capped at 100 applications.
+
+The Action Center derives outstanding follow-ups, upcoming interviews, and aging active applications from owner-scoped schedule projections and application milestones. Completing or rescheduling a follow-up, changing an interview, and mutating a note appends activity atomically with the resource write.
 
 ## Target AWS architecture
 

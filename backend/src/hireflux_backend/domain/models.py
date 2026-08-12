@@ -3,6 +3,7 @@ from datetime import date, datetime
 
 from hireflux_backend.domain.enums import (
     ActivityType,
+    ApplicationSource,
     ApplicationStatus,
     UserRole,
     WorkMode,
@@ -41,13 +42,21 @@ class Application:
     job_url: str | None
     location: str | None
     work_mode: WorkMode | None
-    source: str | None
+    source: ApplicationSource | None
     salary_text: str | None
     description: str | None
     created_at: datetime
     updated_at: datetime
     version: int
     archived_from_status: ApplicationStatus | None = None
+    source_detail: str | None = None
+    submitted_at: datetime | None = None
+    stage_entered_at: datetime | None = None
+    first_response_at: datetime | None = None
+    first_screening_at: datetime | None = None
+    first_interview_at: datetime | None = None
+    first_offer_at: datetime | None = None
+    first_acceptance_at: datetime | None = None
     expires_at: int | None = None
 
 

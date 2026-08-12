@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { applicationFormSchema } from "./formSchema";
+import {
+  applicationFormDefaults,
+  applicationFormSchema,
+  preferredFollowUpDate,
+} from "./formSchema";
 
 const baseInput = {
   company_name: "  Northstar Labs  ",
@@ -11,6 +15,7 @@ const baseInput = {
   location: "",
   work_mode: "" as const,
   source: "",
+  source_detail: "",
   salary_text: "",
   description: "",
 };
@@ -53,5 +58,18 @@ describe("applicationFormSchema", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("defaults a new follow-up using the workspace calendar and interval", () => {
+    const preferences = {
+      defaultFollowUpDays: 7,
+      timeZone: "America/Los_Angeles",
+      now: new Date("2026-08-13T02:30:00Z"),
+    };
+
+    expect(preferredFollowUpDate(preferences)).toBe("2026-08-19");
+    expect(applicationFormDefaults(undefined, preferences).follow_up_date).toBe(
+      "2026-08-19",
+    );
   });
 });

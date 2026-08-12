@@ -43,13 +43,16 @@ def test_demo_sessions_are_seeded_temporary_and_owner_isolated(
         first_list = client.get("/api/v1/applications", headers=first_headers)
         assert first_list.status_code == 200
         first_items = first_list.json()["items"]
-        assert len(first_items) == 5
+        assert len(first_items) == 15
         assert {item["status"] for item in first_items} == {
             "DRAFT",
             "APPLIED",
+            "SCREENING",
             "INTERVIEW",
             "OFFER",
+            "ACCEPTED",
             "REJECTED",
+            "WITHDRAWN",
         }
 
         interview = next(item for item in first_items if item["status"] == "INTERVIEW")
@@ -57,10 +60,9 @@ def test_demo_sessions_are_seeded_temporary_and_owner_isolated(
             f"/api/v1/applications/{interview['application_id']}/activity",
             headers=first_headers,
         )
-        assert [item["activity_type"] for item in activity.json()["items"]] == [
-            "APPLICATION_CREATED",
-            "STATUS_CHANGED",
-        ]
+        activity_types = [item["activity_type"] for item in activity.json()["items"]]
+        assert activity_types[:2] == ["APPLICATION_CREATED", "STATUS_CHANGED"]
+        assert "INTERVIEW_SCHEDULED" in activity_types
 
         second_session = client.post("/api/v1/demo-sessions")
         second_token = second_session.json()["access_token"]
@@ -107,22 +109,13 @@ def test_demo_session_rejects_a_tampered_bearer_token(dynamodb_client: Any) -> N
     assert response.json()["error"]["code"] == "DEMO_SESSION_REQUIRED"
 
 
-def test_demo_workspace_enforces_its_application_limit(dynamodb_client: Any) -> None:
-    app = create_app(
+def test_demo_workspace_requires_capacity_for_its_seed() -> None:
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="16-application seed"):
         build_test_settings(
             auth_mode="demo",
             demo_session_signing_key="demo-test-signing-key-that-is-at-least-32-bytes",
             max_applications_per_workspace=5,
-        ),
-        dynamodb_client=dynamodb_client,
-    )
-    with TestClient(app) as client:
-        token = client.post("/api/v1/demo-sessions").json()["access_token"]
-        response = client.post(
-            "/api/v1/applications",
-            headers=authorization(token),
-            json={"company_name": "Extra Company", "job_title": "Extra Role"},
         )
-
-    assert response.status_code == 409
-    assert "workspace limit" in response.json()["error"]["message"]

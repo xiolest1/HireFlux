@@ -84,3 +84,8 @@ def test_demo_auth_is_supported_locally_and_fails_closed_when_deployed() -> None
 def test_demo_auth_rejects_short_signing_key() -> None:
     with pytest.raises(ValidationError, match="DEMO_SESSION_SIGNING_KEY"):
         settings(auth_mode="demo", demo_session_signing_key="too-short")
+
+
+def test_demo_auth_requires_capacity_for_seed() -> None:
+    with pytest.raises(ValidationError, match="16-application seed"):
+        settings(auth_mode="demo", max_applications_per_workspace=15)

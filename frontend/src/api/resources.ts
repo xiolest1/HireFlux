@@ -1,0 +1,132 @@
+import { z } from "zod";
+import { apiRequest } from "./client";
+import {
+  interviewListResponseSchema,
+  interviewSchema,
+  noteListResponseSchema,
+  noteSchema,
+  settingsSchema,
+  type ColorTheme,
+  type DashboardRange,
+  type Interview,
+  type InterviewStatus,
+  type InterviewType,
+  type Note,
+  type Settings,
+} from "./schemas";
+
+export interface UpdateSettingsRequest {
+  expected_version: number;
+  time_zone?: string;
+  default_follow_up_days?: number;
+  default_application_view?: "ACTIVE" | "ALL" | "ARCHIVED";
+  default_dashboard_range?: DashboardRange;
+  theme?: ColorTheme;
+}
+
+export interface InterviewFields {
+  interview_type: InterviewType;
+  scheduled_at: string;
+  duration_minutes: number;
+  location: string | null;
+  meeting_url: string | null;
+  details: string | null;
+}
+
+export function getSettings(signal?: AbortSignal): Promise<Settings> {
+  return apiRequest("/api/v1/settings", settingsSchema, { signal });
+}
+
+export function updateSettings(request: UpdateSettingsRequest): Promise<Settings> {
+  return apiRequest("/api/v1/settings", settingsSchema, {
+    method: "PATCH",
+    json: request,
+  });
+}
+
+export function listNotes(applicationId: string, signal?: AbortSignal) {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/notes`,
+    noteListResponseSchema,
+    { signal },
+  );
+}
+
+export function createNote(applicationId: string, content: string): Promise<Note> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/notes`,
+    noteSchema,
+    { method: "POST", json: { content } },
+  );
+}
+
+export function updateNote(
+  applicationId: string,
+  noteId: string,
+  expectedVersion: number,
+  content: string,
+): Promise<Note> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/notes/${encodeURIComponent(noteId)}`,
+    noteSchema,
+    { method: "PATCH", json: { expected_version: expectedVersion, content } },
+  );
+}
+
+export function deleteNote(
+  applicationId: string,
+  noteId: string,
+  expectedVersion: number,
+): Promise<null> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/notes/${encodeURIComponent(noteId)}?expected_version=${expectedVersion}`,
+    z.null(),
+    { method: "DELETE" },
+  );
+}
+
+export function listApplicationInterviews(applicationId: string, signal?: AbortSignal) {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/interviews`,
+    interviewListResponseSchema,
+    { signal },
+  );
+}
+
+export function listUpcomingInterviews(signal?: AbortSignal) {
+  return apiRequest("/api/v1/interviews?limit=20", interviewListResponseSchema, { signal });
+}
+
+export function createInterview(applicationId: string, fields: InterviewFields): Promise<Interview> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/interviews`,
+    interviewSchema,
+    { method: "POST", json: fields },
+  );
+}
+
+export function updateInterview(
+  applicationId: string,
+  interviewId: string,
+  expectedVersion: number,
+  fields: Partial<InterviewFields>,
+): Promise<Interview> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/interviews/${encodeURIComponent(interviewId)}`,
+    interviewSchema,
+    { method: "PATCH", json: { expected_version: expectedVersion, ...fields } },
+  );
+}
+
+export function transitionInterview(
+  applicationId: string,
+  interviewId: string,
+  expectedVersion: number,
+  status: Extract<InterviewStatus, "COMPLETED" | "CANCELED">,
+): Promise<Interview> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/interviews/${encodeURIComponent(interviewId)}/status`,
+    interviewSchema,
+    { method: "POST", json: { expected_version: expectedVersion, status } },
+  );
+}

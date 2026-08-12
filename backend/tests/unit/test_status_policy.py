@@ -14,17 +14,35 @@ from hireflux_backend.domain.status_policy import (
 ALLOWED = {
     ApplicationStatus.DRAFT: {ApplicationStatus.APPLIED, ApplicationStatus.ARCHIVED},
     ApplicationStatus.APPLIED: {
+        ApplicationStatus.SCREENING,
         ApplicationStatus.INTERVIEW,
+        ApplicationStatus.OFFER,
         ApplicationStatus.REJECTED,
+        ApplicationStatus.WITHDRAWN,
+        ApplicationStatus.ARCHIVED,
+    },
+    ApplicationStatus.SCREENING: {
+        ApplicationStatus.INTERVIEW,
+        ApplicationStatus.OFFER,
+        ApplicationStatus.REJECTED,
+        ApplicationStatus.WITHDRAWN,
         ApplicationStatus.ARCHIVED,
     },
     ApplicationStatus.INTERVIEW: {
         ApplicationStatus.OFFER,
         ApplicationStatus.REJECTED,
+        ApplicationStatus.WITHDRAWN,
         ApplicationStatus.ARCHIVED,
     },
-    ApplicationStatus.OFFER: {ApplicationStatus.REJECTED, ApplicationStatus.ARCHIVED},
+    ApplicationStatus.OFFER: {
+        ApplicationStatus.ACCEPTED,
+        ApplicationStatus.REJECTED,
+        ApplicationStatus.WITHDRAWN,
+        ApplicationStatus.ARCHIVED,
+    },
+    ApplicationStatus.ACCEPTED: {ApplicationStatus.ARCHIVED},
     ApplicationStatus.REJECTED: {ApplicationStatus.OFFER, ApplicationStatus.ARCHIVED},
+    ApplicationStatus.WITHDRAWN: {ApplicationStatus.ARCHIVED},
 }
 
 

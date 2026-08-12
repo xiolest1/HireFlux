@@ -3,7 +3,13 @@ from typing import Any
 
 from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 
-from hireflux_backend.domain.enums import ActivityType, ApplicationStatus, UserRole, WorkMode
+from hireflux_backend.domain.enums import (
+    ActivityType,
+    ApplicationSource,
+    ApplicationStatus,
+    UserRole,
+    WorkMode,
+)
 from hireflux_backend.domain.models import Activity, Application, UserProfile
 
 _SERIALIZER = TypeSerializer()
@@ -26,6 +32,10 @@ def owner_status_key(owner_user_id: str, status: ApplicationStatus) -> str:
     return f"USER#{owner_user_id}#STATUS#{status.value}"
 
 
+def owner_schedule_key(owner_user_id: str) -> str:
+    return f"USER#{owner_user_id}#SCHEDULE"
+
+
 def format_timestamp(value: datetime) -> str:
     if value.tzinfo is None or value.utcoffset() is None:
         raise ValueError("DynamoDB timestamps must be timezone-aware.")
@@ -42,6 +52,10 @@ def application_sort_key(timestamp: str, application_id: str) -> str:
 
 def activity_sort_key(timestamp: str, activity_id: str) -> str:
     return f"ACTIVITY#{timestamp}#{activity_id}"
+
+
+def follow_up_sort_key(value: date, application_id: str) -> str:
+    return f"FOLLOW_UP#{value.isoformat()}#{application_id}"
 
 
 def serialize_item(item: dict[str, Any]) -> dict[str, Any]:
@@ -70,7 +84,8 @@ def application_to_item(application: Application) -> dict[str, Any]:
         "job_url": application.job_url,
         "location": application.location,
         "work_mode": application.work_mode.value if application.work_mode else None,
-        "source": application.source,
+        "source": application.source.value if application.source else None,
+        "source_detail": application.source_detail,
         "salary_text": application.salary_text,
         "description": application.description,
         "created_at": format_timestamp(application.created_at),
@@ -78,6 +93,37 @@ def application_to_item(application: Application) -> dict[str, Any]:
         "version": application.version,
         "archived_from_status": (
             application.archived_from_status.value if application.archived_from_status else None
+        ),
+        "submitted_at": format_timestamp(application.submitted_at)
+        if application.submitted_at
+        else None,
+        "stage_entered_at": format_timestamp(application.stage_entered_at)
+        if application.stage_entered_at
+        else None,
+        "first_response_at": format_timestamp(application.first_response_at)
+        if application.first_response_at
+        else None,
+        "first_screening_at": format_timestamp(application.first_screening_at)
+        if application.first_screening_at
+        else None,
+        "first_interview_at": format_timestamp(application.first_interview_at)
+        if application.first_interview_at
+        else None,
+        "first_offer_at": format_timestamp(application.first_offer_at)
+        if application.first_offer_at
+        else None,
+        "first_acceptance_at": format_timestamp(application.first_acceptance_at)
+        if application.first_acceptance_at
+        else None,
+        "search_text": " ".join(
+            value.lower()
+            for value in (
+                application.company_name,
+                application.job_title,
+                application.location,
+                application.source_detail,
+            )
+            if value
         ),
         "expires_at": application.expires_at,
         "GSI1PK": (
@@ -92,6 +138,16 @@ def application_to_item(application: Application) -> dict[str, Any]:
         ),
         "GSI2PK": owner_status_key(application.owner_user_id, application.status),
         "GSI2SK": application_sort_key(updated_at, application.application_id),
+        "GSI3PK": (
+            owner_schedule_key(application.owner_user_id)
+            if application.follow_up_date and application.status is not ApplicationStatus.ARCHIVED
+            else None
+        ),
+        "GSI3SK": (
+            follow_up_sort_key(application.follow_up_date, application.application_id)
+            if application.follow_up_date and application.status is not ApplicationStatus.ARCHIVED
+            else None
+        ),
     }
 
 
@@ -111,7 +167,8 @@ def application_from_item(item: dict[str, Any]) -> Application:
         job_url=_optional_string(item, "job_url"),
         location=_optional_string(item, "location"),
         work_mode=WorkMode(str(item["work_mode"])) if item.get("work_mode") else None,
-        source=_optional_string(item, "source"),
+        source=ApplicationSource(str(item["source"])) if item.get("source") else None,
+        source_detail=_optional_string(item, "source_detail"),
         salary_text=_optional_string(item, "salary_text"),
         description=_optional_string(item, "description"),
         created_at=parse_timestamp(str(item["created_at"])),
@@ -122,6 +179,27 @@ def application_from_item(item: dict[str, Any]) -> Application:
             if item.get("archived_from_status")
             else None
         ),
+        submitted_at=parse_timestamp(str(item["submitted_at"]))
+        if item.get("submitted_at")
+        else None,
+        stage_entered_at=parse_timestamp(str(item["stage_entered_at"]))
+        if item.get("stage_entered_at")
+        else None,
+        first_response_at=parse_timestamp(str(item["first_response_at"]))
+        if item.get("first_response_at")
+        else None,
+        first_screening_at=parse_timestamp(str(item["first_screening_at"]))
+        if item.get("first_screening_at")
+        else None,
+        first_interview_at=parse_timestamp(str(item["first_interview_at"]))
+        if item.get("first_interview_at")
+        else None,
+        first_offer_at=parse_timestamp(str(item["first_offer_at"]))
+        if item.get("first_offer_at")
+        else None,
+        first_acceptance_at=parse_timestamp(str(item["first_acceptance_at"]))
+        if item.get("first_acceptance_at")
+        else None,
         expires_at=int(item["expires_at"]) if item.get("expires_at") is not None else None,
     )
 

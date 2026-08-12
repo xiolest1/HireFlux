@@ -1,58 +1,63 @@
 import { useEffect, useState } from "react";
+import {
+  applyTheme,
+  preferredTheme,
+  THEME_EVENT,
+  THEME_STORAGE_KEY,
+  type ColorMode,
+} from "./themePreference";
 
-const THEME_STORAGE_KEY = "hireflux-color-theme";
-
-type ColorTheme = "light" | "dark";
-
-function storedTheme(): ColorTheme | null {
-  try {
-    const value = window.localStorage.getItem(THEME_STORAGE_KEY);
-    return value === "light" || value === "dark" ? value : null;
-  } catch {
-    return null;
-  }
+interface ThemeToggleProps {
+  disabled?: boolean;
+  onPreferenceChange?: (preference: "LIGHT" | "DARK") => void | Promise<unknown>;
 }
 
-function preferredTheme(): ColorTheme {
-  if (typeof window === "undefined") return "dark";
-
-  const stored = storedTheme();
-  if (stored) return stored;
-
-  return "dark";
-}
-
-function applyTheme(theme: ColorTheme) {
-  document.documentElement.classList.toggle("dark", theme === "dark");
-  document.documentElement.style.colorScheme = theme;
-}
-
-export function ThemeToggle() {
-  const [theme, setTheme] = useState<ColorTheme>(preferredTheme);
+export function ThemeToggle({ disabled = false, onPreferenceChange }: ThemeToggleProps = {}) {
+  const [theme, setTheme] = useState<ColorMode>(preferredTheme);
 
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
 
+  useEffect(() => {
+    function syncTheme(event: Event) {
+      const next = (event as CustomEvent<{ theme?: ColorMode }>).detail?.theme;
+      if (next === "light" || next === "dark") setTheme(next);
+    }
+    window.addEventListener(THEME_EVENT, syncTheme);
+    return () => window.removeEventListener(THEME_EVENT, syncTheme);
+  }, []);
+
   const isDark = theme === "dark";
   const nextTheme = isDark ? "light" : "dark";
 
-  function toggleTheme() {
+  async function toggleTheme() {
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
     } catch {
       // The theme still changes for this page when storage is unavailable.
     }
     setTheme(nextTheme);
+    try {
+      await onPreferenceChange?.(nextTheme.toUpperCase() as "LIGHT" | "DARK");
+    } catch {
+      try {
+        window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+      } catch {
+        // The previous theme can still be restored for this page.
+      }
+      setTheme(theme);
+    }
   }
 
   return (
     <button
       type="button"
-      onClick={toggleTheme}
+      onClick={() => void toggleTheme()}
+      disabled={disabled}
       aria-label={`Switch to ${nextTheme} mode`}
       title={`Switch to ${nextTheme} mode`}
-      className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-white"
+      className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950 disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-white"
     >
       {isDark ? (
         <svg

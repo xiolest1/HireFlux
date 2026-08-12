@@ -1,15 +1,29 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { testUser } from "./fixtures";
+import { testDashboard, testSettings, testUser } from "./fixtures";
 
 export const API_ORIGIN = "http://localhost:8000";
 
 export const server = setupServer(
   http.get(`${API_ORIGIN}/api/v1/me`, () => HttpResponse.json(testUser)),
+  http.get(`${API_ORIGIN}/api/v1/settings`, () => HttpResponse.json(testSettings)),
+  http.get(`${API_ORIGIN}/api/v1/dashboard`, ({ request }) =>
+    HttpResponse.json({
+      ...testDashboard,
+      range: new URL(request.url).searchParams.get("range") ?? "30d",
+    }),
+  ),
+  http.get(`${API_ORIGIN}/api/v1/interviews`, () => HttpResponse.json({ items: [] })),
   http.get(`${API_ORIGIN}/api/v1/applications`, () =>
     HttpResponse.json({ items: [], next_cursor: null }),
   ),
   http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/activity`, () =>
+    HttpResponse.json({ items: [] }),
+  ),
+  http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/notes`, () =>
+    HttpResponse.json({ items: [] }),
+  ),
+  http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/interviews`, () =>
     HttpResponse.json({ items: [] }),
   ),
 );

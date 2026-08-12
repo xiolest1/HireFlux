@@ -6,7 +6,9 @@ from hireflux_backend.config import Settings
 from hireflux_backend.infrastructure.dynamodb.table_schema import (
     TableInitializationResult,
     TableSchemaMismatchError,
+    UnsafeTableTargetError,
     initialize_local_table,
+    reset_local_table,
 )
 
 
@@ -52,3 +54,18 @@ def test_initializer_refuses_schema_drift(dynamodb_client: Any) -> None:
     )
     with pytest.raises(TableSchemaMismatchError, match="incompatible"):
         initialize_local_table(local_settings("DriftedTable"), client=dynamodb_client)
+
+
+def test_explicit_reset_requires_exact_table_confirmation(dynamodb_client: Any) -> None:
+    configured = local_settings("ResetTest")
+    initialize_local_table(configured, client=dynamodb_client)
+    with pytest.raises(UnsafeTableTargetError, match="exactly match"):
+        reset_local_table(configured, confirmation="wrong", client=dynamodb_client)
+    assert (
+        reset_local_table(configured, confirmation="ResetTest", client=dynamodb_client)
+        is TableInitializationResult.CREATED
+    )
+    assert (
+        initialize_local_table(configured, client=dynamodb_client)
+        is TableInitializationResult.ALREADY_VALID
+    )

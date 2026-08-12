@@ -21,27 +21,41 @@ Cognito owns passwords, verification, resets, MFA options, sessions, and tokens.
 - `application_id`, `owner_user_id`.
 - Required `company_name`, `job_title`, and non-null `status`.
 - `applied_date`, nullable only for a draft or an archived former draft.
-- Optional `follow_up_date`, `job_url`, `location`, `work_mode`, `source`, `salary_text`, `description`.
+- Optional `follow_up_date`, `job_url`, `location`, `work_mode`, normalized `source`, `source_detail`, `salary_text`, and `description`.
 - `created_at`, `updated_at`, and integer `version` for optimistic concurrency.
 - Internal optional `archived_from_status` to make archive reversible without bypassing the transition policy.
+- Server-owned `submitted_at`, `stage_entered_at`, `first_response_at`, `first_screening_at`, `first_interview_at`, `first_offer_at`, and `first_acceptance_at` milestones. Public write bodies cannot set them.
 
-Statuses are `DRAFT`, `APPLIED`, `INTERVIEW`, `OFFER`, `REJECTED`, and `ARCHIVED`. Work modes are `REMOTE`, `HYBRID`, and `ONSITE`. The complete workflow is in [status-transitions.md](status-transitions.md).
+Statuses are `DRAFT`, `APPLIED`, `SCREENING`, `INTERVIEW`, `OFFER`, `ACCEPTED`, `REJECTED`, `WITHDRAWN`, and `ARCHIVED`. Work modes are `REMOTE`, `HYBRID`, and `ONSITE`. Sources are `LINKEDIN`, `INDEED`, `COMPANY_WEBSITE`, `RECRUITER`, `REFERRAL`, `HANDSHAKE`, `CAREER_FAIR`, and `OTHER`. The complete workflow is in [status-transitions.md](status-transitions.md).
 
-## Note (Milestone 2)
+## Note
 
 - `note_id`, `application_id`, `owner_user_id`.
-- Required `body`.
-- `created_at`, `updated_at`.
+- Required plain-text `content`.
+- `created_at`, `updated_at`, and integer `version`.
 
-## Interview (Milestone 2)
+Creating, editing, and deleting a note appends activity without copying the note content into the activity record. Notes are ordinary mutable child records; activity remains append-only.
+
+## Interview
 
 - `interview_id`, `application_id`, `owner_user_id`.
-- `interview_type`: `PHONE`, `VIDEO`, `ONSITE`, `TECHNICAL`, `BEHAVIORAL`, or `OTHER`.
-- Required `scheduled_at`; optional `location_or_url` and `notes`.
+- `interview_type`: `RECRUITER_CALL`, `TECHNICAL_SCREEN`, `BEHAVIORAL`, `CODING_ASSESSMENT`, `HIRING_MANAGER`, `ONSITE`, `FINAL`, or `OTHER`.
+- Required timezone-aware `scheduled_at`; `duration_minutes`; optional `location`, `meeting_url`, and `details`.
 - `status`: `SCHEDULED`, `COMPLETED`, or `CANCELED`.
-- `created_at`, `updated_at`.
+- Denormalized `company_name` and `job_title`, refreshed from the owned parent when the interview changes.
+- `created_at`, `updated_at`, and integer `version`.
 
-Rescheduling changes `scheduled_at` and appends activity; it is not a separate status.
+Only scheduled interviews are editable. They may transition to completed or canceled; both are terminal. Rescheduling and status changes append activity.
+
+## Workspace settings
+
+- `owner_user_id`, IANA `time_zone`, and `default_follow_up_days` from 1 through 30.
+- `default_application_view`: `ACTIVE`, `ALL`, or `ARCHIVED`.
+- `default_dashboard_range`: `30d`, `90d`, or `all`.
+- `theme`: `SYSTEM`, `LIGHT`, or `DARK`.
+- `created_at`, `updated_at`, integer `version`, and demo-workspace expiry.
+
+The temporary demo persists these preferences for its own 24-hour lifetime. Identity, password, MFA, and connected-login controls remain read-only previews because the demo is not a permanent account.
 
 ## Attachment metadata (Milestone 4)
 
@@ -50,7 +64,7 @@ Rescheduling changes `scheduled_at` and appends activity; it is not a separate s
 
 Only metadata lives in DynamoDB. File bytes live in private S3 and are never logged.
 
-## Notification (Milestones 2 and 6)
+## Notification (Milestone 6)
 
 - `notification_id`, `owner_user_id`, optional `application_id`.
 - `type`, `message`, optional `scheduled_for`.
@@ -61,5 +75,4 @@ Only metadata lives in DynamoDB. File bytes live in private S3 and are never log
 - `activity_id`, `application_id`, `owner_user_id`.
 - `activity_type`, human-readable `summary`, string-valued structured `metadata`, `created_at`.
 
-Milestone 1 activity types are `APPLICATION_CREATED` and `STATUS_CHANGED`. Later child operations add explicit event types rather than rewriting existing entries. Ordinary application behavior can append activity but cannot edit or delete it.
-
+Activity types include application creation/status changes, follow-up completion/rescheduling, note mutations, and interview scheduling/updates/status changes. Ordinary application behavior can append activity but cannot edit or delete it.

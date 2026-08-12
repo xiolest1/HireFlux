@@ -10,7 +10,7 @@ No AWS account, cloud resource, or real AWS credential is needed for the local s
 
 ## Current milestone
 
-The public landing page launches a signed, 24-hour demo workspace with its own owner identity and five fictional applications. Each visitor can view, create, edit, transition, archive, restore, and reset data without seeing or changing another visitor's workspace. DynamoDB TTL marks temporary records for cleanup.
+The public landing page launches a signed, 24-hour demo workspace with its own owner identity and 16 realistic fictional applications. The protected workspace Home summarizes active pursuits, attention items, outcome rates, upcoming interviews, and recent work. Each visitor can manage applications, follow-ups, notes, interviews, analytics, and temporary preferences without seeing or changing another visitor's workspace. DynamoDB TTL marks every temporary record for cleanup.
 
 Deferred work is tracked in [docs/roadmap.md](docs/roadmap.md). Cognito is reserved for future persistent personal accounts; it is not required for the frictionless recruiter demo.
 
@@ -45,6 +45,21 @@ npm --prefix frontend ci
 
 docker compose up -d dynamodb-local
 backend\.venv\Scripts\python.exe backend\scripts\init_local_table.py
+```
+
+Milestone 2 adds a third DynamoDB index. If the initializer reports schema drift from an older local table, explicitly rebuild only the disposable local table, then rerun the initializer:
+
+```bat
+backend\.venv\Scripts\python.exe backend\scripts\reset_local_table.py --confirm-table HireFluxLocal
+backend\.venv\Scripts\python.exe backend\scripts\init_local_table.py
+```
+
+The reset permanently removes the current local table records before recreating the schema. Both scripts fail closed unless the environment is local, the endpoint is loopback-only, and the credentials are visibly fake. Never point either command at a deployed table.
+
+If an existing local table already has the Milestone 2 schema but needs its derived counters or schedule projections repaired, run the idempotent local reconciliation command:
+
+```bat
+backend\.venv\Scripts\python.exe backend\scripts\reconcile_local_projections.py --confirm-table HireFluxLocal
 ```
 
 The values in `.env.example` are fake credential-shaped strings required by the AWS SDK when talking to DynamoDB Local. Never replace them with real credentials for local development, and never commit `.env`.
@@ -113,6 +128,7 @@ The root `.env.example` documents every local setting. Important invariants:
 - [Environment and deployment plan](docs/deployment-environments.md)
 - [Development log](docs/devlog.md)
 - [Domain model](docs/domain-model.md)
+- [Dashboard and analytics contract](docs/dashboard-and-analytics.md)
 - [DynamoDB access patterns](docs/dynamodb-access-patterns.md)
 - [Status transitions](docs/status-transitions.md)
 - [Roadmap](docs/roadmap.md)

@@ -2,7 +2,13 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
-from hireflux_backend.domain.enums import ActivityType, ApplicationStatus, UserRole, WorkMode
+from hireflux_backend.domain.enums import (
+    ActivityType,
+    ApplicationSource,
+    ApplicationStatus,
+    UserRole,
+    WorkMode,
+)
 from hireflux_backend.domain.models import Activity, Application, UserProfile
 from hireflux_backend.domain.status_policy import allowed_transitions
 
@@ -20,7 +26,8 @@ class ApplicationCreateRequest(RequestModel):
     job_url: HttpUrl | None = Field(default=None, max_length=2048)
     location: str | None = Field(default=None, min_length=1, max_length=160)
     work_mode: WorkMode | None = None
-    source: str | None = Field(default=None, min_length=1, max_length=120)
+    source: ApplicationSource | None = None
+    source_detail: str | None = Field(default=None, min_length=1, max_length=120)
     salary_text: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = Field(default=None, min_length=1, max_length=5_000)
 
@@ -34,7 +41,8 @@ class ApplicationUpdateRequest(RequestModel):
     job_url: HttpUrl | None = Field(default=None, max_length=2048)
     location: str | None = Field(default=None, min_length=1, max_length=160)
     work_mode: WorkMode | None = None
-    source: str | None = Field(default=None, min_length=1, max_length=120)
+    source: ApplicationSource | None = None
+    source_detail: str | None = Field(default=None, min_length=1, max_length=120)
     salary_text: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = Field(default=None, min_length=1, max_length=5_000)
 
@@ -50,6 +58,15 @@ class ApplicationStatusRequest(RequestModel):
     status: ApplicationStatus
     expected_version: int = Field(ge=1)
     applied_date: date | None = None
+
+
+class FollowUpCompleteRequest(RequestModel):
+    expected_version: int = Field(ge=1)
+
+
+class FollowUpRescheduleRequest(RequestModel):
+    expected_version: int = Field(ge=1)
+    follow_up_date: date
 
 
 class UserResponse(BaseModel):
@@ -83,12 +100,20 @@ class ApplicationResponse(BaseModel):
     job_url: str | None
     location: str | None
     work_mode: WorkMode | None
-    source: str | None
+    source: ApplicationSource | None
+    source_detail: str | None
     salary_text: str | None
     description: str | None
     created_at: datetime
     updated_at: datetime
     version: int
+    submitted_at: datetime | None
+    stage_entered_at: datetime | None
+    first_response_at: datetime | None
+    first_screening_at: datetime | None
+    first_interview_at: datetime | None
+    first_offer_at: datetime | None
+    first_acceptance_at: datetime | None
     allowed_transitions: list[ApplicationStatus]
 
     @classmethod
@@ -105,11 +130,19 @@ class ApplicationResponse(BaseModel):
             location=application.location,
             work_mode=application.work_mode,
             source=application.source,
+            source_detail=application.source_detail,
             salary_text=application.salary_text,
             description=application.description,
             created_at=application.created_at,
             updated_at=application.updated_at,
             version=application.version,
+            submitted_at=application.submitted_at,
+            stage_entered_at=application.stage_entered_at,
+            first_response_at=application.first_response_at,
+            first_screening_at=application.first_screening_at,
+            first_interview_at=application.first_interview_at,
+            first_offer_at=application.first_offer_at,
+            first_acceptance_at=application.first_acceptance_at,
             allowed_transitions=list(allowed_transitions(application)),
         )
 

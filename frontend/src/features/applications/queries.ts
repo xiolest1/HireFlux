@@ -3,6 +3,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from "@tanstack/react-query";
 import {
   createApplication,
@@ -13,6 +14,7 @@ import {
   transitionApplication,
   updateApplication,
   type CreateApplicationRequest,
+  type ApplicationListFilters,
   type TransitionApplicationRequest,
   type UpdateApplicationRequest,
 } from "../../api/applications";
@@ -21,14 +23,19 @@ import type { ApplicationStatus } from "../../api/schemas";
 export const applicationKeys = {
   all: ["applications"] as const,
   lists: () => [...applicationKeys.all, "list"] as const,
-  list: (status: ApplicationStatus | null, limit = 20) =>
-    [...applicationKeys.lists(), { status, limit }] as const,
+  list: (status: ApplicationStatus | null, limit = 20, filters: ApplicationListFilters = {}) =>
+    [...applicationKeys.lists(), { status, limit, ...filters }] as const,
   details: () => [...applicationKeys.all, "detail"] as const,
   detail: (applicationId: string) =>
     [...applicationKeys.details(), applicationId] as const,
   activity: (applicationId: string) =>
     [...applicationKeys.detail(applicationId), "activity"] as const,
 };
+
+function invalidateWorkspaceInsights(queryClient: QueryClient) {
+  void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+  void queryClient.invalidateQueries({ queryKey: ["analytics"] });
+}
 
 export function useMe() {
   return useQuery({
@@ -40,11 +47,12 @@ export function useMe() {
 export function useApplications(
   status: ApplicationStatus | null = null,
   limit = 20,
+  filters: ApplicationListFilters = {},
 ) {
   return useInfiniteQuery({
-    queryKey: applicationKeys.list(status, limit),
+    queryKey: applicationKeys.list(status, limit, filters),
     queryFn: ({ pageParam, signal }) =>
-      listApplications(pageParam, signal, limit, status ?? undefined),
+      listApplications(pageParam, signal, limit, status ?? undefined, filters),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.next_cursor,
   });
@@ -77,6 +85,7 @@ export function useCreateApplication() {
         application,
       );
       void queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+      invalidateWorkspaceInsights(queryClient);
     },
   });
 }
@@ -97,6 +106,10 @@ export function useUpdateApplication() {
         application,
       );
       void queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: applicationKeys.activity(application.application_id),
+      });
+      invalidateWorkspaceInsights(queryClient);
     },
   });
 }
@@ -120,6 +133,7 @@ export function useTransitionApplication() {
       void queryClient.invalidateQueries({
         queryKey: applicationKeys.activity(application.application_id),
       });
+      invalidateWorkspaceInsights(queryClient);
     },
   });
 }

@@ -89,6 +89,10 @@
     background-color: rgb(15 23 42 / 0.8);
   }
 
+  .dark .bg-slate-50 {
+    background-color: #0f172a;
+  }
+
   .dark .bg-slate-100,
   .dark .bg-zinc-100 {
     background-color: #1e293b;

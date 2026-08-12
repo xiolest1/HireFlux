@@ -4,6 +4,11 @@ import { describe, expect, it } from "vitest";
 import { API_ORIGIN, server } from "../test/server";
 import { makeApplication, makeActivity } from "../test/fixtures";
 import { renderApp } from "../test/renderApp";
+import { testSettings } from "../test/fixtures";
+import { preferredFollowUpDate } from "../features/applications/formSchema";
+
+const dashboardKey = ["dashboard", "30d"] as const;
+const analyticsKey = ["analytics", { range: "30d" }] as const;
 
 describe("application critical flow", () => {
   it("validates and creates an applied application without client-owned fields", async () => {
@@ -29,11 +34,13 @@ describe("application critical flow", () => {
       ),
     );
 
-    const { user } = renderApp();
+    const { user, queryClient } = renderApp();
+    queryClient.setQueryData(dashboardKey, { seeded: true });
+    queryClient.setQueryData(analyticsKey, { seeded: true });
     expect(await screen.findByRole("heading", { name: "Applications" })).toBeVisible();
 
     await user.click(screen.getByRole("link", { name: "New application" }));
-    await user.click(screen.getByRole("button", { name: "Create application" }));
+    await user.click(await screen.findByRole("button", { name: "Create application" }));
 
     expect(await screen.findByText("Company name is required.")).toBeVisible();
     expect(screen.getByText("Job title is required.")).toBeVisible();
@@ -62,11 +69,16 @@ describe("application critical flow", () => {
       job_title: "Product Engineer",
       status: "APPLIED",
       applied_date: "2026-08-09",
-      follow_up_date: null,
+      follow_up_date: preferredFollowUpDate({
+        defaultFollowUpDays: testSettings.default_follow_up_days,
+        timeZone: testSettings.time_zone,
+      }),
       work_mode: null,
     });
     expect(postedBody).not.toHaveProperty("owner_user_id");
     expect(postedBody).not.toHaveProperty("version");
+    expect(queryClient.getQueryState(dashboardKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(analyticsKey)?.isInvalidated).toBe(true);
   });
 
   it("edits details with the current version and never sends status", async () => {
@@ -90,9 +102,11 @@ describe("application critical flow", () => {
       ),
     );
 
-    const { user } = renderApp(
+    const { user, queryClient } = renderApp(
       "/applications/11111111-1111-4111-8111-111111111111/edit",
     );
+    queryClient.setQueryData(dashboardKey, { seeded: true });
+    queryClient.setQueryData(analyticsKey, { seeded: true });
     const companyInput = await screen.findByLabelText(/Company name/);
     await user.clear(companyInput);
     await user.type(companyInput, "Updated Company");
@@ -106,6 +120,8 @@ describe("application critical flow", () => {
     });
     expect(patchBody).not.toHaveProperty("status");
     expect(patchBody).not.toHaveProperty("owner_user_id");
+    expect(queryClient.getQueryState(dashboardKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(analyticsKey)?.isInvalidated).toBe(true);
   });
 
   it("warns before abandoning an edited form", async () => {

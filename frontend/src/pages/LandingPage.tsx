@@ -12,10 +12,13 @@ interface LandingLocationState {
 function locationState(value: unknown): LandingLocationState {
   if (!value || typeof value !== "object") return {};
   const state = value as Record<string, unknown>;
+  const candidatePath = typeof state.from === "string" ? state.from : undefined;
   const requestedPath =
-    typeof state.from === "string" &&
-    (state.from === "/applications" || state.from.startsWith("/applications/"))
-      ? state.from
+    candidatePath &&
+    ["/dashboard", "/applications", "/interviews", "/analytics", "/settings"].some(
+      (path) => candidatePath === path || candidatePath.startsWith(`${path}/`),
+    )
+      ? candidatePath
       : undefined;
   return {
     from: requestedPath,
@@ -34,12 +37,12 @@ export function LandingPage() {
 
   async function enterDemo() {
     if (status === "active") {
-      navigate(routeState.from ?? "/applications");
+      navigate(routeState.from ?? "/dashboard");
       return;
     }
     try {
       await start();
-      navigate(routeState.from ?? "/applications", { replace: true });
+      navigate(routeState.from ?? "/dashboard", { replace: true });
     } catch {
       return;
     }
@@ -193,7 +196,7 @@ export function LandingPage() {
           <div className="mx-auto grid max-w-6xl gap-px bg-slate-200 sm:grid-cols-3">
             {[
               ["Isolated by design", "Every visitor receives a separate temporary workspace."],
-              ["Ready to explore", "Five fictional opportunities arrive across realistic stages."],
+              ["Ready to explore", "Sixteen fictional opportunities arrive across realistic stages."],
               ["Safe to experiment", "Edit, archive, restore, or reset without affecting anyone else."],
             ].map(([title, description]) => (
               <div key={title} className="bg-white px-6 py-9 lg:px-8">

@@ -116,7 +116,7 @@ async def http_exception_handler(request: Request, error: Exception) -> JSONResp
 
 
 async def unexpected_exception_handler(request: Request, error: Exception) -> JSONResponse:
-    logger.exception(
+    logger.error(
         "Unhandled request error",
         extra={"request_id": _request_id(request), "error_type": type(error).__name__},
     )

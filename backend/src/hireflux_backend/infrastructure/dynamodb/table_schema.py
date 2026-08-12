@@ -9,6 +9,7 @@ from hireflux_backend.infrastructure.dynamodb.client import build_dynamodb_clien
 
 GSI1_NAME = "GSI1"
 GSI2_NAME = "GSI2"
+GSI3_NAME = "GSI3"
 TTL_ATTRIBUTE = "expires_at"
 
 
@@ -25,6 +26,37 @@ class TableSchemaMismatchError(RuntimeError):
     pass
 
 
+def reset_local_table(
+    settings: Settings,
+    *,
+    confirmation: str,
+    client: Any | None = None,
+) -> TableInitializationResult:
+    """Explicitly rebuild a disposable local table after a schema change."""
+    assert_safe_local_target(settings)
+    if confirmation != settings.dynamodb_table_name:
+        raise UnsafeTableTargetError(
+            "Table reset confirmation must exactly match DYNAMODB_TABLE_NAME."
+        )
+    dynamodb = client or build_dynamodb_client(settings)
+    try:
+        dynamodb.delete_table(TableName=settings.dynamodb_table_name)
+        dynamodb.get_waiter("table_not_exists").wait(
+            TableName=settings.dynamodb_table_name,
+            WaiterConfig={"Delay": 1, "MaxAttempts": 20},
+        )
+    except ClientError as error:
+        if _error_code(error) != "ResourceNotFoundException":
+            raise
+    dynamodb.create_table(**create_table_request(settings.dynamodb_table_name))
+    dynamodb.get_waiter("table_exists").wait(
+        TableName=settings.dynamodb_table_name,
+        WaiterConfig={"Delay": 1, "MaxAttempts": 20},
+    )
+    _ensure_ttl_enabled(dynamodb, settings.dynamodb_table_name)
+    return TableInitializationResult.CREATED
+
+
 def create_table_request(table_name: str) -> dict[str, Any]:
     return {
         "TableName": table_name,
@@ -36,6 +68,8 @@ def create_table_request(table_name: str) -> dict[str, Any]:
             {"AttributeName": "GSI1SK", "AttributeType": "S"},
             {"AttributeName": "GSI2PK", "AttributeType": "S"},
             {"AttributeName": "GSI2SK", "AttributeType": "S"},
+            {"AttributeName": "GSI3PK", "AttributeType": "S"},
+            {"AttributeName": "GSI3SK", "AttributeType": "S"},
         ],
         "KeySchema": [
             {"AttributeName": "PK", "KeyType": "HASH"},
@@ -58,6 +92,14 @@ def create_table_request(table_name: str) -> dict[str, Any]:
                 ],
                 "Projection": {"ProjectionType": "ALL"},
             },
+            {
+                "IndexName": GSI3_NAME,
+                "KeySchema": [
+                    {"AttributeName": "GSI3PK", "KeyType": "HASH"},
+                    {"AttributeName": "GSI3SK", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            },
         ],
     }
 
@@ -65,7 +107,7 @@ def create_table_request(table_name: str) -> dict[str, Any]:
 def initialize_local_table(
     settings: Settings, *, client: Any | None = None
 ) -> TableInitializationResult:
-    _assert_safe_local_target(settings)
+    assert_safe_local_target(settings)
     dynamodb = client or build_dynamodb_client(settings)
     response = _describe_with_startup_retry(dynamodb, settings.dynamodb_table_name)
     if response is not None:
@@ -155,7 +197,7 @@ def validate_table_schema(table: dict[str, Any]) -> None:
             problems.append(f"{name} key schema differs")
         if actual_index.get("Projection", {}).get("ProjectionType") != "ALL":
             problems.append(f"{name} projection must be ALL")
-    if set(actual_indexes) != {GSI1_NAME, GSI2_NAME}:
+    if set(actual_indexes) != {GSI1_NAME, GSI2_NAME, GSI3_NAME}:
         problems.append("unexpected global secondary indexes exist")
 
     if problems:
@@ -166,7 +208,7 @@ def validate_table_schema(table: dict[str, Any]) -> None:
         )
 
 
-def _assert_safe_local_target(settings: Settings) -> None:
+def assert_safe_local_target(settings: Settings) -> None:
     endpoint = settings.dynamodb_endpoint_url
     if settings.environment is not Environment.LOCAL:
         raise UnsafeTableTargetError("The local initializer requires ENVIRONMENT=local.")

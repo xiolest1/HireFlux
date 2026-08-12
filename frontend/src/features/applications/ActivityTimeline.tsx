@@ -10,7 +10,13 @@ function formatActivityType(value: string): string {
     .join(" ");
 }
 
-export function ActivityTimeline({ applicationId }: { applicationId: string }) {
+export function ActivityTimeline({
+  applicationId,
+  timeZone,
+}: {
+  applicationId: string;
+  timeZone: string;
+}) {
   const activityQuery = useApplicationActivity(applicationId);
 
   if (activityQuery.isPending) {
@@ -50,7 +56,7 @@ export function ActivityTimeline({ applicationId }: { applicationId: string }) {
             <span>{formatActivityType(activity.activity_type)}</span>
             <span aria-hidden="true">•</span>
             <time dateTime={activity.created_at}>
-              {formatTimestamp(activity.created_at)}
+              {formatTimestamp(activity.created_at, timeZone)}
             </time>
           </div>
         </li>

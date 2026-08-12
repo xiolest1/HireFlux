@@ -1,8 +1,8 @@
 import { http, HttpResponse } from "msw";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { API_ORIGIN, server } from "../test/server";
-import { makeApplication } from "../test/fixtures";
+import { makeApplication, testSettings } from "../test/fixtures";
 import { renderApp } from "../test/renderApp";
 
 describe("ApplicationListPage", () => {
@@ -25,15 +25,42 @@ describe("ApplicationListPage", () => {
     );
   });
 
+  it("shows card update timestamps in the saved workspace time zone", async () => {
+    const application = makeApplication({ updated_at: "2026-08-14T01:00:00Z" });
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, () =>
+        HttpResponse.json({ items: [application], next_cursor: null }),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/settings`, () =>
+        HttpResponse.json({ ...testSettings, time_zone: "America/Los_Angeles" }),
+      ),
+    );
+
+    renderApp();
+
+    expect(
+      await screen.findByText("Updated Aug 13, 2026, 6:00 PM"),
+    ).toBeVisible();
+  });
+
   it("binds requests to the selected status, including Archived", async () => {
     let requestedStatus: string | null = null;
+    let requestedView: string | null = null;
     server.use(
       http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
-        requestedStatus = new URL(request.url).searchParams.get("status");
+        const search = new URL(request.url).searchParams;
+        requestedStatus = search.get("status");
+        requestedView = search.get("view");
         return HttpResponse.json({
           items:
-            requestedStatus === "ARCHIVED"
-              ? [makeApplication({ status: "ARCHIVED", allowed_transitions: ["APPLIED"] })]
+            requestedStatus === "ARCHIVED" || requestedStatus === "REJECTED"
+              ? [
+                  makeApplication({
+                    status: requestedStatus,
+                    allowed_transitions:
+                      requestedStatus === "ARCHIVED" ? ["APPLIED"] : ["ARCHIVED"],
+                  }),
+                ]
               : [],
           next_cursor: null,
         });
@@ -47,6 +74,39 @@ describe("ApplicationListPage", () => {
 
     expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
     expect(requestedStatus).toBe("ARCHIVED");
+    expect(requestedView).toBe("ARCHIVED");
+
+    await user.selectOptions(screen.getByLabelText("Filter by status"), "REJECTED");
+
+    await waitFor(() => {
+      expect(requestedStatus).toBe("REJECTED");
+      expect(requestedView).toBe("ALL");
+    });
+  });
+
+  it("asks the server for the whole selected view without filtering the page locally", async () => {
+    let requestedView: string | null = null;
+    const archived = makeApplication({
+      status: "ARCHIVED",
+      allowed_transitions: ["APPLIED"],
+    });
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
+        requestedView = new URL(request.url).searchParams.get("view");
+        return HttpResponse.json({
+          items: requestedView === "ALL" ? [archived] : [],
+          next_cursor: null,
+        });
+      }),
+    );
+
+    const { user } = renderApp();
+    expect(await screen.findByText("No applications yet")).toBeVisible();
+
+    await user.selectOptions(screen.getByLabelText("Application view"), "ALL");
+
+    expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
+    expect(requestedView).toBe("ALL");
   });
 
   it("deduplicates an application repeated across cursor pages", async () => {

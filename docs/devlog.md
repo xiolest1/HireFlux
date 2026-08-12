@@ -382,17 +382,220 @@ Validation results:
   explicit rejected-to-offer correction. The existing upstream
   FastAPI/Starlette TestClient deprecation warning remains non-blocking.
 
+## Milestone 2 local workspace home and richer workflow - August 12, 2026
+
+### Objective and route flow
+
+Completed the local product milestone before beginning any AWS architecture or
+deployment work. The public `/` route remains a recruiter-facing landing page,
+while a newly created or reset 24-hour demo workspace now enters the protected
+`/dashboard` Home. Valid direct links to applications, interviews, analytics,
+and settings remain intact instead of being forced through Home.
+
+Home is organized around the four questions established during product
+planning:
+
+1. How many jobs am I pursuing?
+2. What needs my attention today?
+3. How successful has my search been?
+4. What should I do next?
+
+The resulting dashboard presents whole-workspace and active-pursuit counts, a
+prioritized action center, outcome rates with visible denominators, an
+eight-week submission trend, current-status context, upcoming interviews, and
+recent application movement. Follow-ups can be completed or rescheduled from
+the action itself, with version checks and activity history preserved.
+
+### Application workflow and server-owned list views
+
+Expanded the workflow to all nine current statuses: `DRAFT`, `APPLIED`,
+`SCREENING`, `INTERVIEW`, `OFFER`, `ACCEPTED`, `REJECTED`, `WITHDRAWN`, and
+`ARCHIVED`. The centralized transition policy remains authoritative, including
+the required `INTERVIEW -> OFFER` path, the forbidden `REJECTED -> INTERVIEW`
+path, exact-prior-status archive restoration, and the explicit
+`REJECTED -> OFFER` correction path.
+
+The application page now supports server-owned search, source and work-mode
+filters, current-status filtering, ascending or descending update order, and
+three explicit views:
+
+- `ACTIVE`: Applied, Screening, Interview, and Offer;
+- `ALL`: every status, including Archived;
+- `ARCHIVED`: archived records only.
+
+The API queries only authenticated-owner index partitions. Multi-status views
+fan out across the required GSI2 status partitions, merge within the bounded
+workspace quota, and paginate with a signed logical cursor bound to owner,
+view, explicit status, search, filters, and sort. This prevents the former
+client-side active filtering problem, where a page could appear empty while a
+matching record existed later. The React query cache includes the same filter
+scope and still deduplicates IDs across best-effort cursor pages.
+
+### Notes, interviews, and action history
+
+Added owner-scoped application notes with create, edit, and delete operations,
+and owner-scoped interviews with schedule, edit, complete, and cancel flows.
+Child resource IDs, ownership, versions, and timestamps remain server-owned.
+Application ownership is checked before child access, so another workspace sees
+the same `404` as it would for a missing parent.
+
+Scheduled interviews project into both the owner interview list and GSI3
+schedule. Completing or canceling one removes it from the scheduled projection
+transactionally. Follow-up completion, follow-up rescheduling, note mutations,
+and interview mutations append ordinary activity items instead of rewriting
+history. Upcoming interviews and due follow-ups are therefore actionable views
+over canonical owned records rather than browser-invented state.
+
+### Dashboard and analytics semantics
+
+Added server-owned historical milestones for submission, first response,
+screening, interview, offer, acceptance, and current-stage entry. Current status
+does not erase a previously reached milestone. Response, interview, offer, and
+acceptance rates use submitted applications as the denominator, expose both
+counts and rates, and return zero rather than dividing by an empty population.
+
+Analytics supports `30d`, `90d`, and `all` ranges plus current status, normalized
+source, and work-mode filters. Rates, trends, funnels, source performance, and
+work-mode comparisons use the submitted population inside the selected range.
+For finite ranges, summary, current-status distribution, and stage aging use
+in-range submitted records plus current drafts; all-time includes every current
+record. Source comparisons are visibly marked as small samples until at least
+three submitted applications are present. The page also reports average time to
+first response and submitted applications still awaiting a response, with an
+explicit statement that demo analytics are descriptive rather than predictive.
+
+### Saved workspace preferences and calendar behavior
+
+Added versioned, owner-scoped settings for a validated IANA time zone, default
+follow-up interval, default application view, default dashboard range, and
+theme. Settings carry the demo TTL and survive navigation within the isolated
+workspace. Header theme changes and the Settings page persist through the same
+authenticated API instead of relying only on browser-local state.
+
+Follow-ups are stored as ISO date-only calendar values. “Overdue” and “today”
+are evaluated against the current calendar date in the saved workspace time
+zone; rendering does not convert the date through UTC or shift it to an adjacent
+day. New-application defaults add the saved follow-up interval to the current
+date in that same zone. Interviews remain timezone-aware instants stored in UTC
+and are displayed in the selected workspace zone.
+
+### DynamoDB projections and local operations
+
+The table now has three sparse indexes. GSI1 carries non-archived applications
+and a separate owner-interview partition, GSI2 partitions applications by
+status, and GSI3 carries outstanding follow-ups plus scheduled interviews.
+Application/status transactions maintain nine status counters and one
+historical funnel counter alongside canonical metadata and activity. Dashboard
+counter reads use a strongly consistent owner-partition `Query` over the
+`COUNTER#` sort-key prefix; request paths still contain no `Scan`.
+
+Added a guarded, idempotent local reconciliation command. It refuses non-local
+targets and requires an exact table-name confirmation before its controlled
+maintenance scans. Rewriting applications and interviews through current
+serializers repairs their sparse index attributes, restores missing scheduled
+interview projections, removes stale schedule keys from completed/canceled
+interviews, and rebuilds status and funnel counters. A separate guarded local
+reset command supports intentional clean-room testing without making table
+creation or destructive maintenance an application-startup behavior.
+
+### Recruiter dataset, TTL, and security boundaries
+
+Expanded each new demo from five examples to 16 deterministic fictional
+applications covering every status, varied sources and work modes,
+overdue/today/upcoming follow-ups, notes, scheduled/completed/canceled
+interviews, historical milestones, and enough activity to demonstrate the
+dashboard and analytics honestly. Seeding continues through ordinary services
+and transactions instead of bypassing domain rules.
+
+Every temporary item type now carries the workspace's numeric `expires_at`,
+including settings, notes, interviews, counters, quota, applications,
+activities, and profile. Signed-token expiry remains the immediate authorization
+boundary because DynamoDB TTL cleanup is eventual. Ownership always comes from
+the verified identity; request bodies cannot choose owners, roles, IDs,
+timestamps, milestone fields, or general-edit status. CORS remains an explicit
+allowlist, deployed clients omit local endpoints and explicit credentials, and
+no passwords, uploads, real credentials, or private user data were introduced.
+
+### Frontend quality and validation handoff
+
+Implemented the protected Home, Analytics, Interviews, and Settings routes with
+centralized API calls and Zod validation. New and changed views include labeled
+controls, semantic sections and tables, visible keyboard focus, loading/empty/
+error states, retry paths, responsive layouts, screen-reader equivalents for
+visual trends, and text labels in addition to color. Mutations invalidate the
+relevant application, activity, schedule, dashboard, and analytics queries.
+
+At this documentation handoff, the suite collects 129 isolated backend tests
+and contains 31 frontend tests across eight files. Ruff lint/format, strict
+mypy, backend API/integration tests, frontend ESLint/TypeScript/Vitest, and the
+production build were exercised throughout the milestone, including ownership,
+TTL, cursor scope, view completeness, analytics denominators, projection
+reconciliation, optimistic conflicts, route flow, settings persistence, and
+accessible interactions. The final real-browser pass covered saved-time-zone
+timestamp rendering, date-only follow-ups, session-boundary cache isolation,
+responsive layouts, direct-route refreshes, and keyboard focus behavior. No
+AWS resources were created during Milestone 2.
+
+## Final Milestone 2 browser QA and session-isolation hardening - August 12, 2026
+
+Completed the final local release gate against the running Vite, FastAPI, and
+DynamoDB Local services. The browser pass covered 1440 x 900 desktop,
+768 x 1024 tablet, 390 x 844 mobile, and a 320-pixel narrow fallback. The
+dashboard, application list, application detail, analytics, interviews, and
+settings views remained contained without page-level horizontal overflow.
+Mobile navigation now uses five compact, accessible columns at supported phone
+widths and wraps below 360 pixels, so every primary destination remains visible
+without a horizontally scrolling menu. The compact `Apps` label retains the
+accessible name `Applications`, and tablet and desktop labels remain unchanged.
+
+The browser workflow exercised demo launch, all-status and archived views,
+direct protected-route refresh, unauthenticated deep-link redirection, notes,
+follow-up completion, status transitions, settings and theme persistence,
+analytics filters, application creation, and reset. Modal QA confirmed an
+`alertdialog` with an explicit label and description, safe initial focus, and
+focus restoration to the reset trigger. Automated keyboard tests additionally
+cover Tab and Shift+Tab containment, Escape dismissal, unsaved-change dialogs,
+and focus restoration. The final dashboard refresh produced no browser console
+warnings or errors.
+
+The pass found and resolved three release-significant issues:
+
+- Timestamp formatting outside Home had used the browser time zone instead of
+  the saved workspace time zone. Global interviews, application cards, detail
+  headers, activity, notes, nested interviews, and workspace expiry now all
+  require and use the selected zone. Date-only follow-ups remain calendar-safe.
+- The mobile primary navigation exposed a horizontal scrollbar and initially
+  left `Settings` off-canvas. Its responsive grid now fits all destinations at
+  390 pixels and wraps cleanly at 320 pixels while preserving 44-pixel targets.
+- Replacing a demo identity could briefly render TanStack Query data from the
+  prior workspace. Launch, reset, and exit now synchronously clear the query
+  cache at the identity boundary. Protected routes unmount behind a neutral
+  preparation state while a replacement session is issued, and only remount
+  after the new token is active. A live 17-record-to-reset reproduction proved
+  that the old total disappears during the transition and the new isolated
+  workspace returns with exactly 16 applications and two drafts.
+
+Final validation used Python 3.14.7. Ruff lint and format checks passed across
+59 backend files, strict mypy passed across 43 source files, and Pytest passed
+129 tests. Frontend ESLint and TypeScript checks passed, Vitest passed 31 tests
+across eight files, and the production Vite build passed with route-level code
+splitting. `pip check` and `git diff --check` passed. The Python dependency
+audit reported no known vulnerabilities, and the npm production audit reported
+zero vulnerabilities. The only remaining warning is the existing upstream
+FastAPI/Starlette TestClient deprecation notice. DynamoDB Local, the backend,
+and the frontend remained healthy, and the handoff browser was left on a clean
+16-record dashboard at `http://localhost:5173/dashboard`.
+
 ## Next recommended work
 
-Build and manually validate the AWS staging foundation described above. After
-staging is stable, add CI/CD or resume Milestone 2 product work, which includes:
+Freeze and commit the validated local Milestone 2 baseline, then build and
+manually validate the cost-bounded AWS staging foundation described in the
+roadmap: TypeScript CDK, Python 3.14
+Lambda/Mangum, HTTP API, a separate DynamoDB table, secret-backed signing keys,
+CloudWatch safeguards, and an Amplify staging branch with explicit CORS,
+asset-aware SPA routing, security headers, throttling, constrained concurrency,
+and budget alerts.
 
-- owner-scoped notes and interviews;
-- dashboard status-count projections and an idempotent backfill;
-- upcoming follow-ups and interviews;
-- richer activity history;
-- bounded search, sorting, and filtering;
-- profile/settings UI.
-
-Cognito, private attachments, email, and reminders remain deliberately deferred
-to their later roadmap milestones.
+Automated OIDC-based CI/CD should follow only after the staging stack is stable
+under manual smoke testing. Cognito accounts, private attachments, email, and
+real reminder delivery remain deliberately deferred to their later milestones.

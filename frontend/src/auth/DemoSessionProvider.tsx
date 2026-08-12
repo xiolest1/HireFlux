@@ -38,8 +38,11 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const createAndActivate = useCallback(async () => {
     setIsCreating(true);
     setError(null);
+    queryClient.clear();
     try {
       const session = await createDemoSession();
+      // Nothing from the prior identity may survive until the replacement
+      // token becomes observable by protected queries.
       queryClient.clear();
       saveDemoSession(session);
       setState({ session, status: "active" });
@@ -53,8 +56,9 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const exit = useCallback(() => {
+    queryClient.clear();
     clearDemoSession("cleared");
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     function handleSessionEvent(event: Event) {
