@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { API_ORIGIN, server } from "../test/server";
 import { makeApplication, makeActivity } from "../test/fixtures";
@@ -119,12 +119,23 @@ describe("application critical flow", () => {
     );
     const companyInput = await screen.findByLabelText(/Company name/);
     await user.type(companyInput, " changed");
-    await user.click(screen.getByRole("link", { name: /Back to application/ }));
+    const backLink = screen.getByRole("link", { name: /Back to application/ });
+    await user.click(backLink);
 
     expect(
       screen.getByRole("alertdialog", { name: "Leave without saving?" }),
     ).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+    const keepEditing = screen.getByRole("button", { name: "Keep editing" });
+    const leavePage = screen.getByRole("button", { name: "Leave page" });
+    await waitFor(() => expect(keepEditing).toHaveFocus());
+    await user.tab();
+    expect(leavePage).toHaveFocus();
+    await user.tab();
+    expect(keepEditing).toHaveFocus();
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("alertdialog", { name: "Leave without saving?" })).toBeNull();
+    expect(backLink).toHaveFocus();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeVisible();
   });
 });

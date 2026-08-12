@@ -49,7 +49,7 @@ export function LandingPage() {
     routeState.reason === "expired" || status === "expired"
       ? "Your previous demo workspace expired. Start a fresh one to keep exploring."
       : routeState.reason === "required"
-        ? "Start a demo workspace to explore that page."
+        ? "Start a demo workspace to explore the page."
         : null;
 
   return (

@@ -4,6 +4,7 @@ import { useDemoSession } from "../auth/demoSessionContext";
 import { useMe } from "../features/applications/queries";
 import { Button } from "./ui/Button";
 import { ThemeToggle } from "./ui/ThemeToggle";
+import { useModalFocus } from "./ui/useModalFocus";
 
 function navClassName({ isActive }: { isActive: boolean }): string {
   return `inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold transition-colors ${
@@ -46,12 +47,21 @@ export function AppLayout() {
   const meQuery = useMe();
   const { session, reset, exit, isCreating, error } = useDemoSession();
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const resetTriggerRef = useRef<HTMLButtonElement>(null);
+  const resetDialogRef = useRef<HTMLElement>(null);
   const resetButtonRef = useRef<HTMLButtonElement>(null);
   const expiry = useExpiryLabel(session?.expires_at);
 
-  useEffect(() => {
-    if (confirmingReset) resetButtonRef.current?.focus();
-  }, [confirmingReset]);
+  function closeResetDialog() {
+    if (!isCreating) setConfirmingReset(false);
+  }
+
+  useModalFocus({
+    isOpen: confirmingReset,
+    containerRef: resetDialogRef,
+    initialFocusRef: resetButtonRef,
+    onClose: closeResetDialog,
+  });
 
   async function resetWorkspace() {
     try {
@@ -134,6 +144,7 @@ export function AppLayout() {
               </div>
             )}
             <button
+              ref={resetTriggerRef}
               type="button"
               aria-label="Reset demo"
               className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -164,12 +175,12 @@ export function AppLayout() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
           role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !isCreating) {
-              setConfirmingReset(false);
-            }
+            if (event.target === event.currentTarget) closeResetDialog();
           }}
         >
           <section
+            ref={resetDialogRef}
+            tabIndex={-1}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="reset-demo-title"
@@ -197,7 +208,7 @@ export function AppLayout() {
               <Button
                 variant="secondary"
                 disabled={isCreating}
-                onClick={() => setConfirmingReset(false)}
+                onClick={closeResetDialog}
               >
                 Cancel
               </Button>

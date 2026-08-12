@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { getDemoSession } from "../auth/sessionStore";
@@ -21,7 +21,7 @@ describe("demo workspace flow", () => {
       }),
     ).toBeVisible();
     expect(
-      screen.getByText("Start a demo workspace to explore that page."),
+      screen.getByText("Start a demo workspace to explore the page."),
     ).toBeVisible();
   });
 
@@ -60,5 +60,25 @@ describe("demo workspace flow", () => {
 
     expect(await screen.findByText("Demo workspace reset.")).toBeVisible();
     expect(getDemoSession()?.access_token).toBe(issuedSession.access_token);
+  });
+
+  it("contains focus in the reset dialog and restores it when closed", async () => {
+    const { user } = renderApp();
+    expect(await screen.findByRole("heading", { name: "Applications" })).toBeVisible();
+
+    const resetTrigger = screen.getByRole("button", { name: "Reset demo" });
+    await user.click(resetTrigger);
+    const resetWorkspace = screen.getByRole("button", { name: "Reset workspace" });
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+
+    await waitFor(() => expect(resetWorkspace).toHaveFocus());
+    await user.tab();
+    expect(cancel).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(resetWorkspace).toHaveFocus();
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("alertdialog", { name: "Reset this demo?" })).toBeNull();
+    expect(resetTrigger).toHaveFocus();
   });
 });

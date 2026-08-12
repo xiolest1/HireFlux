@@ -26,7 +26,7 @@ The target recruiter-demo architecture is Amplify Hosting, API Gateway HTTP API,
 ## Prerequisites
 
 - Node.js 22 LTS and npm 10 or newer.
-- Python 3.13.
+- Python 3.13 or 3.14.
 - Docker Desktop with Linux containers enabled.
 - Git.
 
@@ -37,7 +37,7 @@ Run these commands from the repository root:
 ```bat
 copy .env.example .env
 
-py -3.13 -m venv backend\.venv
+python -m venv backend\.venv
 backend\.venv\Scripts\python.exe -m pip install --upgrade pip
 backend\.venv\Scripts\python.exe -m pip install -e ".\backend[dev]"
 

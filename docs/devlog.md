@@ -254,11 +254,111 @@ Completion results:
 - Live DynamoDB Local smoke testing returned five seeded statuses and a cross-workspace `404`.
 - The local root page, direct application-route fallback, and social image returned `200`.
 
+## Post-implementation QA and Python 3.14 support - August 12, 2026
+
+Completed responsive browser QA at 1440 x 900 desktop, 768 x 1024 tablet, and
+390 x 844 mobile viewports. The landing page, application list, detail page,
+create form, reset dialog, and direct-route refresh behavior rendered without
+horizontal overflow or browser console errors.
+
+Keyboard QA identified two modal focus gaps: the unsaved-changes dialog did not
+move focus inside when opened, and the reset dialog did not restore focus to its
+trigger when closed. Both dialogs now share focus management that:
+
+- moves focus to a safe initial action;
+- traps Tab and Shift+Tab within the open dialog;
+- supports Escape-to-close;
+- restores focus to the invoking control when the dialog closes.
+
+Python support now covers 3.13 and 3.14 through the declared range
+`>=3.13,<3.15`, with both versions listed in package metadata. A fresh isolated
+Python 3.14.7 environment successfully installed every pinned runtime and
+development dependency.
+
+Validation results:
+
+- Ruff lint and format checks passed across 40 backend files on Python 3.14.7.
+- Strict mypy passed across 31 backend source files on Python 3.14.7.
+- Pytest passed: 67 tests on Python 3.14.7; the existing upstream
+  FastAPI/Starlette TestClient deprecation warning remains non-blocking.
+- Frontend ESLint and TypeScript checks passed.
+- Vitest passed: 19 tests across 7 files, including modal focus containment,
+  Escape handling, and focus restoration regressions.
+- The Vite production build passed.
+
+## Release-readiness audit and staging decision - August 12, 2026
+
+Completed a broader release-readiness audit after adding Python 3.14 support.
+The local application baseline is healthy and ready for the staging
+infrastructure milestone; no AWS resources were created during this audit.
+
+### Full validation
+
+- Python 3.14.7 passed Ruff lint and formatting, strict mypy, all 67 backend
+  tests, and `pip check`. A separate dependency audit reported no known
+  vulnerabilities in the published packages; the local HireFlux package was
+  skipped because it is not published on PyPI.
+- Frontend ESLint, TypeScript, all 19 Vitest tests across 7 files, and the Vite
+  production build passed. `npm audit` reported zero vulnerabilities.
+- DynamoDB Local was validated against `amazon/dynamodb-local:3.3.0`. Running
+  the initializer twice returned `already_valid`; the table remained active
+  with on-demand billing, the expected primary key and two GSIs, and enabled
+  TTL on `expires_at`.
+- A 23-check live API flow passed, covering demo-session creation,
+  authentication, pagination, cursor ownership, application creation and
+  editing, stale-version conflicts, status transitions, activity history,
+  archive and exact restore behavior, ownership isolation, request validation,
+  CORS, and request IDs.
+- The FastAPI service also launched successfully under Python 3.14.7 and passed
+  health, session, profile, and seeded-application checks before shutting down
+  cleanly.
+- Browser QA passed at 1440 x 900 desktop, 768 x 1024 tablet, and 390 x 844
+  mobile sizes. Create, edit, archive, restore, and `INTERVIEW -> OFFER` flows
+  worked through the real UI without overflow or browser console errors.
+- Keyboard-only modal focus, Escape handling, focus restoration, theme
+  persistence, protected-route redirects, detail-page refresh, and unknown-route
+  refresh all passed.
+- Staging configuration correctly rejected local authentication, loopback
+  DynamoDB endpoints, and wildcard CORS. The repository scan found no normal
+  request-path DynamoDB scans, tracked private `.env` files, or likely committed
+  secrets.
+
+### Remaining staging prerequisites and outliers
+
+- Commit the current application and QA baseline before beginning
+  infrastructure work.
+- Recreate the main `backend/.venv`, which still uses Python 3.12, with the
+  installed Python 3.14 runtime. The isolated Python 3.14 validation environment
+  proves compatibility but does not replace the main development environment.
+- Add a reproducible Python transitive dependency lock file.
+- Replace raw exception traceback logging in the API error handler with safe,
+  structured logging before enabling centralized production logs.
+- Add the Lambda/Mangum entry point and infrastructure code; neither exists yet.
+- Configure an asset-aware Amplify SPA rewrite so application routes fall back
+  to `index.html` while missing static assets remain `404`, and add deployment
+  security headers.
+- Add staging observability and safeguards: structured CloudWatch logs, finite
+  retention, alarms, API throttling, modest Lambda reserved concurrency, a
+  readiness check or synthetic canary, and budget alerts.
+- The remaining FastAPI/Starlette TestClient deprecation warning is
+  non-blocking. Major ESLint 10 and TypeScript 7 upgrades should be handled as
+  separate compatibility work rather than folded into deployment.
+
+### Milestone sequencing decision
+
+The local functional baseline now satisfies the prerequisite for AWS work. For
+a recruiter-accessible demo, the next milestone is a cost-bounded staging stack,
+implemented as TypeScript CDK: Python 3.14 Lambda and Mangum, HTTP API, DynamoDB,
+Secrets Manager, CloudWatch, and an Amplify staging branch with explicit CORS,
+SPA routing, security headers, and budget controls. Staging should be deployed
+and manually smoke-tested before adding automated OIDC-based CI/CD. Cognito,
+private attachments, email, and reminders remain out of scope for this staging
+foundation.
+
 ## Next recommended work
 
-Before Milestone 2, install/use Python 3.13 and rerun the documented backend validation with a fresh virtual environment.
-
-Milestone 2 then adds:
+Build and manually validate the AWS staging foundation described above. After
+staging is stable, add CI/CD or resume Milestone 2 product work, which includes:
 
 - owner-scoped notes and interviews;
 - dashboard status-count projections and an idempotent backfill;
@@ -267,4 +367,5 @@ Milestone 2 then adds:
 - bounded search, sorting, and filtering;
 - profile/settings UI.
 
-AWS provisioning, Cognito, private attachments, reminders, and CI/CD remain deliberately deferred to their roadmap milestones.
+Cognito, private attachments, email, and reminders remain deliberately deferred
+to their later roadmap milestones.

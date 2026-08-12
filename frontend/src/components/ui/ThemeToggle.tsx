@@ -14,14 +14,12 @@ function storedTheme(): ColorTheme | null {
 }
 
 function preferredTheme(): ColorTheme {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "dark";
 
   const stored = storedTheme();
   if (stored) return stored;
 
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return "dark";
 }
 
 function applyTheme(theme: ColorTheme) {

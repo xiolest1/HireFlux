@@ -6,6 +6,7 @@ import type { Application } from "../../api/schemas";
 import { Button } from "../../components/ui/Button";
 import { buttonClassName } from "../../components/ui/buttonStyles";
 import { ErrorPanel } from "../../components/ui/Feedback";
+import { useModalFocus } from "../../components/ui/useModalFocus";
 import {
   applicationFormDefaults,
   applicationFormSchema,
@@ -41,6 +42,8 @@ export function ApplicationForm({
   onSubmit,
 }: ApplicationFormProps) {
   const errorSummaryRef = useRef<HTMLDivElement>(null);
+  const unsavedDialogRef = useRef<HTMLElement>(null);
+  const keepEditingButtonRef = useRef<HTMLButtonElement>(null);
   const allowNavigationRef = useRef(false);
   const [allowNavigation, setAllowNavigation] = useState(false);
   const {
@@ -57,6 +60,17 @@ export function ApplicationForm({
   const blocker = useBlocker(
     () => isDirty && !isSubmitting && !allowNavigationRef.current,
   );
+
+  function keepEditing() {
+    if (blocker.state === "blocked") blocker.reset();
+  }
+
+  useModalFocus({
+    isOpen: blocker.state === "blocked",
+    containerRef: unsavedDialogRef,
+    initialFocusRef: keepEditingButtonRef,
+    onClose: keepEditing,
+  });
 
   useEffect(() => {
     if (!isDirty || allowNavigation) return;
@@ -92,6 +106,8 @@ export function ApplicationForm({
           role="presentation"
         >
           <section
+            ref={unsavedDialogRef}
+            tabIndex={-1}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="unsaved-title"
@@ -105,7 +121,11 @@ export function ApplicationForm({
               Your changes on this form will be lost.
             </p>
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <Button variant="secondary" onClick={() => blocker.reset()}>
+              <Button
+                ref={keepEditingButtonRef}
+                variant="secondary"
+                onClick={keepEditing}
+              >
                 Keep editing
               </Button>
               <Button variant="danger" onClick={() => blocker.proceed()}>

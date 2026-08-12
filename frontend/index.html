@@ -31,12 +31,9 @@
         try {
           storedTheme = window.localStorage.getItem("hireflux-color-theme");
         } catch {
-          // Continue with the visitor's system preference when storage is blocked.
+          // Continue with the default dark theme when storage is blocked.
         }
-        const useDarkTheme =
-          storedTheme === "dark" ||
-          (storedTheme !== "light" &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        const useDarkTheme = storedTheme !== "light";
         document.documentElement.classList.toggle("dark", useDarkTheme);
         document.documentElement.style.colorScheme = useDarkTheme
           ? "dark"
