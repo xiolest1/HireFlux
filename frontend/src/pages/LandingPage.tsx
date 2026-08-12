@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useDemoSession } from "../auth/demoSessionContext";
 import { Button } from "../components/ui/Button";
 import { ErrorPanel } from "../components/ui/Feedback";
+import { ThemeToggle } from "../components/ui/ThemeToggle";
 
 interface LandingLocationState {
   from?: string;
@@ -52,7 +53,7 @@ export function LandingPage() {
         : null;
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[#f7f8fa] text-slate-950">
+    <div className="min-h-screen overflow-hidden bg-[#f7f8fa] text-slate-950 dark:bg-slate-950 dark:text-slate-50">
       <a
         href="#landing-main"
         className="fixed left-4 top-4 z-50 -translate-y-24 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white focus:translate-y-0"
@@ -70,9 +71,12 @@ export function LandingPage() {
             </span>
             <span>HireFlux</span>
           </div>
-          <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-slate-600">
-            Recruiter demo
-          </span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-slate-600 sm:inline-flex">
+              Recruiter demo
+            </span>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

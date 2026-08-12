@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useDemoSession } from "../auth/demoSessionContext";
 import { useMe } from "../features/applications/queries";
 import { Button } from "./ui/Button";
+import { ThemeToggle } from "./ui/ThemeToggle";
 
 function navClassName({ isActive }: { isActive: boolean }): string {
   return `inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold transition-colors ${
@@ -102,6 +103,7 @@ export function AppLayout() {
           </nav>
 
           <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
+            <ThemeToggle />
             <span
               className={`hidden rounded-full border px-2.5 py-1 text-xs font-bold md:inline-flex ${
                 expiry.isExpiringSoon
@@ -133,10 +135,12 @@ export function AppLayout() {
             )}
             <button
               type="button"
+              aria-label="Reset demo"
               className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               onClick={() => setConfirmingReset(true)}
             >
-              Reset demo
+              <span className="sm:hidden">Reset</span>
+              <span className="hidden sm:inline">Reset demo</span>
             </button>
           </div>
         </div>

@@ -8,5 +8,8 @@ afterEach(() => {
   cleanup();
   server.resetHandlers();
   window.sessionStorage.clear();
+  window.localStorage.clear();
+  document.documentElement.classList.remove("dark");
+  document.documentElement.style.colorScheme = "";
 });
 afterAll(() => server.close());

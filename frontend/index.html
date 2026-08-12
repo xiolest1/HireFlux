@@ -25,6 +25,24 @@
     />
     <meta name="twitter:image" content="%VITE_PUBLIC_SITE_URL%/og.png" />
     <title>HireFlux · Recruiter Demo</title>
+    <script>
+      (() => {
+        let storedTheme = null;
+        try {
+          storedTheme = window.localStorage.getItem("hireflux-color-theme");
+        } catch {
+          // Continue with the visitor's system preference when storage is blocked.
+        }
+        const useDarkTheme =
+          storedTheme === "dark" ||
+          (storedTheme !== "light" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", useDarkTheme);
+        document.documentElement.style.colorScheme = useDarkTheme
+          ? "dark"
+          : "light";
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
