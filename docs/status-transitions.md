@@ -16,7 +16,7 @@ Status is never null. Creation starts in `DRAFT` or `APPLIED`; other initial sta
 | APPLIED | Forbidden | No-op | Allowed | Forbidden | Allowed | Allowed |
 | INTERVIEW | Forbidden | Forbidden | No-op | Allowed | Allowed | Allowed |
 | OFFER | Forbidden | Forbidden | Forbidden | No-op | Allowed | Allowed |
-| REJECTED | Forbidden | Forbidden | **Forbidden** | Forbidden | No-op | Allowed |
+| REJECTED | Forbidden | Forbidden | **Forbidden** | Allowed | No-op | Allowed |
 | ARCHIVED | Conditional restore | Conditional restore | Conditional restore | Conditional restore | Conditional restore | No-op |
 
 ## Implementation decisions
@@ -24,9 +24,9 @@ Status is never null. Creation starts in `DRAFT` or `APPLIED`; other initial sta
 - Archiving is reversible and replaces permanent deletion. When entering `ARCHIVED`, the application stores `archived_from_status`. Restore is allowed only to that exact prior status; this prevents archive/restore from bypassing the workflow.
 - Repeating the current status is an idempotent no-op: it creates no activity and does not increment the version.
 - `OFFER -> REJECTED` is allowed for a rescinded or declined offer because the current vocabulary has no separate declined state.
+- `REJECTED -> OFFER` is an explicit correction path for an application that was marked rejected by mistake or later resulted in an offer. It does not permit `REJECTED -> INTERVIEW`.
 - Backward movement such as `INTERVIEW -> APPLIED` is forbidden. A correction can use a future explicit administrative repair workflow rather than weakening ordinary transitions.
 - Moving a draft to `APPLIED` requires an `applied_date` in the transition request if the record does not already have one. The server does not silently invent the date.
 - Each successful change, including archive and restore, appends a human-readable activity item. The service produces its meaning; the repository handles atomic persistence.
 
 These choices are centralized and easy to revise. Tests enumerate the matrix so a policy change is intentional and visible.
-

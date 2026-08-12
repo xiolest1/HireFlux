@@ -35,7 +35,7 @@ _ALLOWED: dict[ApplicationStatus, frozenset[ApplicationStatus]] = {
         }
     ),
     ApplicationStatus.OFFER: frozenset({ApplicationStatus.REJECTED, ApplicationStatus.ARCHIVED}),
-    ApplicationStatus.REJECTED: frozenset({ApplicationStatus.ARCHIVED}),
+    ApplicationStatus.REJECTED: frozenset({ApplicationStatus.OFFER, ApplicationStatus.ARCHIVED}),
     ApplicationStatus.ARCHIVED: frozenset(),
 }
 

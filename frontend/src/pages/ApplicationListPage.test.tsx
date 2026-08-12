@@ -6,6 +6,25 @@ import { makeApplication } from "../test/fixtures";
 import { renderApp } from "../test/renderApp";
 
 describe("ApplicationListPage", () => {
+  it("provides a direct edit action on each application card", async () => {
+    const application = makeApplication();
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, () =>
+        HttpResponse.json({ items: [application], next_cursor: null }),
+      ),
+    );
+
+    renderApp();
+
+    const editLink = await screen.findByRole("link", {
+      name: "Edit Frontend Engineer application",
+    });
+    expect(editLink).toHaveAttribute(
+      "href",
+      `/applications/${application.application_id}`,
+    );
+  });
+
   it("binds requests to the selected status, including Archived", async () => {
     let requestedStatus: string | null = null;
     server.use(

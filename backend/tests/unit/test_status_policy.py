@@ -24,7 +24,7 @@ ALLOWED = {
         ApplicationStatus.ARCHIVED,
     },
     ApplicationStatus.OFFER: {ApplicationStatus.REJECTED, ApplicationStatus.ARCHIVED},
-    ApplicationStatus.REJECTED: {ApplicationStatus.ARCHIVED},
+    ApplicationStatus.REJECTED: {ApplicationStatus.OFFER, ApplicationStatus.ARCHIVED},
 }
 
 
@@ -75,6 +75,13 @@ def test_complete_transition_matrix(source: ApplicationStatus, target: Applicati
 def test_rejected_to_interview_is_explicitly_forbidden() -> None:
     with pytest.raises(StatusPolicyError, match="forbidden"):
         decide_transition(application(ApplicationStatus.REJECTED), ApplicationStatus.INTERVIEW)
+
+
+def test_rejected_can_be_corrected_to_offer() -> None:
+    decision = decide_transition(application(ApplicationStatus.REJECTED), ApplicationStatus.OFFER)
+
+    assert decision.changed is True
+    assert decision.status is ApplicationStatus.OFFER
 
 
 def test_draft_to_applied_requires_a_date() -> None:

@@ -42,9 +42,18 @@ export function ApplicationCard({ application }: { application: Application }) {
         </div>
       </dl>
 
-      <p className="mt-4 text-xs text-slate-500">
-        Updated {formatTimestamp(application.updated_at)}
-      </p>
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <p className="text-xs text-slate-500">
+          Updated {formatTimestamp(application.updated_at)}
+        </p>
+        <Link
+          to={`/applications/${application.application_id}`}
+          aria-label={`Edit ${application.job_title} application`}
+          className="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
+        >
+          Edit
+        </Link>
+      </div>
     </article>
   );
 }

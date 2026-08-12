@@ -355,6 +355,33 @@ and manually smoke-tested before adding automated OIDC-based CI/CD. Cognito,
 private attachments, email, and reminders remain out of scope for this staging
 foundation.
 
+## Application card and status workflow UX - August 12, 2026
+
+Improved the application-list workflow by adding a visible `Edit` action to
+each application card. The action opens that application's detail page rather
+than bypassing the overview and navigating directly into the details form. From
+the detail page, a visitor can review the full record, use the existing status
+control, or choose `Edit details`.
+
+Expanded the centralized status policy with an explicit `REJECTED -> OFFER`
+correction path for applications marked rejected by mistake or later resulting
+in an offer. The API remains authoritative for allowed transitions, status
+changes continue through the dedicated version-checked endpoint, and each
+successful correction is recorded in the activity timeline. The binding
+`REJECTED -> INTERVIEW` prohibition remains enforced.
+
+Validation results:
+
+- Frontend ESLint and TypeScript checks passed.
+- Vitest passed: 21 tests across 7 files, including card navigation and the
+  rejected-to-offer interaction.
+- The Vite production build passed.
+- Backend Ruff lint and formatting passed across 40 files.
+- Strict mypy passed across 31 backend source files.
+- Pytest passed: 68 tests, including the complete transition matrix and the
+  explicit rejected-to-offer correction. The existing upstream
+  FastAPI/Starlette TestClient deprecation warning remains non-blocking.
+
 ## Next recommended work
 
 Build and manually validate the AWS staging foundation described above. After
