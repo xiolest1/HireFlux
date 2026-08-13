@@ -71,6 +71,14 @@ describe("workspace milestone features", () => {
     expect(queryClient.getQueryState(analyticsKey)?.isInvalidated).toBe(true);
   });
 
+  it("persists and dismisses the recruiter guide within the demo session", async () => {
+    const { user } = renderApp("/dashboard");
+    expect(await screen.findByRole("heading", { name: "Three ways to explore HireFlux" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Dismiss recruiter tour" }));
+    expect(screen.queryByRole("heading", { name: "Three ways to explore HireFlux" })).not.toBeInTheDocument();
+    expect(window.sessionStorage.getItem("hireflux-recruiter-guide")).toContain('"dismissed":true');
+  });
+
   it("binds analytics filters to the API and labels small samples", async () => {
     let query = new URLSearchParams();
     server.use(
@@ -105,6 +113,43 @@ describe("workspace milestone features", () => {
     expect(query.get("source")).toBe("REFERRAL");
   });
 
+  it("stages analytics filters and keeps URL-backed sections", async () => {
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/analytics`, ({ request }) =>
+        HttpResponse.json({
+          range: new URL(request.url).searchParams.get("range") ?? "90d",
+          filters: { status: null, source: null, work_mode: null },
+          generated_at: "2026-08-12T13:00:00Z",
+          summary: testDashboard.summary,
+          rates: testDashboard.rates,
+          status_breakdown: testDashboard.status_breakdown,
+          submission_trend: testDashboard.submission_trend,
+          funnel: [{ stage: "SUBMITTED", count: 2, rate: 1 }],
+          stage_aging: [{ bucket: "0-7", count: 1 }],
+          source_performance: [{ source: "REFERRAL", submitted_count: 2, response_count: 1, response_rate: 0.5, interview_count: 1, interview_rate: 0.5, offer_count: 0, offer_rate: 0, sample_sufficient: false }],
+          work_mode_breakdown: [{ work_mode: "HYBRID", count: 2 }],
+          average_days_to_first_response: 3.5,
+          no_response_count: 1,
+          disclaimer: "This dataset is descriptive, not predictive.",
+        }),
+      ),
+    );
+    const { user, router } = renderApp("/analytics?range=90d");
+    expect(await screen.findByRole("heading", { name: "Outcome snapshot" })).toBeVisible();
+
+    await user.click(screen.getByRole("tab", { name: "Sources" }));
+    expect(await screen.findByRole("heading", { name: "Source performance" })).toBeVisible();
+    expect(router.state.location.search).toContain("section=sources");
+
+    await user.click(screen.getByRole("button", { name: "Filters" }));
+    await user.selectOptions(screen.getByLabelText("Source"), "REFERRAL");
+    expect(router.state.location.search).not.toContain("source=REFERRAL");
+    await user.click(screen.getByRole("button", { name: "Apply filters" }));
+
+    await waitFor(() => expect(router.state.location.search).toContain("source=REFERRAL"));
+    expect(screen.getByRole("button", { name: "Remove Source: Referral" })).toBeVisible();
+  });
+
   it("persists demo preferences with optimistic versioning", async () => {
     let body: Record<string, unknown> | null = null;
     server.use(
@@ -122,6 +167,20 @@ describe("workspace milestone features", () => {
     expect(await screen.findByText("Preferences saved for this demo workspace.")).toBeVisible();
     expect(body).toMatchObject({ expected_version: 1, default_dashboard_range: "90d", theme: "LIGHT" });
     expect(document.documentElement).not.toHaveClass("dark");
+  });
+
+  it("keeps settings URL sections distinct and saves only dirty preferences", async () => {
+    const { user, router } = renderApp("/settings");
+    const save = await screen.findByRole("button", { name: "Save preferences" });
+    expect(save).toBeDisabled();
+
+    await user.selectOptions(screen.getByLabelText("Default dashboard range"), "90d");
+    expect(save).toBeEnabled();
+
+    await user.click(screen.getByRole("link", { name: "Account preview" }));
+    expect(await screen.findByRole("heading", { name: "What a registered account could unlock" })).toBeVisible();
+    expect(router.state.location.search).toBe("?section=account");
+    expect(screen.queryByRole("button", { name: "Change password" })).not.toBeInTheDocument();
   });
 
   it("persists header theme changes into authenticated workspace settings", async () => {
@@ -164,6 +223,31 @@ describe("workspace milestone features", () => {
     expect(screen.getByRole("link", { name: "View application" })).toHaveAttribute("href", "/applications/11111111-1111-4111-8111-111111111111");
   });
 
+  it("groups upcoming interviews by the saved calendar day", async () => {
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+        HttpResponse.json({
+          items: [
+            makeInterview({ interview_id: "44444444-4444-4444-8444-444444444444" }),
+            makeInterview({
+              interview_id: "55555555-5555-4555-8555-555555555555",
+              job_title: "Design Systems Engineer",
+              scheduled_at: "2026-08-15T18:00:00Z",
+            }),
+          ],
+        }),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/settings`, () =>
+        HttpResponse.json({ ...testSettings, time_zone: "America/Los_Angeles" }),
+      ),
+    );
+
+    renderApp("/interviews");
+    expect(await screen.findByRole("heading", { name: /Friday, August 14/ })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /Saturday, August 15/ })).toBeVisible();
+    expect(screen.getAllByText("1 conversation", { selector: "p" })).toHaveLength(2);
+  });
+
   it("manages application notes and schedules interviews without client-owned fields", async () => {
     const application = makeApplication();
     const notes: Array<Record<string, unknown>> = [];
@@ -190,12 +274,15 @@ describe("workspace milestone features", () => {
 
     const { user } = renderApp(`/applications/${application.application_id}`);
     expect(await screen.findByRole("heading", { name: "Frontend Engineer" })).toBeVisible();
+    await user.click(screen.getByRole("tab", { name: "Notes" }));
+    await user.click(await screen.findByRole("button", { name: "Add note" }));
     await user.type(screen.getByLabelText("New note"), "Ask about the platform roadmap.");
-    await user.click(screen.getByRole("button", { name: "Add note" }));
+    await user.click(screen.getByRole("button", { name: "Save note" }));
     expect(await screen.findByText("Ask about the platform roadmap.")).toBeVisible();
     expect(noteBody).toEqual({ content: "Ask about the platform roadmap." });
 
-    await user.click(screen.getByRole("button", { name: "Schedule interview" }));
+    await user.click(screen.getByRole("tab", { name: "Interviews" }));
+    await user.click(await screen.findByRole("button", { name: "Schedule interview" }));
     await user.selectOptions(screen.getByLabelText("Interview type"), "FINAL");
     fireEvent.change(screen.getByLabelText(/Date and time/), { target: { value: "2026-08-20T10:00" } });
     await user.type(screen.getByLabelText(/Location/), "Video call");

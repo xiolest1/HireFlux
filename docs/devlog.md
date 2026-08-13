@@ -586,6 +586,81 @@ FastAPI/Starlette TestClient deprecation notice. DynamoDB Local, the backend,
 and the frontend remained healthy, and the handoff browser was left on a clean
 16-record dashboard at `http://localhost:5173/dashboard`.
 
+## Full frontend visual redesign - August 13, 2026
+
+Completed the dark-first HireFlux workspace redesign without changing backend
+routes, payloads, ownership rules, or status-transition policy. The visual
+foundation now uses semantic canvas, surface, border, text, accent, success,
+warning, and danger tokens; self-hosted variable Inter and Space Grotesk fonts;
+and one Lucide outline-icon system. Dark remains the first-run default, while
+explicit Light, Dark, and System preferences persist consistently. Shared
+surface, page-header, field, tab, drawer, dialog, menu, icon-button, skeleton,
+toast, and feedback primitives now provide consistent motion, focus, Escape,
+and focus-restoration behavior.
+
+The authenticated shell now provides a persistent collapsible desktop sidebar,
+contextual utility bar, mobile top bar, safe-area-aware bottom navigation, and a
+focused More sheet. Route changes restore scroll, announce the destination,
+focus the new page heading, and update the document title. Reset and exit retain
+their confirmation/session protections and also clear the session-only
+recruiter guide. The landing experience keeps the direct demo entry while
+adding a stronger product-proof narrative and an explicitly decorative,
+screen-reader-described workspace preview.
+
+Applications now use URL-backed Active, All, and Archived views plus a
+medium-screen card/list preference. Search remains submit-driven; status,
+source, work mode, and sort changes are staged in a responsive filter drawer
+until Apply, with result counts and removable filter chips after submission.
+Cards and the semantic desktop table expose location, work mode, urgency,
+timestamps, and a visible Manage route to the application overview. Narrow
+screens intentionally fall back to cards rather than squeezing the table.
+
+Application detail now exposes URL-backed Overview, Notes, Interviews, and
+Activity tabs, lazily requesting each resource only when selected and retaining
+React Query cache when revisited. The server-provided status policy remains the
+only source of allowed transitions; it is presented in a sticky desktop rail
+and a focused mobile/tablet sheet. Notes reveal their composer deliberately,
+interview editing uses a drawer/sheet with explicit cancellation confirmation,
+and create/edit forms keep essential fields open while optional fields collapse
+until requested, pre-populated, or invalid. Required fields are semantic,
+validation summaries link to invalid controls, and form actions remain visible
+in a sticky footer.
+
+Home now leads with a dismissible three-action recruiter tour, a linked metric
+strip, and a dominant action center grouped into Overdue, Today, and Upcoming.
+Successful status, note, and interview actions alone advance session-only guide
+progress. Analytics is divided into URL-backed Overview, Pipeline, and Sources
+sections with staged secondary filters, accessible week labels, responsive
+source cards, and a labeled desktop table. Interviews is organized around the
+saved workspace calendar, and Settings separates Preferences, Demo workspace,
+and Account preview while disabling Save until a real change exists and
+replacing unavailable production controls with explanatory capability content.
+Dashboard, analytics, and application filters retain previous data during
+refetches and reserve layout-matched skeletons for initial loading.
+
+The acceptance layer now includes JSX accessibility linting, twelve route and
+open-overlay axe component checks, and deterministic Playwright coverage against
+a production preview. Browser checks run at 320 x 720, 390 x 844, 768 x 1024,
+and 1280 x 900 with reduced motion. They exercise computed dark and light
+contrast, persisted theme choice, keyboard tabs, staged filters, drawer and
+status-sheet focus restoration, card/list fallback, lazy query caching,
+progressive form validation, route containment, and a desktop 200-percent zoom
+equivalent. Ten stable desktop visual baselines cover the landing page, Home
+shell, Applications, every application-detail tab, Interviews, Analytics, and
+Settings.
+
+Final validation passed ESLint, TypeScript, 58 Vitest tests across 11 files
+(including all twelve axe scenarios), the production Vite build, and 47
+Playwright checks with nine expected non-desktop skips for the desktop-only
+theme, tab-snapshot, and zoom duplicates. Every principal browser route had
+zero detected WCAG A/AA axe
+violations and no unintended page-level horizontal overflow at the four tested
+widths. Dedicated browser scenarios also verified layout-matched loading,
+explicit empty and failed-request/retry feedback, and containment of extreme
+long application content. A final live pass launched a fresh 16-record isolated workspace and
+verified the redesigned Home and Applications flows against the running local
+API. `git diff --check` and the npm production dependency audit also passed.
+
 ## Next recommended work
 
 Freeze and commit the validated local Milestone 2 baseline, then build and

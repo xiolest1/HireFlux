@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { API_ORIGIN, server } from "../test/server";
@@ -6,7 +6,23 @@ import { makeApplication, testSettings } from "../test/fixtures";
 import { renderApp } from "../test/renderApp";
 
 describe("ApplicationListPage", () => {
-  it("provides a direct edit action on each application card", async () => {
+  it("uses an accessible card-shaped skeleton for the initial load", async () => {
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, async () => {
+        await delay(300);
+        return HttpResponse.json({ items: [makeApplication()], next_cursor: null });
+      }),
+    );
+
+    renderApp();
+
+    expect(
+      await screen.findByRole("status", { name: "Loading applications…" }),
+    ).toBeVisible();
+    expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
+  });
+
+  it("provides a direct manage action on each application card", async () => {
     const application = makeApplication();
     server.use(
       http.get(`${API_ORIGIN}/api/v1/applications`, () =>
@@ -16,10 +32,10 @@ describe("ApplicationListPage", () => {
 
     renderApp();
 
-    const editLink = await screen.findByRole("link", {
-      name: "Edit Frontend Engineer application",
+    const manageLink = await screen.findByRole("link", {
+      name: "Manage Frontend Engineer application",
     });
-    expect(editLink).toHaveAttribute(
+    expect(manageLink).toHaveAttribute(
       "href",
       `/applications/${application.application_id}`,
     );
@@ -70,13 +86,18 @@ describe("ApplicationListPage", () => {
     const { user } = renderApp();
     expect(await screen.findByText("No applications yet")).toBeVisible();
 
+    await user.click(screen.getByRole("button", { name: "Filters" }));
     await user.selectOptions(screen.getByLabelText("Filter by status"), "ARCHIVED");
+    expect(requestedStatus).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Apply filters" }));
 
     expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
     expect(requestedStatus).toBe("ARCHIVED");
     expect(requestedView).toBe("ARCHIVED");
 
+    await user.click(screen.getByRole("button", { name: /Filters/ }));
     await user.selectOptions(screen.getByLabelText("Filter by status"), "REJECTED");
+    await user.click(screen.getByRole("button", { name: "Apply filters" }));
 
     await waitFor(() => {
       expect(requestedStatus).toBe("REJECTED");
@@ -103,7 +124,7 @@ describe("ApplicationListPage", () => {
     const { user } = renderApp();
     expect(await screen.findByText("No applications yet")).toBeVisible();
 
-    await user.selectOptions(screen.getByLabelText("Application view"), "ALL");
+    await user.click(screen.getByRole("button", { name: "All" }));
 
     expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
     expect(requestedView).toBe("ALL");
@@ -141,6 +162,38 @@ describe("ApplicationListPage", () => {
     expect(await screen.findByRole("link", { name: "Updated title" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Second role" })).toBeVisible();
     expect(screen.queryByRole("link", { name: "Original title" })).not.toBeInTheDocument();
-    expect(screen.getByText("2 applications loaded")).toBeVisible();
+    expect(
+      screen.getByText((_, element) => element?.textContent === "2 applications loaded"),
+    ).toBeVisible();
+  });
+
+  it("keeps layout choice in the URL and exposes a semantic desktop table", async () => {
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, () =>
+        HttpResponse.json({ items: [makeApplication()], next_cursor: null }),
+      ),
+    );
+
+    const { user, router } = renderApp();
+    expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "List view" }));
+
+    expect(router.state.location.search).toContain("layout=list");
+    expect(screen.getByRole("table", { name: "Applications in compact list view" })).toBeInTheDocument();
+  });
+
+  it("traps filter focus and restores it after Escape", async () => {
+    const { user } = renderApp();
+    expect(await screen.findByRole("heading", { name: "Applications" })).toBeVisible();
+    const trigger = screen.getByRole("button", { name: "Filters" });
+
+    await user.click(trigger);
+    expect(await screen.findByRole("dialog", { name: "Application filters" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Close panel" })).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Application filters" })).toBeNull();
+    expect(trigger).toHaveFocus();
   });
 });

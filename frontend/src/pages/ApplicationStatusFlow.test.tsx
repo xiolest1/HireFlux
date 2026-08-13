@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { API_ORIGIN, server } from "../test/server";
@@ -6,6 +6,80 @@ import { makeApplication } from "../test/fixtures";
 import { renderApp } from "../test/renderApp";
 
 describe("application status flow", () => {
+  it("uses accessible layout skeletons for the detail page and lazy resources", async () => {
+    const application = makeApplication();
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, async () => {
+        await delay(300);
+        return HttpResponse.json(application);
+      }),
+      http.get(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/notes`,
+        async () => {
+          await delay(300);
+          return HttpResponse.json({ items: [] });
+        },
+      ),
+    );
+
+    const { user } = renderApp(`/applications/${application.application_id}`);
+    expect(
+      await screen.findByRole("status", { name: "Loading application…" }),
+    ).toBeVisible();
+    expect(await screen.findByRole("heading", { name: application.job_title })).toBeVisible();
+
+    await user.click(screen.getByRole("tab", { name: "Notes" }));
+    expect(
+      await screen.findByRole("status", { name: "Loading notes…" }),
+    ).toBeVisible();
+    expect(await screen.findByText("No notes yet")).toBeVisible();
+  });
+
+  it("keeps detail tabs in the URL, supports arrow keys, and loads panels on demand", async () => {
+    const application = makeApplication();
+    let notesRequests = 0;
+    let interviewRequests = 0;
+    let activityRequests = 0;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
+        HttpResponse.json(application),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/notes`, () => {
+        notesRequests += 1;
+        return HttpResponse.json({ items: [] });
+      }),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/interviews`, () => {
+        interviewRequests += 1;
+        return HttpResponse.json({ items: [] });
+      }),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/activity`, () => {
+        activityRequests += 1;
+        return HttpResponse.json({ items: [] });
+      }),
+    );
+
+    const { user, router } = renderApp(
+      `/applications/${application.application_id}`,
+    );
+    expect(await screen.findByRole("heading", { name: "Frontend Engineer" })).toBeVisible();
+    expect(notesRequests).toBe(0);
+    expect(interviewRequests).toBe(0);
+    expect(activityRequests).toBe(0);
+
+    const notesTab = screen.getByRole("tab", { name: "Notes" });
+    await user.click(notesTab);
+    expect(await screen.findByText("No notes yet")).toBeVisible();
+    expect(notesRequests).toBe(1);
+    expect(router.state.location.search).toBe("?tab=notes");
+
+    await user.keyboard("{ArrowRight}");
+    expect(await screen.findByText("No interviews recorded")).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Interviews" })).toHaveFocus();
+    expect(interviewRequests).toBe(1);
+    expect(activityRequests).toBe(0);
+    expect(router.state.location.search).toBe("?tab=interviews");
+  });
+
   it("allows a rejected application to be corrected to Offer", async () => {
     const initial = makeApplication({
       status: "REJECTED",

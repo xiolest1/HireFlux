@@ -18,6 +18,8 @@ backend/.venv/
 # Node
 node_modules/
 frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
 coverage/
 *.tsbuildinfo
 
@@ -32,4 +34,3 @@ tmp/
 Thumbs.db
 .idea/
 .vscode/
-

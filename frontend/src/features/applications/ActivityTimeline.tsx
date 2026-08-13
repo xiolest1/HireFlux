@@ -1,4 +1,5 @@
-import { EmptyState, ErrorPanel, LoadingState } from "../../components/ui/Feedback";
+import { EmptyState, ErrorPanel } from "../../components/ui/Feedback";
+import { ResourcePanelSkeleton } from "./ApplicationSkeletons";
 import { formatTimestamp } from "./format";
 import { useApplicationActivity } from "./queries";
 
@@ -20,7 +21,7 @@ export function ActivityTimeline({
   const activityQuery = useApplicationActivity(applicationId);
 
   if (activityQuery.isPending) {
-    return <LoadingState label="Loading activity…" />;
+    return <ResourcePanelSkeleton label="Loading activity…" />;
   }
 
   if (activityQuery.isError) {
@@ -44,15 +45,15 @@ export function ActivityTimeline({
   }
 
   return (
-    <ol className="relative ml-2 border-l border-slate-200 pl-6">
+    <ol className="relative ml-2 border-l border-line pl-6">
       {activityQuery.data.items.map((activity) => (
         <li key={activity.activity_id} className="relative pb-6 last:pb-0">
           <span
             aria-hidden="true"
-            className="absolute -left-[1.81rem] top-1.5 size-3 rounded-full border-2 border-white bg-brand-600 ring-1 ring-brand-200"
+            className="absolute -left-[1.81rem] top-1.5 size-3 rounded-full border-2 border-surface bg-accent ring-1 ring-accent/30"
           />
-          <p className="text-sm font-semibold text-slate-900">{activity.summary}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+          <p className="text-sm font-semibold text-ink">{activity.summary}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
             <span>{formatActivityType(activity.activity_type)}</span>
             <span aria-hidden="true">•</span>
             <time dateTime={activity.created_at}>

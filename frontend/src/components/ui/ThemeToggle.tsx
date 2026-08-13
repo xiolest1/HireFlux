@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 import {
   applyTheme,
   preferredTheme,
+  storedThemePreference,
   THEME_EVENT,
   THEME_STORAGE_KEY,
   type ColorMode,
@@ -26,6 +28,19 @@ export function ThemeToggle({ disabled = false, onPreferenceChange }: ThemeToggl
     }
     window.addEventListener(THEME_EVENT, syncTheme);
     return () => window.removeEventListener(THEME_EVENT, syncTheme);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    function syncSystemTheme(event: MediaQueryListEvent) {
+      if (storedThemePreference() !== "system") return;
+      const next = event.matches ? "dark" : "light";
+      applyTheme(next);
+      setTheme(next);
+    }
+    media.addEventListener?.("change", syncSystemTheme);
+    return () => media.removeEventListener?.("change", syncSystemTheme);
   }, []);
 
   const isDark = theme === "dark";
@@ -57,31 +72,12 @@ export function ThemeToggle({ disabled = false, onPreferenceChange }: ThemeToggl
       disabled={disabled}
       aria-label={`Switch to ${nextTheme} mode`}
       title={`Switch to ${nextTheme} mode`}
-      className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950 disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-white"
+      className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink-muted shadow-sm transition-[color,background-color,border-color,transform] duration-200 hover:border-accent/60 hover:bg-surface-muted hover:text-ink active:scale-95 disabled:cursor-wait disabled:opacity-60"
     >
       {isDark ? (
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          className="size-5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        >
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" />
-        </svg>
+        <Sun aria-hidden="true" className="size-5" strokeWidth={1.8} />
       ) : (
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          className="size-5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        >
-          <path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1Z" />
-        </svg>
+        <Moon aria-hidden="true" className="size-5" strokeWidth={1.8} />
       )}
     </button>
   );

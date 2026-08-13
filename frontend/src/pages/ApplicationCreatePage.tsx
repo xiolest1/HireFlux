@@ -6,7 +6,9 @@ import {
 } from "../features/applications/formSchema";
 import { useCreateApplication } from "../features/applications/queries";
 import { useSettings } from "../features/resources/queries";
-import { LoadingState } from "../components/ui/Feedback";
+import { PageHeader } from "../components/ui/PageHeader";
+import { ChevronLeft } from "lucide-react";
+import { ApplicationFormSkeleton } from "../features/applications/ApplicationSkeletons";
 
 export function ApplicationCreatePage() {
   const navigate = useNavigate();
@@ -28,25 +30,24 @@ export function ApplicationCreatePage() {
   }
 
   if (settingsQuery.isPending) {
-    return <LoadingState label="Preparing application defaults…" />;
+    return <ApplicationFormSkeleton label="Preparing application defaults…" />;
   }
 
   return (
     <div className="mx-auto max-w-4xl">
       <Link
         to="/applications"
-        className="inline-flex min-h-11 items-center rounded-lg text-sm font-semibold text-brand-700 underline-offset-4 hover:underline"
+        className="inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-semibold text-accent underline-offset-4 hover:underline"
       >
-        ← Back to applications
+        <ChevronLeft aria-hidden="true" className="size-4" />
+        Back to applications
       </Link>
-      <div className="mb-8 mt-3">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-950">
-          Add an application
-        </h1>
-        <p className="mt-2 text-base leading-7 text-slate-600">
-          Start with the essentials. You can update details and status at any time.
-        </p>
-      </div>
+      <PageHeader
+        className="mb-8 mt-3"
+        eyebrow="New opportunity"
+        title="Add an application"
+        description="Start with the essentials. You can add optional context now or return to it later."
+      />
 
       <ApplicationForm
         mode="create"

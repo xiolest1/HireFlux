@@ -4,6 +4,7 @@ import { afterAll, afterEach, beforeAll } from "vitest";
 import { server } from "./server";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+beforeAll(() => document.documentElement.setAttribute("lang", "en"));
 afterEach(() => {
   cleanup();
   server.resetHandlers();

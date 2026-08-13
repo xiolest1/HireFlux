@@ -2,18 +2,18 @@ export type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "border-brand-600 bg-brand-600 text-white shadow-sm hover:border-brand-700 hover:bg-brand-700",
+    "border-accent bg-accent text-accent-contrast shadow-sm hover:border-accent-strong hover:bg-accent-strong",
   secondary:
-    "border-slate-300 bg-white text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-50",
+    "border-line-strong bg-surface text-ink shadow-sm hover:border-accent/60 hover:bg-surface-muted",
   danger:
-    "border-rose-700 bg-rose-700 text-white shadow-sm hover:border-rose-800 hover:bg-rose-800",
+    "border-danger bg-danger text-surface shadow-sm hover:brightness-90",
   ghost:
-    "border-transparent bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-950",
+    "border-transparent bg-transparent text-ink-muted hover:bg-surface-muted hover:text-ink",
 };
 
 export function buttonClassName(
   variant: ButtonVariant = "primary",
   className = "",
 ): string {
-  return `inline-flex min-h-11 items-center justify-center rounded-lg border px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${variantClasses[variant]} ${className}`;
+  return `inline-flex min-h-11 items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 ${variantClasses[variant]} ${className}`;
 }

@@ -1,5 +1,6 @@
 import {
   useInfiniteQuery,
+  keepPreviousData,
   useMutation,
   useQuery,
   useQueryClient,
@@ -55,6 +56,7 @@ export function useApplications(
       listApplications(pageParam, signal, limit, status ?? undefined, filters),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.next_cursor,
+    placeholderData: keepPreviousData,
   });
 }
 

@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, type RouteObject } from "react-router-dom";
 import { DemoSessionGuard } from "../auth/DemoSessionGuard";
 import { AppLayout } from "../components/AppLayout";
+import { DocumentTitle } from "../components/DocumentTitle";
 import { LoadingState } from "../components/ui/Feedback";
 import { LandingPage } from "../pages/LandingPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
@@ -20,10 +21,14 @@ function privatePage(page: ReactNode, label: string) {
   return <Suspense fallback={<LoadingState label={label} />}>{page}</Suspense>;
 }
 
+function titledPage(title: string, page: ReactNode) {
+  return <DocumentTitle title={title}>{page}</DocumentTitle>;
+}
+
 export const appRoutes: RouteObject[] = [
   {
     path: "/",
-    element: <LandingPage />,
+    element: titledPage("Recruiter demo", <LandingPage />),
     errorElement: <RouteErrorPage />,
   },
   {
@@ -51,7 +56,7 @@ export const appRoutes: RouteObject[] = [
       },
     ],
   },
-  { path: "*", element: <NotFoundPage /> },
+  { path: "*", element: titledPage("Page not found", <NotFoundPage />) },
 ];
 
 export const router = createBrowserRouter(appRoutes);

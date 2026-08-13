@@ -24,7 +24,7 @@
       content="Keep every opportunity moving forward in a safe, resettable demo workspace."
     />
     <meta name="twitter:image" content="%VITE_PUBLIC_SITE_URL%/og.png" />
-    <title>HireFlux · Recruiter Demo</title>
+    <title>HireFlux · Recruiter demo</title>
     <script>
       (() => {
         let storedTheme = null;
@@ -33,7 +33,10 @@
         } catch {
           // Continue with the default dark theme when storage is blocked.
         }
-        const useDarkTheme = storedTheme !== "light";
+        const useDarkTheme =
+          storedTheme === "system"
+            ? !window.matchMedia("(prefers-color-scheme: light)").matches
+            : storedTheme !== "light";
         document.documentElement.classList.toggle("dark", useDarkTheme);
         document.documentElement.style.colorScheme = useDarkTheme
           ? "dark"

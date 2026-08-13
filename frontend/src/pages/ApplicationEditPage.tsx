@@ -1,8 +1,11 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { buttonClassName } from "../components/ui/buttonStyles";
-import { ErrorPanel, LoadingState } from "../components/ui/Feedback";
+import { ErrorPanel } from "../components/ui/Feedback";
 import { ApplicationForm } from "../features/applications/ApplicationForm";
+import { PageHeader } from "../components/ui/PageHeader";
+import { ChevronLeft } from "lucide-react";
+import { ApplicationFormSkeleton } from "../features/applications/ApplicationSkeletons";
 import {
   toApplicationFields,
   type ApplicationFormValues,
@@ -19,7 +22,7 @@ export function ApplicationEditPage() {
   const updateMutation = useUpdateApplication();
 
   if (applicationQuery.isPending) {
-    return <LoadingState label="Loading application…" />;
+    return <ApplicationFormSkeleton label="Loading application…" />;
   }
 
   if (applicationQuery.isError) {
@@ -64,19 +67,17 @@ export function ApplicationEditPage() {
     <div className="mx-auto max-w-4xl">
       <Link
         to={`/applications/${application.application_id}`}
-        className="inline-flex min-h-11 items-center rounded-lg text-sm font-semibold text-brand-700 underline-offset-4 hover:underline"
+        className="inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-semibold text-accent underline-offset-4 hover:underline"
       >
-        ← Back to application
+        <ChevronLeft aria-hidden="true" className="size-4" />
+        Back to application
       </Link>
-      <div className="mb-8 mt-3">
-        <p className="text-sm font-bold text-brand-700">{application.company_name}</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
-          Edit {application.job_title}
-        </h1>
-        <p className="mt-2 text-base leading-7 text-slate-600">
-          Status changes are managed separately on the application page.
-        </p>
-      </div>
+      <PageHeader
+        className="mb-8 mt-3"
+        eyebrow={application.company_name}
+        title={`Edit ${application.job_title}`}
+        description="Update the opportunity details here. Status changes remain in the application workspace."
+      />
 
       <ApplicationForm
         mode="edit"

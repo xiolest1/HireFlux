@@ -11,6 +11,26 @@ const dashboardKey = ["dashboard", "30d"] as const;
 const analyticsKey = ["analytics", { range: "30d" }] as const;
 
 describe("application critical flow", () => {
+  it("progressively reveals optional fields and links validation errors to controls", async () => {
+    const { user } = renderApp("/applications/new");
+    const optionalLabel = await screen.findByText("Optional details");
+    const optionalDetails = optionalLabel.closest("details");
+    expect(optionalDetails).not.toHaveAttribute("open");
+
+    await user.click(optionalLabel.closest("summary") as HTMLElement);
+    expect(optionalDetails).toHaveAttribute("open");
+    await user.type(screen.getByLabelText(/Job URL/), "not-a-complete-url");
+    await user.click(optionalLabel.closest("summary") as HTMLElement);
+    expect(optionalDetails).not.toHaveAttribute("open");
+    await user.click(screen.getByRole("button", { name: "Create application" }));
+
+    expect(await screen.findByText("Enter a complete http:// or https:// URL.")).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: /Job URL: Enter a complete/ }),
+    ).toHaveAttribute("href", "#job_url");
+    expect(optionalDetails).toHaveAttribute("open");
+  });
+
   it("validates and creates an applied application without client-owned fields", async () => {
     let postedBody: Record<string, unknown> | null = null;
     let postCount = 0;

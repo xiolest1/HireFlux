@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ThemeToggle } from "./ThemeToggle";
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("ThemeToggle", () => {
   it("uses dark mode by default", () => {
@@ -36,6 +38,31 @@ describe("ThemeToggle", () => {
     render(<ThemeToggle />);
 
     expect(document.documentElement).not.toHaveClass("dark");
+    expect(
+      screen.getByRole("button", { name: "Switch to dark mode" }),
+    ).toBeVisible();
+  });
+
+  it("restores a saved system preference from the current system theme", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query.includes("light"),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    );
+    window.localStorage.setItem("hireflux-color-theme", "system");
+
+    render(<ThemeToggle />);
+
+    expect(document.documentElement).not.toHaveClass("dark");
+    expect(window.localStorage.getItem("hireflux-color-theme")).toBe("system");
     expect(
       screen.getByRole("button", { name: "Switch to dark mode" }),
     ).toBeVisible();

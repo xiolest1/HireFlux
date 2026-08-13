@@ -1,4 +1,19 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import {
+  ArrowUpRight,
+  Check,
+  LayoutGrid,
+  List,
+  MapPin,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import {
   APPLICATION_SOURCES,
@@ -14,25 +29,54 @@ import { buttonClassName } from "../components/ui/buttonStyles";
 import {
   EmptyState,
   ErrorPanel,
-  LoadingState,
   SuccessBanner,
 } from "../components/ui/Feedback";
+import { StatusBadge } from "../components/ui/StatusBadge";
+import { Drawer } from "../components/ui/Drawer";
 import { ApplicationCard } from "../features/applications/ApplicationCard";
-import { formatSource, formatStatus, formatWorkMode } from "../features/applications/format";
+import { ApplicationListSkeleton } from "../features/applications/ApplicationSkeletons";
+import {
+  formatDateOnly,
+  formatSource,
+  formatStatus,
+  formatTimestamp,
+  formatWorkMode,
+} from "../features/applications/format";
 import { useApplications } from "../features/applications/queries";
 import { useSettings } from "../features/resources/queries";
+
+type ApplicationLayout = "cards" | "list";
+
+interface FilterDraft {
+  status: string;
+  source: string;
+  workMode: string;
+  sort: string;
+}
+
+const defaultFilterDraft: FilterDraft = {
+  status: "",
+  source: "",
+  workMode: "",
+  sort: "updated_desc",
+};
 
 function statusFromSearchParam(value: string | null): ApplicationStatus | null {
   return APPLICATION_STATUSES.find((status) => status === value) ?? null;
 }
 
-function optionFromSearchParam<T extends string>(value: string | null, options: readonly T[]): T | undefined {
+function optionFromSearchParam<T extends string>(
+  value: string | null,
+  options: readonly T[],
+): T | undefined {
   return options.find((option) => option === value);
 }
 
 function viewForStatus(status: ApplicationStatus): ApplicationView {
   if (status === "ARCHIVED") return "ARCHIVED";
-  if (["APPLIED", "SCREENING", "INTERVIEW", "OFFER"].includes(status)) return "ACTIVE";
+  if (["APPLIED", "SCREENING", "INTERVIEW", "OFFER"].includes(status)) {
+    return "ACTIVE";
+  }
   return "ALL";
 }
 
@@ -44,22 +88,50 @@ function deduplicateApplications(applications: Application[]): Application[] {
   return Array.from(byId.values());
 }
 
+function applicationViewLabel(view: ApplicationView): string {
+  if (view === "ACTIVE") return "Active";
+  if (view === "ARCHIVED") return "Archived";
+  return "All";
+}
+
 export function ApplicationListPage() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const status = statusFromSearchParam(searchParams.get("status"));
   const settingsQuery = useSettings();
   const timeZone = settingsQuery.data?.time_zone ?? "UTC";
-  const viewParam = optionFromSearchParam(searchParams.get("view"), APPLICATION_VIEWS);
-  const applicationView = viewParam
-    ?? (status ? viewForStatus(status) : undefined)
-    ?? settingsQuery.data?.default_application_view
-    ?? "ACTIVE";
+  const viewParam = optionFromSearchParam(
+    searchParams.get("view"),
+    APPLICATION_VIEWS,
+  );
+  const applicationView =
+    viewParam ??
+    (status ? viewForStatus(status) : undefined) ??
+    settingsQuery.data?.default_application_view ??
+    "ACTIVE";
+  const layout: ApplicationLayout =
+    searchParams.get("layout") === "list" ? "list" : "cards";
   const q = (searchParams.get("q") ?? "").slice(0, 120);
-  const source = optionFromSearchParam(searchParams.get("source"), APPLICATION_SOURCES);
-  const workMode = optionFromSearchParam(searchParams.get("work_mode"), WORK_MODES);
-  const sort = optionFromSearchParam(searchParams.get("sort"), APPLICATION_SORTS) ?? "updated_desc";
+  const source = optionFromSearchParam(
+    searchParams.get("source"),
+    APPLICATION_SOURCES,
+  );
+  const workMode = optionFromSearchParam(
+    searchParams.get("work_mode"),
+    WORK_MODES,
+  );
+  const sort =
+    optionFromSearchParam(searchParams.get("sort"), APPLICATION_SORTS) ??
+    "updated_desc";
   const [searchDraft, setSearchDraft] = useState(q);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterDraft, setFilterDraft] = useState<FilterDraft>({
+    status: status ?? "",
+    source: source ?? "",
+    workMode: workMode ?? "",
+    sort,
+  });
+
   useEffect(() => setSearchDraft(q), [q]);
   const applicationsQuery = useApplications(status, 20, {
     q: q || undefined,
@@ -79,41 +151,95 @@ export function ApplicationListPage() {
       ? location.state.notice
       : null;
 
-  function setStatus(nextStatus: string) {
+  function updateSearchParams(
+    update: (next: URLSearchParams) => void,
+    replace = true,
+  ) {
     const next = new URLSearchParams(searchParams);
-    if (nextStatus === "ALL") {
+    update(next);
+    setSearchParams(next, { replace });
+  }
+
+  function setApplicationView(value: ApplicationView) {
+    updateSearchParams((next) => {
+      next.set("view", value);
       next.delete("status");
-      next.set("view", "ALL");
-    } else {
-      const parsedStatus = statusFromSearchParam(nextStatus);
-      if (parsedStatus) {
-        next.set("status", parsedStatus);
-        next.set("view", viewForStatus(parsedStatus));
+    });
+  }
+
+  function setLayout(value: ApplicationLayout) {
+    updateSearchParams((next) => {
+      if (value === "cards") next.delete("layout");
+      else next.set("layout", value);
+    });
+  }
+
+  function openFilters() {
+    setFilterDraft({
+      status: status ?? "",
+      source: source ?? "",
+      workMode: workMode ?? "",
+      sort,
+    });
+    setFilterOpen(true);
+  }
+
+  function applyFilters() {
+    updateSearchParams((next) => {
+      if (filterDraft.status) {
+        const parsedStatus = statusFromSearchParam(filterDraft.status);
+        if (parsedStatus) {
+          next.set("status", parsedStatus);
+          next.set("view", viewForStatus(parsedStatus));
+        }
+      } else {
+        next.delete("status");
       }
-    }
-    setSearchParams(next, { replace: true });
+      if (filterDraft.source) next.set("source", filterDraft.source);
+      else next.delete("source");
+      if (filterDraft.workMode) next.set("work_mode", filterDraft.workMode);
+      else next.delete("work_mode");
+      if (filterDraft.sort !== "updated_desc") {
+        next.set("sort", filterDraft.sort);
+      } else {
+        next.delete("sort");
+      }
+    });
+    setFilterOpen(false);
   }
 
-  function setApplicationView(value: string) {
-    const next = new URLSearchParams(searchParams);
-    next.set("view", value);
-    next.delete("status");
-    setSearchParams(next, { replace: true });
+  function clearAllFilters() {
+    updateSearchParams((next) => {
+      next.delete("q");
+      next.delete("status");
+      next.delete("source");
+      next.delete("work_mode");
+      next.delete("sort");
+    });
   }
 
-  function setFilter(name: string, value: string) {
-    const next = new URLSearchParams(searchParams);
-    if (value) next.set(name, value);
-    else next.delete(name);
-    setSearchParams(next, { replace: true });
+  function removeFilter(name: "q" | "status" | "source" | "work_mode" | "sort") {
+    updateSearchParams((next) => next.delete(name));
   }
 
   function submitSearch(event: FormEvent) {
     event.preventDefault();
-    setFilter("q", searchDraft.trim());
+    updateSearchParams((next) => {
+      const value = searchDraft.trim();
+      if (value) next.set("q", value);
+      else next.delete("q");
+    });
   }
 
-  const hasFilters = Boolean(status || q || source || workMode || sort !== "updated_desc" || viewParam);
+  const hasFilters = Boolean(
+    status || q || source || workMode || sort !== "updated_desc",
+  );
+  const filterCount = [
+    status,
+    source,
+    workMode,
+    sort !== "updated_desc" ? sort : null,
+  ].filter(Boolean).length;
 
   return (
     <div>
@@ -122,16 +248,17 @@ export function ApplicationListPage() {
           <SuccessBanner>{notice}</SuccessBanner>
         </div>
       ) : null}
+
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">
-            Your search
+          <p className="text-sm font-bold uppercase tracking-[0.16em] text-accent">
+            Opportunity workspace
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
             Applications
           </h1>
-          <p className="mt-2 max-w-2xl text-base leading-7 text-slate-600">
-            Keep every opportunity and its next step in one calm, reliable place.
+          <p className="mt-2 max-w-2xl text-base leading-7 text-ink-muted">
+            Find the next action quickly, then keep every opportunity moving.
           </p>
         </div>
         <Link to="/applications/new" className={buttonClassName("primary")}>
@@ -139,27 +266,135 @@ export function ApplicationListPage() {
         </Link>
       </div>
 
-      <section className="mt-8 rounded-xl border border-slate-200 bg-white p-4 shadow-panel" aria-labelledby="application-filters-title">
-        <div className="flex items-start justify-between gap-4">
-          <div><h2 id="application-filters-title" className="text-sm font-bold text-slate-950">Find and filter applications</h2><p className="mt-0.5 text-xs text-slate-500">Search remains scoped to your isolated workspace.</p></div>
-          {hasFilters ? <button type="button" className="min-h-10 rounded-lg px-3 text-sm font-semibold text-brand-700 hover:bg-brand-50" onClick={() => setSearchParams({}, { replace: true })}>Clear filters</button> : null}
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-          <form className="flex gap-2 sm:col-span-2 lg:col-span-1" onSubmit={submitSearch} role="search">
-            <div className="min-w-0 flex-1"><label htmlFor="application-search" className="text-xs font-bold uppercase tracking-wide text-slate-600">Search</label><input id="application-search" type="search" maxLength={120} value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Company or role" className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900" /></div>
-            <button type="submit" className="mt-[1.65rem] min-h-11 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white">Go</button>
+      <nav
+        className="mt-7 inline-flex w-full rounded-2xl border border-line bg-surface-muted p-1 sm:w-auto"
+        aria-label="Application views"
+      >
+        {APPLICATION_VIEWS.map((view) => {
+          const selected = applicationView === view;
+          return (
+            <button
+              key={view}
+              type="button"
+              aria-current={selected ? "page" : undefined}
+              className={`min-h-10 flex-1 rounded-xl px-5 text-sm font-semibold transition-colors sm:flex-none ${
+                selected
+                  ? "bg-surface-raised text-accent shadow-sm"
+                  : "text-ink-muted hover:bg-surface hover:text-ink"
+              }`}
+              onClick={() => setApplicationView(view)}
+            >
+              {applicationViewLabel(view)}
+            </button>
+          );
+        })}
+      </nav>
+
+      <section
+        className="mt-5 rounded-2xl border border-line bg-surface p-4 shadow-panel sm:p-5"
+        aria-labelledby="application-search-title"
+      >
+        <h2 id="application-search-title" className="sr-only">
+          Search and filter applications
+        </h2>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end">
+          <form
+            className="flex min-w-0 flex-1 gap-2"
+            onSubmit={submitSearch}
+            role="search"
+          >
+            <div className="min-w-0 flex-1">
+              <label
+                htmlFor="application-search"
+                className="text-xs font-bold uppercase tracking-wide text-ink-muted"
+              >
+                Search applications
+              </label>
+              <div className="relative mt-1.5">
+                <Search
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted"
+                />
+                <input
+                  id="application-search"
+                  type="search"
+                  maxLength={120}
+                  value={searchDraft}
+                  onChange={(event) => setSearchDraft(event.target.value)}
+                  placeholder="Search company or role"
+                  className="min-h-11 w-full rounded-xl border border-line-strong bg-surface-raised py-2 pl-10 pr-3 text-sm text-ink placeholder:text-ink-muted"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              className="min-h-11 self-end rounded-xl bg-accent-strong px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent"
+            >
+              Search
+            </button>
           </form>
-          <ListFilter id="view-filter" label="Application view" value={applicationView} onChange={setApplicationView}><option value="ACTIVE">Active pursuits</option><option value="ALL">All applications</option><option value="ARCHIVED">Archived only</option></ListFilter>
-          <ListFilter id="status-filter" label="Filter by status" value={status ?? "ALL"} onChange={setStatus}><option value="ALL">All statuses</option>{APPLICATION_STATUSES.map((option) => <option key={option} value={option}>{formatStatus(option)}</option>)}</ListFilter>
-          <ListFilter id="source-filter" label="Source" value={source ?? ""} onChange={(value) => setFilter("source", value)}><option value="">All sources</option>{APPLICATION_SOURCES.map((option) => <option key={option} value={option}>{formatSource(option)}</option>)}</ListFilter>
-          <ListFilter id="work-mode-filter" label="Work mode" value={workMode ?? ""} onChange={(value) => setFilter("work_mode", value)}><option value="">All modes</option>{WORK_MODES.map((option) => <option key={option} value={option}>{formatWorkMode(option)}</option>)}</ListFilter>
-          <ListFilter id="sort-filter" label="Sort" value={sort} onChange={(value) => setFilter("sort", value)}><option value="updated_desc">Recently updated</option><option value="updated_asc">Least recently updated</option></ListFilter>
+
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface-raised px-4 text-sm font-semibold text-ink transition-colors hover:border-accent/50 hover:text-accent"
+            onClick={openFilters}
+          >
+            <SlidersHorizontal aria-hidden="true" className="size-4" />
+            Filters
+            {filterCount ? (
+              <span className="inline-flex size-6 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent">
+                {filterCount}
+              </span>
+            ) : null}
+          </button>
         </div>
+
+        {hasFilters ? (
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              Active filters
+            </span>
+            {q ? (
+              <FilterChip label={`Search: ${q}`} onRemove={() => removeFilter("q")} />
+            ) : null}
+            {status ? (
+              <FilterChip
+                label={formatStatus(status)}
+                onRemove={() => removeFilter("status")}
+              />
+            ) : null}
+            {source ? (
+              <FilterChip
+                label={formatSource(source)}
+                onRemove={() => removeFilter("source")}
+              />
+            ) : null}
+            {workMode ? (
+              <FilterChip
+                label={formatWorkMode(workMode)}
+                onRemove={() => removeFilter("work_mode")}
+              />
+            ) : null}
+            {sort !== "updated_desc" ? (
+              <FilterChip
+                label="Least recently updated"
+                onRemove={() => removeFilter("sort")}
+              />
+            ) : null}
+            <button
+              type="button"
+              className="min-h-9 rounded-lg px-2.5 text-sm font-semibold text-accent hover:bg-accent-soft"
+              onClick={clearAllFilters}
+            >
+              Clear all
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <div className="mt-6">
         {applicationsQuery.isPending ? (
-          <LoadingState label="Loading applications…" />
+          <ApplicationListSkeleton />
         ) : applicationsQuery.isError && applications.length === 0 ? (
           <ErrorPanel
             error={applicationsQuery.error}
@@ -172,14 +407,16 @@ export function ApplicationListPage() {
             description={
               hasFilters
                 ? "Try clearing one or more filters, or search for a different company or role."
-                : "Add your first opportunity to start building a clear application history."
+                : applicationView === "ARCHIVED"
+                  ? "Archived opportunities will stay safely available here."
+                  : "Add your first opportunity to start building a clear application history."
             }
             action={
               hasFilters ? (
                 <button
                   type="button"
                   className={buttonClassName("secondary")}
-                  onClick={() => setSearchParams({}, { replace: true })}
+                  onClick={clearAllFilters}
                 >
                   Clear filters
                 </button>
@@ -192,18 +429,50 @@ export function ApplicationListPage() {
           />
         ) : (
           <>
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <p className="text-sm text-slate-600" aria-live="polite">
-                {applications.length} {applications.length === 1 ? "application" : "applications"} loaded
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-ink-muted" aria-live="polite">
+                <span className="font-semibold text-ink">{applications.length}</span>{" "}
+                {applications.length === 1 ? "application" : "applications"} loaded
+                {applicationsQuery.isFetching &&
+                !applicationsQuery.isFetchingNextPage ? (
+                  <span className="ml-2 text-accent">Refreshing…</span>
+                ) : null}
               </p>
+              <div
+                className="hidden items-center rounded-xl border border-line bg-surface-muted p-1 md:flex"
+                role="group"
+                aria-label="Application layout"
+              >
+                <LayoutButton
+                  selected={layout === "cards"}
+                  label="Card view"
+                  onClick={() => setLayout("cards")}
+                >
+                  <LayoutGrid aria-hidden="true" className="size-4" />
+                </LayoutButton>
+                <LayoutButton
+                  selected={layout === "list"}
+                  label="List view"
+                  onClick={() => setLayout("list")}
+                >
+                  <List aria-hidden="true" className="size-4" />
+                </LayoutButton>
+              </div>
             </div>
-            <ul className="grid gap-4 md:grid-cols-2">
-              {applications.map((application) => (
-                <li key={application.application_id}>
-                  <ApplicationCard application={application} timeZone={timeZone} />
-                </li>
-              ))}
-            </ul>
+
+            <div className={layout === "list" ? "md:hidden" : ""}>
+              <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {applications.map((application) => (
+                  <li className="min-w-0" key={application.application_id}>
+                    <ApplicationCard application={application} timeZone={timeZone} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {layout === "list" ? (
+              <ApplicationTable applications={applications} timeZone={timeZone} />
+            ) : null}
 
             {applicationsQuery.isFetchNextPageError ? (
               <div className="mt-5">
@@ -231,10 +500,237 @@ export function ApplicationListPage() {
           </>
         )}
       </div>
+
+      <FilterDrawer
+        open={filterOpen}
+        draft={filterDraft}
+        onDraftChange={setFilterDraft}
+        onClose={() => setFilterOpen(false)}
+        onApply={applyFilters}
+        onClear={() => setFilterDraft(defaultFilterDraft)}
+      />
     </div>
   );
 }
 
-function ListFilter({ id, label, value, onChange, children }: { id: string; label: string; value: string; onChange: (value: string) => void; children: ReactNode }) {
-  return <div><label htmlFor={id} className="text-xs font-bold uppercase tracking-wide text-slate-600">{label}</label><select id={id} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800">{children}</select></div>;
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <button
+      type="button"
+      className="inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border border-accent/30 bg-accent-soft px-3 text-sm font-medium text-accent transition-colors hover:border-accent"
+      onClick={onRemove}
+      aria-label={`Remove ${label} filter`}
+    >
+      <span className="truncate">{label}</span>
+      <X aria-hidden="true" className="size-3.5 shrink-0" />
+    </button>
+  );
+}
+
+function LayoutButton({
+  selected,
+  label,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      aria-label={label}
+      className={`inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors ${
+        selected
+          ? "bg-surface-raised text-accent shadow-sm"
+          : "text-ink-muted hover:text-ink"
+      }`}
+      onClick={onClick}
+    >
+      {children}
+      <span>{label.replace(" view", "")}</span>
+    </button>
+  );
+}
+
+function FilterDrawer({
+  open,
+  draft,
+  onDraftChange,
+  onClose,
+  onApply,
+  onClear,
+}: {
+  open: boolean;
+  draft: FilterDraft;
+  onDraftChange: (draft: FilterDraft) => void;
+  onClose: () => void;
+  onApply: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title="Application filters"
+      description="Changes are staged until you apply them."
+      footer={
+        <div className="flex gap-3">
+          <button
+            type="button"
+            className={buttonClassName("secondary", "flex-1")}
+            onClick={onClear}
+          >
+            Clear
+          </button>
+          <button
+            type="button"
+            className={buttonClassName("primary", "flex-1 gap-2")}
+            onClick={onApply}
+          >
+            <Check aria-hidden="true" className="size-4" />
+            Apply filters
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-5">
+        <ListFilter
+          id="status-filter"
+          label="Filter by status"
+          value={draft.status}
+          onChange={(status) => onDraftChange({ ...draft, status })}
+        >
+          <option value="">All statuses</option>
+          {APPLICATION_STATUSES.map((option) => (
+            <option key={option} value={option}>{formatStatus(option)}</option>
+          ))}
+        </ListFilter>
+        <ListFilter
+          id="source-filter"
+          label="Source"
+          value={draft.source}
+          onChange={(source) => onDraftChange({ ...draft, source })}
+        >
+          <option value="">All sources</option>
+          {APPLICATION_SOURCES.map((option) => (
+            <option key={option} value={option}>{formatSource(option)}</option>
+          ))}
+        </ListFilter>
+        <ListFilter
+          id="work-mode-filter"
+          label="Work mode"
+          value={draft.workMode}
+          onChange={(workMode) => onDraftChange({ ...draft, workMode })}
+        >
+          <option value="">All modes</option>
+          {WORK_MODES.map((option) => (
+            <option key={option} value={option}>{formatWorkMode(option)}</option>
+          ))}
+        </ListFilter>
+        <ListFilter
+          id="sort-filter"
+          label="Sort"
+          value={draft.sort}
+          onChange={(sort) => onDraftChange({ ...draft, sort })}
+        >
+          <option value="updated_desc">Recently updated</option>
+          <option value="updated_asc">Least recently updated</option>
+        </ListFilter>
+      </div>
+    </Drawer>
+  );
+}
+
+function ApplicationTable({
+  applications,
+  timeZone,
+}: {
+  applications: Application[];
+  timeZone: string;
+}) {
+  return (
+    <div className="hidden overflow-x-auto rounded-2xl border border-line bg-surface shadow-panel md:block">
+      <table className="w-full border-collapse text-left text-sm">
+        <caption className="sr-only">Applications in compact list view</caption>
+        <thead className="bg-surface-muted text-xs uppercase tracking-wide text-ink-muted">
+          <tr>
+            <th scope="col" className="px-4 py-3 font-semibold">Opportunity</th>
+            <th scope="col" className="px-4 py-3 font-semibold">Status</th>
+            <th scope="col" className="px-4 py-3 font-semibold">Follow-up</th>
+            <th scope="col" className="px-4 py-3 font-semibold">Applied</th>
+            <th scope="col" className="px-4 py-3 font-semibold">Updated</th>
+            <th scope="col" className="px-4 py-3"><span className="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line">
+          {applications.map((application) => (
+            <tr key={application.application_id} className="transition-colors hover:bg-surface-muted focus-within:bg-surface-muted">
+              <th scope="row" className="min-w-56 px-4 py-4 font-normal">
+                <Link
+                  to={`/applications/${application.application_id}`}
+                  className="font-semibold text-ink hover:text-accent hover:underline"
+                >
+                  {application.job_title}
+                </Link>
+                <p className="mt-1 text-ink-muted">{application.company_name}</p>
+                {application.location || application.work_mode ? (
+                  <p className="mt-1 flex items-center gap-1 text-xs text-ink-muted">
+                    <MapPin aria-hidden="true" className="size-3.5" />
+                    {[application.location, application.work_mode ? formatWorkMode(application.work_mode) : null].filter(Boolean).join(" · ")}
+                  </p>
+                ) : null}
+              </th>
+              <td className="whitespace-nowrap px-4 py-4"><StatusBadge status={application.status} /></td>
+              <td className="whitespace-nowrap px-4 py-4 text-ink">{formatDateOnly(application.follow_up_date)}</td>
+              <td className="whitespace-nowrap px-4 py-4 text-ink-muted">{formatDateOnly(application.applied_date)}</td>
+              <td className="whitespace-nowrap px-4 py-4 text-ink-muted">{formatTimestamp(application.updated_at, timeZone)}</td>
+              <td className="px-4 py-4 text-right">
+                <Link
+                  to={`/applications/${application.application_id}`}
+                  aria-label={`Manage ${application.job_title} application`}
+                  className="inline-flex min-h-10 items-center gap-1 rounded-lg px-3 font-semibold text-accent hover:bg-accent-soft"
+                >
+                  Manage <ArrowUpRight aria-hidden="true" className="size-4" />
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ListFilter({
+  id,
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="text-sm font-semibold text-ink">
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink"
+      >
+        {children}
+      </select>
+    </div>
+  );
 }
