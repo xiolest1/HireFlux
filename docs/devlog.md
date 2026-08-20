@@ -588,6 +588,20 @@ and the frontend remained healthy, and the handoff browser was left on a clean
 
 ## Full frontend visual redesign - August 13, 2026
 
+### Purpose
+
+Redesign the local recruiter demo from a functional CRUD workspace into a
+polished portfolio product experience. The goal was to make HireFlux feel like
+a focused job-search command center: dark-first, easier to scan, more
+comfortable for repeated use, stronger on mobile, and clearer about what a
+recruiter should try during a short demo session.
+
+The redesign deliberately stayed inside the frontend boundary. Backend routes,
+payloads, authentication/session behavior, ownership rules, application status
+transition rules, and DynamoDB access patterns were not changed.
+
+### Changes delivered
+
 Completed the dark-first HireFlux workspace redesign without changing backend
 routes, payloads, ownership rules, or status-transition policy. The visual
 foundation now uses semantic canvas, surface, border, text, accent, success,
@@ -638,6 +652,8 @@ replacing unavailable production controls with explanatory capability content.
 Dashboard, analytics, and application filters retain previous data during
 refetches and reserve layout-matched skeletons for initial loading.
 
+### Validation and acceptance
+
 The acceptance layer now includes JSX accessibility linting, twelve route and
 open-overlay axe component checks, and deterministic Playwright coverage against
 a production preview. Browser checks run at 320 x 720, 390 x 844, 768 x 1024,
@@ -653,13 +669,13 @@ Final validation passed ESLint, TypeScript, 58 Vitest tests across 11 files
 (including all twelve axe scenarios), the production Vite build, and 47
 Playwright checks with nine expected non-desktop skips for the desktop-only
 theme, tab-snapshot, and zoom duplicates. Every principal browser route had
-zero detected WCAG A/AA axe
-violations and no unintended page-level horizontal overflow at the four tested
-widths. Dedicated browser scenarios also verified layout-matched loading,
-explicit empty and failed-request/retry feedback, and containment of extreme
-long application content. A final live pass launched a fresh 16-record isolated workspace and
-verified the redesigned Home and Applications flows against the running local
-API. `git diff --check` and the npm production dependency audit also passed.
+zero detected WCAG A/AA axe violations and no unintended page-level horizontal
+overflow at the four tested widths. Dedicated browser scenarios also verified
+layout-matched loading, explicit empty and failed-request/retry feedback, and
+containment of extreme long application content. A final live pass launched a
+fresh 16-record isolated workspace and verified the redesigned Home and
+Applications flows against the running local API. `git diff --check` and the
+npm production dependency audit also passed.
 
 ## Next recommended work
 

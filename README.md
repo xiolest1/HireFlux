@@ -124,7 +124,7 @@ The root `.env.example` documents every local setting. Important invariants:
 
 ## Further reading
 
-- [Architecture](docs/architecture.md)
+- [Architecture](ARCHITECTURE.md)
 - [Environment and deployment plan](docs/deployment-environments.md)
 - [Development log](docs/devlog.md)
 - [Domain model](docs/domain-model.md)
