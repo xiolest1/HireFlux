@@ -1,6 +1,5 @@
 import { Bell, Check, Clock3, Download, KeyRound, Mail, Palette, ShieldCheck, UserRound, UsersRound } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
 import type { ColorTheme, DashboardRange, Settings } from "../api/schemas";
 import { useDemoSession } from "../auth/demoSessionContext";
 import { Button } from "../components/ui/Button";
@@ -46,8 +45,6 @@ function draftsMatch(left: SettingsDraft | null, right: SettingsDraft | null) {
 }
 
 export function SettingsPage() {
-  const [searchParams] = useSearchParams();
-  const section = (["preferences", "workspace", "account"] as const).find((value) => value === searchParams.get("section")) ?? "preferences";
   const settingsQuery = useSettings();
   const updateMutation = useUpdateSettings();
   const meQuery = useMe();
@@ -55,6 +52,13 @@ export function SettingsPage() {
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
   const dirtyFields = useRef<Set<keyof SettingsDraft>>(new Set());
   const [saved, setSaved] = useState(false);
+  const [profileNameOverride, setProfileNameOverride] = useState<string | null>(null);
+  const [profilePreviewSaved, setProfilePreviewSaved] = useState(false);
+
+  useEffect(() => {
+    setProfileNameOverride(null);
+    setProfilePreviewSaved(false);
+  }, [session?.access_token]);
 
   useEffect(() => {
     if (!settingsQuery.data) return;
@@ -98,56 +102,78 @@ export function SettingsPage() {
     }
   }
 
+  function previewProfileChange(event: FormEvent) {
+    event.preventDefault();
+    if (!meQuery.data || !profileNameOverride?.trim()) return;
+    setProfileNameOverride(profileNameOverride.trim());
+    setProfilePreviewSaved(true);
+  }
+
+  const profileName = profileNameOverride ?? meQuery.data?.name ?? "";
+
   return (
     <div className="space-y-7">
       <header>
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">Workspace controls</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Settings & profile</h1>
-        <p className="mt-2 max-w-3xl text-base leading-7 text-slate-600">Personalize this temporary workspace and preview how a registered account would grow with the product.</p>
+        <p className="mt-2 max-w-3xl text-base leading-7 text-slate-600">Personalize this temporary workspace and preview account controls from one page.</p>
       </header>
 
-      <nav aria-label="Settings sections" className="grid w-full grid-cols-3 rounded-xl bg-slate-100 p-1 sm:inline-flex sm:w-auto">
-        {([[
-          "preferences", "Preferences"], ["workspace", "Demo workspace"], ["account", "Account preview"]] as const).map(([value, label]) => {
-          const next = new URLSearchParams(searchParams);
-          if (value === "preferences") next.delete("section"); else next.set("section", value);
-          const mobileLabel = value === "workspace" ? "Workspace" : value === "account" ? "Account" : label;
-          return <Link key={value} to={`?${next.toString()}`} replace aria-label={label} aria-current={section === value ? "page" : undefined} className={`flex min-h-10 min-w-0 flex-1 items-center justify-center rounded-lg px-2 text-center text-xs font-semibold transition-colors sm:flex-none sm:px-4 sm:text-sm ${section === value ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-950"}`}><span className="sm:hidden">{mobileLabel}</span><span className="hidden sm:inline">{label}</span></Link>;
-        })}
-      </nav>
-
-      {section === "preferences" ? (
-        <section className="rounded-3xl border border-slate-200 bg-white shadow-panel" aria-labelledby="preferences-title">
-          <div className="border-b border-slate-200 p-5 sm:p-6"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><Palette aria-hidden="true" className="size-5" /></span><div><h2 id="preferences-title" className="text-xl font-bold text-slate-950">Demo preferences</h2><p className="mt-1 text-sm leading-6 text-slate-600">These settings persist only for this isolated 24-hour workspace.</p></div></div></div>
-          {settingsQuery.isPending || (!draft && !settingsQuery.isError) ? <SettingsSkeleton /> : null}
-          {settingsQuery.isError ? <div className="p-5 sm:p-6"><ErrorPanel compact error={settingsQuery.error} onRetry={() => void settingsQuery.refetch()} /></div> : null}
-          {draft && settingsQuery.data ? (
-            <form onSubmit={submit}>
-              <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
-                <SettingSelect label="Time zone" value={draft.time_zone} onChange={(value) => change({ ...draft, time_zone: value })}>{TIME_ZONES.map((zone) => <option key={zone} value={zone}>{zone.replaceAll("_", " ")}</option>)}</SettingSelect>
-                <div><label htmlFor="follow-up-days" className="text-sm font-semibold text-slate-800">Default follow-up interval</label><div className="relative mt-2"><input id="follow-up-days" type="number" min={1} max={30} value={draft.default_follow_up_days} onChange={(event) => change({ ...draft, default_follow_up_days: Number(event.target.value) })} className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 pr-14 text-slate-900" /><span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">days</span></div></div>
-                <SettingSelect label="Default application view" value={draft.default_application_view} onChange={(value) => change({ ...draft, default_application_view: value as SettingsDraft["default_application_view"] })}><option value="ACTIVE">Active pursuits</option><option value="ALL">All applications</option><option value="ARCHIVED">Archived</option></SettingSelect>
-                <SettingSelect label="Default dashboard range" value={draft.default_dashboard_range} onChange={(value) => change({ ...draft, default_dashboard_range: value as DashboardRange })}><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="all">All time</option></SettingSelect>
-                <SettingSelect label="Color theme" value={draft.theme} onChange={(value) => change({ ...draft, theme: value as ColorTheme })}><option value="SYSTEM">Use system preference</option><option value="LIGHT">Light</option><option value="DARK">Dark</option></SettingSelect>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="profile-title">
+          <div className="flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><UserRound aria-hidden="true" className="size-5" /></span>
+            <div><h2 id="profile-title" className="text-xl font-bold text-slate-950">Profile</h2><p className="mt-1 text-sm leading-6 text-slate-600">Try a profile update in this local preview. The signed-in demo identity remains server-owned.</p></div>
+          </div>
+          {meQuery.isPending ? <p className="mt-6 text-sm text-slate-600" role="status">Loading profile…</p> : null}
+          {meQuery.isError ? <div className="mt-6"><ErrorPanel compact error={meQuery.error} onRetry={() => void meQuery.refetch()} /></div> : null}
+          {meQuery.data ? (
+            <form className="mt-6 space-y-5" onSubmit={previewProfileChange}>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="profile-name" className="text-sm font-semibold text-slate-800">Name</label>
+                  <input id="profile-name" value={profileName} onChange={(event) => { setProfileNameOverride(event.target.value); setProfilePreviewSaved(false); }} className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-slate-900" />
+                  <p id="profile-name-help" className="mt-2 text-xs leading-5 text-slate-500">Simulation only · no profile write endpoint is used.</p>
+                </div>
+                <div>
+                  <label htmlFor="profile-email" className="text-sm font-semibold text-slate-800">Email address</label>
+                  <input id="profile-email" value={meQuery.data.email} readOnly disabled className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-slate-500" />
+                  <p className="mt-2 text-xs leading-5 text-slate-500">Read-only in the demo; email verification and delivery are not enabled.</p>
+                </div>
               </div>
-              <div className="space-y-4 border-t border-slate-200 bg-slate-50 p-5 sm:p-6">
-                {updateMutation.error ? <ErrorPanel compact title="Preferences could not be saved" error={updateMutation.error} /> : null}
-                {saved ? <SuccessBanner>Preferences saved for this demo workspace.</SuccessBanner> : null}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-slate-500">{dirty ? "You have unsaved preference changes." : "Preferences are up to date."}</p><Button type="submit" disabled={!dirty || updateMutation.isPending || draft.default_follow_up_days < 1 || draft.default_follow_up_days > 30}>{updateMutation.isPending ? "Saving…" : "Save preferences"}</Button></div>
-              </div>
+              {profilePreviewSaved ? <SuccessBanner>Profile preview updated locally. The demo identity is unchanged.</SuccessBanner> : null}
+              <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-slate-500">{profileNameOverride && profileNameOverride !== meQuery.data.name ? "You have a local profile preview change." : "Profile preview matches the demo identity."}</p><Button type="submit" disabled={!profileNameOverride?.trim() || profileNameOverride.trim() === meQuery.data.name}>Save profile preview</Button></div>
             </form>
           ) : null}
+          {meQuery.data ? <dl className="mt-6 grid gap-5 border-t border-slate-200 pt-5 sm:grid-cols-2"><ProfileItem label="Account type" value="Isolated demo" /><ProfileItem label="Role" value="Standard user" /></dl> : null}
         </section>
-      ) : null}
 
-      {section === "workspace" ? (
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="workspace-profile-title"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><UserRound aria-hidden="true" className="size-5" /></span><div><h2 id="workspace-profile-title" className="text-xl font-bold text-slate-950">Demo identity</h2><p className="mt-1 text-sm leading-6 text-slate-600">Fictional profile data scoped to this isolated workspace.</p></div></div>{meQuery.isPending ? <p className="mt-6 text-sm text-slate-600" role="status">Loading profile…</p> : null}{meQuery.isError ? <div className="mt-6"><ErrorPanel compact error={meQuery.error} onRetry={() => void meQuery.refetch()} /></div> : null}{meQuery.data ? <dl className="mt-6 grid gap-5 sm:grid-cols-2"><ProfileItem label="Name" value={meQuery.data.name} /><ProfileItem label="Email" value={meQuery.data.email} /><ProfileItem label="Account type" value="Isolated demo" /><ProfileItem label="Role" value="Standard user" /></dl> : null}</section>
-          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel" aria-labelledby="workspace-lifecycle-title"><div className="bg-gradient-to-br from-brand-600 to-violet-700 p-5 text-white sm:p-6"><Clock3 aria-hidden="true" className="size-7" /><h2 id="workspace-lifecycle-title" className="mt-4 text-xl font-bold">Temporary by design</h2><p className="mt-2 text-sm leading-6 text-blue-50">Every recruiter gets a separate environment with fictional data. Nothing is shared with another visitor.</p></div><dl className="space-y-4 p-5 sm:p-6"><ProfileItem label="Workspace expires" value={session ? formatTimestamp(session.expires_at, settingsQuery.data?.time_zone ?? "UTC") : "Not available"} /><ProfileItem label="Data lifetime" value="24 hours" /><ProfileItem label="Persistence" value="This browser session only" /></dl></section>
-        </div>
-      ) : null}
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel" aria-labelledby="workspace-lifecycle-title"><div className="bg-gradient-to-br from-brand-600 to-violet-700 p-5 text-white sm:p-6"><Clock3 aria-hidden="true" className="size-7" /><h2 id="workspace-lifecycle-title" className="mt-4 text-xl font-bold">Temporary by design</h2><p className="mt-2 text-sm leading-6 text-blue-50">Every recruiter gets a separate environment with fictional data. Nothing is shared with another visitor.</p></div><dl className="space-y-4 p-5 sm:p-6"><ProfileItem label="Workspace expires" value={session ? formatTimestamp(session.expires_at, settingsQuery.data?.time_zone ?? "UTC") : "Not available"} /><ProfileItem label="Data lifetime" value="24 hours" /><ProfileItem label="Persistence" value="This browser session only" /></dl></section>
+      </div>
 
-      {section === "account" ? <AccountPreview /> : null}
+      <section className="rounded-3xl border border-slate-200 bg-white shadow-panel" aria-labelledby="preferences-title">
+        <div className="border-b border-slate-200 p-5 sm:p-6"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><Palette aria-hidden="true" className="size-5" /></span><div><h2 id="preferences-title" className="text-xl font-bold text-slate-950">Preferences</h2><p className="mt-1 text-sm leading-6 text-slate-600">These settings persist only for this isolated 24-hour workspace.</p></div></div></div>
+        {settingsQuery.isPending || (!draft && !settingsQuery.isError) ? <SettingsSkeleton /> : null}
+        {settingsQuery.isError ? <div className="p-5 sm:p-6"><ErrorPanel compact error={settingsQuery.error} onRetry={() => void settingsQuery.refetch()} /></div> : null}
+        {draft && settingsQuery.data ? (
+          <form onSubmit={submit}>
+            <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+              <SettingSelect label="Time zone" value={draft.time_zone} onChange={(value) => change({ ...draft, time_zone: value })}>{TIME_ZONES.map((zone) => <option key={zone} value={zone}>{zone.replaceAll("_", " ")}</option>)}</SettingSelect>
+              <div><label htmlFor="follow-up-days" className="text-sm font-semibold text-slate-800">Default follow-up interval</label><div className="relative mt-2"><input id="follow-up-days" type="number" min={1} max={30} value={draft.default_follow_up_days} onChange={(event) => change({ ...draft, default_follow_up_days: Number(event.target.value) })} className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 pr-14 text-slate-900" /><span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">days</span></div></div>
+              <SettingSelect label="Default application view" value={draft.default_application_view} onChange={(value) => change({ ...draft, default_application_view: value as SettingsDraft["default_application_view"] })}><option value="ACTIVE">Active pursuits</option><option value="ALL">All applications</option><option value="ARCHIVED">Archived</option></SettingSelect>
+              <SettingSelect label="Default dashboard range" value={draft.default_dashboard_range} onChange={(value) => change({ ...draft, default_dashboard_range: value as DashboardRange })}><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="all">All time</option></SettingSelect>
+              <SettingSelect label="Color theme" value={draft.theme} onChange={(value) => change({ ...draft, theme: value as ColorTheme })}><option value="SYSTEM">Use system preference</option><option value="LIGHT">Light</option><option value="DARK">Dark</option></SettingSelect>
+            </div>
+            <div className="space-y-4 border-t border-slate-200 bg-slate-50 p-5 sm:p-6">
+              {updateMutation.error ? <ErrorPanel compact title="Preferences could not be saved" error={updateMutation.error} /> : null}
+              {saved ? <SuccessBanner>Preferences saved for this demo workspace.</SuccessBanner> : null}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-slate-500">{dirty ? "You have unsaved preference changes." : "Preferences are up to date."}</p><Button type="submit" disabled={!dirty || updateMutation.isPending || draft.default_follow_up_days < 1 || draft.default_follow_up_days > 30}>{updateMutation.isPending ? "Saving…" : "Save preferences"}</Button></div>
+            </div>
+          </form>
+        ) : null}
+      </section>
+
+      <AccountControlsPreview />
     </div>
   );
 }
@@ -169,14 +195,13 @@ function SettingsSkeleton() {
   );
 }
 
-function AccountPreview() {
+function AccountControlsPreview() {
   const exportMutation = useExportWorkspace();
   const [previewRole, setPreviewRole] = useState<PreviewRole>("CANDIDATE");
-  const [notifications, setNotifications] = useState({ followUps: true, interviews: true, digest: false });
   const capabilities = [
     { icon: KeyRound, title: "Secure sign-in", description: "Password recovery and connected identity providers would be managed by the production identity service." },
     { icon: ShieldCheck, title: "Multi-factor authentication", description: "Persistent accounts could add verification and session controls without changing application ownership rules." },
-    { icon: Bell, title: "Notification delivery", description: "Email and reminder preferences would live here after an opt-in delivery system is available." },
+    { icon: Bell, title: "Notification delivery", description: "Email and reminder delivery stays blocked in this demo until a real opt-in delivery system exists." },
   ];
   const role = PREVIEW_ROLES.find((item) => item.id === previewRole) ?? PREVIEW_ROLES[0];
   async function downloadExport() {
@@ -192,7 +217,7 @@ function AccountPreview() {
 
   return <section className="space-y-6" aria-labelledby="account-preview-title">
     <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel">
-      <div className="border-b border-slate-200 bg-gradient-to-r from-brand-50 via-white to-violet-50 p-5 sm:p-6"><span className="inline-flex rounded-full border border-brand-100 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-700">Production concept</span><h2 id="account-preview-title" className="mt-4 text-2xl font-bold text-slate-950">What a registered account could unlock</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Recruiters can see the account lifecycle a real product would support, while every demo-only boundary stays visible.</p></div>
+      <div className="border-b border-slate-200 bg-gradient-to-r from-brand-50 via-slate-50 to-violet-50 p-5 sm:p-6"><span className="inline-flex rounded-full border border-brand-100 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-700">Production concept</span><h2 id="account-preview-title" className="mt-4 text-2xl font-bold text-slate-950">What a registered account could unlock</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Recruiters can see the account lifecycle a real product would support, while every demo-only boundary stays visible.</p></div>
       <div className="grid gap-px bg-slate-200 md:grid-cols-3">{capabilities.map(({ icon: Icon, title, description }) => <article key={title} className="bg-white p-5 sm:p-6"><span className="flex size-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700"><Icon aria-hidden="true" className="size-5" /></span><h3 className="mt-4 font-bold text-slate-950">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{description}</p></article>)}</div>
     </div>
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
@@ -201,9 +226,9 @@ function AccountPreview() {
     </div>
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="role-preview-title"><div className="flex items-start gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700"><UsersRound aria-hidden="true" className="size-5" /></span><div><h3 id="role-preview-title" className="text-xl font-bold text-slate-950">Role & access preview</h3><p className="mt-1 text-sm leading-6 text-slate-600">Explore how a future account model could explain access without changing this demo identity or its permissions.</p></div></div><div className="mt-5 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Preview role">{PREVIEW_ROLES.map((item) => <button key={item.id} type="button" role="radio" aria-checked={previewRole === item.id} onClick={() => setPreviewRole(item.id)} className={`min-h-11 rounded-xl border px-3 text-left text-sm font-semibold transition-colors ${previewRole === item.id ? "border-brand-400 bg-brand-50 text-brand-900" : "border-slate-200 text-slate-700 hover:bg-slate-50"}`}>{item.label}</button>)}</div><div className="mt-4 rounded-2xl bg-slate-50 p-4"><p className="font-semibold text-slate-900">{role.label}</p><p className="mt-1 text-sm leading-6 text-slate-600">{role.description}</p><p className="mt-2 text-xs font-bold uppercase tracking-wide text-violet-700">Preview only · authorization unchanged</p></div></section>
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="notification-preview-title"><div className="flex items-start gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700"><Mail aria-hidden="true" className="size-5" /></span><div><h3 id="notification-preview-title" className="text-xl font-bold text-slate-950">Notification center preview</h3><p className="mt-1 text-sm leading-6 text-slate-600">Choose the kinds of reminders a persistent account could receive. No emails or messages are sent in the demo.</p></div></div><div className="mt-5 space-y-3">{([ ["followUps", "Follow-up reminders", "When a task reaches its due date."], ["interviews", "Interview reminders", "Before a scheduled conversation."], ["digest", "Weekly search digest", "A summary of movement and outcomes."] ] as const).map(([key, label, description]) => <label key={key} className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50"><input aria-label={label} type="checkbox" checked={notifications[key]} onChange={(event) => setNotifications((current) => ({ ...current, [key]: event.target.checked }))} className="mt-1 size-4 accent-brand-600" /><span><span className="block text-sm font-semibold text-slate-900">{label}</span><span className="mt-1 block text-xs leading-5 text-slate-600">{description}</span></span></label>)}</div><p className="mt-4 flex items-center gap-2 text-xs font-semibold text-sky-700"><Bell aria-hidden="true" className="size-4" />Local preview preferences reset when this page session ends.</p></section>
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="notification-preview-title"><div className="flex items-start gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700"><Mail aria-hidden="true" className="size-5" /></span><div><h3 id="notification-preview-title" className="text-xl font-bold text-slate-950">Email notifications</h3><p className="mt-1 text-sm leading-6 text-slate-600">Notification preferences are intentionally blocked until HireFlux has a real message-delivery service.</p></div></div><div className="mt-5 space-y-3">{([ ["followUps", "Follow-up reminders", "When a task reaches its due date."], ["interviews", "Interview reminders", "Before a scheduled conversation."], ["digest", "Weekly search digest", "A summary of movement and outcomes."] ] as const).map(([key, label, description]) => <label key={key} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-500"><input aria-label={label} type="checkbox" checked={false} disabled className="mt-1 size-4 accent-brand-600" /><span><span className="block text-sm font-semibold text-slate-700">{label}</span><span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span></span></label>)}</div><p className="mt-4 flex items-center gap-2 text-xs font-semibold text-sky-700"><Bell aria-hidden="true" className="size-4" />Unavailable in this demo · no emails or messages are sent.</p></section>
     </div>
-    <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950 sm:p-6"><strong>Demo boundary:</strong> passwords, MFA enrollment, message delivery, permission changes, permanent account deletion, and persistent login are intentionally unavailable. The export is the one active account-control action; the other items are clearly labeled previews.</div>
+    <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950 sm:p-6"><strong>Demo boundary:</strong> passwords, MFA enrollment, email notification delivery, permission changes, permanent account deletion, and persistent login are intentionally unavailable. The export is the one active account-control action; the other items are clearly labeled previews.</div>
   </section>;
 }
 

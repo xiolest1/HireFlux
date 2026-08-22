@@ -160,7 +160,7 @@ describe("workspace milestone features", () => {
       }),
     );
     const { user } = renderApp("/settings");
-    expect(await screen.findByRole("heading", { name: "Demo preferences" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Preferences" })).toBeVisible();
     await user.selectOptions(await screen.findByLabelText("Default dashboard range"), "90d");
     await user.selectOptions(screen.getByLabelText("Color theme"), "LIGHT");
     await user.click(screen.getByRole("button", { name: "Save preferences" }));
@@ -170,18 +170,26 @@ describe("workspace milestone features", () => {
     expect(document.documentElement).not.toHaveClass("dark");
   });
 
-  it("keeps settings URL sections distinct and saves only dirty preferences", async () => {
-    const { user, router } = renderApp("/settings");
+  it("renders the unified settings and profile page without legacy sections", async () => {
+    const { user } = renderApp("/settings?section=account");
     const save = await screen.findByRole("button", { name: "Save preferences" });
     expect(save).toBeDisabled();
+    expect(screen.getByRole("heading", { name: "Profile" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Temporary by design" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "What a registered account could unlock" })).toBeVisible();
+    expect(screen.queryByRole("navigation", { name: "Settings sections" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Account preview" })).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Default dashboard range"), "90d");
     expect(save).toBeEnabled();
 
-    await user.click(screen.getByRole("link", { name: "Account preview" }));
-    expect(await screen.findByRole("heading", { name: "What a registered account could unlock" })).toBeVisible();
-    expect(router.state.location.search).toBe("?section=account");
-    expect(screen.queryByRole("button", { name: "Change password" })).not.toBeInTheDocument();
+    const name = screen.getByLabelText("Name");
+    await user.clear(name);
+    await user.type(name, "Jordan Morgan");
+    await user.click(screen.getByRole("button", { name: "Save profile preview" }));
+    expect(await screen.findByText("Profile preview updated locally. The demo identity is unchanged.")).toBeVisible();
+    expect(name).toHaveValue("Jordan Morgan");
+    expect(screen.getByLabelText("Email address")).toBeDisabled();
   });
 
   it("downloads an owner-scoped workspace export from the account preview", async () => {
@@ -202,7 +210,7 @@ describe("workspace milestone features", () => {
     );
     const createObjectUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
     const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
-    const { user } = renderApp("/settings?section=account");
+    const { user } = renderApp("/settings");
     expect(await screen.findByRole("heading", { name: "Your data, under your control" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Download JSON" }));
     expect(await screen.findByText("Export downloaded. This file remains on your device only.")).toBeVisible();
@@ -212,8 +220,8 @@ describe("workspace milestone features", () => {
     revokeObjectUrl.mockRestore();
   });
 
-  it("keeps recruiter role and notification previews explicitly local", async () => {
-    const { user } = renderApp("/settings?section=account");
+  it("keeps recruiter role local and blocks email notifications", async () => {
+    const { user } = renderApp("/settings");
     expect(await screen.findByRole("heading", { name: "Role & access preview" })).toBeVisible();
     const recruiterRole = screen.getByRole("radio", { name: "Recruiter" });
     await user.click(recruiterRole);
@@ -221,10 +229,9 @@ describe("workspace milestone features", () => {
     expect(screen.getByText("Preview only · authorization unchanged")).toBeVisible();
 
     const digest = screen.getByRole("checkbox", { name: /Weekly search digest/ });
-    expect(digest).not.toBeChecked();
-    await user.click(digest);
-    expect(digest).toBeChecked();
-    expect(screen.getByText(/No emails or messages are sent in the demo/)).toBeVisible();
+    expect(digest).toBeDisabled();
+    expect(screen.getByText(/Notification preferences are intentionally blocked/)).toBeVisible();
+    expect(screen.getByText(/Unavailable in this demo/)).toBeVisible();
   });
 
   it("persists header theme changes into authenticated workspace settings", async () => {
@@ -262,7 +269,7 @@ describe("workspace milestone features", () => {
 
     const { user, queryClient } = renderApp("/settings");
     const dashboardRange = await screen.findByLabelText("Default dashboard range");
-    expect(screen.getByRole("heading", { name: "Demo preferences" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Preferences" })).toBeVisible();
     await user.selectOptions(dashboardRange, "90d");
     await user.click(screen.getByRole("button", { name: "Switch to light mode" }));
 

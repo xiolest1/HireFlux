@@ -646,9 +646,9 @@ Successful status, note, and interview actions alone advance session-only guide
 progress. Analytics is divided into URL-backed Overview, Pipeline, and Sources
 sections with staged secondary filters, accessible week labels, responsive
 source cards, and a labeled desktop table. Interviews is organized around the
-saved workspace calendar, and Settings separates Preferences, Demo workspace,
-and Account preview while disabling Save until a real change exists and
-replacing unavailable production controls with explanatory capability content.
+saved workspace calendar, and Settings presents profile, workspace lifecycle,
+preferences, and account controls together while replacing unavailable
+production controls with explanatory capability content.
 Dashboard, analytics, and application filters retain previous data during
 refetches and reserve layout-matched skeletons for initial loading.
 
@@ -676,6 +676,43 @@ containment of extreme long application content. A final live pass launched a
 fresh 16-record isolated workspace and verified the redesigned Home and
 Applications flows against the running local API. `git diff --check` and the
 npm production dependency audit also passed.
+
+## Light-mode visual refinement - August 22, 2026
+
+### Purpose
+
+Refined the explicit light theme so it feels calmer and more legible across
+different displays without changing the existing dark-first product identity.
+The work stayed within presentation: no API contracts, routes, theme
+persistence behavior, authentication, or backend architecture changed.
+
+### Changes delivered
+
+The light palette now uses a cool blue-gray canvas, near-white raised
+surfaces, stronger semantic borders, darker readable muted text, and softer
+cyan/violet lighting. Primary actions remain cyan/teal with white text, while
+amber is reserved for warning and expiry states using a contained cream panel
+and narrow warning rule rather than a bright yellow outline.
+
+The landing page now uses semantic canvas and surface tokens, a quieter hero
+gradient, clearer workspace-preview boundaries, gray-blue preview layers, and
+consistent feature/proof-card separation. Status badges and remaining
+legacy-palette feature screens use the same semantic light-mode compatibility
+mapping, while the dark token values and layout remain unchanged.
+
+### Validation
+
+Added deterministic light-mode screenshots for the landing page at 320, 390,
+768, and 1280 pixels, plus desktop light baselines for Dashboard,
+Applications, Application Detail, Interviews, Analytics, and Settings. Light
+routes are checked for WCAG A/AA axe violations, horizontal overflow, and
+stable layout after the theme transition.
+
+Final validation passed frontend ESLint, TypeScript, 68 Vitest tests across 12
+files, the production Vite build, and 60 Playwright checks (51 passed with
+nine expected desktop-only skips). Existing dark-route coverage also passed;
+the Settings desktop baseline was refreshed to match the current Settings
+page structure already present in the working tree. `git diff --check` passed.
 
 ## Analytics, resource bounds, and workflow-integrity hardening - August 22, 2026
 
@@ -878,10 +915,13 @@ resource quotas allow up to 100 applications, 10,000 notes, 2,500 interviews,
 and 50,000 activity records, so a maximum workspace must move to a future async
 S3 export path before AWS staging relies on production-scale data export.
 
-## Account preview and workspace export - August 22, 2026
+## Unified Settings & profile controls - August 22, 2026
 
-The Settings → Account preview now has one real, useful account-control action
-for recruiters to try: `GET /api/v1/me/export` produces a validated JSON
+Settings & profile is now a single page: profile editing, workspace lifecycle,
+preferences, and account controls render together without the former
+Preferences/Demo workspace/Account preview section navigation. The page keeps
+one real, useful account-control action for recruiters to try:
+`GET /api/v1/me/export` produces a validated JSON
 snapshot of the signed-in demo workspace. The export includes the owner-scoped
 profile, preferences, applications, append-only activity, notes, and interview
 records, along with counts and an explicit export version. It walks the existing
@@ -889,12 +929,15 @@ bounded Query-based pagination paths rather than introducing a DynamoDB Scan,
 and never accepts an owner identifier from the client.
 
 The frontend validates the export with Zod and downloads it locally as
-`hireflux-workspace-export.json`. The Account preview also now presents a
+`hireflux-workspace-export.json`. The unified page also presents a
 production-readiness checklist for identity recovery, MFA/session controls,
 notifications, retention, and portability. These remain clearly labeled
 production concepts: the demo does not pretend to provide passwords, MFA,
-notifications, role switching, persistent login, or permanent deletion. The
-export is the only active account-control action in this milestone.
+email notification delivery, role switching, persistent login, or permanent
+deletion. The export is the only active account-control action in this
+milestone. The profile name field is an explicit local simulation; email remains
+read-only because there is no profile-write or delivery service in the local
+demo.
 
 Added API coverage proving the export contains application, note, interview,
 activity, profile, and settings data and remains owner-scoped. Frontend lint,
@@ -904,22 +947,21 @@ notification resources were created.
 
 ### Recruiter simulation controls
 
-Extended the Account preview with two interactive, deliberately
-non-authoritative experiences. The Role & access preview lets a recruiter
+The unified page includes one interactive, deliberately non-authoritative
+experience. The Role & access preview lets a recruiter
 inspect Candidate, Recruiter, Hiring manager, and Administrator lenses and
 explains the access model each would eventually represent. It never changes
-the signed-in role, authorization, or server identity. The Notification center
-preview lets a recruiter toggle follow-up, interview, and weekly-digest
-preferences in local component state so the product can demonstrate a
-realistic control surface without sending messages or implying that a delivery
-system exists.
+the signed-in role, authorization, or server identity. Email notification
+controls remain visibly blocked: the reminder checkboxes are disabled and
+explain that no delivery system exists in the demo.
 
-The preview now distinguishes the one active account action (workspace export)
+The page distinguishes the one active account action (workspace export)
 from production concepts such as recovery, MFA, session controls, retention,
 and permanent deletion. Added frontend coverage for role selection,
-notification toggling, and the explicit authorization/message-delivery
-boundary. This keeps the demo useful for recruiter review while preserving the
-server-owned security and business rules.
+the local-only profile simulation, disabled email notifications, and the
+explicit authorization/message-delivery boundary. This keeps the demo useful
+for recruiter review while preserving the server-owned security and business
+rules.
 
 ## Localhost development reliability - August 22, 2026
 

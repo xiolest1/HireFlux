@@ -180,8 +180,7 @@ test("application layouts, status sheet, and progressive form disclosure stay us
   await expect(optionalDetails).toHaveAttribute("open", "");
 });
 
-test("the explicit light theme persists and remains accessible", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop-1280", "One desktop theme check is sufficient.");
+test("the explicit light theme persists and remains accessible", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(page.locator("html")).not.toHaveClass(/dark/);
@@ -196,6 +195,27 @@ test("the explicit light theme persists and remains accessible", async ({ page }
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
   expect(accessibility.violations).toEqual([]);
+  await expectNoHorizontalPageOverflow(page);
+  await expect(page).toHaveScreenshot("landing-light.png", { fullPage: true });
+});
+
+test("principal workspace routes retain their layout in light mode", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280", "Desktop light-mode baselines only.");
+
+  for (const route of routes.filter(({ name }) => name !== "landing")) {
+    await page.goto(route.path);
+    await expect(page.getByRole("heading", { name: route.heading, level: 1 })).toBeVisible();
+    const themeToggle = page.getByRole("button", { name: "Switch to light mode" });
+    if (await themeToggle.isVisible()) await themeToggle.click();
+    await expect(page.locator("html")).not.toHaveClass(/dark/);
+    await page.waitForTimeout(300);
+    await expectNoHorizontalPageOverflow(page);
+    const accessibility = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(accessibility.violations).toEqual([]);
+    await expect(page).toHaveScreenshot(`light-${route.name}.png`, { fullPage: true });
+  }
 });
 
 test("application detail tabs have stable visual baselines", async ({ page }, testInfo) => {
