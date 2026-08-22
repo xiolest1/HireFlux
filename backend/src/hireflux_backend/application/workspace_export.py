@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TypeVar
 
+from hireflux_backend.application.errors import WorkspaceExportTooLargeError
 from hireflux_backend.application.resource_ports import ResourcePage
 from hireflux_backend.application.resource_services import WorkspaceResourceService
 from hireflux_backend.application.services import ApplicationService, UserService
@@ -34,20 +35,36 @@ class WorkspaceExportService:
         user_service: UserService,
         application_service: ApplicationService,
         resource_service: WorkspaceResourceService,
+        *,
+        max_records: int,
     ) -> None:
         self._users = user_service
         self._applications = application_service
         self._resources = resource_service
+        self._max_records = max_records
 
     def export(self, identity: CurrentIdentity) -> WorkspaceExport:
         applications = self._applications.list_all(identity)
+        record_count = len(applications)
+        self._ensure_record_limit(record_count)
         activities: list[Activity] = []
         notes: list[Note] = []
         interviews: list[Interview] = []
         for application in applications:
-            activities.extend(self._all_activity(identity, application.application_id))
-            notes.extend(self._all_notes(identity, application.application_id))
-            interviews.extend(self._all_interviews(identity, application.application_id))
+            application_activities = self._all_activity(identity, application.application_id)
+            record_count += len(application_activities)
+            self._ensure_record_limit(record_count)
+            activities.extend(application_activities)
+
+            application_notes = self._all_notes(identity, application.application_id)
+            record_count += len(application_notes)
+            self._ensure_record_limit(record_count)
+            notes.extend(application_notes)
+
+            application_interviews = self._all_interviews(identity, application.application_id)
+            record_count += len(application_interviews)
+            self._ensure_record_limit(record_count)
+            interviews.extend(application_interviews)
 
         return WorkspaceExport(
             exported_at=datetime.now(UTC),
@@ -57,6 +74,14 @@ class WorkspaceExportService:
             activities=tuple(activities),
             notes=tuple(notes),
             interviews=tuple(interviews),
+        )
+
+    def _ensure_record_limit(self, record_count: int) -> None:
+        if record_count <= self._max_records:
+            return
+        raise WorkspaceExportTooLargeError(
+            "This workspace is too large for synchronous JSON export. "
+            "A production-scale export will use an asynchronous downloadable artifact."
         )
 
     def _all_activity(self, identity: CurrentIdentity, application_id: str) -> tuple[Activity, ...]:

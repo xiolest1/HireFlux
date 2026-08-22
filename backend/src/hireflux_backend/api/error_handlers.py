@@ -15,6 +15,7 @@ from hireflux_backend.application.errors import (
     NotFoundError,
     PersistenceError,
     ValidationError,
+    WorkspaceExportTooLargeError,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AuthenticationUnavailableError, authentication_handler)
     app.add_exception_handler(DemoSessionRequiredError, demo_session_required_handler)
     app.add_exception_handler(DemoSessionExpiredError, demo_session_expired_handler)
+    app.add_exception_handler(WorkspaceExportTooLargeError, workspace_export_too_large_handler)
     app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(Exception, unexpected_exception_handler)
 
@@ -105,6 +107,11 @@ async def demo_session_expired_handler(request: Request, error: Exception) -> JS
     response = _response(request, 401, "DEMO_SESSION_EXPIRED", str(error))
     response.headers["WWW-Authenticate"] = "Bearer"
     return response
+
+
+async def workspace_export_too_large_handler(request: Request, error: Exception) -> JSONResponse:
+    assert isinstance(error, WorkspaceExportTooLargeError)
+    return _response(request, 413, "WORKSPACE_EXPORT_TOO_LARGE", str(error))
 
 
 async def http_exception_handler(request: Request, error: Exception) -> JSONResponse:

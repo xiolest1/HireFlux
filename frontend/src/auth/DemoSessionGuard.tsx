@@ -6,7 +6,7 @@ export function DemoSessionGuard() {
   const { status, isCreating } = useDemoSession();
   const location = useLocation();
 
-  if (status === "active") {
+  if (status === "active" || status === "replacing") {
     return <Outlet />;
   }
 

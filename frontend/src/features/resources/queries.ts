@@ -25,8 +25,12 @@ export const resourceKeys = {
   upcomingInterviews: ["interviews", "upcoming"] as const,
 };
 
-export function useSettings() {
-  return useQuery({ queryKey: resourceKeys.settings, queryFn: ({ signal }) => getSettings(signal) });
+export function useSettings({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: resourceKeys.settings,
+    queryFn: ({ signal }) => getSettings(signal),
+    enabled,
+  });
 }
 
 export function useUpdateSettings() {

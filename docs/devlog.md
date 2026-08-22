@@ -847,6 +847,37 @@ server-confirmed response and clears the dirty-field set.
 Added a frontend regression test covering an unsaved dashboard-range change
 surviving a header theme refresh while the refreshed theme is accepted.
 
+## P1 audit remediation - August 22, 2026
+
+### Browser Notes contract
+
+The Playwright Notes-tab regression was caused by stale browser fixtures that
+omitted `next_cursor` from paginated notes and activity responses. The real API
+and frontend Zod schemas require the cursor field, so the fixture now matches
+the production contract without weakening validation or suppressing parser
+errors.
+
+### Demo reset isolation
+
+Demo reset now cancels active queries, clears React Query data, and removes the
+stored demo token as soon as identity replacement begins. The protected app
+stays mounted only to show a reset/provisioning state and the existing reset
+dialog; old workspace records are not rendered behind it. If provisioning
+fails, the previous valid session is restored explicitly, caches remain cleared,
+and the dialog focuses the existing accessible error with retry/recovery
+actions.
+
+### Bounded synchronous export
+
+`GET /api/v1/me/export` now sets `Cache-Control: no-store` and `Pragma:
+no-cache` on successful responses. Synchronous export is capped by
+`MAX_SYNC_EXPORT_RECORDS`, defaulting to 5,000 exported application, activity,
+note, and interview records. Larger workspaces receive
+`WORKSPACE_EXPORT_TOO_LARGE` instead of a partial download. The current default
+resource quotas allow up to 100 applications, 10,000 notes, 2,500 interviews,
+and 50,000 activity records, so a maximum workspace must move to a future async
+S3 export path before AWS staging relies on production-scale data export.
+
 ## Account preview and workspace export - August 22, 2026
 
 The Settings → Account preview now has one real, useful account-control action

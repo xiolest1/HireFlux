@@ -29,6 +29,7 @@ import { useSettings, useUpdateSettings } from "../features/resources/queries";
 import { Button } from "./ui/Button";
 import { Dialog } from "./ui/Dialog";
 import { Drawer } from "./ui/Drawer";
+import { LoadingState } from "./ui/Feedback";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { ToastProvider } from "./ui/Toast";
 import {
@@ -128,10 +129,11 @@ function clearRecruiterGuide() {
 export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const meQuery = useMe();
-  const settingsQuery = useSettings();
+  const { session, status, reset, exit, isCreating, error } = useDemoSession();
+  const identityReady = status === "active";
+  const meQuery = useMe({ enabled: identityReady });
+  const settingsQuery = useSettings({ enabled: identityReady });
   const updateSettingsMutation = useUpdateSettings();
-  const { session, reset, exit, isCreating, error } = useDemoSession();
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarPreference);
@@ -404,7 +406,11 @@ export function AppLayout() {
             tabIndex={-1}
             className="mx-auto w-full max-w-[100rem] px-4 py-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 lg:px-8 lg:py-10 lg:pb-10 xl:px-10"
           >
-            <Outlet />
+            {status === "replacing" ? (
+              <LoadingState label="Preparing a fresh demo workspace..." />
+            ) : (
+              <Outlet />
+            )}
           </main>
         </div>
 

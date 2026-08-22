@@ -32,3 +32,7 @@ class DemoSessionRequiredError(HireFluxError):
 
 class DemoSessionExpiredError(HireFluxError):
     pass
+
+
+class WorkspaceExportTooLargeError(HireFluxError):
+    pass

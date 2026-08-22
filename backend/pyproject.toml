@@ -36,6 +36,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 addopts = "-ra"
+cache_dir = "../.pytest_cache"
 pythonpath = ["src"]
 testpaths = ["tests"]
 

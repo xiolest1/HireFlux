@@ -17,6 +17,7 @@ import {
   clearDemoSession,
   DEMO_SESSION_EVENT,
   loadDemoSession,
+  removeStoredDemoSession,
   saveDemoSession,
   type DemoSessionEventReason,
 } from "./sessionStore";
@@ -35,13 +36,11 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
-  const createAndActivate = useCallback(async () => {
+  const start = useCallback(async () => {
     setIsCreating(true);
     setError(null);
     try {
       const session = await createDemoSession();
-      // Keep the current workspace available while creation is pending. Once
-      // the replacement token exists, no prior identity data may survive.
       queryClient.clear();
       saveDemoSession(session);
       setState({ session, status: "active" });
@@ -53,6 +52,35 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
       setIsCreating(false);
     }
   }, [queryClient]);
+
+  const reset = useCallback(async () => {
+    const previousSession = state.session;
+    setIsCreating(true);
+    setError(null);
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    removeStoredDemoSession();
+    setState({ session: null, status: "replacing" });
+    try {
+      const session = await createDemoSession();
+      queryClient.clear();
+      saveDemoSession(session);
+      setState({ session, status: "active" });
+      return session;
+    } catch (creationError) {
+      if (previousSession) {
+        saveDemoSession(previousSession);
+        setState({ session: previousSession, status: "active" });
+      } else {
+        setState({ session: null, status: "missing" });
+      }
+      queryClient.clear();
+      setError(creationError);
+      throw creationError;
+    } finally {
+      setIsCreating(false);
+    }
+  }, [queryClient, state.session]);
 
   const exit = useCallback(() => {
     queryClient.clear();
@@ -91,11 +119,11 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
       ...state,
       isCreating,
       error,
-      start: createAndActivate,
-      reset: createAndActivate,
+      start,
+      reset,
       exit,
     }),
-    [createAndActivate, error, exit, isCreating, state],
+    [error, exit, isCreating, reset, start, state],
   );
 
   return (

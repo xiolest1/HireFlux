@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 
 from hireflux_backend.api.dependencies import (
     IdentityDependency,
@@ -20,5 +20,8 @@ def get_me(identity: IdentityDependency, service: UserServiceDependency) -> User
 def export_workspace(
     identity: IdentityDependency,
     service: WorkspaceExportServiceDependency,
+    response: Response,
 ) -> WorkspaceExportResponse:
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
     return WorkspaceExportResponse.from_domain(service.export(identity))

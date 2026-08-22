@@ -1,5 +1,5 @@
 import { screen, waitFor, within } from "@testing-library/react";
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { getDemoSession } from "../auth/sessionStore";
 import { renderApp } from "../test/renderApp";
@@ -72,7 +72,7 @@ describe("demo workspace flow", () => {
     expect(getDemoSession()?.access_token).toBe(issuedSession.access_token);
   });
 
-  it("keeps the reset dialog and current workspace available when reset fails", async () => {
+  it("keeps the reset dialog and restores the prior workspace only after reset fails", async () => {
     server.use(
       http.post(`${API_ORIGIN}/api/v1/demo-sessions`, () =>
         HttpResponse.json(
@@ -103,7 +103,7 @@ describe("demo workspace flow", () => {
     expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
   });
 
-  it("keeps the prior workspace visible until reset succeeds", async () => {
+  it("hides and clears the prior workspace while reset is creating a replacement", async () => {
     const oldDashboard = {
       ...testDashboard,
       summary: { ...testDashboard.summary, total_tracked: 17, drafts: 3 },
@@ -113,9 +113,12 @@ describe("demo workspace flow", () => {
       summary: { ...testDashboard.summary, total_tracked: 16, drafts: 2 },
     };
     let dashboardAuthorization: string | null = null;
+    const releaseReset: { current: (() => void) | undefined } = { current: undefined };
     server.use(
       http.post(`${API_ORIGIN}/api/v1/demo-sessions`, async () => {
-        await delay(75);
+        await new Promise<void>((resolve) => {
+          releaseReset.current = resolve;
+        });
         return HttpResponse.json(issuedSession, { status: 201 });
       }),
       http.get(`${API_ORIGIN}/api/v1/dashboard`, ({ request }) => {
@@ -139,10 +142,14 @@ describe("demo workspace flow", () => {
     await user.click(screen.getByRole("button", { name: "Reset workspace" }));
 
     expect(screen.getByRole("alertdialog", { name: "Reset this demo?" })).toBeVisible();
-    expect(screen.getByText("17")).toBeVisible();
-    expect(queryClient.getQueryData(dashboardKey)).toEqual(oldDashboard);
+    expect(screen.getByText("Preparing a fresh demo workspace...")).toBeVisible();
+    expect(screen.queryByText("17")).not.toBeInTheDocument();
+    expect(queryClient.getQueryData(dashboardKey)).toBeUndefined();
 
-    const totalTracked = screen.getByText("Total tracked").parentElement!;
+    await waitFor(() => expect(releaseReset.current).toEqual(expect.any(Function)));
+    releaseReset.current?.();
+    await screen.findByText("Demo workspace reset.");
+    const totalTracked = (await screen.findByText("Total tracked")).parentElement!;
     await waitFor(() =>
       expect(within(totalTracked).getByText("16")).toBeVisible(),
     );

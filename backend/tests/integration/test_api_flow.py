@@ -1,11 +1,15 @@
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+from conftest import test_settings as build_test_settings
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from hireflux_backend.domain.enums import ApplicationStatus
-from hireflux_backend.domain.models import Application
+from hireflux_backend.api.dependencies import get_current_identity
+from hireflux_backend.domain.enums import ApplicationStatus, UserRole
+from hireflux_backend.domain.models import Application, CurrentIdentity
 from hireflux_backend.infrastructure.dynamodb.mapping import application_to_item, serialize_item
+from hireflux_backend.main import create_app
 
 
 def draft_payload(company: str = "Acme") -> dict[str, Any]:
@@ -23,6 +27,19 @@ def draft_payload(company: str = "Acme") -> dict[str, Any]:
         "salary_text": "$120k-$140k",
         "description": "Build reliable services.",
     }
+
+
+def _identity(user_id: str, name: str) -> CurrentIdentity:
+    return CurrentIdentity(
+        user_id=user_id,
+        name=name,
+        email=f"{user_id}@example.invalid",
+        role=UserRole.STANDARD_USER,
+    )
+
+
+def _use_identity(app: FastAPI, identity: CurrentIdentity) -> None:
+    app.dependency_overrides[get_current_identity] = lambda: identity
 
 
 def test_health_profile_and_request_ids(client: TestClient) -> None:
@@ -56,6 +73,8 @@ def test_workspace_export_is_owner_scoped_and_contains_resources(client: TestCli
 
     response = client.get("/api/v1/me/export")
     assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Pragma"] == "no-cache"
     payload = response.json()
     assert payload["export_version"] == 1
     assert payload["profile"]["user_id"] == "00000000-0000-4000-8000-000000000001"
@@ -67,6 +86,86 @@ def test_workspace_export_is_owner_scoped_and_contains_resources(client: TestCli
     )
     assert payload["counts"]["applications"] == len(payload["applications"])
     assert payload["counts"]["activities"] == len(payload["activities"])
+
+
+def test_workspace_export_aggregates_only_the_authenticated_workspace(
+    dynamodb_client: Any,
+) -> None:
+    app = create_app(build_test_settings(), dynamodb_client=dynamodb_client)
+    identity_a = _identity("00000000-0000-4000-8000-0000000000aa", "Owner A")
+    identity_b = _identity("00000000-0000-4000-8000-0000000000bb", "Owner B")
+
+    with TestClient(app) as client:
+        _use_identity(app, identity_a)
+        application_a = client.post(
+            "/api/v1/applications", json=draft_payload("Export Owner A")
+        ).json()
+        note_a = client.post(
+            f"/api/v1/applications/{application_a['application_id']}/notes",
+            json={"content": "Owner A note"},
+        ).json()
+        interview_a = client.post(
+            f"/api/v1/applications/{application_a['application_id']}/interviews",
+            json={
+                "interview_type": "RECRUITER_CALL",
+                "scheduled_at": (datetime.now(UTC) + timedelta(days=2)).isoformat(),
+            },
+        ).json()
+
+        _use_identity(app, identity_b)
+        application_b = client.post(
+            "/api/v1/applications", json=draft_payload("Export Owner B")
+        ).json()
+        note_b = client.post(
+            f"/api/v1/applications/{application_b['application_id']}/notes",
+            json={"content": "Owner B note"},
+        ).json()
+        interview_b = client.post(
+            f"/api/v1/applications/{application_b['application_id']}/interviews",
+            json={
+                "interview_type": "RECRUITER_CALL",
+                "scheduled_at": (datetime.now(UTC) + timedelta(days=3)).isoformat(),
+            },
+        ).json()
+
+        _use_identity(app, identity_a)
+        response = client.get("/api/v1/me/export")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert {item["application_id"] for item in payload["applications"]} == {
+        application_a["application_id"]
+    }
+    assert {item["note_id"] for item in payload["notes"]} == {note_a["note_id"]}
+    assert {item["interview_id"] for item in payload["interviews"]} == {interview_a["interview_id"]}
+    assert all(
+        item["application_id"] == application_a["application_id"] for item in payload["activities"]
+    )
+    assert application_b["application_id"] not in {
+        item["application_id"] for item in payload["applications"]
+    }
+    assert note_b["note_id"] not in {item["note_id"] for item in payload["notes"]}
+    assert interview_b["interview_id"] not in {
+        item["interview_id"] for item in payload["interviews"]
+    }
+    assert "Owner B" not in str(payload)
+
+
+def test_workspace_export_rejects_workspaces_above_the_sync_record_limit(
+    dynamodb_client: Any,
+) -> None:
+    app = create_app(
+        build_test_settings(max_sync_export_records=1),
+        dynamodb_client=dynamodb_client,
+    )
+    with TestClient(app) as client:
+        response = client.post("/api/v1/applications", json=draft_payload("Too Large"))
+        assert response.status_code == 201
+
+        export = client.get("/api/v1/me/export")
+
+    assert export.status_code == 413
+    assert export.json()["error"]["code"] == "WORKSPACE_EXPORT_TOO_LARGE"
 
 
 def test_create_read_update_page_and_activity(client: TestClient) -> None:

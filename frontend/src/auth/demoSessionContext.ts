@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 import type { DemoSession } from "../api/schemas";
 
-export type SessionStatus = "active" | "missing" | "expired";
+export type SessionStatus = "active" | "missing" | "expired" | "replacing";
 
 export interface DemoSessionContextValue {
   session: DemoSession | null;

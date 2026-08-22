@@ -38,10 +38,11 @@ function invalidateWorkspaceInsights(queryClient: QueryClient) {
   void queryClient.invalidateQueries({ queryKey: ["analytics"] });
 }
 
-export function useMe() {
+export function useMe({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ["me"],
     queryFn: ({ signal }) => getMe(signal),
+    enabled,
   });
 }
 

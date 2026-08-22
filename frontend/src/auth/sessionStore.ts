@@ -44,9 +44,14 @@ export function saveDemoSession(session: DemoSession): void {
   window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 }
 
-export function clearDemoSession(reason: DemoSessionEventReason = "cleared"): void {
+export function removeStoredDemoSession(): void {
   if (typeof window === "undefined") return;
   window.sessionStorage.removeItem(STORAGE_KEY);
+}
+
+export function clearDemoSession(reason: DemoSessionEventReason = "cleared"): void {
+  if (typeof window === "undefined") return;
+  removeStoredDemoSession();
   window.dispatchEvent(
     new CustomEvent(DEMO_SESSION_EVENT, { detail: { reason } }),
   );

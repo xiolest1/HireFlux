@@ -23,6 +23,7 @@ HireFlux uses three intentionally separate environments. The repository currentl
 - Production uses a separate DynamoDB table and secret values supplied by the deployment platform.
 - Lambda uses its IAM execution role; deployed configuration omits local endpoints and explicit AWS credentials.
 - API Gateway throttling, constrained Lambda concurrency, a workspace record limit, short log retention, low budget alerts, and monitoring are release gates rather than assumptions in browser code.
+- Synchronous workspace export is intentionally bounded for the recruiter demo. Production-scale export should move to an asynchronous job that reads DynamoDB resources in controlled pages, writes the complete artifact to S3, and returns a short-lived presigned download URL rather than aggregating a maximum workspace into one API response.
 
 ## Single-page application rewrite
 

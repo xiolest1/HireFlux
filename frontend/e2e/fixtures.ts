@@ -275,6 +275,7 @@ export async function installDeterministicApi(page: Page) {
             created_at: "2026-08-08T13:00:00Z",
           },
         ],
+        next_cursor: null,
       });
       return;
     }
@@ -290,6 +291,7 @@ export async function installDeterministicApi(page: Page) {
             version: 1,
           },
         ],
+        next_cursor: null,
       });
       return;
     }

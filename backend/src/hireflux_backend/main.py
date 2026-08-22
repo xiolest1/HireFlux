@@ -91,7 +91,10 @@ def create_app(
     )
     app.state.workspace_resource_service = workspace_resource_service
     app.state.workspace_export_service = WorkspaceExportService(
-        user_service, application_service, workspace_resource_service
+        user_service,
+        application_service,
+        workspace_resource_service,
+        max_records=configured.max_sync_export_records,
     )
     app.state.demo_session_codec = demo_session_codec
     app.state.demo_session_service = DemoSessionService(
