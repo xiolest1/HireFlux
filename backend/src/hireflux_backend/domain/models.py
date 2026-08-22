@@ -5,6 +5,7 @@ from hireflux_backend.domain.enums import (
     ActivityType,
     ApplicationSource,
     ApplicationStatus,
+    DemoWorkspaceState,
     UserRole,
     WorkMode,
 )
@@ -70,3 +71,13 @@ class Activity:
     created_at: datetime
     metadata: dict[str, str] = field(default_factory=dict)
     expires_at: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DemoWorkspace:
+    workspace_id: str
+    state: DemoWorkspaceState
+    issued_at: datetime
+    updated_at: datetime
+    expires_at: int
+    idempotency_key_hash: str | None = None

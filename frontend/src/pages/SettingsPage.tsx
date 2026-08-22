@@ -1,5 +1,5 @@
 import { Bell, Clock3, KeyRound, Palette, ShieldCheck, UserRound } from "lucide-react";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { ColorTheme, DashboardRange, Settings } from "../api/schemas";
 import { useDemoSession } from "../auth/demoSessionContext";
@@ -19,6 +19,27 @@ function draftFromSettings(settings: Settings): SettingsDraft {
   return { time_zone, default_follow_up_days, default_application_view, default_dashboard_range, theme };
 }
 
+function mergeRefreshedDraft(
+  current: SettingsDraft | null,
+  nextServer: SettingsDraft,
+  dirtyFields: ReadonlySet<keyof SettingsDraft>,
+): SettingsDraft {
+  if (!current) return nextServer;
+  const merged = { ...nextServer };
+  if (dirtyFields.has("time_zone")) merged.time_zone = current.time_zone;
+  if (dirtyFields.has("default_follow_up_days")) {
+    merged.default_follow_up_days = current.default_follow_up_days;
+  }
+  if (dirtyFields.has("default_application_view")) {
+    merged.default_application_view = current.default_application_view;
+  }
+  if (dirtyFields.has("default_dashboard_range")) {
+    merged.default_dashboard_range = current.default_dashboard_range;
+  }
+  if (dirtyFields.has("theme")) merged.theme = current.theme;
+  return merged;
+}
+
 function draftsMatch(left: SettingsDraft | null, right: SettingsDraft | null) {
   if (!left || !right) return true;
   return JSON.stringify(left) === JSON.stringify(right);
@@ -32,16 +53,32 @@ export function SettingsPage() {
   const meQuery = useMe();
   const { session } = useDemoSession();
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
+  const dirtyFields = useRef<Set<keyof SettingsDraft>>(new Set());
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (settingsQuery.data) setDraft(draftFromSettings(settingsQuery.data));
+    if (!settingsQuery.data) return;
+    const nextServerDraft = draftFromSettings(settingsQuery.data);
+    setDraft((current) => mergeRefreshedDraft(current, nextServerDraft, dirtyFields.current));
   }, [settingsQuery.data]);
 
   const original = settingsQuery.data ? draftFromSettings(settingsQuery.data) : null;
   const dirty = !draftsMatch(draft, original);
 
   function change(next: SettingsDraft) {
+    if (settingsQuery.data) {
+      const serverDraft = draftFromSettings(settingsQuery.data);
+      for (const field of [
+        "time_zone",
+        "default_follow_up_days",
+        "default_application_view",
+        "default_dashboard_range",
+        "theme",
+      ] as const) {
+        if (next[field] === serverDraft[field]) dirtyFields.current.delete(field);
+        else dirtyFields.current.add(field);
+      }
+    }
     setDraft(next);
     setSaved(false);
   }
@@ -51,8 +88,10 @@ export function SettingsPage() {
     if (!draft || !settingsQuery.data || !dirty) return;
     setSaved(false);
     try {
-      await updateMutation.mutateAsync({ expected_version: settingsQuery.data.version, ...draft });
-      setColorThemePreference(draft.theme);
+      const savedSettings = await updateMutation.mutateAsync({ expected_version: settingsQuery.data.version, ...draft });
+      dirtyFields.current.clear();
+      setDraft(draftFromSettings(savedSettings));
+      setColorThemePreference(savedSettings.theme);
       setSaved(true);
     } catch {
       return;

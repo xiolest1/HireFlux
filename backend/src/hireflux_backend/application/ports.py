@@ -8,7 +8,13 @@ from hireflux_backend.domain.enums import (
     ApplicationStatus,
     WorkMode,
 )
-from hireflux_backend.domain.models import Activity, Application, CurrentIdentity, UserProfile
+from hireflux_backend.domain.models import (
+    Activity,
+    Application,
+    CurrentIdentity,
+    DemoWorkspace,
+    UserProfile,
+)
 from hireflux_backend.domain.resources import DefaultApplicationView
 
 
@@ -89,3 +95,26 @@ class DemoSessionTokenIssuer(Protocol):
         issued_at: datetime,
         expires_at: datetime,
     ) -> str: ...
+
+
+@dataclass(frozen=True, slots=True)
+class DemoWorkspaceReservation:
+    workspace: DemoWorkspace
+    is_new: bool
+
+
+class DemoWorkspaceRepository(Protocol):
+    def reserve(
+        self,
+        workspace_id: str,
+        *,
+        issued_at: datetime,
+        expires_at: int,
+        idempotency_key: str | None,
+    ) -> DemoWorkspaceReservation: ...
+
+    def mark_ready(self, workspace: DemoWorkspace) -> None: ...
+
+    def mark_failed(self, workspace: DemoWorkspace, *, expires_at: int) -> None: ...
+
+    def cleanup(self, workspace_id: str, *, application_ids: tuple[str, ...] = ()) -> None: ...

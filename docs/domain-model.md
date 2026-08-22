@@ -60,6 +60,13 @@ Only scheduled interviews are editable. They may transition to completed or canc
 
 The temporary demo persists these preferences for its own 24-hour lifetime. Identity, password, MFA, and connected-login controls remain read-only previews because the demo is not a permanent account.
 
+## Demo workspace provisioning
+
+- Lifecycle item: `workspace_id`, `state`, `issued_at`, `updated_at`, and `expires_at`.
+- `state` is `PROVISIONING` while the seed is being written, `READY` only after the complete seed succeeds, or `FAILED` after a failed attempt.
+- A failed lifecycle marker uses a short cleanup TTL and is not an authenticated workspace. Partial profile, settings, application, child-resource, quota, counter, and activity records are removed best-effort.
+- An optional request `Idempotency-Key` is hashed server-side and stored with the lifecycle reference. A successful replay reissues the deterministic token for the original workspace; provisioning and failed replays return a conflict so the caller does not create an ambiguous second result.
+
 ## Attachment metadata (Milestone 4)
 
 - `attachment_id`, `application_id`, `owner_user_id`, `attachment_type`.

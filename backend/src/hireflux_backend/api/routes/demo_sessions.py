@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Header
 from fastapi import status as http_status
 
 from hireflux_backend.api.dependencies import (
@@ -16,12 +18,13 @@ router = APIRouter(prefix="/api/v1/demo-sessions", tags=["demo sessions"])
 def create_demo_session(
     settings: SettingsDependency,
     service: DemoSessionServiceDependency,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> DemoSessionResponse:
     if settings.auth_mode is not AuthMode.DEMO:
         raise AuthenticationUnavailableError(
             "Temporary demo sessions are not enabled in this environment."
         )
-    session = service.create()
+    session = service.create(idempotency_key=idempotency_key)
     return DemoSessionResponse(
         access_token=session.access_token,
         expires_at=session.expires_at,

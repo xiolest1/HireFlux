@@ -29,6 +29,9 @@ dynamodb-data/
 .tools/
 tmp/
 
+# Generated software inventory artifacts
+sbom/*.cdx.json
+
 # Editors and operating systems
 .DS_Store
 Thumbs.db

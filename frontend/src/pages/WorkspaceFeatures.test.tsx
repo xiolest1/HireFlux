@@ -207,6 +207,30 @@ describe("workspace milestone features", () => {
     expect(screen.getByRole("button", { name: "Switch to dark mode" })).toBeVisible();
   });
 
+  it("preserves dirty settings when a refreshed server value changes another field", async () => {
+    let body: Record<string, unknown> | null = null;
+    server.use(
+      http.patch(`${API_ORIGIN}/api/v1/settings`, async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ ...testSettings, theme: "LIGHT", version: 2 });
+      }),
+    );
+
+    const { user, queryClient } = renderApp("/settings");
+    const dashboardRange = await screen.findByLabelText("Default dashboard range");
+    expect(screen.getByRole("heading", { name: "Demo preferences" })).toBeVisible();
+    await user.selectOptions(dashboardRange, "90d");
+    await user.click(screen.getByRole("button", { name: "Switch to light mode" }));
+
+    await waitFor(() => expect(body).toMatchObject({ expected_version: 1, theme: "LIGHT" }));
+    await waitFor(() => expect(queryClient.getQueryData(["settings"])).toMatchObject({ theme: "LIGHT" }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Default dashboard range")).toHaveValue("90d");
+      expect(screen.getByLabelText("Color theme")).toHaveValue("LIGHT");
+    });
+    expect(screen.getByRole("button", { name: "Save preferences" })).toBeEnabled();
+  });
+
   it("shows upcoming interviews in the saved workspace time zone", async () => {
     server.use(
       http.get(`${API_ORIGIN}/api/v1/interviews`, () =>

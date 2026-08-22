@@ -19,6 +19,8 @@ Adding or changing an index is an explicit schema migration decision, not an app
 | Entity | Primary key | Sort key | Relevant index keys |
 | --- | --- | --- | --- |
 | User profile | `USER#<user_id>` | `PROFILE` | none |
+| Demo workspace lifecycle | `USER#<workspace_id>` | `WORKSPACE` | none; `state` is `PROVISIONING`, `READY`, or `FAILED` |
+| Demo idempotency record | `DEMO_IDEMPOTENCY#<sha256(idempotency-key)>` | `SESSION` | none; stores only the workspace reference, state, timestamps, and TTL |
 | Workspace quota | `USER#<user_id>` | `WORKSPACE_QUOTA` | none |
 | Application | `USER#<owner>#APPLICATION#<application_id>` | `METADATA` | non-archived only: `GSI1PK=USER#<owner>#APPLICATIONS`, `GSI1SK=<updated_at>#<id>`; every status: `GSI2PK=USER#<owner>#STATUS#<status>`, `GSI2SK=<updated_at>#<id>`; outstanding follow-up only: `GSI3PK=USER#<owner>#SCHEDULE`, `GSI3SK=FOLLOW_UP#<date>#<id>` |
 | Activity | same application partition | `ACTIVITY#<created_at>#<activity_id>` | optional owner recent-activity projection later |
@@ -59,6 +61,8 @@ Every temporary demo item, including settings, notes, counters, and interviews, 
 | 18 | List unread notifications | `Query GSI2PK=USER#sub#NOTIFICATION#UNREAD` | overloaded GSI2 | signed cursor | owner partition comes from identity |
 | 19 | Dashboard counts by status and historical funnel | strongly consistent `Query PK=USER#sub AND begins_with(SK, COUNTER#)` reads the nine status counters and funnel counter | table | none | the counter partition comes from the authenticated owner |
 | 20 | Later admin reporting | role-gated query on a sparse admin index keyed by entity/date | admin GSI, later | signed cursor | separate admin service requires `ADMIN`; ordinary methods never use this index |
+| 21 | Reserve or replay demo provisioning | conditional `PutItem` without a key, or two-item `TransactWriteItems` for lifecycle plus idempotency record | table | none | public route has no owner input; generated workspace ID and hashed key are server-owned |
+| 22 | Clean up failed demo provisioning | owner-partition `Query`, status-partition `Query` on GSI2, application-partition `Query`, then bounded `BatchWriteItem` deletes | table + GSI2 | internal bounded pagination | only invoked for the just-reserved generated workspace; lifecycle and failure marker remain until TTL |
 
 ## Cursor contract
 
@@ -73,6 +77,12 @@ Status counters, funnel counters, historical milestone timestamps, and schedule 
 The idempotent reconciliation command is deliberately local-only and requires the operator to confirm the exact table name. Its controlled maintenance scans load canonical applications and interviews, rewrite them through the current serializers, and rebuild status and funnel counters. Rewriting repairs application index attributes and both interview projections: it restores missing owner-interview or scheduled-interview keys and removes stale GSI3 schedule keys from completed or canceled interviews. Scans remain forbidden in normal request paths.
 
 GSI reads are eventually consistent. Mutations return the canonical base-table result immediately; a following list, upcoming schedule, or dashboard action can lag briefly. Search and multi-status view merging operate over owner-scoped queries bounded by the configured workspace quota, which defaults to 100 applications. Each application also has resource quotas for stored notes (100), interviews (25), and append-only activity entries (500) by default. The `RESOURCE_QUOTA` item is updated in the same transaction as the child/activity mutation, so rejected quota writes cannot leave a partial record behind; deleting a note releases its note slot atomically. Update-time ascending and descending ordering use the index sort value and application ID as a stable logical position.
+
+Demo provisioning is the one workflow that intentionally performs a bounded
+cleanup sweep after a failure. It queries known owner/status/application
+partitions and never uses a normal-path `Scan`. The lifecycle record is retained
+as `FAILED` with a short TTL so operators can distinguish an incomplete seed
+from a successful workspace without exposing internal DynamoDB keys to clients.
 
 ## Local versus AWS clients
 

@@ -751,6 +751,102 @@ The durable contracts were updated in the dashboard/analytics, domain-model,
 DynamoDB access-pattern, and isolated-demo-session ADR documents. No AWS
 resources were created during this work.
 
+## Browser security headers - August 22, 2026
+
+### Hosted policy
+
+Added the repository-root `customHttp.yml` monorepo configuration for Amplify
+Hosting. Hosted responses now receive a deployable Content Security Policy,
+HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
+`Permissions-Policy`, and cross-origin isolation headers. The policy permits
+same-origin scripts only, blocks object/plugin content and inline event-handler
+scripts, prevents framing, disables unused browser capabilities, and scopes API
+connections to the planned us-east-1 API Gateway origin. Deployments using a
+custom API domain or another AWS region must update `connect-src` before release.
+
+The pre-React theme setup moved from an inline script in `frontend/index.html`
+to `frontend/public/theme-bootstrap.js`, keeping first-paint theme selection
+while allowing `script-src 'self'`. Vite development and preview servers now
+send the same header family with an explicit local API allowlist and without
+HSTS on HTTP. The development-only Vite React-refresh bootstrap is the sole
+reason the local server allows inline scripts; the production preview and
+hosted policy keep them blocked. The security-header helper has focused tests
+covering inline script blocking, framing protection, local HTTP behavior, and
+MIME sniffing protection.
+
+This is defense in depth for the current temporary demo token in
+`sessionStorage`; it does not make a bearer token unreadable to already-running
+same-origin JavaScript. Production identity/session hardening remains a separate
+deployment milestone.
+
+## Python dependency lock and SBOM baseline - August 22, 2026
+
+### Reproducible dependency graph
+
+Generated and committed `backend/uv.lock` from the existing pinned
+`backend/pyproject.toml`. The lock covers the runtime and development extra
+across the supported Python 3.13 and 3.14 range, records transitive versions,
+registry sources, and SHA-256 hashes for source and wheel artifacts. The
+recommended environment setup is now `uv sync --project backend --extra dev
+--locked`, and `uv lock --check` is the drift gate before validation.
+
+The frontend already has a committed npm lockfile; the documented setup keeps
+using `npm ci` so its package integrity metadata remains authoritative.
+
+### Software inventory
+
+Added `backend/scripts/generate_sbom.py`, a standard-library CycloneDX 1.5
+generator that reads the Python lockfile and emits package URLs, dependency
+edges, artifact hashes, and the lockfile digest. The supply-chain guide also
+documents npm's CycloneDX SBOM command for the frontend. Generated SBOM files
+are ignored local/CI artifacts rather than source files, so a future staging
+workflow can upload the exact inventories alongside each build.
+
+## Demo provisioning reliability - August 22, 2026
+
+### Lifecycle state and failure cleanup
+
+Demo creation now reserves a workspace lifecycle item as `PROVISIONING` before
+writing the profile and seeded applications, activities, notes, interviews,
+settings, quotas, and counters. The item becomes `READY` only after the full
+seed completes. If any step fails, the service returns a safe persistence error,
+marks the lifecycle `FAILED` with a 15-minute default TTL, and removes partial
+owner/application records best-effort through bounded owner-scoped queries and
+batch deletes. The failed marker and its optional idempotency record remain
+briefly so an incomplete seed is distinguishable from a successful workspace;
+they do not grant authorization.
+
+### Retry safety
+
+`POST /api/v1/demo-sessions` accepts an optional `Idempotency-Key`. The backend
+stores only a SHA-256 hash of that key with the generated workspace reference.
+Once provisioning is `READY`, replaying the same key returns the same
+deterministic signed token and workspace expiry rather than creating a second
+seed. Requests that collide with `PROVISIONING` or `FAILED` receive a conflict,
+so callers can retry an incomplete operation with a new key after the failure
+has been surfaced. The frontend generates a UUID key for each launch/reset
+attempt, making transport-level replay safe without exposing internal
+DynamoDB keys.
+
+### Validation
+
+Added Moto-backed integration coverage for the `READY` lifecycle marker,
+idempotent replay, partial-seed cleanup, short failure TTL, and failed-key
+conflict behavior. Added frontend coverage proving demo launch sends the
+idempotency header. The local architecture and access-pattern documents now
+describe the lifecycle and bounded cleanup path. No AWS resources were created.
+
+## Settings draft refresh safety - August 22, 2026
+
+Settings preferences now track dirty fields independently from the server
+snapshot. When another control, such as the header theme toggle, refreshes the
+shared settings query, untouched fields accept the latest server values while
+locally edited fields remain in the draft. Saving replaces the draft with the
+server-confirmed response and clears the dirty-field set.
+
+Added a frontend regression test covering an unsaved dashboard-range change
+surviving a header theme refresh while the refreshed theme is accepted.
+
 ## Next recommended work
 
 Freeze and commit the validated local Milestone 2 baseline, then build and

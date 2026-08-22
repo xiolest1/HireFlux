@@ -25,6 +25,9 @@ from hireflux_backend.auth.demo import DemoSessionCodec
 from hireflux_backend.config import Settings, get_settings
 from hireflux_backend.infrastructure.dynamodb.client import build_dynamodb_client
 from hireflux_backend.infrastructure.dynamodb.cursor import CursorCodec
+from hireflux_backend.infrastructure.dynamodb.demo_workspace_repository import (
+    DynamoDemoWorkspaceRepository,
+)
 from hireflux_backend.infrastructure.dynamodb.repositories import (
     DynamoApplicationRepository,
     DynamoUserRepository,
@@ -77,6 +80,9 @@ def create_app(
         ),
     )
     demo_session_codec = DemoSessionCodec(configured.demo_session_signing_key.get_secret_value())
+    demo_workspace_repository = DynamoDemoWorkspaceRepository(
+        client, configured.dynamodb_table_name
+    )
     app.state.user_service = user_service
     app.state.application_service = application_service
     app.state.insights_service = InsightsService(
@@ -89,7 +95,9 @@ def create_app(
         application_service,
         demo_session_codec,
         ttl_hours=configured.demo_session_ttl_hours,
+        failure_ttl_minutes=configured.demo_session_failure_ttl_minutes,
         resource_service=workspace_resource_service,
+        workspace_repository=demo_workspace_repository,
     )
 
     app.add_middleware(
@@ -97,7 +105,7 @@ def create_app(
         allow_origins=list(configured.cors_origins),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+        allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Request-ID"],
         expose_headers=["X-Request-ID"],
     )
 

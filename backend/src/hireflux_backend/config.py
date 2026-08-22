@@ -51,6 +51,7 @@ class Settings(BaseSettings):
         "local-only-demo-session-signing-key-change-before-deployment"
     )
     demo_session_ttl_hours: int = Field(default=24, ge=1, le=168)
+    demo_session_failure_ttl_minutes: int = Field(default=15, ge=1, le=1440)
     max_applications_per_workspace: int = Field(default=100, ge=5, le=500)
     max_notes_per_application: int = Field(default=100, ge=1, le=500)
     max_interviews_per_application: int = Field(default=25, ge=1, le=100)

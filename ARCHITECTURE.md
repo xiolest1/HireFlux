@@ -117,6 +117,16 @@ an `expires_at` TTL value, but TTL cleanup is asynchronous and is not used as an
 authorization mechanism. A guessed UUID under another owner resolves exactly
 like a missing record and returns `404`.
 
+Provisioning creates an owner-partition lifecycle item in `PROVISIONING` before
+the profile and seed writes begin. It moves to `READY` only after all seed
+resources succeed. A failure is translated to a safe persistence error, the
+partial owner/application partitions are deleted best-effort, and the lifecycle
+marker moves to `FAILED` with a 15-minute default TTL. Requests may supply an
+`Idempotency-Key`; its SHA-256 mapping is stored in a separate TTL item, so a
+retry after a successful response reissues the same deterministic signed token.
+Requests that arrive while provisioning is in progress or after a failed
+attempt receive a conflict and must retry with the appropriate key.
+
 ## DynamoDB model
 
 HireFlux uses one table with `PK` and `SK` string keys. The primary application
@@ -158,10 +168,11 @@ sequenceDiagram
     participant A as FastAPI
     participant S as Demo service
     participant D as DynamoDB
-    B->>A: POST /api/v1/demo-sessions
-    A->>S: Create isolated workspace
+    B->>A: POST /api/v1/demo-sessions + Idempotency-Key
+    A->>S: Reserve lifecycle as PROVISIONING
     S->>D: Create profile, quota, settings, applications, activity, notes, interviews, counters
     D-->>S: Transactional/conditional results
+    S->>D: Mark lifecycle READY
     S-->>A: Signed token and expiry
     A-->>B: 201 demo session
     Note over B: Clear old query cache before activating the new identity
@@ -170,6 +181,11 @@ sequenceDiagram
 
 Seed creation uses ordinary trusted services and persistence paths so the demo
 exercises the same business rules as subsequent user actions.
+
+If a seed write fails, the service marks the lifecycle `FAILED`, deletes known
+partial records through owner-scoped queries and batch deletes, and keeps only
+the short-lived lifecycle/idempotency markers. Cleanup is not authorization;
+token expiry and the verified workspace identity remain the security boundary.
 
 ### Mutate an application or child resource
 
@@ -231,7 +247,9 @@ flowchart LR
 
 - **Amplify Hosting** fits a static Vite SPA, supplies managed HTTPS, and keeps
   frontend deployment separate from API execution. It needs an asset-aware SPA
-  rewrite and security headers.
+  rewrite and security headers. The repository root `customHttp.yml` supplies
+  the hosted security-header policy for the `frontend/` monorepo app; its CSP
+  `connect-src` must be kept aligned with each environment's API origin.
 - **API Gateway HTTP API** provides the public HTTPS boundary and routing with
   less complexity and lower baseline cost than an ALB/API Gateway REST API for
   this small JSON API.

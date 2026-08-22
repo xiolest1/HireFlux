@@ -15,6 +15,19 @@ Profile, application, activity, and quota items carry the workspace expiry as th
 
 The local fixed identity remains available for deterministic backend tests. Cognito is deferred until HireFlux needs persistent personal accounts.
 
+Demo provisioning is lifecycle-tracked. The backend first reserves a
+`PROVISIONING` lifecycle record, seeds through the ordinary services, and marks
+it `READY` only after the complete seed succeeds. If a write fails, the service
+marks the workspace `FAILED` with a short cleanup TTL, removes partial
+owner/application records best-effort, and returns a safe persistence error.
+The failed marker is retained briefly for diagnosis and does not grant access.
+
+The create endpoint also accepts an optional `Idempotency-Key`. The backend
+stores only its SHA-256 hash with the generated workspace reference. A replay
+after `READY` returns the same deterministic signed token; a replay during
+provisioning or after failure returns a conflict, avoiding duplicate seed
+workspaces after a client timeout.
+
 ## Consequences
 
 Simultaneous recruiters can safely use the same one-click entry point without sharing data. The demo has no passwords, signup, recovery, or email cost. Production still requires edge throttling, constrained compute, workspace record limits, monitoring, and budget alerts because a public button can be automated.

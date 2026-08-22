@@ -10,7 +10,7 @@ No AWS account, cloud resource, or real AWS credential is needed for the local s
 
 ## Current milestone
 
-The public landing page launches a signed, 24-hour demo workspace with its own owner identity and 16 realistic fictional applications. The protected workspace Home summarizes active pursuits, attention items, outcome rates, upcoming interviews, and recent work. Each visitor can manage applications, follow-ups, notes, interviews, analytics, and temporary preferences without seeing or changing another visitor's workspace. DynamoDB TTL marks every temporary record for cleanup.
+The public landing page launches a signed, 24-hour demo workspace with its own owner identity and 16 realistic fictional applications. The protected workspace Home summarizes active pursuits, attention items, outcome rates, upcoming interviews, and recent work. Each visitor can manage applications, follow-ups, notes, interviews, analytics, and temporary preferences without seeing or changing another visitor's workspace. Provisioning is recorded as `PROVISIONING`, `READY`, or short-lived `FAILED`; a replayed `Idempotency-Key` returns the original ready session instead of reseeding. DynamoDB TTL marks every temporary record for cleanup.
 
 Deferred work is tracked in [docs/roadmap.md](docs/roadmap.md). Cognito is reserved for future persistent personal accounts; it is not required for the frictionless recruiter demo.
 
@@ -27,6 +27,7 @@ The target recruiter-demo architecture is Amplify Hosting, API Gateway HTTP API,
 
 - Node.js 22 LTS and npm 10 or newer.
 - Python 3.13 or 3.14.
+- uv 0.12.5 or newer for locked Python environments.
 - Docker Desktop with Linux containers enabled.
 - Git.
 
@@ -37,9 +38,7 @@ Run these commands from the repository root:
 ```bat
 copy .env.example .env
 
-python -m venv backend\.venv
-backend\.venv\Scripts\python.exe -m pip install --upgrade pip
-backend\.venv\Scripts\python.exe -m pip install -e ".\backend[dev]"
+uv sync --project backend --extra dev --locked
 
 npm --prefix frontend ci
 
@@ -110,11 +109,27 @@ npm --prefix frontend run build
 
 Backend tests use an isolated Moto table and do not need Docker. Frontend tests use a mocked HTTP boundary and do not need the backend.
 
+Supply-chain checks and SBOM generation:
+
+```bat
+uv lock --check --project backend --python 3.14
+uv sync --project backend --extra dev --locked
+if not exist sbom mkdir sbom
+backend\.venv\Scripts\python.exe backend\scripts\generate_sbom.py --output sbom\hireflux-backend.cdx.json
+npm --prefix frontend ci
+npm --prefix frontend sbom --package-lock-only --sbom-format cyclonedx --sbom-type application > sbom\hireflux-frontend.cdx.json
+```
+
+The generated SBOM files are local/CI artifacts and are ignored by Git. See
+[the supply-chain guide](docs/supply-chain.md) for lock refresh and review
+guidance.
+
 ## Configuration
 
 The root `.env.example` documents every local setting. Important invariants:
 
 - `AUTH_MODE=demo` issues HMAC-signed temporary identities; its signing key must be replaced in staging and production.
+- Demo creation accepts an `Idempotency-Key`; failed partial seeds are cleaned up best-effort and retain only a short-lived failure marker for diagnosis.
 - `AUTH_MODE=local` remains available for deterministic backend development only, is accepted only for local/test, and is rejected when Lambda runtime markers exist.
 - `DYNAMODB_ENDPOINT_URL` is explicit locally and omitted in AWS.
 - Local SDK credentials are visibly fake. Deployed code will use its Lambda execution role.
@@ -127,6 +142,7 @@ The root `.env.example` documents every local setting. Important invariants:
 - [Architecture](ARCHITECTURE.md)
 - [Environment and deployment plan](docs/deployment-environments.md)
 - [Development log](docs/devlog.md)
+- [Supply-chain guide](docs/supply-chain.md)
 - [Domain model](docs/domain-model.md)
 - [Dashboard and analytics contract](docs/dashboard-and-analytics.md)
 - [DynamoDB access patterns](docs/dynamodb-access-patterns.md)

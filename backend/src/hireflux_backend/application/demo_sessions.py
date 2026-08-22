@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from hireflux_backend.application.ports import DemoSessionTokenIssuer
+from hireflux_backend.application.errors import PersistenceError, ValidationError
+from hireflux_backend.application.ports import DemoSessionTokenIssuer, DemoWorkspaceRepository
 from hireflux_backend.application.resource_services import (
     CreateInterviewCommand,
     CreateNoteCommand,
@@ -17,7 +18,7 @@ from hireflux_backend.application.services import (
     UserService,
 )
 from hireflux_backend.domain.enums import ApplicationSource, ApplicationStatus, UserRole, WorkMode
-from hireflux_backend.domain.models import Application, CurrentIdentity
+from hireflux_backend.domain.models import Application, CurrentIdentity, DemoWorkspace
 from hireflux_backend.domain.resources import InterviewStatus, InterviewType
 
 
@@ -191,7 +192,9 @@ class DemoSessionService:
         token_issuer: DemoSessionTokenIssuer,
         *,
         ttl_hours: int,
+        failure_ttl_minutes: int,
         resource_service: WorkspaceResourceService | None = None,
+        workspace_repository: DemoWorkspaceRepository,
         clock: Callable[[], datetime] = utc_now,
         id_factory: Callable[[], str] = new_id,
     ) -> None:
@@ -200,13 +203,26 @@ class DemoSessionService:
         self._resource_service = resource_service
         self._token_issuer = token_issuer
         self._ttl = timedelta(hours=ttl_hours)
+        self._failure_ttl = timedelta(minutes=failure_ttl_minutes)
         self._clock = clock
         self._id_factory = id_factory
+        self._workspace_repository = workspace_repository
 
-    def create(self) -> DemoSession:
+    def create(self, idempotency_key: str | None = None) -> DemoSession:
+        if idempotency_key is not None and not 16 <= len(idempotency_key) <= 255:
+            raise ValidationError("Idempotency-Key must contain between 16 and 255 characters.")
         issued_at = self._clock().astimezone(UTC)
         expires_at = issued_at + self._ttl
         workspace_id = self._id_factory()
+        reservation = self._workspace_repository.reserve(
+            workspace_id,
+            issued_at=issued_at,
+            expires_at=int(expires_at.timestamp()),
+            idempotency_key=idempotency_key,
+        )
+        if not reservation.is_new:
+            return self._session_for_workspace(reservation.workspace)
+
         identity = CurrentIdentity(
             user_id=workspace_id,
             name="Demo Recruiter",
@@ -214,17 +230,44 @@ class DemoSessionService:
             role=UserRole.STANDARD_USER,
             expires_at=int(expires_at.timestamp()),
         )
-        self._user_service.get_or_create_profile(identity)
-        self._seed_workspace(identity, issued_at)
+        created: list[Application] = []
+        try:
+            self._user_service.get_or_create_profile(identity)
+            self._seed_workspace(identity, issued_at, created)
+            self._workspace_repository.mark_ready(reservation.workspace)
+        except Exception as error:
+            self._handle_provisioning_failure(reservation.workspace, created)
+            raise PersistenceError("Unable to create demo workspace.") from error
+        return self._session_for_workspace(reservation.workspace)
+
+    def _session_for_workspace(self, workspace: DemoWorkspace) -> DemoSession:
+        expires_at = datetime.fromtimestamp(workspace.expires_at, UTC)
         token = self._token_issuer.issue(
-            workspace_id=workspace_id,
-            issued_at=issued_at,
+            workspace_id=workspace.workspace_id,
+            issued_at=workspace.issued_at,
             expires_at=expires_at,
         )
         return DemoSession(access_token=token, expires_at=expires_at)
 
-    def _seed_workspace(self, identity: CurrentIdentity, now: datetime) -> None:
-        created: list[Application] = []
+    def _handle_provisioning_failure(
+        self, workspace: DemoWorkspace, created: list[Application]
+    ) -> None:
+        failed_expires_at = int((self._clock().astimezone(UTC) + self._failure_ttl).timestamp())
+        try:
+            self._workspace_repository.mark_failed(workspace, expires_at=failed_expires_at)
+        except Exception:
+            pass
+        try:
+            self._workspace_repository.cleanup(
+                workspace.workspace_id,
+                application_ids=tuple(application.application_id for application in created),
+            )
+        except Exception:
+            pass
+
+    def _seed_workspace(
+        self, identity: CurrentIdentity, now: datetime, created: list[Application]
+    ) -> None:
         for seed in _SEED:
             created_at = now - timedelta(days=seed.days_ago)
             applied_date = created_at.date() if seed.status is not ApplicationStatus.DRAFT else None
@@ -247,8 +290,8 @@ class DemoSessionService:
                     trusted_created_at=created_at,
                 ),
             )
-            application = self._advance(identity, application, seed.status, created_at)
             created.append(application)
+            application = self._advance(identity, application, seed.status, created_at)
 
         if self._resource_service is not None:
             self._seed_resources(identity, created, now)

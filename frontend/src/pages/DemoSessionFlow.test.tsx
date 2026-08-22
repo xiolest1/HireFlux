@@ -28,10 +28,12 @@ describe("demo workspace flow", () => {
 
   it("launches an isolated demo and authenticates subsequent API requests", async () => {
     let authorization: string | null = null;
+    let idempotencyKey: string | null = null;
     server.use(
-      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, () =>
-        HttpResponse.json(issuedSession, { status: 201 }),
-      ),
+      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, ({ request }) => {
+        idempotencyKey = request.headers.get("Idempotency-Key");
+        return HttpResponse.json(issuedSession, { status: 201 });
+      }),
       http.get(`${API_ORIGIN}/api/v1/dashboard`, ({ request }) => {
         authorization = request.headers.get("authorization");
         return HttpResponse.json({
@@ -49,6 +51,7 @@ describe("demo workspace flow", () => {
 
     expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
     expect(authorization).toBe(`Bearer ${issuedSession.access_token}`);
+    expect(idempotencyKey).toMatch(/^[0-9a-f-]{36}$/i);
     expect(getDemoSession()?.access_token).toBe(issuedSession.access_token);
   });
 

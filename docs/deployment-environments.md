@@ -28,6 +28,27 @@ HireFlux uses three intentionally separate environments. The repository currentl
 
 Amplify must serve `/index.html` with status `200` for routes that do not look like real static assets. This lets direct visits and refreshes work for `/applications`, `/applications/new`, and application detail/edit URLs. Missing `.js`, `.css`, image, and other asset paths must remain real `404` responses.
 
+## Hosted security headers
+
+The repository root `customHttp.yml` is the deployable Amplify Hosting policy
+for the `frontend/` monorepo app. It applies a strict CSP, HTTPS enforcement,
+clickjacking protection, MIME sniffing protection, referrer and permissions
+policies, and cross-origin isolation headers to hosted responses. The CSP
+allows only same-origin scripts and the planned us-east-1 API Gateway origin;
+if staging or production uses a custom API domain or another region, update
+the `connect-src` origin before deploying that environment.
+
+The pre-React theme bootstrap lives in `frontend/public/theme-bootstrap.js`,
+so the policy does not need `unsafe-inline` in `script-src`. The existing
+`unsafe-inline` allowance is limited to styles because the current UI uses
+runtime style attributes. HSTS is intentionally present only in the hosted
+policy; local Vite development serves HTTP and uses a separate API allowlist.
+The local development server allows Vite's own inline React-refresh bootstrap;
+the production build preview and hosted policy keep inline scripts blocked.
+The bearer token remains a temporary demo credential in `sessionStorage`, so
+the CSP reduces script-injection risk but does not replace server-side token
+validation or a future HttpOnly production session design.
+
 Before a release, verify direct navigation and refresh for every client route, a protected route without a demo session, the not-found screen, and one deliberately missing static asset.
 
 ## Promotion sequence
