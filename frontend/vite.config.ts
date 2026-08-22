@@ -26,11 +26,13 @@ export default defineConfig(({ mode }) => ({
   envDir: "..",
   plugins: [react(), tailwindcss()],
   server: {
+    host: "127.0.0.1",
     port: 5173,
     // Vite injects an inline React-refresh module during development only.
     headers: localSecurityHeaders(mode, { allowInlineScripts: true }),
   },
   preview: {
+    host: "127.0.0.1",
     headers: localSecurityHeaders(mode),
   },
   test: {

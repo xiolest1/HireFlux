@@ -921,6 +921,14 @@ notification toggling, and the explicit authorization/message-delivery
 boundary. This keeps the demo useful for recruiter review while preserving the
 server-owned security and business rules.
 
+## Localhost development reliability - August 22, 2026
+
+The Vite development and preview servers now bind explicitly to IPv4
+`127.0.0.1`. This keeps the documented `http://127.0.0.1:5173/` browser URL
+working on Windows systems where `localhost` may resolve first to IPv6 `::1`.
+The local FastAPI process remains a separate service on port 8000, with
+DynamoDB Local on port 8001.
+
 ## Next recommended work
 
 Freeze and commit the validated local Milestone 2 baseline, then build and
