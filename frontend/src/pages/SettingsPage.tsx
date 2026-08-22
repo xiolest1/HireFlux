@@ -1,4 +1,4 @@
-import { Bell, Clock3, KeyRound, Palette, ShieldCheck, UserRound } from "lucide-react";
+import { Bell, Check, Clock3, Download, KeyRound, Mail, Palette, ShieldCheck, UserRound, UsersRound } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { ColorTheme, DashboardRange, Settings } from "../api/schemas";
@@ -9,7 +9,7 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { setColorThemePreference } from "../components/ui/themePreference";
 import { formatTimestamp } from "../features/applications/format";
 import { useMe } from "../features/applications/queries";
-import { useSettings, useUpdateSettings } from "../features/resources/queries";
+import { useExportWorkspace, useSettings, useUpdateSettings } from "../features/resources/queries";
 
 type SettingsDraft = Omit<Settings, "created_at" | "updated_at" | "version">;
 const TIME_ZONES = ["UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/London", "Europe/Paris", "Asia/Kolkata", "Asia/Tokyo", "Australia/Sydney"];
@@ -170,13 +170,51 @@ function SettingsSkeleton() {
 }
 
 function AccountPreview() {
+  const exportMutation = useExportWorkspace();
+  const [previewRole, setPreviewRole] = useState<PreviewRole>("CANDIDATE");
+  const [notifications, setNotifications] = useState({ followUps: true, interviews: true, digest: false });
   const capabilities = [
     { icon: KeyRound, title: "Secure sign-in", description: "Password recovery and connected identity providers would be managed by the production identity service." },
     { icon: ShieldCheck, title: "Multi-factor authentication", description: "Persistent accounts could add verification and session controls without changing application ownership rules." },
     { icon: Bell, title: "Notification delivery", description: "Email and reminder preferences would live here after an opt-in delivery system is available." },
   ];
-  return <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel" aria-labelledby="account-preview-title"><div className="border-b border-slate-200 bg-gradient-to-r from-brand-50 via-white to-violet-50 p-5 sm:p-6"><span className="inline-flex rounded-full border border-brand-100 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-700">Production concept</span><h2 id="account-preview-title" className="mt-4 text-2xl font-bold text-slate-950">What a registered account could unlock</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">This panel explains future capabilities without presenting controls that cannot work in the temporary demo.</p></div><div className="grid gap-px bg-slate-200 md:grid-cols-3">{capabilities.map(({ icon: Icon, title, description }) => <article key={title} className="bg-white p-5 sm:p-6"><span className="flex size-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700"><Icon aria-hidden="true" className="size-5" /></span><h3 className="mt-4 font-bold text-slate-950">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{description}</p></article>)}</div><div className="border-t border-slate-200 p-5 text-sm leading-6 text-slate-600 sm:p-6"><strong className="text-slate-900">Not part of this demo:</strong> passwords, MFA enrollment, notifications, permanent exports, and account deletion are intentionally unavailable.</div></section>;
+  const role = PREVIEW_ROLES.find((item) => item.id === previewRole) ?? PREVIEW_ROLES[0];
+  async function downloadExport() {
+    const data = await exportMutation.mutateAsync();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "hireflux-workspace-export.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return <section className="space-y-6" aria-labelledby="account-preview-title">
+    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel">
+      <div className="border-b border-slate-200 bg-gradient-to-r from-brand-50 via-white to-violet-50 p-5 sm:p-6"><span className="inline-flex rounded-full border border-brand-100 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-700">Production concept</span><h2 id="account-preview-title" className="mt-4 text-2xl font-bold text-slate-950">What a registered account could unlock</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Recruiters can see the account lifecycle a real product would support, while every demo-only boundary stays visible.</p></div>
+      <div className="grid gap-px bg-slate-200 md:grid-cols-3">{capabilities.map(({ icon: Icon, title, description }) => <article key={title} className="bg-white p-5 sm:p-6"><span className="flex size-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700"><Icon aria-hidden="true" className="size-5" /></span><h3 className="mt-4 font-bold text-slate-950">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{description}</p></article>)}</div>
+    </div>
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="account-data-title"><div className="flex items-start gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Download aria-hidden="true" className="size-5" /></span><div><h3 id="account-data-title" className="text-xl font-bold text-slate-950">Your data, under your control</h3><p className="mt-1 text-sm leading-6 text-slate-600">Download the current workspace as portable JSON. It is generated from your owner-scoped API data and never includes another workspace.</p></div></div><div className="mt-5 flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-slate-900">Workspace export</p><p className="text-sm text-slate-600">Applications, notes, interviews, activity, profile, and preferences.</p></div><Button onClick={() => void downloadExport()} disabled={exportMutation.isPending}>{exportMutation.isPending ? "Preparing…" : "Download JSON"}</Button></div>{exportMutation.error ? <div className="mt-4"><ErrorPanel compact title="Export could not be prepared" error={exportMutation.error} /></div> : null}{exportMutation.isSuccess ? <div className="mt-4"><SuccessBanner>Export downloaded. This file remains on your device only.</SuccessBanner></div> : null}</section>
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="account-readiness-title"><h3 id="account-readiness-title" className="text-xl font-bold text-slate-950">Production-readiness preview</h3><p className="mt-1 text-sm leading-6 text-slate-600">A recruiter-facing checklist of what would become real with persistent accounts.</p><ul className="mt-5 space-y-3">{["Verified identity and recovery", "MFA and active-session controls", "Notification preferences", "Export and retention policy"].map((item) => <li key={item} className="flex items-start gap-3 text-sm text-slate-700"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-emerald-600" />{item}</li>)}</ul></section>
+    </div>
+    <div className="grid gap-6 lg:grid-cols-2">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="role-preview-title"><div className="flex items-start gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700"><UsersRound aria-hidden="true" className="size-5" /></span><div><h3 id="role-preview-title" className="text-xl font-bold text-slate-950">Role & access preview</h3><p className="mt-1 text-sm leading-6 text-slate-600">Explore how a future account model could explain access without changing this demo identity or its permissions.</p></div></div><div className="mt-5 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Preview role">{PREVIEW_ROLES.map((item) => <button key={item.id} type="button" role="radio" aria-checked={previewRole === item.id} onClick={() => setPreviewRole(item.id)} className={`min-h-11 rounded-xl border px-3 text-left text-sm font-semibold transition-colors ${previewRole === item.id ? "border-brand-400 bg-brand-50 text-brand-900" : "border-slate-200 text-slate-700 hover:bg-slate-50"}`}>{item.label}</button>)}</div><div className="mt-4 rounded-2xl bg-slate-50 p-4"><p className="font-semibold text-slate-900">{role.label}</p><p className="mt-1 text-sm leading-6 text-slate-600">{role.description}</p><p className="mt-2 text-xs font-bold uppercase tracking-wide text-violet-700">Preview only · authorization unchanged</p></div></section>
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="notification-preview-title"><div className="flex items-start gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700"><Mail aria-hidden="true" className="size-5" /></span><div><h3 id="notification-preview-title" className="text-xl font-bold text-slate-950">Notification center preview</h3><p className="mt-1 text-sm leading-6 text-slate-600">Choose the kinds of reminders a persistent account could receive. No emails or messages are sent in the demo.</p></div></div><div className="mt-5 space-y-3">{([ ["followUps", "Follow-up reminders", "When a task reaches its due date."], ["interviews", "Interview reminders", "Before a scheduled conversation."], ["digest", "Weekly search digest", "A summary of movement and outcomes."] ] as const).map(([key, label, description]) => <label key={key} className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50"><input aria-label={label} type="checkbox" checked={notifications[key]} onChange={(event) => setNotifications((current) => ({ ...current, [key]: event.target.checked }))} className="mt-1 size-4 accent-brand-600" /><span><span className="block text-sm font-semibold text-slate-900">{label}</span><span className="mt-1 block text-xs leading-5 text-slate-600">{description}</span></span></label>)}</div><p className="mt-4 flex items-center gap-2 text-xs font-semibold text-sky-700"><Bell aria-hidden="true" className="size-4" />Local preview preferences reset when this page session ends.</p></section>
+    </div>
+    <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950 sm:p-6"><strong>Demo boundary:</strong> passwords, MFA enrollment, message delivery, permission changes, permanent account deletion, and persistent login are intentionally unavailable. The export is the one active account-control action; the other items are clearly labeled previews.</div>
+  </section>;
 }
+
+type PreviewRole = "CANDIDATE" | "RECRUITER" | "HIRING_MANAGER" | "ADMIN";
+
+const PREVIEW_ROLES: ReadonlyArray<{ id: PreviewRole; label: string; description: string }> = [
+  { id: "CANDIDATE", label: "Candidate", description: "Owns applications, interviews, notes, and personal search analytics." },
+  { id: "RECRUITER", label: "Recruiter", description: "Would manage candidate pipelines and shared hiring workflows in a future product area." },
+  { id: "HIRING_MANAGER", label: "Hiring manager", description: "Would review assigned candidates and interview feedback with scoped visibility." },
+  { id: "ADMIN", label: "Administrator", description: "Would manage organization policy through a separately guarded administrative service." },
+];
 
 function SettingSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode }) {
   const id = `setting-${label.toLowerCase().replaceAll(" ", "-")}`;

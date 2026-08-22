@@ -1,12 +1,13 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderApp } from "../test/renderApp";
 import {
   makeApplication,
   makeInterview,
   testDashboard,
   testSettings,
+  testUser,
 } from "../test/fixtures";
 import { API_ORIGIN, server } from "../test/server";
 
@@ -181,6 +182,49 @@ describe("workspace milestone features", () => {
     expect(await screen.findByRole("heading", { name: "What a registered account could unlock" })).toBeVisible();
     expect(router.state.location.search).toBe("?section=account");
     expect(screen.queryByRole("button", { name: "Change password" })).not.toBeInTheDocument();
+  });
+
+  it("downloads an owner-scoped workspace export from the account preview", async () => {
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/me/export`, () =>
+        HttpResponse.json({
+          export_version: 1,
+          exported_at: "2026-08-22T13:00:00Z",
+          profile: testUser,
+          settings: testSettings,
+          applications: [],
+          activities: [],
+          notes: [],
+          interviews: [],
+          counts: { applications: 0, activities: 0, notes: 0, interviews: 0 },
+        }),
+      ),
+    );
+    const createObjectUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
+    const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const { user } = renderApp("/settings?section=account");
+    expect(await screen.findByRole("heading", { name: "Your data, under your control" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Download JSON" }));
+    expect(await screen.findByText("Export downloaded. This file remains on your device only.")).toBeVisible();
+    expect(createObjectUrl).toHaveBeenCalledOnce();
+    expect(revokeObjectUrl).toHaveBeenCalledWith("blob:test");
+    createObjectUrl.mockRestore();
+    revokeObjectUrl.mockRestore();
+  });
+
+  it("keeps recruiter role and notification previews explicitly local", async () => {
+    const { user } = renderApp("/settings?section=account");
+    expect(await screen.findByRole("heading", { name: "Role & access preview" })).toBeVisible();
+    const recruiterRole = screen.getByRole("radio", { name: "Recruiter" });
+    await user.click(recruiterRole);
+    expect(recruiterRole).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByText("Preview only · authorization unchanged")).toBeVisible();
+
+    const digest = screen.getByRole("checkbox", { name: /Weekly search digest/ });
+    expect(digest).not.toBeChecked();
+    await user.click(digest);
+    expect(digest).toBeChecked();
+    expect(screen.getByText(/No emails or messages are sent in the demo/)).toBeVisible();
   });
 
   it("persists header theme changes into authenticated workspace settings", async () => {

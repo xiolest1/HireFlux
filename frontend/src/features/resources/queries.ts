@@ -11,6 +11,7 @@ import {
   updateInterview,
   updateNote,
   updateSettings,
+  exportWorkspace,
   type InterviewFields,
   type UpdateSettingsRequest,
 } from "../../api/resources";
@@ -34,6 +35,10 @@ export function useUpdateSettings() {
     mutationFn: (request: UpdateSettingsRequest) => updateSettings(request),
     onSuccess: (settings) => client.setQueryData(resourceKeys.settings, settings),
   });
+}
+
+export function useExportWorkspace() {
+  return useMutation({ mutationFn: exportWorkspace });
 }
 
 export function useNotes(applicationId: string) {

@@ -847,6 +847,49 @@ server-confirmed response and clears the dirty-field set.
 Added a frontend regression test covering an unsaved dashboard-range change
 surviving a header theme refresh while the refreshed theme is accepted.
 
+## Account preview and workspace export - August 22, 2026
+
+The Settings → Account preview now has one real, useful account-control action
+for recruiters to try: `GET /api/v1/me/export` produces a validated JSON
+snapshot of the signed-in demo workspace. The export includes the owner-scoped
+profile, preferences, applications, append-only activity, notes, and interview
+records, along with counts and an explicit export version. It walks the existing
+bounded Query-based pagination paths rather than introducing a DynamoDB Scan,
+and never accepts an owner identifier from the client.
+
+The frontend validates the export with Zod and downloads it locally as
+`hireflux-workspace-export.json`. The Account preview also now presents a
+production-readiness checklist for identity recovery, MFA/session controls,
+notifications, retention, and portability. These remain clearly labeled
+production concepts: the demo does not pretend to provide passwords, MFA,
+notifications, role switching, persistent login, or permanent deletion. The
+export is the only active account-control action in this milestone.
+
+Added API coverage proving the export contains application, note, interview,
+activity, profile, and settings data and remains owner-scoped. Frontend lint,
+typecheck, tests, and production build were rerun for the account-preview
+change. This is still local demo functionality; no AWS identity, storage, or
+notification resources were created.
+
+### Recruiter simulation controls
+
+Extended the Account preview with two interactive, deliberately
+non-authoritative experiences. The Role & access preview lets a recruiter
+inspect Candidate, Recruiter, Hiring manager, and Administrator lenses and
+explains the access model each would eventually represent. It never changes
+the signed-in role, authorization, or server identity. The Notification center
+preview lets a recruiter toggle follow-up, interview, and weekly-digest
+preferences in local component state so the product can demonstrate a
+realistic control surface without sending messages or implying that a delivery
+system exists.
+
+The preview now distinguishes the one active account action (workspace export)
+from production concepts such as recovery, MFA, session controls, retention,
+and permanent deletion. Added frontend coverage for role selection,
+notification toggling, and the explicit authorization/message-delivery
+boundary. This keeps the demo useful for recruiter review while preserving the
+server-owned security and business rules.
+
 ## Next recommended work
 
 Freeze and commit the validated local Milestone 2 baseline, then build and

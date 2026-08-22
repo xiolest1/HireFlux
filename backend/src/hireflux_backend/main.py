@@ -21,6 +21,7 @@ from hireflux_backend.application.demo_sessions import DemoSessionService
 from hireflux_backend.application.insights import InsightsService
 from hireflux_backend.application.resource_services import WorkspaceResourceService
 from hireflux_backend.application.services import ApplicationService, UserService
+from hireflux_backend.application.workspace_export import WorkspaceExportService
 from hireflux_backend.auth.demo import DemoSessionCodec
 from hireflux_backend.config import Settings, get_settings
 from hireflux_backend.infrastructure.dynamodb.client import build_dynamodb_client
@@ -89,6 +90,9 @@ def create_app(
         application_repository, resource_service=workspace_resource_service
     )
     app.state.workspace_resource_service = workspace_resource_service
+    app.state.workspace_export_service = WorkspaceExportService(
+        user_service, application_service, workspace_resource_service
+    )
     app.state.demo_session_codec = demo_session_codec
     app.state.demo_session_service = DemoSessionService(
         user_service,

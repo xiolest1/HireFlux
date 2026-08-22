@@ -6,6 +6,7 @@ import {
   noteListResponseSchema,
   noteSchema,
   settingsSchema,
+  workspaceExportSchema,
   type ColorTheme,
   type DashboardRange,
   type Interview,
@@ -42,6 +43,10 @@ export function updateSettings(request: UpdateSettingsRequest): Promise<Settings
     method: "PATCH",
     json: request,
   });
+}
+
+export function exportWorkspace() {
+  return apiRequest("/api/v1/me/export", workspaceExportSchema);
 }
 
 export function listNotes(

@@ -9,6 +9,7 @@ from hireflux_backend.application.errors import (
 )
 from hireflux_backend.application.resource_services import WorkspaceResourceService
 from hireflux_backend.application.services import ApplicationService, UserService
+from hireflux_backend.application.workspace_export import WorkspaceExportService
 from hireflux_backend.auth.demo import identity_from_claims
 from hireflux_backend.auth.local import identity_from_settings
 from hireflux_backend.config import AuthMode, Settings
@@ -53,6 +54,10 @@ def get_workspace_resource_service(request: Request) -> WorkspaceResourceService
     return request.app.state.workspace_resource_service
 
 
+def get_workspace_export_service(request: Request) -> WorkspaceExportService:
+    return request.app.state.workspace_export_service
+
+
 IdentityDependency = Annotated[CurrentIdentity, Depends(get_current_identity)]
 UserServiceDependency = Annotated[UserService, Depends(get_user_service)]
 ApplicationServiceDependency = Annotated[ApplicationService, Depends(get_application_service)]
@@ -60,4 +65,7 @@ DemoSessionServiceDependency = Annotated[DemoSessionService, Depends(get_demo_se
 SettingsDependency = Annotated[Settings, Depends(get_settings)]
 WorkspaceResourceServiceDependency = Annotated[
     WorkspaceResourceService, Depends(get_workspace_resource_service)
+]
+WorkspaceExportServiceDependency = Annotated[
+    WorkspaceExportService, Depends(get_workspace_export_service)
 ]

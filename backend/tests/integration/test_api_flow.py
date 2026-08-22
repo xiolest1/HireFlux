@@ -38,6 +38,37 @@ def test_health_profile_and_request_ids(client: TestClient) -> None:
     assert client.get("/api/v1/me").json()["created_at"] == profile.json()["created_at"]
 
 
+def test_workspace_export_is_owner_scoped_and_contains_resources(client: TestClient) -> None:
+    application = client.post("/api/v1/applications", json=draft_payload("Export Labs")).json()
+    application_id = application["application_id"]
+    note = client.post(
+        f"/api/v1/applications/{application_id}/notes", json={"content": "Export this note."}
+    )
+    assert note.status_code == 201
+    interview = client.post(
+        f"/api/v1/applications/{application_id}/interviews",
+        json={
+            "interview_type": "RECRUITER_CALL",
+            "scheduled_at": (datetime.now(UTC) + timedelta(days=2)).isoformat(),
+        },
+    )
+    assert interview.status_code == 201
+
+    response = client.get("/api/v1/me/export")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["export_version"] == 1
+    assert payload["profile"]["user_id"] == "00000000-0000-4000-8000-000000000001"
+    assert [item["application_id"] for item in payload["applications"]] == [application_id]
+    assert payload["notes"][0]["application_id"] == application_id
+    assert payload["interviews"][0]["application_id"] == application_id
+    assert all(
+        item["owner_user_id"] == payload["profile"]["user_id"] for item in payload["applications"]
+    )
+    assert payload["counts"]["applications"] == len(payload["applications"])
+    assert payload["counts"]["activities"] == len(payload["activities"])
+
+
 def test_create_read_update_page_and_activity(client: TestClient) -> None:
     first = client.post("/api/v1/applications", json=draft_payload("Acme"))
     assert first.status_code == 201

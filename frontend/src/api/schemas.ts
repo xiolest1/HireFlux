@@ -172,6 +172,23 @@ export const settingsSchema = z.object({
   version: z.number().int().positive(),
 });
 
+export const workspaceExportSchema = z.object({
+  export_version: z.literal(1),
+  exported_at: timestampSchema,
+  profile: userSchema,
+  settings: settingsSchema,
+  applications: z.array(applicationSchema),
+  activities: z.array(activitySchema),
+  notes: z.array(noteSchema),
+  interviews: z.array(interviewSchema),
+  counts: z.object({
+    applications: z.number().int().nonnegative(),
+    activities: z.number().int().nonnegative(),
+    notes: z.number().int().nonnegative(),
+    interviews: z.number().int().nonnegative(),
+  }),
+});
+
 export type ApplicationStatus = z.infer<typeof applicationStatusSchema>;
 export type WorkMode = z.infer<typeof workModeSchema>;
 export type ApplicationSource = z.infer<typeof applicationSourceSchema>;
@@ -191,3 +208,4 @@ export type DemoSession = z.infer<typeof demoSessionSchema>;
 export type Note = z.infer<typeof noteSchema>;
 export type Interview = z.infer<typeof interviewSchema>;
 export type Settings = z.infer<typeof settingsSchema>;
+export type WorkspaceExport = z.infer<typeof workspaceExportSchema>;
