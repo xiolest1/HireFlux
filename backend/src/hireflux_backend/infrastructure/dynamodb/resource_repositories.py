@@ -1,11 +1,14 @@
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
 from botocore.exceptions import ClientError
 
-from hireflux_backend.application.errors import ConflictError, PersistenceError
+from hireflux_backend.application.errors import ConflictError, InvalidCursorError, PersistenceError
+from hireflux_backend.application.resource_ports import ResourcePage
 from hireflux_backend.domain.models import Activity
 from hireflux_backend.domain.resources import Interview, Note, WorkspaceSettings
+from hireflux_backend.infrastructure.dynamodb.cursor import CursorCodec
 from hireflux_backend.infrastructure.dynamodb.mapping import (
     activity_to_item,
     application_partition,
@@ -25,13 +28,27 @@ from hireflux_backend.infrastructure.dynamodb.resource_mapping import (
     settings_key,
     settings_to_item,
 )
+from hireflux_backend.infrastructure.dynamodb.resource_quota import resource_quota_update
 from hireflux_backend.infrastructure.dynamodb.table_schema import GSI3_NAME
 
 
 class DynamoWorkspaceResourceRepository:
-    def __init__(self, client: Any, table_name: str) -> None:
+    def __init__(
+        self,
+        client: Any,
+        table_name: str,
+        cursor_codec: CursorCodec,
+        *,
+        max_notes_per_application: int = 100,
+        max_interviews_per_application: int = 25,
+        max_activity_per_application: int = 500,
+    ) -> None:
         self._client = client
         self._table_name = table_name
+        self._cursor_codec = cursor_codec
+        self._max_notes = max_notes_per_application
+        self._max_interviews = max_interviews_per_application
+        self._max_activity = max_activity_per_application
 
     def get_settings(self, owner_user_id: str) -> WorkspaceSettings | None:
         try:
@@ -92,13 +109,29 @@ class DynamoWorkspaceResourceRepository:
         )
         return note_from_item(item) if item is not None else None
 
-    def list_notes(self, owner_user_id: str, application_id: str) -> tuple[Note, ...]:
-        items = self._query_children(
-            owner_user_id, application_id, prefix="NOTE#", resource_name="notes"
+    def list_notes(
+        self,
+        owner_user_id: str,
+        application_id: str,
+        *,
+        limit: int,
+        cursor: str | None,
+    ) -> ResourcePage[Note]:
+        items, next_cursor = self._query_child_page(
+            owner_user_id,
+            application_id,
+            prefix="NOTE#",
+            resource_name="notes",
+            kind="application-notes",
+            limit=limit,
+            cursor=cursor,
+            key_factory=lambda item_id: note_key(owner_user_id, application_id, item_id),
+            item_id_field="note_id",
         )
-        notes = [note_from_item(item) for item in items]
-        notes.sort(key=lambda note: (note.updated_at, note.note_id), reverse=True)
-        return tuple(notes)
+        return ResourcePage(
+            items=tuple(note_from_item(item) for item in items),
+            next_cursor=next_cursor,
+        )
 
     def replace_note(self, note: Note, *, expected_version: int, activity: Activity) -> None:
         self._replace_child(
@@ -133,6 +166,14 @@ class DynamoWorkspaceResourceRepository:
                             ),
                         }
                     },
+                    resource_quota_update(
+                        self._table_name,
+                        owner_user_id=owner_user_id,
+                        application_id=application_id,
+                        expires_at=activity.expires_at,
+                        max_activity=self._max_activity,
+                        note_delta=-1,
+                    ),
                     self._activity_put(activity),
                 ]
             )
@@ -161,38 +202,89 @@ class DynamoWorkspaceResourceRepository:
         )
         return interview_from_item(item) if item is not None else None
 
-    def list_interviews(self, owner_user_id: str, application_id: str) -> tuple[Interview, ...]:
-        items = self._query_children(
+    def list_interviews(
+        self,
+        owner_user_id: str,
+        application_id: str,
+        *,
+        limit: int,
+        cursor: str | None,
+    ) -> ResourcePage[Interview]:
+        items, next_cursor = self._query_child_page(
             owner_user_id,
             application_id,
             prefix="INTERVIEW#",
             resource_name="interviews",
+            kind="application-interviews",
+            limit=limit,
+            cursor=cursor,
+            key_factory=lambda item_id: interview_key(owner_user_id, application_id, item_id),
+            item_id_field="interview_id",
         )
-        interviews = [interview_from_item(item) for item in items]
-        interviews.sort(key=lambda interview: (interview.scheduled_at, interview.interview_id))
-        return tuple(interviews)
+        return ResourcePage(
+            items=tuple(interview_from_item(item) for item in items),
+            next_cursor=next_cursor,
+        )
 
     def list_owner_interviews(
-        self, owner_user_id: str, *, scheduled_after: datetime, limit: int
-    ) -> tuple[Interview, ...]:
-        try:
-            response = self._client.query(
-                TableName=self._table_name,
-                IndexName=GSI3_NAME,
-                KeyConditionExpression="GSI3PK = :partition AND GSI3SK >= :lower_bound",
-                ExpressionAttributeValues=serialize_item(
-                    {
-                        ":partition": owner_schedule_key(owner_user_id),
-                        ":lower_bound": f"INTERVIEW#{format_timestamp(scheduled_after)}",
-                    }
-                ),
-                ScanIndexForward=True,
-                Limit=limit,
+        self,
+        owner_user_id: str,
+        *,
+        scheduled_after: datetime,
+        limit: int,
+        cursor: str | None = None,
+    ) -> ResourcePage[Interview]:
+        arguments: dict[str, Any] = {
+            "TableName": self._table_name,
+            "IndexName": GSI3_NAME,
+            "KeyConditionExpression": "GSI3PK = :partition AND GSI3SK >= :lower_bound",
+            "ExpressionAttributeValues": serialize_item(
+                {
+                    ":partition": owner_schedule_key(owner_user_id),
+                    ":lower_bound": f"INTERVIEW#{format_timestamp(scheduled_after)}",
+                }
+            ),
+            "ScanIndexForward": True,
+            "Limit": limit + 1,
+        }
+        if cursor:
+            position = self._cursor_codec.decode(
+                cursor,
+                kind="workspace-interviews",
+                owner_user_id=owner_user_id,
+                scope="workspace",
             )
+            try:
+                application_id, interview_id = position.item_id.split(":", maxsplit=1)
+            except ValueError as error:
+                raise InvalidCursorError("The pagination cursor is invalid or expired.") from error
+            arguments["ExclusiveStartKey"] = serialize_item(
+                {
+                    "PK": application_partition(owner_user_id, application_id),
+                    "SK": f"INTERVIEW#{interview_id}",
+                    "GSI3PK": owner_schedule_key(owner_user_id),
+                    "GSI3SK": f"INTERVIEW#{position.timestamp}#{interview_id}",
+                }
+            )
+        try:
+            response = self._client.query(**arguments)
         except ClientError as error:
             raise PersistenceError("Unable to list workspace interviews.") from error
-        return tuple(
-            interview_from_item(deserialize_item(item)) for item in response.get("Items", [])
+        raw_items = [deserialize_item(item) for item in response.get("Items", [])]
+        page_items = raw_items[:limit]
+        next_cursor = None
+        if page_items and (len(raw_items) > limit or response.get("LastEvaluatedKey")):
+            last = interview_from_item(page_items[-1])
+            next_cursor = self._cursor_codec.encode(
+                kind="workspace-interviews",
+                owner_user_id=owner_user_id,
+                scope="workspace",
+                timestamp=format_timestamp(last.scheduled_at),
+                item_id=f"{last.application_id}:{last.interview_id}",
+            )
+        return ResourcePage(
+            items=tuple(interview_from_item(item) for item in page_items),
+            next_cursor=next_cursor,
         )
 
     def replace_interview(
@@ -238,6 +330,17 @@ class DynamoWorkspaceResourceRepository:
                             ),
                         }
                     },
+                    resource_quota_update(
+                        self._table_name,
+                        owner_user_id=owner_user_id,
+                        application_id=application_id,
+                        expires_at=item.get("expires_at"),
+                        max_activity=self._max_activity,
+                        note_limit=self._max_notes if resource_name == "note" else None,
+                        interview_limit=(
+                            self._max_interviews if resource_name == "interview" else None
+                        ),
+                    ),
                     self._activity_put(activity),
                 ]
             )
@@ -272,6 +375,15 @@ class DynamoWorkspaceResourceRepository:
                             ),
                         }
                     },
+                    resource_quota_update(
+                        self._table_name,
+                        owner_user_id=str(item["owner_user_id"]),
+                        application_id=str(item["application_id"]),
+                        expires_at=(
+                            int(item["expires_at"]) if item.get("expires_at") is not None else None
+                        ),
+                        max_activity=self._max_activity,
+                    ),
                     self._activity_put(activity),
                 ]
             )
@@ -294,14 +406,19 @@ class DynamoWorkspaceResourceRepository:
         item = response.get("Item")
         return deserialize_item(item) if item else None
 
-    def _query_children(
+    def _query_child_page(
         self,
         owner_user_id: str,
         application_id: str,
         *,
         prefix: str,
         resource_name: str,
-    ) -> list[dict[str, Any]]:
+        kind: str,
+        limit: int,
+        cursor: str | None,
+        key_factory: Callable[[str], dict[str, str]],
+        item_id_field: str,
+    ) -> tuple[list[dict[str, Any]], str | None]:
         arguments: dict[str, Any] = {
             "TableName": self._table_name,
             "KeyConditionExpression": "PK = :partition AND begins_with(SK, :prefix)",
@@ -311,19 +428,32 @@ class DynamoWorkspaceResourceRepository:
                     ":prefix": prefix,
                 }
             ),
+            "Limit": limit + 1,
         }
-        items: list[dict[str, Any]] = []
+        if cursor:
+            position = self._cursor_codec.decode(
+                cursor,
+                kind=kind,
+                owner_user_id=owner_user_id,
+                scope=application_id,
+            )
+            arguments["ExclusiveStartKey"] = serialize_item(key_factory(position.item_id))
         try:
-            while True:
-                response = self._client.query(**arguments)
-                items.extend(deserialize_item(item) for item in response.get("Items", []))
-                last_key = response.get("LastEvaluatedKey")
-                if not last_key:
-                    break
-                arguments["ExclusiveStartKey"] = last_key
+            response = self._client.query(**arguments)
         except ClientError as error:
             raise PersistenceError(f"Unable to list {resource_name}.") from error
-        return items
+        raw_items = [deserialize_item(item) for item in response.get("Items", [])]
+        page_items = raw_items[:limit]
+        next_cursor = None
+        if page_items and (len(raw_items) > limit or response.get("LastEvaluatedKey")):
+            next_cursor = self._cursor_codec.encode(
+                kind=kind,
+                owner_user_id=owner_user_id,
+                scope=application_id,
+                timestamp="",
+                item_id=str(page_items[-1][item_id_field]),
+            )
+        return page_items, next_cursor
 
     def _activity_put(self, activity: Activity) -> dict[str, Any]:
         return {

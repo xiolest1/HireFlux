@@ -69,7 +69,38 @@ describe("demo workspace flow", () => {
     expect(getDemoSession()?.access_token).toBe(issuedSession.access_token);
   });
 
-  it("removes the prior identity cache before the reset workspace renders", async () => {
+  it("keeps the reset dialog and current workspace available when reset fails", async () => {
+    server.use(
+      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "RESET_FAILED",
+              message: "The demo service is unavailable.",
+              request_id: "reset-test",
+            },
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+    const { user } = renderApp("/dashboard");
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Reset demo" }));
+    await user.click(screen.getByRole("button", { name: "Reset workspace" }));
+
+    const error = await screen.findByRole("alert");
+    expect(error).toHaveTextContent(
+      "Unable to reset demo. Your existing demo workspace is still available. The demo service is unavailable.",
+    );
+    expect(error).toHaveFocus();
+    expect(screen.getByRole("alertdialog", { name: "Reset this demo?" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
+  });
+
+  it("keeps the prior workspace visible until reset succeeds", async () => {
     const oldDashboard = {
       ...testDashboard,
       summary: { ...testDashboard.summary, total_tracked: 17, drafts: 3 },
@@ -104,14 +135,18 @@ describe("demo workspace flow", () => {
     await user.click(screen.getByRole("button", { name: "Reset demo" }));
     await user.click(screen.getByRole("button", { name: "Reset workspace" }));
 
+    expect(screen.getByRole("alertdialog", { name: "Reset this demo?" })).toBeVisible();
+    expect(screen.getByText("17")).toBeVisible();
+    expect(queryClient.getQueryData(dashboardKey)).toEqual(oldDashboard);
+
+    const totalTracked = screen.getByText("Total tracked").parentElement!;
+    await waitFor(() =>
+      expect(within(totalTracked).getByText("16")).toBeVisible(),
+    );
     await waitFor(() => {
-      expect(queryClient.getQueryData(dashboardKey)).toBeUndefined();
+      expect(queryClient.getQueryData(dashboardKey)).toEqual(newDashboard);
       expect(screen.queryByText("17")).not.toBeInTheDocument();
     });
-    expect(screen.getByText("Preparing a fresh demo workspace...")).toBeVisible();
-
-    const newTotal = await screen.findByText("Total tracked");
-    expect(within(newTotal.parentElement!).getByText("16")).toBeVisible();
     expect(screen.queryByText("17")).not.toBeInTheDocument();
     expect(dashboardAuthorization).toBe(`Bearer ${issuedSession.access_token}`);
   });

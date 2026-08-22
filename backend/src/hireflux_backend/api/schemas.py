@@ -175,6 +175,7 @@ class ActivityResponse(BaseModel):
 
 class ActivityListResponse(BaseModel):
     items: list[ActivityResponse]
+    next_cursor: str | None
 
 
 class DemoSessionResponse(BaseModel):

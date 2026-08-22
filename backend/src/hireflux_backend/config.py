@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     )
     demo_session_ttl_hours: int = Field(default=24, ge=1, le=168)
     max_applications_per_workspace: int = Field(default=100, ge=5, le=500)
+    max_notes_per_application: int = Field(default=100, ge=1, le=500)
+    max_interviews_per_application: int = Field(default=25, ge=1, le=100)
+    max_activity_per_application: int = Field(default=500, ge=10, le=5_000)
 
     local_user_id: UUID = UUID("00000000-0000-4000-8000-000000000001")
     local_user_name: str = "Local Demo User"

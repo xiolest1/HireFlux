@@ -11,6 +11,7 @@ import { useModalFocus } from "../../components/ui/useModalFocus";
 import {
   applicationFormDefaults,
   applicationFormSchema,
+  currentDateInTimeZone,
   type ApplicationFormDefaultPreferences,
   type ApplicationFormInput,
   type ApplicationFormValues,
@@ -46,6 +47,7 @@ export function ApplicationForm({
   serverError,
   onSubmit,
 }: ApplicationFormProps) {
+  const appliedDateMaximum = currentDateInTimeZone(defaultPreferences?.timeZone);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
   const unsavedDialogRef = useRef<HTMLElement>(null);
   const keepEditingButtonRef = useRef<HTMLButtonElement>(null);
@@ -70,7 +72,7 @@ export function ApplicationForm({
     watch,
     formState: { errors, isDirty },
   } = useForm<ApplicationFormInput, unknown, ApplicationFormValues>({
-    resolver: zodResolver(applicationFormSchema(mode)),
+    resolver: zodResolver(applicationFormSchema(mode, appliedDateMaximum)),
     defaultValues: applicationFormDefaults(application, defaultPreferences),
   });
   const selectedStatus = watch("status");
@@ -274,12 +276,16 @@ export function ApplicationForm({
             <input
               id="applied_date"
               type="date"
+              max={appliedDateMaximum}
               required={mode === "create" && selectedStatus === "APPLIED"}
               aria-invalid={Boolean(errors.applied_date)}
               aria-describedby={errors.applied_date ? "applied_date-error" : undefined}
               className={fieldClassName}
               {...register("applied_date")}
             />
+            <p className="mt-1.5 text-xs leading-5 text-ink-muted">
+              Use the date you submitted the application; future dates are not allowed.
+            </p>
             <FieldError
               id="applied_date-error"
               message={errors.applied_date?.message}

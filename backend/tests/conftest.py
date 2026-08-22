@@ -57,3 +57,17 @@ def client(dynamodb_client: Any) -> Iterator[TestClient]:
     app = create_app(test_settings(), dynamodb_client=dynamodb_client)
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def limited_client(dynamodb_client: Any) -> Iterator[TestClient]:
+    app = create_app(
+        test_settings(
+            max_notes_per_application=2,
+            max_interviews_per_application=1,
+            max_activity_per_application=20,
+        ),
+        dynamodb_client=dynamodb_client,
+    )
+    with TestClient(app) as test_client:
+        yield test_client

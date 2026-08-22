@@ -237,6 +237,7 @@ export function ApplicationDetailPage() {
         <ResponsiveStatusRail
           application={application}
           onReload={() => void applicationQuery.refetch()}
+          timeZone={timeZone}
         />
       </div>
     </div>
@@ -326,9 +327,11 @@ function ApplicationTabs({
 function ResponsiveStatusRail({
   application,
   onReload,
+  timeZone,
 }: {
   application: Application;
   onReload: () => void;
+  timeZone: string;
 }) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
@@ -384,7 +387,11 @@ function ResponsiveStatusRail({
             <X aria-hidden="true" className="size-5" />
           </button>
         </div>
-        <StatusTransitionForm application={application} onReload={onReload} />
+        <StatusTransitionForm
+          application={application}
+          onReload={onReload}
+          timeZone={timeZone}
+        />
       </section>
     </>
   );

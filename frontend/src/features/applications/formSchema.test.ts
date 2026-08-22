@@ -51,6 +51,26 @@ describe("applicationFormSchema", () => {
     }
   });
 
+  it("rejects an applied date after the workspace current date", () => {
+    const result = applicationFormSchema("create", "2026-08-20").safeParse({
+      ...baseInput,
+      status: "APPLIED",
+      applied_date: "2026-08-21",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ["applied_date"],
+            message: "Applied date cannot be in the future.",
+          }),
+        ]),
+      );
+    }
+  });
+
   it("rejects non-http job URLs", () => {
     const result = applicationFormSchema("create").safeParse({
       ...baseInput,

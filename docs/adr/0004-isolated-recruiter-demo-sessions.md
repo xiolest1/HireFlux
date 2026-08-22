@@ -11,7 +11,7 @@ A literal shared demo account would give every recruiter the same owner identity
 
 The public landing page creates an isolated temporary workspace. The backend generates a random owner UUID, seeds fictional data through the ordinary application services, and returns an HMAC-signed 24-hour bearer token. Protected routes derive ownership only from that verified token. The browser stores it in tab-scoped session storage, clears user-specific query data when identity changes, and never sends ownership in a request body.
 
-Profile, application, activity, and quota items carry the workspace expiry as the DynamoDB `expires_at` TTL attribute. Each workspace has an atomic lifetime application limit. Authorization ends at token expiry; it never depends on DynamoDB's asynchronous physical deletion. Reset creates a new identity before switching the browser to the fresh workspace.
+Profile, application, activity, and quota items carry the workspace expiry as the DynamoDB `expires_at` TTL attribute. Each workspace has an atomic lifetime application limit. Authorization ends at token expiry; it never depends on DynamoDB's asynchronous physical deletion. Reset creates a new identity before switching the browser to the fresh workspace. While reset is pending, the existing workspace remains available; a failed reset keeps the dialog open, moves focus to an alert, and offers retry.
 
 The local fixed identity remains available for deterministic backend tests. Cognito is deferred until HireFlux needs persistent personal accounts.
 

@@ -23,6 +23,7 @@ export function NotesPanel({
   timeZone: string;
 }) {
   const notesQuery = useNotes(applicationId);
+  const notes = notesQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const createMutation = useCreateNote(applicationId);
   const updateMutation = useUpdateNote(applicationId);
   const deleteMutation = useDeleteNote(applicationId);
@@ -170,7 +171,7 @@ export function NotesPanel({
           />
         </div>
       ) : null}
-      {notesQuery.data?.items.length === 0 ? (
+      {notesQuery.isSuccess && notes.length === 0 ? (
         <div className="mt-5 flex flex-col items-center rounded-2xl border border-dashed border-line-strong bg-surface-muted px-5 py-8 text-center">
           <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-violet-soft text-violet">
             <FileText aria-hidden="true" className="size-5" />
@@ -181,9 +182,9 @@ export function NotesPanel({
           </p>
         </div>
       ) : null}
-      {notesQuery.data?.items.length ? (
+      {notes.length ? (
         <ul className="mt-5 space-y-3">
-          {notesQuery.data.items.map((note) => (
+          {notes.map((note) => (
             <li key={note.note_id} className="rounded-2xl border border-line bg-surface-raised p-4">
               {editingId === note.note_id ? (
                 <form
@@ -311,6 +312,18 @@ export function NotesPanel({
             </li>
           ))}
         </ul>
+      ) : null}
+      {notesQuery.hasNextPage ? (
+        <div className="mt-5 flex justify-center">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={notesQuery.isFetchingNextPage}
+            onClick={() => void notesQuery.fetchNextPage()}
+          >
+            {notesQuery.isFetchingNextPage ? "Loading more…" : "Load more notes"}
+          </Button>
+        </div>
       ) : null}
     </section>
   );

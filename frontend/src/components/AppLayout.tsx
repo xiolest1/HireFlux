@@ -137,6 +137,7 @@ export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarPreference);
   const resetTriggerRef = useRef<HTMLButtonElement>(null);
   const resetButtonRef = useRef<HTMLButtonElement>(null);
+  const resetErrorRef = useRef<HTMLParagraphElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const expiry = useExpiryLabel(session?.expires_at);
   const currentRouteTitle = routeTitle(location.pathname);
@@ -152,6 +153,10 @@ export function AppLayout() {
     }
     setColorThemePreference(settingsQuery.data.theme);
   }, [settingsQuery.data]);
+
+  useEffect(() => {
+    if (confirmingReset && error) resetErrorRef.current?.focus();
+  }, [confirmingReset, error]);
 
   useEffect(() => {
     document.title = `${currentRouteTitle} · HireFlux`;
@@ -544,10 +549,18 @@ export function AppLayout() {
             Fresh workspace
           </p>
           {error ? (
-            <p className="mt-3 text-sm font-medium text-danger" role="alert">
+            <p
+              ref={resetErrorRef}
+              className="mt-3 text-sm font-medium text-danger"
+              role="alert"
+              tabIndex={-1}
+              aria-live="assertive"
+              aria-atomic="true"
+            >
+              Unable to reset demo. Your existing demo workspace is still available.{" "}
               {error instanceof Error
                 ? error.message
-                : "The workspace could not be reset. Please try again."}
+                : "Please try again."}
             </p>
           ) : null}
           <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -567,7 +580,7 @@ export function AppLayout() {
               disabled={isCreating}
               onClick={() => void resetWorkspace()}
             >
-              {isCreating ? "Resetting…" : "Reset workspace"}
+              {isCreating ? "Resetting…" : error ? "Try again" : "Reset workspace"}
             </Button>
           </div>
         </Dialog>

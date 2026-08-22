@@ -110,7 +110,7 @@ def test_notes_are_owned_versioned_and_append_activity(client: TestClient) -> No
     )
     deleted = client.delete(f"{path}/notes/{note['note_id']}", params={"expected_version": 2})
     assert deleted.status_code == 204
-    assert client.get(f"{path}/notes").json() == {"items": []}
+    assert client.get(f"{path}/notes").json() == {"items": [], "next_cursor": None}
 
     activity = client.get(f"{path}/activity").json()["items"]
     assert [item["activity_type"] for item in activity][-3:] == [
@@ -218,7 +218,7 @@ def test_interviews_project_to_workspace_and_remain_as_history(
     item = deserialize_item(stored["Item"])
     assert "GSI3PK" not in item
     assert "GSI3SK" not in item
-    assert client.get("/api/v1/interviews").json() == {"items": []}
+    assert client.get("/api/v1/interviews").json() == {"items": [], "next_cursor": None}
 
     terminal_edit = client.patch(
         f"{path}/interviews/{interview['interview_id']}",
@@ -233,6 +233,42 @@ def test_interviews_project_to_workspace_and_remain_as_history(
         "INTERVIEW_UPDATED",
         "INTERVIEW_STATUS_CHANGED",
     ]
+
+
+def test_global_interviews_continue_past_the_default_page(client: TestClient) -> None:
+    application = _create_application(client)
+    path = f"/api/v1/applications/{application['application_id']}"
+    now = datetime.now(UTC).replace(microsecond=0)
+    created_ids: set[str] = set()
+
+    for index in range(21):
+        response = client.post(
+            f"{path}/interviews",
+            json={
+                "interview_type": "TECHNICAL_SCREEN",
+                "scheduled_at": (now + timedelta(days=index + 1)).isoformat(),
+            },
+        )
+        assert response.status_code == 201
+        created_ids.add(response.json()["interview_id"])
+
+    first_page = client.get("/api/v1/interviews")
+    assert first_page.status_code == 200
+    first_payload = first_page.json()
+    assert len(first_payload["items"]) == 20
+    assert first_payload["next_cursor"]
+
+    second_page = client.get(
+        "/api/v1/interviews",
+        params={"cursor": first_payload["next_cursor"]},
+    )
+    assert second_page.status_code == 200
+    second_payload = second_page.json()
+    assert len(second_payload["items"]) == 1
+    assert second_payload["next_cursor"] is None
+    assert {
+        item["interview_id"] for item in first_payload["items"] + second_payload["items"]
+    } == created_ids
 
 
 def test_foreign_or_missing_interview_and_note_are_not_found(client: TestClient) -> None:
@@ -256,3 +292,67 @@ def test_foreign_or_missing_interview_and_note_are_not_found(client: TestClient)
         == 404
     )
     assert application["application_id"]
+
+
+def test_resource_pages_reject_tampering_and_enforce_quotas(limited_client: TestClient) -> None:
+    application = _create_application(limited_client)
+    path = f"/api/v1/applications/{application['application_id']}"
+
+    notes = []
+    for content in ("First", "Second"):
+        response = limited_client.post(f"{path}/notes", json={"content": content})
+        assert response.status_code == 201
+        notes.append(response.json())
+    quota_exceeded = limited_client.post(f"{path}/notes", json={"content": "Third"})
+    assert quota_exceeded.status_code == 409
+
+    first_page = limited_client.get(f"{path}/notes", params={"limit": 1})
+    assert first_page.status_code == 200
+    first_payload = first_page.json()
+    assert len(first_payload["items"]) == 1
+    assert first_payload["next_cursor"]
+
+    tampered = limited_client.get(
+        f"{path}/notes", params={"limit": 1, "cursor": first_payload["next_cursor"] + "x"}
+    )
+    assert tampered.status_code == 400
+
+    second_page = limited_client.get(
+        f"{path}/notes",
+        params={"limit": 1, "cursor": first_payload["next_cursor"]},
+    )
+    assert second_page.status_code == 200
+    second_payload = second_page.json()
+    assert len(second_payload["items"]) == 1
+    assert second_payload["next_cursor"] is None
+    assert {first_payload["items"][0]["note_id"], second_payload["items"][0]["note_id"]} == {
+        note["note_id"] for note in notes
+    }
+
+    deleted = limited_client.delete(
+        f"{path}/notes/{notes[0]['note_id']}", params={"expected_version": 1}
+    )
+    assert deleted.status_code == 204
+    note_slot_reused = limited_client.post(f"{path}/notes", json={"content": "Third"})
+    assert note_slot_reused.status_code == 201
+
+    interview_payload = {
+        "interview_type": "TECHNICAL_SCREEN",
+        "scheduled_at": (datetime.now(UTC) + timedelta(days=3)).isoformat(),
+    }
+    created_interview = limited_client.post(f"{path}/interviews", json=interview_payload)
+    assert created_interview.status_code == 201
+    interview_quota_exceeded = limited_client.post(f"{path}/interviews", json=interview_payload)
+    assert interview_quota_exceeded.status_code == 409
+
+    activity_page = limited_client.get(f"{path}/activity", params={"limit": 1})
+    assert activity_page.status_code == 200
+    activity_payload = activity_page.json()
+    assert len(activity_payload["items"]) == 1
+    assert activity_payload["next_cursor"]
+    activity_next = limited_client.get(
+        f"{path}/activity",
+        params={"limit": 1, "cursor": activity_payload["next_cursor"]},
+    )
+    assert activity_next.status_code == 200
+    assert len(activity_next.json()["items"]) == 1

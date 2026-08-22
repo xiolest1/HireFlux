@@ -6,6 +6,8 @@ This file is the durable contract for HireFlux domain vocabulary. API JSON uses 
 
 Every application belongs to exactly one user. Every note, interview, attachment, activity, and application-linked notification carries both `application_id` and `owner_user_id`. The API always derives ownership from the authenticated identity and never accepts it from request JSON. Missing and foreign-owned resources both return the same not-found response.
 
+The local demo bounds resource growth per application: 100 notes, 25 interviews, and 500 activity entries by default. Notes, interviews, and activity list endpoints return bounded pages with signed cursors; quota counters are server-owned and updated atomically with the corresponding write.
+
 `STANDARD_USER` and `ADMIN` are the only roles. Clients cannot mutate a role. In AWS, a verified Cognito group/custom claim is authoritative and the DynamoDB profile value is only a projection.
 
 ## User
@@ -20,11 +22,12 @@ Cognito owns passwords, verification, resets, MFA options, sessions, and tokens.
 
 - `application_id`, `owner_user_id`.
 - Required `company_name`, `job_title`, and non-null `status`.
-- `applied_date`, nullable only for a draft or an archived former draft.
+- `applied_date`, nullable only for a draft or an archived former draft. It is a user-entered calendar date, is never later than the workspace's current calendar date, and is never converted into a timestamp.
 - Optional `follow_up_date`, `job_url`, `location`, `work_mode`, normalized `source`, `source_detail`, `salary_text`, and `description`.
 - `created_at`, `updated_at`, and integer `version` for optimistic concurrency.
 - Internal optional `archived_from_status` to make archive reversible without bypassing the transition policy.
-- Server-owned `submitted_at`, `stage_entered_at`, `first_response_at`, `first_screening_at`, `first_interview_at`, `first_offer_at`, and `first_acceptance_at` milestones. Public write bodies cannot set them.
+- Archived edits continue to satisfy the requirements of `archived_from_status`; an archived later-stage application cannot clear its required `applied_date`. A legacy archived record missing that field must supply it as part of the restore request.
+- Server-owned UTC `submitted_at`, `stage_entered_at`, `first_response_at`, `first_screening_at`, `first_interview_at`, `first_offer_at`, and `first_acceptance_at` milestones. `submitted_at` captures the actual instant an application is created as `APPLIED` or first leaves `DRAFT`; public write bodies cannot set them.
 
 Statuses are `DRAFT`, `APPLIED`, `SCREENING`, `INTERVIEW`, `OFFER`, `ACCEPTED`, `REJECTED`, `WITHDRAWN`, and `ARCHIVED`. Work modes are `REMOTE`, `HYBRID`, and `ONSITE`. Sources are `LINKEDIN`, `INDEED`, `COMPANY_WEBSITE`, `RECRUITER`, `REFERRAL`, `HANDSHAKE`, `CAREER_FAIR`, and `OTHER`. The complete workflow is in [status-transitions.md](status-transitions.md).
 

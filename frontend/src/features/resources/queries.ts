@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createInterview,
   createNote,
@@ -37,9 +37,11 @@ export function useUpdateSettings() {
 }
 
 export function useNotes(applicationId: string) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: resourceKeys.notes(applicationId),
-    queryFn: ({ signal }) => listNotes(applicationId, signal),
+    queryFn: ({ signal, pageParam }) => listNotes(applicationId, pageParam, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
     enabled: Boolean(applicationId),
   });
 }
@@ -91,17 +93,22 @@ export function useDeleteNote(applicationId: string) {
 }
 
 export function useApplicationInterviews(applicationId: string) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: resourceKeys.applicationInterviews(applicationId),
-    queryFn: ({ signal }) => listApplicationInterviews(applicationId, signal),
+    queryFn: ({ signal, pageParam }) =>
+      listApplicationInterviews(applicationId, pageParam, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
     enabled: Boolean(applicationId),
   });
 }
 
 export function useUpcomingInterviews() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: resourceKeys.upcomingInterviews,
-    queryFn: ({ signal }) => listUpcomingInterviews(signal),
+    queryFn: ({ signal, pageParam }) => listUpcomingInterviews(pageParam, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
   });
 }
 

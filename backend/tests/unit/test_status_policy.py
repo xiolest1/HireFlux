@@ -8,6 +8,7 @@ from hireflux_backend.domain.status_policy import (
     StatusPolicyError,
     allowed_transitions,
     decide_transition,
+    validate_applied_date,
     validate_initial_status,
 )
 
@@ -121,3 +122,9 @@ def test_initial_status_is_draft_or_applied_only() -> None:
         validate_initial_status(ApplicationStatus.INTERVIEW, date(2026, 8, 1))
     with pytest.raises(StatusPolicyError, match="applied_date"):
         validate_initial_status(ApplicationStatus.APPLIED, None)
+
+
+def test_applied_date_cannot_be_in_the_future() -> None:
+    validate_applied_date(date(2026, 8, 20), today=date(2026, 8, 20))
+    with pytest.raises(StatusPolicyError, match="future"):
+        validate_applied_date(date(2026, 8, 21), today=date(2026, 8, 20))

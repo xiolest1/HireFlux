@@ -14,12 +14,14 @@ import {
   useApplication,
   useUpdateApplication,
 } from "../features/applications/queries";
+import { useSettings } from "../features/resources/queries";
 
 export function ApplicationEditPage() {
   const { applicationId = "" } = useParams();
   const navigate = useNavigate();
   const applicationQuery = useApplication(applicationId);
   const updateMutation = useUpdateApplication();
+  const settingsQuery = useSettings();
 
   if (applicationQuery.isPending) {
     return <ApplicationFormSkeleton label="Loading application…" />;
@@ -82,6 +84,14 @@ export function ApplicationEditPage() {
       <ApplicationForm
         mode="edit"
         application={application}
+        defaultPreferences={
+          settingsQuery.data
+            ? {
+                defaultFollowUpDays: settingsQuery.data.default_follow_up_days,
+                timeZone: settingsQuery.data.time_zone,
+              }
+            : undefined
+        }
         isSubmitting={updateMutation.isPending}
         serverError={updateMutation.error}
         onSubmit={submit}

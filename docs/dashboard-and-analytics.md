@@ -15,7 +15,7 @@ The dashboard also shows an eight-week submission trend and a compact current-st
 
 ## Metric definitions
 
-- **Submitted population:** applications with a server-owned `submitted_at` milestone inside the selected date range. Drafts are excluded. Later current outcomes do not remove an application from this denominator.
+- **Submitted population:** applications with a server-owned `submitted_at` milestone and canonical `applied_date` inside the selected date range. Drafts are excluded. Later current outcomes do not remove an application from this denominator.
 - **Response:** first reached screening, interview, offer, acceptance, or rejection. Withdrawal by itself is not treated as an employer response.
 - **Interview, offer, and acceptance:** first reached the corresponding milestone at any time, regardless of current status.
 - **Rate:** milestone count divided by submitted count. A zero submitted population produces a zero rate and an explicit zero denominator.
@@ -26,7 +26,7 @@ The dashboard also shows an eight-week submission trend and a compact current-st
 - **No response:** submitted applications without `first_response_at`.
 - **Source performance:** rate comparisons are labeled as a small sample until the source contains at least three submitted applications.
 
-Ranges are `30d`, `90d`, and `all`; date windows use `submitted_at`. Analytics filters support current status, normalized source, and work mode. Results describe the temporary workspace and are not predictions about a user's career or future outcomes.
+Ranges are `30d`, `90d`, and `all`; date windows and submission trends use the user-entered `applied_date`, while `submitted_at` remains the exact server instant used for elapsed-time metrics. This keeps direct `APPLIED` creation and `DRAFT` → `APPLIED` transitions in the same reporting window when they share an applied date. Analytics filters support current status, normalized source, and work mode. Results describe the temporary workspace and are not predictions about a user's career or future outcomes.
 
 Application lists accept an explicit server-owned view. `ACTIVE` contains `APPLIED`, `SCREENING`, `INTERVIEW`, and `OFFER`; `ALL` contains every status, including `ARCHIVED`; and `ARCHIVED` contains only archived records. An explicit status filter selects that status regardless of view. The web client keeps both selectors coherent: active status filters use `ACTIVE`, archived uses `ARCHIVED`, and draft or completed-outcome filters use `ALL`. The signed cursor is bound to the effective view, status, search filters, and sort order. Omitting `view` preserves the legacy non-archived list used by older API clients; the web client always sends its selected or configured view.
 
@@ -36,7 +36,9 @@ The saved `time_zone` is a validated IANA name and defines the workspace calenda
 
 `follow_up_date` is an ISO `YYYY-MM-DD` calendar value, not a timestamp or midnight UTC instant. The API and DynamoDB preserve that date exactly, and the UI renders it without applying a time-zone shift. When a new application form uses the default follow-up interval, the browser starts from the current calendar date in the saved workspace zone and adds `default_follow_up_days`; the user can still replace or clear that proposed date.
 
-Interviews and historical milestones are different: they are timezone-aware instants stored and exchanged in UTC. The UI displays interview timestamps in the saved workspace zone, while rolling analytics ranges compare the server-owned UTC milestone timestamps. This separation prevents a date-only follow-up from moving to an adjacent day while still presenting scheduled times in the user's chosen zone.
+`applied_date` is a user-entered calendar date and cannot be later than the current date in the saved workspace time zone. It is never converted into a timestamp. It is the canonical calendar date for submission ranges and trends. `submitted_at` is a separate server-owned UTC instant captured when an application is created as `APPLIED` or first leaves `DRAFT`; `first_response_at` and the other historical milestones are also UTC instants. Analytics durations use these ordered instants, so a date-only value cannot create a negative response time. Legacy records with out-of-order response milestones are excluded from the average rather than producing an invalid value.
+
+Interviews and historical milestones are different from date-only fields: they are timezone-aware instants stored and exchanged in UTC. The UI displays interview timestamps in the saved workspace zone, while elapsed-time analytics compare the server-owned UTC milestone timestamps. This separation prevents a date-only follow-up from moving to an adjacent day while still presenting scheduled times in the user's chosen zone.
 
 ## Demo behavior
 

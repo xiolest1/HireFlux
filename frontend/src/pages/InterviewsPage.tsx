@@ -41,7 +41,9 @@ export function InterviewsPage() {
   const interviewsQuery = useUpcomingInterviews();
   const settingsQuery = useSettings();
   const timeZone = settingsQuery.data?.time_zone ?? "UTC";
-  const interviews = [...(interviewsQuery.data?.items ?? [])].sort((left, right) => left.scheduled_at.localeCompare(right.scheduled_at));
+  const interviews = [...(interviewsQuery.data?.pages.flatMap((page) => page.items) ?? [])].sort(
+    (left, right) => left.scheduled_at.localeCompare(right.scheduled_at),
+  );
   const grouped = new Map<string, Interview[]>();
   for (const interview of interviews) {
     const key = calendarKey(interview.scheduled_at, timeZone);
@@ -63,7 +65,7 @@ export function InterviewsPage() {
       <div className="mt-8">
         {interviewsQuery.isPending ? <InterviewsSkeleton /> : null}
         {interviewsQuery.isError ? <ErrorPanel title="Interviews could not be loaded" error={interviewsQuery.error} onRetry={() => void interviewsQuery.refetch()} /> : null}
-        {interviewsQuery.data?.items.length === 0 ? <EmptyState title="No upcoming interviews" description="Schedule an interview from an application page when your next conversation is confirmed." action={<Link to="/applications" className={buttonClassName("primary")}>Browse applications</Link>} /> : null}
+        {interviewsQuery.isSuccess && interviews.length === 0 ? <EmptyState title="No upcoming interviews" description="Schedule an interview from an application page when your next conversation is confirmed." action={<Link to="/applications" className={buttonClassName("primary")}>Browse applications</Link>} /> : null}
         {interviews.length ? (
           <div className="space-y-9">
             {Array.from(grouped.entries()).map(([date, items]) => (
@@ -77,6 +79,18 @@ export function InterviewsPage() {
                 </ol>
               </section>
             ))}
+          </div>
+        ) : null}
+        {interviewsQuery.hasNextPage ? (
+          <div className="mt-8 flex justify-center">
+            <button
+              type="button"
+              className={buttonClassName("secondary")}
+              disabled={interviewsQuery.isFetchingNextPage}
+              onClick={() => void interviewsQuery.fetchNextPage()}
+            >
+              {interviewsQuery.isFetchingNextPage ? "Loading more…" : "Load more interviews"}
+            </button>
           </div>
         ) : null}
       </div>

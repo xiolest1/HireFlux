@@ -38,11 +38,10 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const createAndActivate = useCallback(async () => {
     setIsCreating(true);
     setError(null);
-    queryClient.clear();
     try {
       const session = await createDemoSession();
-      // Nothing from the prior identity may survive until the replacement
-      // token becomes observable by protected queries.
+      // Keep the current workspace available while creation is pending. Once
+      // the replacement token exists, no prior identity data may survive.
       queryClient.clear();
       saveDemoSession(session);
       setState({ session, status: "active" });

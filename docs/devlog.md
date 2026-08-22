@@ -677,6 +677,80 @@ fresh 16-record isolated workspace and verified the redesigned Home and
 Applications flows against the running local API. `git diff --check` and the
 npm production dependency audit also passed.
 
+## Analytics, resource bounds, and workflow-integrity hardening - August 22, 2026
+
+### Purpose
+
+Completed a correctness and resilience pass based on recruiter-facing review.
+The work focused on preventing date-only values from becoming invalid
+timestamps, keeping analytics consistent across equivalent workflows, making
+bounded resources complete and affordable to read, and preserving recoverable
+UI state when a demo reset fails.
+
+### Analytics and date semantics
+
+Established the separation between the user-entered `applied_date` calendar
+value and server-owned UTC milestones. `applied_date` is validated against the
+workspace's current calendar date and is never converted through UTC. The
+analytics reporting window and submission trend use that canonical business
+date, while elapsed-time metrics use ordered server timestamps such as
+`submitted_at` and `first_response_at`.
+
+Direct `APPLIED` creation and `DRAFT` to `APPLIED` transitions now resolve to
+the same applied-date reporting window. Invalid legacy milestone ordering is
+excluded from duration averages rather than producing negative response times.
+The API, service, schema, and frontend form changes keep these rules
+server-owned and display validation errors at the user input boundary.
+
+### Archived workflow integrity
+
+Archived applications continue to satisfy the required fields of their
+remembered prior status. In particular, an archived later-stage application
+cannot clear the `applied_date` that would be required when restored. Restore
+requests can repair a legacy archived record that is missing this field before
+the status transition is applied; the exact `archived_from_status` rule remains
+authoritative.
+
+### Resource quotas and bounded reads
+
+Added per-application server-owned quotas with transactional counters: 100
+notes, 25 interviews, and 500 append-only activity entries by default. Quota
+updates happen atomically with child-resource creation or activity writes, and
+deleting a note releases its slot. The local demo's existing 100-application
+lifetime quota remains in place.
+
+Notes, interviews, activity, and global upcoming-interview reads now return
+bounded pages with signed, scope-bound cursors and continuation metadata. The
+cursor contract hides DynamoDB keys and rejects tampering, cross-owner reuse,
+and application/filter mismatches. Frontend panels accumulate pages safely,
+deduplicate items, and expose load-more behavior so records beyond the first
+page remain discoverable.
+
+### Reset failure recovery
+
+Demo reset no longer clears the active workspace or unmounts the protected
+layout while the replacement session is being created. The current workspace
+and reset dialog remain available until reset succeeds. If creation fails, the
+dialog stays open with the explicit message that the existing workspace is
+still available, a `Try again` action, and an assertive alert that receives
+focus for screen readers and keyboard users. Query data is cleared only after
+the replacement session exists, preserving the old identity on failure while
+still enforcing cache isolation at the successful identity boundary.
+
+### Validation
+
+Added regression coverage for date validation, milestone consistency, archived
+workflow repair, quota limits and rollback, signed cursor scope, complete
+interview pagination, and failed-reset focus/retry behavior. The current
+frontend validation passes 62 Vitest tests, ESLint, TypeScript checking, and
+the production Vite build. Backend Ruff lint/format, strict mypy, and the full
+backend suite also pass at 138 tests. `git diff --check` passes; existing
+Git line-ending normalization warnings are non-blocking.
+
+The durable contracts were updated in the dashboard/analytics, domain-model,
+DynamoDB access-pattern, and isolated-demo-session ADR documents. No AWS
+resources were created during this work.
+
 ## Next recommended work
 
 Freeze and commit the validated local Milestone 2 baseline, then build and

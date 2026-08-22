@@ -13,17 +13,19 @@ export const server = setupServer(
       range: new URL(request.url).searchParams.get("range") ?? "30d",
     }),
   ),
-  http.get(`${API_ORIGIN}/api/v1/interviews`, () => HttpResponse.json({ items: [] })),
+  http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+    HttpResponse.json({ items: [], next_cursor: null }),
+  ),
   http.get(`${API_ORIGIN}/api/v1/applications`, () =>
     HttpResponse.json({ items: [], next_cursor: null }),
   ),
   http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/activity`, () =>
-    HttpResponse.json({ items: [] }),
+    HttpResponse.json({ items: [], next_cursor: null }),
   ),
   http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/notes`, () =>
-    HttpResponse.json({ items: [] }),
+    HttpResponse.json({ items: [], next_cursor: null }),
   ),
   http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/interviews`, () =>
-    HttpResponse.json({ items: [] }),
+    HttpResponse.json({ items: [], next_cursor: null }),
   ),
 );

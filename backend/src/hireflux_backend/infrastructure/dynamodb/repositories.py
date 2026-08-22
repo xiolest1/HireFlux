@@ -8,7 +8,7 @@ from hireflux_backend.application.errors import (
     InvalidCursorError,
     PersistenceError,
 )
-from hireflux_backend.application.ports import ApplicationPage
+from hireflux_backend.application.ports import ActivityPage, ApplicationPage
 from hireflux_backend.domain.enums import (
     ApplicationSort,
     ApplicationSource,
@@ -23,6 +23,7 @@ from hireflux_backend.domain.resources import (
 from hireflux_backend.infrastructure.dynamodb.cursor import CursorCodec
 from hireflux_backend.infrastructure.dynamodb.mapping import (
     activity_from_item,
+    activity_sort_key,
     activity_to_item,
     application_from_item,
     application_partition,
@@ -39,6 +40,7 @@ from hireflux_backend.infrastructure.dynamodb.mapping import (
     serialize_item,
     user_partition,
 )
+from hireflux_backend.infrastructure.dynamodb.resource_quota import resource_quota_update
 from hireflux_backend.infrastructure.dynamodb.table_schema import GSI1_NAME, GSI2_NAME, GSI3_NAME
 
 
@@ -91,11 +93,13 @@ class DynamoApplicationRepository:
         cursor_codec: CursorCodec,
         *,
         max_applications: int = 100,
+        max_activity_per_application: int = 500,
     ) -> None:
         self._client = client
         self._table_name = table_name
         self._cursor_codec = cursor_codec
         self._max_applications = max_applications
+        self._max_activity = max_activity_per_application
 
     def create(self, application: Application, activity: Activity) -> None:
         quota_values: dict[str, object] = {
@@ -140,6 +144,13 @@ class DynamoApplicationRepository:
                             ),
                         }
                     },
+                    resource_quota_update(
+                        self._table_name,
+                        owner_user_id=application.owner_user_id,
+                        application_id=application.application_id,
+                        expires_at=application.expires_at,
+                        max_activity=self._max_activity,
+                    ),
                     {
                         "Put": {
                             "TableName": self._table_name,
@@ -536,6 +547,13 @@ class DynamoApplicationRepository:
                             ),
                         }
                     },
+                    resource_quota_update(
+                        self._table_name,
+                        owner_user_id=application.owner_user_id,
+                        application_id=application.application_id,
+                        expires_at=application.expires_at,
+                        max_activity=self._max_activity,
+                    ),
                 ]
             )
         except ClientError as error:
@@ -585,6 +603,13 @@ class DynamoApplicationRepository:
                             ),
                         }
                     },
+                    resource_quota_update(
+                        self._table_name,
+                        owner_user_id=application.owner_user_id,
+                        application_id=application.application_id,
+                        expires_at=application.expires_at,
+                        max_activity=self._max_activity,
+                    ),
                     _status_counter_update(
                         self._table_name, application, prior_application.status, -1
                     ),
@@ -603,7 +628,14 @@ class DynamoApplicationRepository:
                 ) from error
             raise PersistenceError("Unable to change the application status.") from error
 
-    def list_activity(self, owner_user_id: str, application_id: str) -> tuple[Activity, ...]:
+    def list_activity(
+        self,
+        owner_user_id: str,
+        application_id: str,
+        *,
+        limit: int,
+        cursor: str | None,
+    ) -> ActivityPage:
         arguments: dict[str, Any] = {
             "TableName": self._table_name,
             "KeyConditionExpression": "PK = :partition AND begins_with(SK, :prefix)",
@@ -614,21 +646,40 @@ class DynamoApplicationRepository:
                 }
             ),
             "ScanIndexForward": True,
+            "Limit": limit + 1,
         }
-        activities: list[Activity] = []
+        if cursor:
+            position = self._cursor_codec.decode(
+                cursor,
+                kind="application-activity",
+                owner_user_id=owner_user_id,
+                scope=application_id,
+            )
+            arguments["ExclusiveStartKey"] = serialize_item(
+                {
+                    "PK": application_partition(owner_user_id, application_id),
+                    "SK": activity_sort_key(position.timestamp, position.item_id),
+                }
+            )
         try:
-            while True:
-                response = self._client.query(**arguments)
-                activities.extend(
-                    activity_from_item(deserialize_item(item)) for item in response.get("Items", [])
-                )
-                last_key = response.get("LastEvaluatedKey")
-                if not last_key:
-                    break
-                arguments["ExclusiveStartKey"] = last_key
+            response = self._client.query(**arguments)
         except ClientError as error:
             raise PersistenceError("Unable to list application activity.") from error
-        return tuple(activities)
+        raw_activities = [
+            activity_from_item(deserialize_item(item)) for item in response.get("Items", [])
+        ]
+        activities = raw_activities[:limit]
+        next_cursor = None
+        if activities and (len(raw_activities) > limit or response.get("LastEvaluatedKey")):
+            last = activities[-1]
+            next_cursor = self._cursor_codec.encode(
+                kind="application-activity",
+                owner_user_id=owner_user_id,
+                scope=application_id,
+                timestamp=format_timestamp(last.created_at),
+                item_id=last.activity_id,
+            )
+        return ActivityPage(items=tuple(activities), next_cursor=next_cursor)
 
 
 def _application_statuses_for_view(

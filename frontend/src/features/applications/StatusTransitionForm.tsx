@@ -5,24 +5,37 @@ import { ErrorPanel } from "../../components/ui/Feedback";
 import { useToast } from "../../components/ui/toastContext";
 import { updateRecruiterGuide } from "../workspace/queries";
 import { formatStatus } from "./format";
+import { currentDateInTimeZone } from "./formSchema";
 import { useTransitionApplication } from "./queries";
 
 interface StatusTransitionFormProps {
   application: Application;
   onReload: () => void;
+  timeZone?: string;
 }
 
 export function StatusTransitionForm({
   application,
   onReload,
+  timeZone = "UTC",
 }: StatusTransitionFormProps) {
   const transitionMutation = useTransitionApplication();
   const { showToast } = useToast();
   const [targetStatus, setTargetStatus] = useState<ApplicationStatus | "">("");
   const [appliedDate, setAppliedDate] = useState(application.applied_date ?? "");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const appliedDateMaximum = currentDateInTimeZone(timeZone);
 
-  const needsAppliedDate = targetStatus === "APPLIED" && !application.applied_date;
+  const needsAppliedDate =
+    [
+      "APPLIED",
+      "SCREENING",
+      "INTERVIEW",
+      "OFFER",
+      "ACCEPTED",
+      "REJECTED",
+      "WITHDRAWN",
+    ].includes(targetStatus) && !application.applied_date;
   const isArchiving = targetStatus === "ARCHIVED";
   const isRestoring = application.status === "ARCHIVED" && targetStatus !== "";
 
@@ -39,7 +52,11 @@ export function StatusTransitionForm({
       return;
     }
     if (needsAppliedDate && !appliedDate) {
-      setValidationError("Applied date is required before moving to Applied.");
+      setValidationError("Applied date is required before entering or restoring this status.");
+      return;
+    }
+    if (needsAppliedDate && appliedDate > appliedDateMaximum) {
+      setValidationError("Applied date cannot be in the future.");
       return;
     }
 
@@ -124,6 +141,7 @@ export function StatusTransitionForm({
             <input
               id="transition-applied-date"
               type="date"
+              max={appliedDateMaximum}
               value={appliedDate}
               required
               aria-invalid={Boolean(validationError && !appliedDate)}

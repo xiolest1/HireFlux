@@ -44,9 +44,15 @@ export function updateSettings(request: UpdateSettingsRequest): Promise<Settings
   });
 }
 
-export function listNotes(applicationId: string, signal?: AbortSignal) {
+export function listNotes(
+  applicationId: string,
+  cursor: string | null,
+  signal?: AbortSignal,
+) {
+  const search = new URLSearchParams({ limit: "25" });
+  if (cursor) search.set("cursor", cursor);
   return apiRequest(
-    `/api/v1/applications/${encodeURIComponent(applicationId)}/notes`,
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/notes?${search.toString()}`,
     noteListResponseSchema,
     { signal },
   );
@@ -85,16 +91,26 @@ export function deleteNote(
   );
 }
 
-export function listApplicationInterviews(applicationId: string, signal?: AbortSignal) {
+export function listApplicationInterviews(
+  applicationId: string,
+  cursor: string | null,
+  signal?: AbortSignal,
+) {
+  const search = new URLSearchParams({ limit: "25" });
+  if (cursor) search.set("cursor", cursor);
   return apiRequest(
-    `/api/v1/applications/${encodeURIComponent(applicationId)}/interviews`,
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/interviews?${search.toString()}`,
     interviewListResponseSchema,
     { signal },
   );
 }
 
-export function listUpcomingInterviews(signal?: AbortSignal) {
-  return apiRequest("/api/v1/interviews?limit=20", interviewListResponseSchema, { signal });
+export function listUpcomingInterviews(cursor: string | null, signal?: AbortSignal) {
+  const search = new URLSearchParams({ limit: "20" });
+  if (cursor) search.set("cursor", cursor);
+  return apiRequest(`/api/v1/interviews?${search.toString()}`, interviewListResponseSchema, {
+    signal,
+  });
 }
 
 export function createInterview(applicationId: string, fields: InterviewFields): Promise<Interview> {

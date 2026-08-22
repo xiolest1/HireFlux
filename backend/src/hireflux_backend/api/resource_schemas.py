@@ -86,6 +86,7 @@ class NoteResponse(BaseModel):
 
 class NoteListResponse(BaseModel):
     items: list[NoteResponse]
+    next_cursor: str | None
 
 
 class InterviewCreateRequest(RequestModel):
@@ -152,3 +153,4 @@ class InterviewResponse(BaseModel):
 
 class InterviewListResponse(BaseModel):
     items: list[InterviewResponse]
+    next_cursor: str | None

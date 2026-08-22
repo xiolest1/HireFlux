@@ -151,10 +151,13 @@ export function transitionApplication(
 
 export async function listApplicationActivity(
   applicationId: string,
+  cursor: string | null,
   signal?: AbortSignal,
-): Promise<{ items: Activity[] }> {
+): Promise<{ items: Activity[]; next_cursor: string | null }> {
+  const search = new URLSearchParams({ limit: "25" });
+  if (cursor) search.set("cursor", cursor);
   return apiRequest(
-    `/api/v1/applications/${encodeURIComponent(applicationId)}/activity`,
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/activity?${search.toString()}`,
     activityListResponseSchema,
     { signal },
   );

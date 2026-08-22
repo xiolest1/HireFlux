@@ -51,14 +51,15 @@ class InsightsService:
 
     def dashboard(self, identity: CurrentIdentity, *, reporting_range: str) -> dict[str, object]:
         now = self._clock().astimezone(UTC)
-        workspace_time_zone = (
-            ZoneInfo(self._resource_service.get_settings(identity).time_zone)
-            if self._resource_service is not None
-            else ZoneInfo("UTC")
-        )
+        workspace_time_zone = _workspace_time_zone(self._resource_service, identity)
         local_today = now.astimezone(workspace_time_zone).date()
         applications = self._repository.list_all(identity.user_id)
-        submitted = _submitted_in_range(applications, reporting_range, now)
+        submitted = _submitted_in_range(
+            applications,
+            reporting_range,
+            today=local_today,
+            time_zone=workspace_time_zone,
+        )
         status_counts = self._repository.get_status_counts(identity.user_id)
         funnel_counts = self._repository.get_funnel_counts(identity.user_id)
         upcoming = (
@@ -99,7 +100,12 @@ class InsightsService:
                 for application in applications
                 if application.status is not ApplicationStatus.ARCHIVED
             ][:5],
-            "submission_trend": _submission_trend(submitted, now=now, fixed_weeks=8),
+            "submission_trend": _submission_trend(
+                submitted,
+                today=local_today,
+                time_zone=workspace_time_zone,
+                fixed_weeks=8,
+            ),
             "status_breakdown": _status_breakdown(applications),
         }
 
@@ -111,6 +117,8 @@ class InsightsService:
         filters: InsightFilters,
     ) -> dict[str, object]:
         now = self._clock().astimezone(UTC)
+        workspace_time_zone = _workspace_time_zone(self._resource_service, identity)
+        local_today = now.astimezone(workspace_time_zone).date()
         all_applications = self._repository.list_all(identity.user_id)
         filtered = tuple(
             item
@@ -119,13 +127,25 @@ class InsightsService:
             and (filters.source is None or item.source is filters.source)
             and (filters.work_mode is None or item.work_mode is filters.work_mode)
         )
-        submitted = _submitted_in_range(filtered, reporting_range, now)
-        current_population = _current_population_in_range(filtered, reporting_range, now)
+        submitted = _submitted_in_range(
+            filtered,
+            reporting_range,
+            today=local_today,
+            time_zone=workspace_time_zone,
+        )
+        current_population = _current_population_in_range(
+            filtered,
+            reporting_range,
+            today=local_today,
+            time_zone=workspace_time_zone,
+        )
         rates = _rates(submitted)
         response_days = [
             (item.first_response_at - item.submitted_at).total_seconds() / 86_400
             for item in submitted
-            if item.first_response_at is not None and item.submitted_at is not None
+            if item.first_response_at is not None
+            and item.submitted_at is not None
+            and item.first_response_at >= item.submitted_at
         ]
         return {
             "range": reporting_range,
@@ -138,7 +158,11 @@ class InsightsService:
             "summary": _summary(current_population),
             "rates": rates,
             "status_breakdown": _status_breakdown(current_population),
-            "submission_trend": _submission_trend(submitted, now=now),
+            "submission_trend": _submission_trend(
+                submitted,
+                today=local_today,
+                time_zone=workspace_time_zone,
+            ),
             "funnel": _funnel(submitted),
             "stage_aging": _stage_aging(current_population, now),
             "source_performance": _source_performance(submitted),
@@ -155,34 +179,67 @@ class InsightsService:
 
 
 def _submitted_in_range(
-    applications: tuple[Application, ...], reporting_range: str, now: datetime
+    applications: tuple[Application, ...],
+    reporting_range: str,
+    *,
+    today: date,
+    time_zone: ZoneInfo,
 ) -> tuple[Application, ...]:
     if reporting_range not in REPORTING_RANGES:
         raise ValueError("Unsupported reporting range.")
     cutoff = None
     if reporting_range != "all":
-        cutoff = now - timedelta(days=int(reporting_range.removesuffix("d")))
+        cutoff = today - timedelta(days=int(reporting_range.removesuffix("d")))
     return tuple(
         item
         for item in applications
-        if item.submitted_at is not None and (cutoff is None or item.submitted_at >= cutoff)
+        if (submission_date := _submission_date(item, time_zone)) is not None
+        and (cutoff is None or submission_date >= cutoff)
     )
 
 
 def _current_population_in_range(
-    applications: tuple[Application, ...], reporting_range: str, now: datetime
+    applications: tuple[Application, ...],
+    reporting_range: str,
+    *,
+    today: date,
+    time_zone: ZoneInfo,
 ) -> tuple[Application, ...]:
     if reporting_range not in REPORTING_RANGES:
         raise ValueError("Unsupported reporting range.")
     if reporting_range == "all":
         return applications
-    cutoff = now - timedelta(days=int(reporting_range.removesuffix("d")))
+    cutoff = today - timedelta(days=int(reporting_range.removesuffix("d")))
     return tuple(
         item
         for item in applications
         if item.status is ApplicationStatus.DRAFT
-        or (item.submitted_at is not None and item.submitted_at >= cutoff)
+        or (
+            (submission_date := _submission_date(item, time_zone)) is not None
+            and submission_date >= cutoff
+        )
     )
+
+
+def _workspace_time_zone(
+    resource_service: WorkspaceResourceService | None,
+    identity: CurrentIdentity,
+) -> ZoneInfo:
+    if resource_service is None:
+        return ZoneInfo("UTC")
+    return ZoneInfo(resource_service.get_settings(identity).time_zone)
+
+
+def _submission_date(application: Application, time_zone: ZoneInfo) -> date | None:
+    """Return the canonical business date for a submitted application.
+
+    `submitted_at` remains the exact server instant used for elapsed-time metrics.
+    The user-entered `applied_date` is the stable calendar date used for reporting
+    windows and trends, including when a draft is later submitted.
+    """
+    if application.submitted_at is None:
+        return None
+    return application.applied_date or application.submitted_at.astimezone(time_zone).date()
 
 
 def _summary(applications: tuple[Application, ...]) -> dict[str, int]:
@@ -311,22 +368,29 @@ def _status_breakdown(applications: tuple[Application, ...]) -> list[dict[str, o
 
 
 def _submission_trend(
-    applications: tuple[Application, ...], *, now: datetime, fixed_weeks: int | None = None
+    applications: tuple[Application, ...],
+    *,
+    today: date,
+    time_zone: ZoneInfo,
+    fixed_weeks: int | None = None,
 ) -> list[dict[str, object]]:
-    end_week = now.date() - timedelta(days=now.weekday())
+    end_week = today - timedelta(days=today.weekday())
+    submission_dates = [
+        submission_date
+        for application in applications
+        if (submission_date := _submission_date(application, time_zone)) is not None
+    ]
     if fixed_weeks is not None:
         first_week = end_week - timedelta(weeks=fixed_weeks - 1)
-    elif applications:
-        earliest = min(item.submitted_at for item in applications if item.submitted_at)
-        assert earliest is not None
-        first_week = earliest.date() - timedelta(days=earliest.weekday())
+    elif submission_dates:
+        earliest = min(submission_dates)
+        first_week = earliest - timedelta(days=earliest.weekday())
     else:
         first_week = end_week
     counts: Counter[date] = Counter()
-    for item in applications:
-        if item.submitted_at is not None:
-            week = item.submitted_at.date() - timedelta(days=item.submitted_at.weekday())
-            counts[week] += 1
+    for submission_date in submission_dates:
+        week = submission_date - timedelta(days=submission_date.weekday())
+        counts[week] += 1
     points: list[dict[str, object]] = []
     week = first_week
     while week <= end_week:

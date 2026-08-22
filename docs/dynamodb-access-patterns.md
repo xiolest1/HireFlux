@@ -22,6 +22,7 @@ Adding or changing an index is an explicit schema migration decision, not an app
 | Workspace quota | `USER#<user_id>` | `WORKSPACE_QUOTA` | none |
 | Application | `USER#<owner>#APPLICATION#<application_id>` | `METADATA` | non-archived only: `GSI1PK=USER#<owner>#APPLICATIONS`, `GSI1SK=<updated_at>#<id>`; every status: `GSI2PK=USER#<owner>#STATUS#<status>`, `GSI2SK=<updated_at>#<id>`; outstanding follow-up only: `GSI3PK=USER#<owner>#SCHEDULE`, `GSI3SK=FOLLOW_UP#<date>#<id>` |
 | Activity | same application partition | `ACTIVITY#<created_at>#<activity_id>` | optional owner recent-activity projection later |
+| Application resource quota | same application partition | `RESOURCE_QUOTA` | none |
 | Note | same application partition | `NOTE#<note_id>` | none |
 | Interview | same application partition | `INTERVIEW#<interview_id>` | `GSI1PK=USER#<owner>#INTERVIEWS`, `GSI1SK=<scheduled_at>#<id>`; scheduled only: `GSI3PK=USER#<owner>#SCHEDULE`, `GSI3SK=INTERVIEW#<scheduled_at>#<id>` |
 | Workspace settings | `USER#<owner_user_id>` | `SETTINGS` | none |
@@ -45,12 +46,12 @@ Every temporary demo item, including settings, notes, counters, and interviews, 
 | 5 | Query an owner's applications by explicit status | `Query GSI2PK=USER#sub#STATUS#status`; status overrides the broader view population | GSI2 | cursor is bound to owner, status, view, filters, and sort | owner comes from identity; status and view are validated enums |
 | 6 | Edit application | owner-key `GetItem`, then conditional versioned write | table | none | owner-qualified key plus expected version |
 | 7 | Transition/archive application | owner-key read, domain policy, transactional conditional write plus activity | table | none | owner-qualified key; policy is server-owned |
-| 8 | List notes | `Query owner-qualified application PK AND begins_with(SK, NOTE#)` | table | none within the bounded demo workspace | partition is derived from identity plus route id |
+| 8 | List notes | `Query owner-qualified application PK AND begins_with(SK, NOTE#)` | table | `limit+1` query with a signed cursor bound to owner and application | partition is derived from identity plus route id |
 | 9 | Create/get/update/delete one note | conditional `PutItem`/`GetItem`/versioned write/delete at `SK=NOTE#id` | table | none | owner-qualified parent partition; body has no owner/application IDs |
-| 10 | List application interviews | `Query owner-qualified application PK AND begins_with(SK, INTERVIEW#)` | table | none within the bounded demo workspace | partition is derived from identity plus route id |
+| 10 | List application interviews | `Query owner-qualified application PK AND begins_with(SK, INTERVIEW#)` | table | `limit+1` query with a signed cursor bound to owner and application | partition is derived from identity plus route id |
 | 11 | Create/get/update/cancel one interview | conditional `PutItem`/`GetItem`/versioned write at `SK=INTERVIEW#id`; schedule projection updated transactionally | table + GSI3 | none | owner-qualified parent partition |
-| 12 | List owner's upcoming interviews | `Query GSI3PK=USER#sub#SCHEDULE AND begins_with(GSI3SK, INTERVIEW#)` | GSI3 | bounded limit | owner comes from identity; only scheduled items project into GSI3 |
-| 13 | Retrieve activity timeline | `Query owner-qualified application PK AND begins_with(SK, ACTIVITY#)` | table | none within the bounded demo workspace | partition is derived from identity plus route id |
+| 12 | List owner's upcoming interviews | `Query GSI3PK=USER#sub#SCHEDULE AND begins_with(GSI3SK, INTERVIEW#)` | GSI3 | bounded `limit+1` query with a signed cursor | owner comes from identity; only scheduled items project into GSI3 |
+| 13 | Retrieve activity timeline | `Query owner-qualified application PK AND begins_with(SK, ACTIVITY#)` | table | `limit+1` query with a signed cursor bound to owner and application | partition is derived from identity plus route id |
 | 14 | Upcoming follow-ups/interviews | two kind-prefixed `Query` operations on `GSI3PK=USER#sub#SCHEDULE`, merged by time | GSI3 | bounded dashboard result | index owner is derived from identity |
 | 15 | Get/update workspace settings | `GetItem` or conditional versioned write at `PK=USER#sub, SK=SETTINGS` | table | none | owner comes from identity |
 | 16 | List/create notifications | owner-partition query or conditional put at `NOTIFICATION#<id>` | table | signed cursor for list | owner comes from verified identity/event target |
@@ -61,7 +62,7 @@ Every temporary demo item, including settings, notes, counters, and interviews, 
 
 ## Cursor contract
 
-The API converts the last returned logical position into a small payload containing a format version, list kind, last timestamp, last application ID, and an owner/query fingerprint. The fingerprint covers view, explicit status, search, source, work mode, and sort. The API signs canonical JSON with HMAC-SHA256 and base64url-encodes the payload and signature. Decoding verifies the signature and complete scope before continuing. A single-index legacy query can reconstruct an exclusive start key; a multi-partition view compares the logical position after its bounded merge.
+The API converts the last returned logical position into a small payload containing a format version, list kind, last timestamp, last item ID, and an owner/query fingerprint. The fingerprint covers view, explicit status, search, source, work mode, sort, or application scope as appropriate. The API signs canonical JSON with HMAC-SHA256 and base64url-encodes the payload and signature. Decoding verifies the signature and complete scope before continuing. A single-index query reconstructs an exclusive start key without exposing DynamoDB internals.
 
 This keeps DynamoDB attribute names out of the public contract and rejects tampering or cross-user/filter reuse. Pagination is best-effort rather than a frozen snapshot: concurrent edits can move an item and cause a duplicate or omission between pages. The frontend deduplicates accumulated pages by `application_id`; users refresh to obtain a current complete view.
 
@@ -71,7 +72,7 @@ Status counters, funnel counters, historical milestone timestamps, and schedule 
 
 The idempotent reconciliation command is deliberately local-only and requires the operator to confirm the exact table name. Its controlled maintenance scans load canonical applications and interviews, rewrite them through the current serializers, and rebuild status and funnel counters. Rewriting repairs application index attributes and both interview projections: it restores missing owner-interview or scheduled-interview keys and removes stale GSI3 schedule keys from completed or canceled interviews. Scans remain forbidden in normal request paths.
 
-GSI reads are eventually consistent. Mutations return the canonical base-table result immediately; a following list, upcoming schedule, or dashboard action can lag briefly. Search and multi-status view merging operate over owner-scoped queries bounded by the configured workspace lifetime quota, which defaults to 100 applications. Update-time ascending and descending ordering use the index sort value and application ID as a stable logical position.
+GSI reads are eventually consistent. Mutations return the canonical base-table result immediately; a following list, upcoming schedule, or dashboard action can lag briefly. Search and multi-status view merging operate over owner-scoped queries bounded by the configured workspace quota, which defaults to 100 applications. Each application also has resource quotas for stored notes (100), interviews (25), and append-only activity entries (500) by default. The `RESOURCE_QUOTA` item is updated in the same transaction as the child/activity mutation, so rejected quota writes cannot leave a partial record behind; deleting a note releases its note slot atomically. Update-time ascending and descending ordering use the index sort value and application ID as a stable logical position.
 
 ## Local versus AWS clients
 

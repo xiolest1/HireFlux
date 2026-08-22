@@ -115,6 +115,7 @@ export const activitySchema = z.object({
 
 export const activityListResponseSchema = z.object({
   items: z.array(activitySchema),
+  next_cursor: z.string().min(1).nullable(),
 });
 
 export const demoSessionSchema = z.object({
@@ -132,7 +133,10 @@ export const noteSchema = z.object({
   version: z.number().int().positive(),
 });
 
-export const noteListResponseSchema = z.object({ items: z.array(noteSchema) });
+export const noteListResponseSchema = z.object({
+  items: z.array(noteSchema),
+  next_cursor: z.string().min(1).nullable(),
+});
 
 export const interviewSchema = z.object({
   interview_id: z.string().uuid(),
@@ -154,7 +158,7 @@ export const interviewSchema = z.object({
 
 export const interviewListResponseSchema = z.object({
   items: z.array(interviewSchema),
-  next_cursor: z.string().min(1).nullable().optional(),
+  next_cursor: z.string().min(1).nullable(),
 });
 
 export const settingsSchema = z.object({

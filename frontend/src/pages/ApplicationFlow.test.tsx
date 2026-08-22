@@ -50,7 +50,7 @@ describe("application critical flow", () => {
       }),
       http.get(
         `${API_ORIGIN}/api/v1/applications/:applicationId/activity`,
-        () => HttpResponse.json({ items: [makeActivity()] }),
+        () => HttpResponse.json({ items: [makeActivity()], next_cursor: null }),
       ),
     );
 

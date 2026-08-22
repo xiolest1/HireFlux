@@ -1,10 +1,12 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 from hireflux_backend.application.errors import ConflictError, NotFoundError, ValidationError
 from hireflux_backend.application.ports import (
+    ActivityPage,
     ApplicationPage,
     ApplicationRepository,
     UserRepository,
@@ -22,6 +24,7 @@ from hireflux_backend.domain.status_policy import (
     ACTIVE_STATUSES_REQUIRING_APPLIED_DATE,
     StatusPolicyError,
     decide_transition,
+    validate_applied_date,
     validate_initial_status,
 )
 
@@ -111,24 +114,26 @@ class ApplicationService:
         *,
         clock: Callable[[], datetime] = utc_now,
         id_factory: Callable[[], str] = new_id,
+        workspace_time_zone: Callable[[CurrentIdentity], str] | None = None,
     ) -> None:
         self._repository = repository
         self._clock = clock
         self._id_factory = id_factory
+        self._workspace_time_zone = workspace_time_zone or (lambda _identity: "UTC")
 
     def create(self, identity: CurrentIdentity, command: CreateApplicationCommand) -> Application:
+        now = command.trusted_created_at or self._clock()
+        _require_aware(now)
         try:
             validate_initial_status(command.status, command.applied_date)
+            validate_applied_date(
+                command.applied_date,
+                today=_workspace_today(identity, now, self._workspace_time_zone),
+            )
         except StatusPolicyError as error:
             raise ValidationError(str(error)) from error
 
-        now = command.trusted_created_at or self._clock()
-        _require_aware(now)
-        submitted_at = (
-            _date_as_timestamp(command.applied_date)
-            if command.status is ApplicationStatus.APPLIED and command.applied_date
-            else None
-        )
+        submitted_at = now if command.status is ApplicationStatus.APPLIED else None
         application = Application(
             application_id=self._id_factory(),
             owner_user_id=identity.user_id,
@@ -240,15 +245,29 @@ class ApplicationService:
                 effective_changes, "description", current.description
             ),
         )
+        required_status = (
+            current.archived_from_status
+            if current.status is ApplicationStatus.ARCHIVED
+            else candidate.status
+        )
         if (
-            candidate.status in ACTIVE_STATUSES_REQUIRING_APPLIED_DATE
+            required_status in ACTIVE_STATUSES_REQUIRING_APPLIED_DATE
             and candidate.applied_date is None
         ):
-            raise ValidationError("applied_date is required for the current status.")
+            raise ValidationError("applied_date is required for the restore status.")
+        now = self._clock()
+        _require_aware(now)
+        try:
+            validate_applied_date(
+                candidate.applied_date,
+                today=_workspace_today(identity, now, self._workspace_time_zone),
+            )
+        except StatusPolicyError as error:
+            raise ValidationError(str(error)) from error
 
         updated = replace(
             candidate,
-            updated_at=self._clock(),
+            updated_at=now,
             version=current.version + 1,
         )
         if "follow_up_date" in effective_changes:
@@ -280,16 +299,31 @@ class ApplicationService:
     ) -> Application:
         current = self.get(identity, application_id)
         self._require_version(current, command.expected_version)
+        now = command.trusted_transitioned_at or self._clock()
+        _require_aware(now)
+        try:
+            validate_applied_date(
+                command.applied_date,
+                today=_workspace_today(identity, now, self._workspace_time_zone),
+            )
+        except StatusPolicyError as error:
+            raise ValidationError(str(error)) from error
         try:
             decision = decide_transition(current, command.status, command.applied_date)
         except StatusPolicyError as error:
             raise ConflictError(str(error)) from error
 
+        try:
+            validate_applied_date(
+                decision.applied_date,
+                today=_workspace_today(identity, now, self._workspace_time_zone),
+            )
+        except StatusPolicyError as error:
+            raise ValidationError(str(error)) from error
+
         if not decision.changed:
             return current
 
-        now = command.trusted_transitioned_at or self._clock()
-        _require_aware(now)
         milestones = _milestones_for_transition(current, decision.status, now)
         updated = replace(
             current,
@@ -379,9 +413,21 @@ class ApplicationService:
             ),
         )
 
-    def list_activity(self, identity: CurrentIdentity, application_id: str) -> tuple[Activity, ...]:
+    def list_activity(
+        self,
+        identity: CurrentIdentity,
+        application_id: str,
+        *,
+        limit: int,
+        cursor: str | None,
+    ) -> ActivityPage:
         self.get(identity, application_id)
-        return self._repository.list_activity(identity.user_id, application_id)
+        return self._repository.list_activity(
+            identity.user_id,
+            application_id,
+            limit=limit,
+            cursor=cursor,
+        )
 
     def list_all(self, identity: CurrentIdentity) -> tuple[Application, ...]:
         return self._repository.list_all(identity.user_id)
@@ -481,8 +527,12 @@ def _require_aware(value: datetime) -> None:
         raise ValueError("Trusted timestamps and clock values must be timezone-aware.")
 
 
-def _date_as_timestamp(value: date) -> datetime:
-    return datetime.combine(value, time(hour=12), tzinfo=UTC)
+def _workspace_today(
+    identity: CurrentIdentity,
+    now: datetime,
+    time_zone_provider: Callable[[CurrentIdentity], str],
+) -> date:
+    return now.astimezone(ZoneInfo(time_zone_provider(identity))).date()
 
 
 def _milestones_for_transition(
@@ -498,9 +548,7 @@ def _milestones_for_transition(
 ]:
     submitted_at = application.submitted_at
     if submitted_at is None and target not in {ApplicationStatus.DRAFT, ApplicationStatus.ARCHIVED}:
-        submitted_at = (
-            _date_as_timestamp(application.applied_date) if application.applied_date else now
-        )
+        submitted_at = now
     response_statuses = {
         ApplicationStatus.SCREENING,
         ApplicationStatus.INTERVIEW,

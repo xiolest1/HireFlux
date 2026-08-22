@@ -69,9 +69,11 @@ export function useApplication(applicationId: string) {
 }
 
 export function useApplicationActivity(applicationId: string) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: applicationKeys.activity(applicationId),
-    queryFn: ({ signal }) => listApplicationActivity(applicationId, signal),
+    queryFn: ({ signal, pageParam }) => listApplicationActivity(applicationId, pageParam, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
     enabled: Boolean(applicationId),
   });
 }

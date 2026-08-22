@@ -57,11 +57,24 @@ def create_app(
         configured.dynamodb_table_name,
         cursor_codec,
         max_applications=configured.max_applications_per_workspace,
+        max_activity_per_application=configured.max_activity_per_application,
     )
-    application_service = ApplicationService(application_repository)
     workspace_resource_service = WorkspaceResourceService(
         application_repository,
-        DynamoWorkspaceResourceRepository(client, configured.dynamodb_table_name),
+        DynamoWorkspaceResourceRepository(
+            client,
+            configured.dynamodb_table_name,
+            cursor_codec,
+            max_notes_per_application=configured.max_notes_per_application,
+            max_interviews_per_application=configured.max_interviews_per_application,
+            max_activity_per_application=configured.max_activity_per_application,
+        ),
+    )
+    application_service = ApplicationService(
+        application_repository,
+        workspace_time_zone=lambda identity: (
+            workspace_resource_service.get_settings(identity).time_zone
+        ),
     )
     demo_session_codec = DemoSessionCodec(configured.demo_session_signing_key.get_secret_value())
     app.state.user_service = user_service

@@ -80,6 +80,7 @@ export function InterviewsPanel({
   timeZone: string;
 }) {
   const interviewsQuery = useApplicationInterviews(applicationId);
+  const interviews = interviewsQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const createMutation = useCreateInterview(applicationId);
   const updateMutation = useUpdateInterview(applicationId);
   const transitionMutation = useTransitionInterview(applicationId);
@@ -211,7 +212,7 @@ export function InterviewsPanel({
           />
         </div>
       ) : null}
-      {interviewsQuery.data?.items.length === 0 ? (
+      {interviewsQuery.isSuccess && interviews.length === 0 ? (
         <div className="mt-5 flex flex-col items-center rounded-2xl border border-dashed border-line-strong bg-surface-muted px-5 py-8 text-center">
           <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-violet-soft text-violet">
             <CalendarClock aria-hidden="true" className="size-5" />
@@ -222,9 +223,9 @@ export function InterviewsPanel({
           </p>
         </div>
       ) : null}
-      {interviewsQuery.data?.items.length ? (
+      {interviews.length ? (
         <ol className="mt-5 space-y-3">
-          {interviewsQuery.data.items.map((interview) => (
+          {interviews.map((interview) => (
             <li
               key={interview.interview_id}
               className="rounded-2xl border border-line bg-surface-raised p-4"
@@ -365,6 +366,18 @@ export function InterviewsPanel({
             </li>
           ))}
         </ol>
+      ) : null}
+      {interviewsQuery.hasNextPage ? (
+        <div className="mt-5 flex justify-center">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={interviewsQuery.isFetchingNextPage}
+            onClick={() => void interviewsQuery.fetchNextPage()}
+          >
+            {interviewsQuery.isFetchingNextPage ? "Loading more…" : "Load more interviews"}
+          </Button>
+        </div>
       ) : null}
 
       {showForm ? (

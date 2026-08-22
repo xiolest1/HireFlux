@@ -80,6 +80,11 @@ def validate_initial_status(status: ApplicationStatus, applied_date: date | None
         raise StatusPolicyError("applied_date is required when creating an APPLIED application.")
 
 
+def validate_applied_date(applied_date: date | None, *, today: date) -> None:
+    if applied_date is not None and applied_date > today:
+        raise StatusPolicyError("applied_date cannot be in the future.")
+
+
 def allowed_transitions(application: Application) -> tuple[ApplicationStatus, ...]:
     if application.status is ApplicationStatus.ARCHIVED:
         if application.archived_from_status is None:

@@ -1,4 +1,5 @@
 import { EmptyState, ErrorPanel } from "../../components/ui/Feedback";
+import { Button } from "../../components/ui/Button";
 import { ResourcePanelSkeleton } from "./ApplicationSkeletons";
 import { formatTimestamp } from "./format";
 import { useApplicationActivity } from "./queries";
@@ -19,6 +20,7 @@ export function ActivityTimeline({
   timeZone: string;
 }) {
   const activityQuery = useApplicationActivity(applicationId);
+  const activities = activityQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   if (activityQuery.isPending) {
     return <ResourcePanelSkeleton label="Loading activity…" />;
@@ -35,7 +37,7 @@ export function ActivityTimeline({
     );
   }
 
-  if (activityQuery.data.items.length === 0) {
+  if (activities.length === 0) {
     return (
       <EmptyState
         title="No activity recorded"
@@ -45,8 +47,9 @@ export function ActivityTimeline({
   }
 
   return (
-    <ol className="relative ml-2 border-l border-line pl-6">
-      {activityQuery.data.items.map((activity) => (
+    <div>
+      <ol className="relative ml-2 border-l border-line pl-6">
+        {activities.map((activity) => (
         <li key={activity.activity_id} className="relative pb-6 last:pb-0">
           <span
             aria-hidden="true"
@@ -61,7 +64,20 @@ export function ActivityTimeline({
             </time>
           </div>
         </li>
-      ))}
-    </ol>
+        ))}
+      </ol>
+      {activityQuery.hasNextPage ? (
+        <div className="mt-5 flex justify-center">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={activityQuery.isFetchingNextPage}
+            onClick={() => void activityQuery.fetchNextPage()}
+          >
+            {activityQuery.isFetchingNextPage ? "Loading more…" : "Load more activity"}
+          </Button>
+        </div>
+      ) : null}
+    </div>
   );
 }

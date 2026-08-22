@@ -41,6 +41,21 @@ const optionalDate = (label: string) =>
     )
     .transform((value) => value || null);
 
+export function currentDateInTimeZone(
+  timeZone = "UTC",
+  now = new Date(),
+): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const value = (type: "year" | "month" | "day") =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
 const optionalUrl = z
   .string()
   .trim()
@@ -113,8 +128,18 @@ export function preferredFollowUpDate({
   return preferred.toISOString().slice(0, 10);
 }
 
-export function applicationFormSchema(mode: "create" | "edit") {
+export function applicationFormSchema(
+  mode: "create" | "edit",
+  today = currentDateInTimeZone(),
+) {
   return applicationFormSchemaBase.superRefine((values, context) => {
+    if (values.applied_date && values.applied_date > today) {
+      context.addIssue({
+        code: "custom",
+        path: ["applied_date"],
+        message: "Applied date cannot be in the future.",
+      });
+    }
     if (
       mode === "create" &&
       values.status === "APPLIED" &&

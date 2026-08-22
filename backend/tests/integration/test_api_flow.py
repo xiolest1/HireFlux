@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -50,6 +50,13 @@ def test_create_read_update_page_and_activity(client: TestClient) -> None:
     assert client.post("/api/v1/applications", json=forbidden_owner).status_code == 422
     missing_date = draft_payload("Applied") | {"status": "APPLIED"}
     assert client.post("/api/v1/applications", json=missing_date).status_code == 422
+    future_date = draft_payload("Future") | {
+        "status": "APPLIED",
+        "applied_date": (date.today() + timedelta(days=7)).isoformat(),
+    }
+    future_response = client.post("/api/v1/applications", json=future_date)
+    assert future_response.status_code == 422
+    assert "future" in future_response.json()["error"]["message"]
 
     second = client.post("/api/v1/applications", json=draft_payload("Beta")).json()
     third = client.post("/api/v1/applications", json=draft_payload("Gamma")).json()
@@ -70,7 +77,7 @@ def test_create_read_update_page_and_activity(client: TestClient) -> None:
         third["application_id"],
     }
 
-    tampered = f"{cursor[:-1]}{'A' if cursor[-1] != 'A' else 'B'}"
+    tampered = f"{'A' if cursor[0] != 'A' else 'B'}{cursor[1:]}"
     invalid_cursor = client.get("/api/v1/applications", params={"limit": 2, "cursor": tampered})
     assert invalid_cursor.status_code == 400
     assert invalid_cursor.json()["error"]["code"] == "INVALID_CURSOR"
@@ -93,7 +100,7 @@ def test_create_read_update_page_and_activity(client: TestClient) -> None:
 
     activity = client.get(f"/api/v1/applications/{created['application_id']}/activity")
     assert activity.status_code == 200
-    assert list(activity.json()) == ["items"]
+    assert list(activity.json()) == ["items", "next_cursor"]
     assert activity.json()["items"][0]["activity_type"] == "APPLICATION_CREATED"
 
 
@@ -146,6 +153,44 @@ def test_status_workflow_archive_restore_and_filter(client: TestClient) -> None:
     activity = client.get(f"/api/v1/applications/{created['application_id']}/activity").json()
     assert len(activity["items"]) == 7
     assert activity["items"][-1]["metadata"]["to_status"] == "REJECTED"
+
+
+def test_archived_later_stage_cannot_clear_its_required_applied_date(client: TestClient) -> None:
+    created = client.post("/api/v1/applications", json=draft_payload("Restorable")).json()
+    path = f"/api/v1/applications/{created['application_id']}"
+
+    applied = client.post(
+        f"{path}/status",
+        json={
+            "status": "APPLIED",
+            "expected_version": created["version"],
+            "applied_date": "2026-08-10",
+        },
+    ).json()
+    interview = client.post(
+        f"{path}/status",
+        json={"status": "INTERVIEW", "expected_version": applied["version"]},
+    ).json()
+    archived = client.post(
+        f"{path}/status",
+        json={"status": "ARCHIVED", "expected_version": interview["version"]},
+    ).json()
+    assert archived["allowed_transitions"] == ["INTERVIEW"]
+
+    cleared = client.patch(
+        path,
+        json={"expected_version": archived["version"], "applied_date": None},
+    )
+    assert cleared.status_code == 422
+    assert "applied_date" in cleared.json()["error"]["message"]
+
+    restored = client.post(
+        f"{path}/status",
+        json={"status": "INTERVIEW", "expected_version": archived["version"]},
+    )
+    assert restored.status_code == 200
+    assert restored.json()["status"] == "INTERVIEW"
+    assert restored.json()["applied_date"] == "2026-08-10"
 
 
 def test_delete_alias_archives(client: TestClient) -> None:

@@ -210,7 +210,7 @@ describe("workspace milestone features", () => {
   it("shows upcoming interviews in the saved workspace time zone", async () => {
     server.use(
       http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
-        HttpResponse.json({ items: [makeInterview()] }),
+        HttpResponse.json({ items: [makeInterview()], next_cursor: null }),
       ),
       http.get(`${API_ORIGIN}/api/v1/settings`, () =>
         HttpResponse.json({ ...testSettings, time_zone: "America/Los_Angeles" }),
@@ -235,6 +235,7 @@ describe("workspace milestone features", () => {
               scheduled_at: "2026-08-15T18:00:00Z",
             }),
           ],
+          next_cursor: null,
         }),
       ),
       http.get(`${API_ORIGIN}/api/v1/settings`, () =>
@@ -248,6 +249,38 @@ describe("workspace milestone features", () => {
     expect(screen.getAllByText("1 conversation", { selector: "p" })).toHaveLength(2);
   });
 
+  it("loads the next page of upcoming interviews", async () => {
+    const cursors: Array<string | null> = [];
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/interviews`, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("cursor");
+        cursors.push(cursor);
+        return cursor
+          ? HttpResponse.json({
+              items: [
+                makeInterview({
+                  interview_id: "66666666-6666-4666-8666-666666666666",
+                  job_title: "Second Interview",
+                }),
+              ],
+              next_cursor: null,
+            })
+          : HttpResponse.json({
+              items: [makeInterview()],
+              next_cursor: "signed-next-cursor",
+            });
+      }),
+    );
+
+    const { user } = renderApp("/interviews");
+    expect(await screen.findByRole("heading", { name: "Frontend Engineer" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Load more interviews" }));
+
+    expect(await screen.findByRole("heading", { name: "Second Interview" })).toBeVisible();
+    expect(cursors).toEqual([null, "signed-next-cursor"]);
+    expect(screen.queryByRole("button", { name: "Load more interviews" })).not.toBeInTheDocument();
+  });
+
   it("manages application notes and schedules interviews without client-owned fields", async () => {
     const application = makeApplication();
     const notes: Array<Record<string, unknown>> = [];
@@ -256,14 +289,14 @@ describe("workspace milestone features", () => {
     let interviewBody: Record<string, unknown> | null = null;
     server.use(
       http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () => HttpResponse.json(application)),
-      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/notes`, () => HttpResponse.json({ items: notes })),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/notes`, () => HttpResponse.json({ items: notes, next_cursor: null })),
       http.post(`${API_ORIGIN}/api/v1/applications/:applicationId/notes`, async ({ request }) => {
         noteBody = (await request.json()) as Record<string, unknown>;
         const note = { note_id: "55555555-5555-4555-8555-555555555555", application_id: application.application_id, content: noteBody.content, created_at: "2026-08-12T13:00:00Z", updated_at: "2026-08-12T13:00:00Z", version: 1 };
         notes.push(note);
         return HttpResponse.json(note, { status: 201 });
       }),
-      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/interviews`, () => HttpResponse.json({ items: interviews })),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/interviews`, () => HttpResponse.json({ items: interviews, next_cursor: null })),
       http.post(`${API_ORIGIN}/api/v1/applications/:applicationId/interviews`, async ({ request }) => {
         interviewBody = (await request.json()) as Record<string, unknown>;
         const interview = makeInterview({ interview_type: "FINAL", scheduled_at: String(interviewBody.scheduled_at) });

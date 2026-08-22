@@ -1,8 +1,21 @@
+from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import Protocol, TypeVar
 
 from hireflux_backend.domain.models import Activity
 from hireflux_backend.domain.resources import Interview, Note, WorkspaceSettings
+
+ResourceT = TypeVar("ResourceT")
+
+
+@dataclass(frozen=True, slots=True)
+class ResourcePage[ResourceT]:
+    items: tuple[ResourceT, ...]
+    next_cursor: str | None
+
+    def __iter__(self) -> Iterator[ResourceT]:
+        return iter(self.items)
 
 
 class WorkspaceResourceRepository(Protocol):
@@ -16,7 +29,9 @@ class WorkspaceResourceRepository(Protocol):
 
     def get_note(self, owner_user_id: str, application_id: str, note_id: str) -> Note | None: ...
 
-    def list_notes(self, owner_user_id: str, application_id: str) -> tuple[Note, ...]: ...
+    def list_notes(
+        self, owner_user_id: str, application_id: str, *, limit: int, cursor: str | None
+    ) -> ResourcePage[Note]: ...
 
     def replace_note(self, note: Note, *, expected_version: int, activity: Activity) -> None: ...
 
@@ -36,11 +51,18 @@ class WorkspaceResourceRepository(Protocol):
         self, owner_user_id: str, application_id: str, interview_id: str
     ) -> Interview | None: ...
 
-    def list_interviews(self, owner_user_id: str, application_id: str) -> tuple[Interview, ...]: ...
+    def list_interviews(
+        self, owner_user_id: str, application_id: str, *, limit: int, cursor: str | None
+    ) -> ResourcePage[Interview]: ...
 
     def list_owner_interviews(
-        self, owner_user_id: str, *, scheduled_after: datetime, limit: int
-    ) -> tuple[Interview, ...]: ...
+        self,
+        owner_user_id: str,
+        *,
+        scheduled_after: datetime,
+        limit: int,
+        cursor: str | None = None,
+    ) -> ResourcePage[Interview]: ...
 
     def replace_interview(
         self, interview: Interview, *, expected_version: int, activity: Activity

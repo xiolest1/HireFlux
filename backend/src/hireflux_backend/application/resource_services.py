@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from hireflux_backend.application.errors import ConflictError, NotFoundError, ValidationError
 from hireflux_backend.application.ports import ApplicationRepository
-from hireflux_backend.application.resource_ports import WorkspaceResourceRepository
+from hireflux_backend.application.resource_ports import ResourcePage, WorkspaceResourceRepository
 from hireflux_backend.domain.enums import ActivityType
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity
 from hireflux_backend.domain.resources import (
@@ -200,9 +200,21 @@ class WorkspaceResourceService:
         self._resources.create_note(note, activity)
         return note
 
-    def list_notes(self, identity: CurrentIdentity, application_id: str) -> tuple[Note, ...]:
+    def list_notes(
+        self,
+        identity: CurrentIdentity,
+        application_id: str,
+        *,
+        limit: int,
+        cursor: str | None,
+    ) -> ResourcePage[Note]:
         self._require_application(identity, application_id)
-        return self._resources.list_notes(identity.user_id, application_id)
+        return self._resources.list_notes(
+            identity.user_id,
+            application_id,
+            limit=limit,
+            cursor=cursor,
+        )
 
     def update_note(
         self,
@@ -310,18 +322,29 @@ class WorkspaceResourceService:
         return interview
 
     def list_interviews(
-        self, identity: CurrentIdentity, application_id: str
-    ) -> tuple[Interview, ...]:
+        self,
+        identity: CurrentIdentity,
+        application_id: str,
+        *,
+        limit: int,
+        cursor: str | None,
+    ) -> ResourcePage[Interview]:
         self._require_application(identity, application_id)
-        return self._resources.list_interviews(identity.user_id, application_id)
+        return self._resources.list_interviews(
+            identity.user_id,
+            application_id,
+            limit=limit,
+            cursor=cursor,
+        )
 
     def list_owner_interviews(
-        self, identity: CurrentIdentity, *, limit: int
-    ) -> tuple[Interview, ...]:
+        self, identity: CurrentIdentity, *, limit: int, cursor: str | None = None
+    ) -> ResourcePage[Interview]:
         return self._resources.list_owner_interviews(
             identity.user_id,
             scheduled_after=self._aware_utc_now(),
             limit=limit,
+            cursor=cursor,
         )
 
     def update_interview(

@@ -18,6 +18,12 @@ class ApplicationPage:
     next_cursor: str | None
 
 
+@dataclass(frozen=True, slots=True)
+class ActivityPage:
+    items: tuple[Activity, ...]
+    next_cursor: str | None
+
+
 class UserRepository(Protocol):
     def get_or_create(self, identity: CurrentIdentity, *, now_iso: str) -> UserProfile: ...
 
@@ -70,7 +76,9 @@ class ApplicationRepository(Protocol):
         activity: Activity,
     ) -> None: ...
 
-    def list_activity(self, owner_user_id: str, application_id: str) -> tuple[Activity, ...]: ...
+    def list_activity(
+        self, owner_user_id: str, application_id: str, *, limit: int, cursor: str | None
+    ) -> ActivityPage: ...
 
 
 class DemoSessionTokenIssuer(Protocol):

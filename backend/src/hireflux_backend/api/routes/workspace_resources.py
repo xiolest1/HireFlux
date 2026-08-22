@@ -38,9 +38,19 @@ def list_notes(
     application_id: UUID,
     identity: IdentityDependency,
     service: WorkspaceResourceServiceDependency,
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    cursor: str | None = None,
 ) -> NoteListResponse:
-    notes = service.list_notes(identity, str(application_id))
-    return NoteListResponse(items=[NoteResponse.from_domain(note) for note in notes])
+    page = service.list_notes(
+        identity,
+        str(application_id),
+        limit=limit,
+        cursor=cursor,
+    )
+    return NoteListResponse(
+        items=[NoteResponse.from_domain(note) for note in page.items],
+        next_cursor=page.next_cursor,
+    )
 
 
 @applications_router.post(
@@ -102,10 +112,18 @@ def list_application_interviews(
     application_id: UUID,
     identity: IdentityDependency,
     service: WorkspaceResourceServiceDependency,
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    cursor: str | None = None,
 ) -> InterviewListResponse:
-    interviews = service.list_interviews(identity, str(application_id))
+    page = service.list_interviews(
+        identity,
+        str(application_id),
+        limit=limit,
+        cursor=cursor,
+    )
     return InterviewListResponse(
-        items=[InterviewResponse.from_domain(interview) for interview in interviews]
+        items=[InterviewResponse.from_domain(interview) for interview in page.items],
+        next_cursor=page.next_cursor,
     )
 
 
@@ -183,8 +201,10 @@ def list_workspace_interviews(
     identity: IdentityDependency,
     service: WorkspaceResourceServiceDependency,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    cursor: str | None = None,
 ) -> InterviewListResponse:
-    interviews = service.list_owner_interviews(identity, limit=limit)
+    page = service.list_owner_interviews(identity, limit=limit, cursor=cursor)
     return InterviewListResponse(
-        items=[InterviewResponse.from_domain(interview) for interview in interviews]
+        items=[InterviewResponse.from_domain(interview) for interview in page.items],
+        next_cursor=page.next_cursor,
     )

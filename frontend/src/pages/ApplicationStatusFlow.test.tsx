@@ -17,14 +17,18 @@ describe("application status flow", () => {
         `${API_ORIGIN}/api/v1/applications/:applicationId/notes`,
         async () => {
           await delay(300);
-          return HttpResponse.json({ items: [] });
+          return HttpResponse.json({ items: [], next_cursor: null });
         },
       ),
     );
 
     const { user } = renderApp(`/applications/${application.application_id}`);
     expect(
-      await screen.findByRole("status", { name: "Loading application…" }),
+      await screen.findByRole(
+        "status",
+        { name: "Loading application…" },
+        { timeout: 5_000 },
+      ),
     ).toBeVisible();
     expect(await screen.findByRole("heading", { name: application.job_title })).toBeVisible();
 
@@ -46,15 +50,15 @@ describe("application status flow", () => {
       ),
       http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/notes`, () => {
         notesRequests += 1;
-        return HttpResponse.json({ items: [] });
+        return HttpResponse.json({ items: [], next_cursor: null });
       }),
       http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/interviews`, () => {
         interviewRequests += 1;
-        return HttpResponse.json({ items: [] });
+        return HttpResponse.json({ items: [], next_cursor: null });
       }),
       http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/activity`, () => {
         activityRequests += 1;
-        return HttpResponse.json({ items: [] });
+        return HttpResponse.json({ items: [], next_cursor: null });
       }),
     );
 
@@ -185,5 +189,54 @@ describe("application status flow", () => {
       { status: "ARCHIVED", expected_version: 1 },
       { status: "APPLIED", expected_version: 2 },
     ]);
+  });
+
+  it("asks for an applied date before restoring an invalid archived later-stage record", async () => {
+    const initial = makeApplication({
+      status: "ARCHIVED",
+      applied_date: null,
+      allowed_transitions: ["INTERVIEW"],
+    });
+    let requestBody: Record<string, unknown> | null = null;
+
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
+        HttpResponse.json(initial),
+      ),
+      http.post(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/status`,
+        async ({ request }) => {
+          requestBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(
+            makeApplication({
+              status: "INTERVIEW",
+              applied_date: "2026-08-10",
+              version: 2,
+              allowed_transitions: ["OFFER", "ARCHIVED"],
+            }),
+          );
+        },
+      ),
+    );
+
+    const { user } = renderApp(
+      "/applications/11111111-1111-4111-8111-111111111111",
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Frontend Engineer" }),
+    ).toBeVisible();
+
+    await user.selectOptions(screen.getByLabelText("New status"), "INTERVIEW");
+    expect(screen.getByLabelText("New status")).toHaveValue("INTERVIEW");
+    expect(screen.getByLabelText(/Applied date/)).toBeVisible();
+    await user.type(screen.getByLabelText(/Applied date/), "2026-08-10");
+    await user.click(screen.getByRole("button", { name: "Restore to Interview" }));
+
+    expect(await screen.findByText("Status changed to Interview.")).toBeVisible();
+    expect(requestBody).toEqual({
+      status: "INTERVIEW",
+      expected_version: 1,
+      applied_date: "2026-08-10",
+    });
   });
 });

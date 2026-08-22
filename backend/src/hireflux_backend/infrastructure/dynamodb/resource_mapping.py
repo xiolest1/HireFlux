@@ -36,6 +36,13 @@ def interview_key(owner_user_id: str, application_id: str, interview_id: str) ->
     }
 
 
+def resource_quota_key(owner_user_id: str, application_id: str) -> dict[str, str]:
+    return {
+        "PK": application_partition(owner_user_id, application_id),
+        "SK": "RESOURCE_QUOTA",
+    }
+
+
 def owner_schedule_key(owner_user_id: str) -> str:
     return f"USER#{owner_user_id}#SCHEDULE"
 
