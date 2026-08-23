@@ -272,7 +272,7 @@ and least-privilege IAM are required controls.
 ## Deferred AWS services
 
 - **Cognito**: persistent user registration, password reset, MFA, and verified
-  claims when real accounts are introduced. The recruiter demo remains
+  claims when real accounts are introduced. The demo workspace remains
   passwordless.
 - **Private S3**: attachment bytes, with metadata in DynamoDB and access through
   short-lived signed operations after attachment policy is designed.

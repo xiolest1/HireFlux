@@ -157,7 +157,7 @@ Clarified the local run workflow for Windows Command Prompt users. The applicati
 
 The reproducible commands remain in the repository [README](../README.md). The local site is `http://localhost:5173`, API documentation is `http://localhost:8000/docs`, and DynamoDB Local is visible in Docker Desktop under the HireFlux Compose project.
 
-## 2026-08-11 - Isolated recruiter demo workspace
+## 2026-08-11 - Isolated demo workspace
 
 ### Objective
 
@@ -594,7 +594,7 @@ and the frontend remained healthy, and the handoff browser was left on a clean
 
 ### Purpose
 
-Redesign the local recruiter demo from a functional CRUD workspace into a
+Redesign the local demo workspace from a functional CRUD workspace into a
 polished portfolio product experience. The goal was to make HireFlux feel like
 a focused job-search command center: dark-first, easier to scan, more
 comfortable for repeated use, stronger on mobile, and clearer about what a

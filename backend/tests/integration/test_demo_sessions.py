@@ -42,7 +42,17 @@ def test_demo_sessions_are_seeded_temporary_and_owner_isolated(
 
         profile = client.get("/api/v1/me", headers=first_headers)
         assert profile.status_code == 200
-        assert profile.json()["name"] == "Demo Recruiter"
+        assert profile.json()["name"] == "Demo Workspace"
+        dynamodb_client.update_item(
+            TableName="HireFluxTest",
+            Key=serialize_item({"PK": user_partition(profile.json()["user_id"]), "SK": "PROFILE"}),
+            UpdateExpression="SET #name = :name",
+            ExpressionAttributeNames={"#name": "name"},
+            ExpressionAttributeValues=serialize_item({":name": "Demo Recruiter"}),
+        )
+        migrated_profile = client.get("/api/v1/me", headers=first_headers)
+        assert migrated_profile.status_code == 200
+        assert migrated_profile.json()["name"] == "Demo Workspace"
 
         first_list = client.get("/api/v1/applications", headers=first_headers)
         assert first_list.status_code == 200

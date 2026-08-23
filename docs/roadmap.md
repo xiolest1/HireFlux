@@ -15,7 +15,7 @@ Acceptance criteria:
 - The responsive React UI exercises the full application flow with accessible loading, empty, validation, and error states.
 - Isolated backend/frontend tests cover configuration failure, ownership, transitions, pagination, API errors, validation, and critical UI flows; lint, type checks, and production build pass; a local smoke test is attempted when Docker is available.
 
-## Milestone 1.1 - isolated recruiter demo (implemented)
+## Milestone 1.1 - isolated demo workspace (implemented)
 
 Acceptance criteria: public recruiter landing page; one-click signed 24-hour workspace; uniquely derived owner identity; fictional seeded applications and activity; protected application routes; bearer-token API calls; reset/exit and expiry behavior; query-cache clearing on identity changes; unsaved-form navigation warning; DynamoDB TTL metadata; and isolation, tamper, expiry, routing, and reset tests.
 
@@ -31,7 +31,7 @@ AWS infrastructure, persistent accounts, attachments, email delivery, and real n
 
 Dependencies: stable identity port and deployed-environment configuration design.
 
-This milestone is needed only if HireFlux expands beyond the temporary recruiter demo. Acceptance criteria: signup, verification, login, reset flows; server-side JWT signature/issuer/audience/token-use/expiry validation; Cognito `sub` profile linking; role claims; and proof that local auth cannot start in deployed environments.
+This milestone is needed only if HireFlux expands beyond the temporary demo workspace. Acceptance criteria: signup, verification, login, reset flows; server-side JWT signature/issuer/audience/token-use/expiry validation; Cognito `sub` profile linking; role claims; and proof that local auth cannot start in deployed environments.
 
 ## Milestone 4 - private attachments
 

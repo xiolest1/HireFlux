@@ -1,4 +1,4 @@
-# ADR 0004: Isolated temporary recruiter demo workspaces
+# ADR 0004: Isolated temporary demo workspaces
 
 - Status: Accepted
 - Date: 2026-08-11

@@ -49,7 +49,7 @@ export function LandingPage() {
       <header className="relative z-20 border-b border-line bg-surface/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
         <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 font-bold tracking-tight"><span aria-hidden="true" className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-brand-700 text-sm font-black text-white shadow-lg shadow-cyan-950/10">HF</span><span>HireFlux</span></div>
-          <div className="flex items-center gap-2 sm:gap-3"><span className="hidden rounded-full border border-line bg-surface-raised px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-ink-muted dark:border-slate-700 dark:bg-slate-900 sm:inline-flex">Recruiter demo</span><ThemeToggle /></div>
+          <div className="flex items-center gap-2 sm:gap-3"><span className="hidden rounded-full border border-line bg-surface-raised px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-ink-muted dark:border-slate-700 dark:bg-slate-900 sm:inline-flex">Demo workspace</span><ThemeToggle /></div>
         </div>
       </header>
 

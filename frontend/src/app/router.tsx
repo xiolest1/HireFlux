@@ -28,7 +28,7 @@ function titledPage(title: string, page: ReactNode) {
 export const appRoutes: RouteObject[] = [
   {
     path: "/",
-    element: titledPage("Recruiter demo", <LandingPage />),
+    element: titledPage("Demo workspace", <LandingPage />),
     errorElement: <RouteErrorPage />,
   },
   {

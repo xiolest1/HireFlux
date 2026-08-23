@@ -105,7 +105,7 @@ def identity_from_claims(claims: DemoSessionClaims) -> CurrentIdentity:
     short_id = claims.workspace_id.split("-")[0]
     return CurrentIdentity(
         user_id=claims.workspace_id,
-        name="Demo Recruiter",
+        name="Demo Workspace",
         email=f"demo-{short_id}@example.invalid",
         role=UserRole.STANDARD_USER,
         expires_at=int(claims.expires_at.timestamp()),

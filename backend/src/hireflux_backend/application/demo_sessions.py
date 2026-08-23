@@ -225,7 +225,7 @@ class DemoSessionService:
 
         identity = CurrentIdentity(
             user_id=workspace_id,
-            name="Demo Recruiter",
+            name="Demo Workspace",
             email=f"demo-{workspace_id.split('-')[0]}@example.invalid",
             role=UserRole.STANDARD_USER,
             expires_at=int(expires_at.timestamp()),

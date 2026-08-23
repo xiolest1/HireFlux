@@ -163,6 +163,7 @@ export function AppLayout() {
   const mainRef = useRef<HTMLElement>(null);
   const expiry = useExpiryLabel(session?.expires_at);
   const currentRouteTitle = routeTitle(location.pathname);
+  const displayName = session ? "Demo Workspace" : meQuery.data?.name;
 
   useEffect(() => {
     if (!settingsQuery.data) return;
@@ -333,9 +334,9 @@ export function AppLayout() {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ink">
-                      {meQuery.data?.name ?? (meQuery.isError ? "Demo guest" : "Connecting…")}
+                      {displayName ?? (meQuery.isError ? "Demo guest" : "Connecting…")}
                     </p>
-                    <p className="truncate text-xs text-ink-muted">Isolated demo</p>
+                    <p className="truncate text-xs text-ink-muted">Demo workspace</p>
                   </div>
                 </div>
               </div>
@@ -416,9 +417,9 @@ export function AppLayout() {
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-ink">
-                    {meQuery.data?.name ?? (meQuery.isError ? "Demo guest" : "Connecting…")}
+                    {displayName ?? (meQuery.isError ? "Demo guest" : "Connecting…")}
                   </p>
-                  <p className="truncate text-xs text-ink-muted">Isolated demo</p>
+                  <p className="truncate text-xs text-ink-muted">Demo workspace</p>
                 </div>
               </div>
             </div>
@@ -569,9 +570,9 @@ export function AppLayout() {
                     Reconnect
                   </button>
                 ) : (
-                  <p className="truncate text-sm font-semibold text-ink">{meQuery.data.name}</p>
+                  <p className="truncate text-sm font-semibold text-ink">{displayName}</p>
                 )}
-                <p className="truncate text-xs text-ink-muted">Isolated recruiter demo</p>
+                <p className="truncate text-xs text-ink-muted">Demo workspace</p>
               </div>
             </div>
             <p

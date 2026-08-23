@@ -185,7 +185,7 @@ export async function installDeterministicApi(page: Page) {
     if (path === "/api/v1/me") {
       await json(route, {
         user_id: "browser-test-user",
-        name: "Demo Recruiter",
+        name: "Demo Workspace",
         email: "demo@example.invalid",
         role: "STANDARD_USER",
         created_at: "2026-08-10T13:00:00Z",

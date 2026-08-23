@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import date
 from typing import Any
 
@@ -82,7 +83,20 @@ class DynamoUserRepository:
         item = response.get("Item")
         if item is None:
             raise PersistenceError("The user profile could not be initialized.")
-        return profile_from_item(deserialize_item(item))
+        profile = profile_from_item(deserialize_item(item))
+        if identity.name == "Demo Workspace" and profile.name == "Demo Recruiter":
+            try:
+                self._client.update_item(
+                    TableName=self._table_name,
+                    Key=serialize_item({"PK": user_partition(identity.user_id), "SK": "PROFILE"}),
+                    UpdateExpression="SET #name = :name",
+                    ExpressionAttributeNames={"#name": "name"},
+                    ExpressionAttributeValues=serialize_item({":name": identity.name}),
+                )
+            except ClientError as error:
+                raise PersistenceError("Unable to migrate the demo workspace profile.") from error
+            return replace(profile, name=identity.name)
+        return profile
 
 
 class DynamoApplicationRepository:
