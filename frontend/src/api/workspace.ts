@@ -188,10 +188,13 @@ export const analyticsSchema = z.object({
       ]),
       category: z.enum(["momentum", "response", "pipeline", "follow_up", "source"]),
       semantic_type: z.enum(["action", "trend", "observation", "achievement"]),
-      tone: z.enum(["INFO", "ATTENTION", "POSITIVE"]),
+      tone: z.enum(["ACTION_NEEDED", "WATCH", "INFO", "POSITIVE"]),
       title: z.string().min(1),
       description: z.string().min(1),
+      evidence_summary: z.string().min(1),
       evidence: z.string().min(1),
+      evidence_strength: z.enum(["LIMITED", "MODERATE", "STRONG"]),
+      evidence_label: z.string().min(1).nullable(),
       priority: z.number().int().min(0).max(100),
       action: z
         .object({

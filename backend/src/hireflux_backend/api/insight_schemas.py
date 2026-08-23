@@ -169,10 +169,13 @@ class AnalyticsInsightResponse(BaseModel):
     ]
     category: Literal["momentum", "response", "pipeline", "follow_up", "source"]
     semantic_type: Literal["action", "trend", "observation", "achievement"]
-    tone: Literal["INFO", "ATTENTION", "POSITIVE"]
+    tone: Literal["ACTION_NEEDED", "WATCH", "INFO", "POSITIVE"]
     title: str
     description: str
+    evidence_summary: str
     evidence: str
+    evidence_strength: Literal["LIMITED", "MODERATE", "STRONG"]
+    evidence_label: str | None
     priority: int = Field(ge=0, le=100)
     action: AnalyticsInsightActionResponse | None
 

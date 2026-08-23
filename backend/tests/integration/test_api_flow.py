@@ -1,5 +1,6 @@
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from conftest import test_settings as build_test_settings
 from fastapi import FastAPI
@@ -488,6 +489,17 @@ def test_application_list_views_are_server_owned_complete_and_cursor_bound(
     assert bucket_cursor_scope.status_code == 400
     assert bucket_cursor_scope.json()["error"]["code"] == "INVALID_CURSOR"
 
+    workspace_settings = client.get("/api/v1/settings")
+    assert workspace_settings.status_code == 200
+    workspace_zone = ZoneInfo(workspace_settings.json()["time_zone"])
+    follow_up_today = datetime.now(workspace_zone).date().isoformat()
+    applied = created["Applied"]
+    updated_applied = client.patch(
+        f"/api/v1/applications/{applied['application_id']}",
+        json={"expected_version": applied["version"], "follow_up_date": follow_up_today},
+    )
+    assert updated_applied.status_code == 200
+
     follow_up_attention = client.get(
         "/api/v1/applications",
         params={"view": "ACTIVE", "follow_up": "NEEDS_ATTENTION", "limit": 100},
@@ -499,7 +511,10 @@ def test_application_list_views_are_server_owned_complete_and_cursor_bound(
         "INTERVIEW",
         "OFFER",
     }
-    assert all(item["follow_up_date"] is None for item in follow_up_attention.json()["items"])
+    assert {item["follow_up_date"] for item in follow_up_attention.json()["items"]} == {
+        None,
+        follow_up_today,
+    }
     invalid_follow_up_view = client.get(
         "/api/v1/applications",
         params={"view": "ALL", "follow_up": "NEEDS_ATTENTION"},

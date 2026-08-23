@@ -172,8 +172,8 @@ describe("workspace milestone features", () => {
           },
           follow_up_coverage: { active_count: 1, scheduled_count: 0, coverage_rate: 0, overdue_count: 0, due_today_count: 0, missing_count: 1 },
           insights: [
-            { code: "FOLLOW_UP_ATTENTION", category: "follow_up", semantic_type: "action", tone: "ATTENTION", title: "1 active application needs follow-up planning", description: "1 without a next step scheduled.", evidence: "1 without a next step scheduled across 1 active application.", priority: 72, action: { kind: "VIEW_APPLICATIONS", label: "Review follow-ups", parameters: { view: "ACTIVE", follow_up: "NEEDS_ATTENTION" } } },
-            { code: "BUILD_SAMPLE", category: "response", semantic_type: "observation", tone: "INFO", title: "Search Health is still building your picture", description: "Track more applications before judging rates.", evidence: "This view contains 2 submitted applications.", priority: 20, action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } },
+            { code: "FOLLOW_UP_ATTENTION", category: "follow_up", semantic_type: "action", tone: "ACTION_NEEDED", title: "1 follow-up is overdue", description: "1 other active application does not have a next step scheduled.", evidence_summary: "1 overdue · 1 missing a next step", evidence: "1 follow-up overdue and 1 without a next step scheduled across 2 active applications.", evidence_strength: "STRONG", evidence_label: null, priority: 100, action: { kind: "VIEW_APPLICATIONS", label: "Review follow-ups", parameters: { view: "ACTIVE", follow_up: "NEEDS_ATTENTION" } } },
+            { code: "BUILD_SAMPLE", category: "response", semantic_type: "observation", tone: "INFO", title: "Search Health is still building your picture", description: "Track more applications before judging rates.", evidence_summary: "2 submitted · trends begin at 5", evidence: "This view contains 2 submitted applications.", evidence_strength: "LIMITED", evidence_label: "Early signal", priority: 20, action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } },
           ],
           disclaimer: "This dataset is descriptive, not predictive.",
         });
@@ -183,6 +183,8 @@ describe("workspace milestone features", () => {
     const { user } = renderApp("/analytics?range=30d&source=REFERRAL");
     expect(await screen.findByRole("heading", { name: "Outcome snapshot" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Search health" })).toBeVisible();
+    expect(screen.getByText("1 action needs you · 1 thing worth knowing")).toBeVisible();
+    expect(screen.getByText("Action needed")).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "Search Health is still building your picture" }),
     ).toBeVisible();
@@ -194,6 +196,15 @@ describe("workspace milestone features", () => {
       "href",
       "/applications?view=ACTIVE&follow_up=NEEDS_ATTENTION",
     );
+    const whyButton = screen.getByRole("button", {
+      name: "Why you're seeing this: 1 follow-up is overdue",
+    });
+    expect(whyButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText(/1 follow-up overdue and 1 without a next step/)).not.toBeVisible();
+    whyButton.focus();
+    await user.keyboard("{Enter}");
+    expect(whyButton).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/1 follow-up overdue and 1 without a next step/)).toBeVisible();
     expect(screen.getByRole("heading", { name: "Compared with the previous period" })).toBeVisible();
     expect(screen.getAllByText("+50 pp")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "Follow-up coverage" })).toBeVisible();
@@ -251,7 +262,7 @@ describe("workspace milestone features", () => {
             deltas: { submitted_count: 1, response_rate: 0.5, interview_rate: 0.5, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: null },
           },
           follow_up_coverage: { active_count: 1, scheduled_count: 0, coverage_rate: 0, overdue_count: 0, due_today_count: 0, missing_count: 1 },
-          insights: [{ code: "BUILD_SAMPLE", category: "response", semantic_type: "observation", tone: "INFO", title: "Search Health is still building your picture", description: "Track more applications before judging rates.", evidence: "This view contains 2 submitted applications.", priority: 20, action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } }],
+          insights: [{ code: "BUILD_SAMPLE", category: "response", semantic_type: "observation", tone: "INFO", title: "Search Health is still building your picture", description: "Track more applications before judging rates.", evidence_summary: "2 submitted · trends begin at 5", evidence: "This view contains 2 submitted applications.", evidence_strength: "LIMITED", evidence_label: "Early signal", priority: 20, action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } }],
           disclaimer: "This dataset is descriptive, not predictive.",
         }),
       ),

@@ -746,7 +746,7 @@ def _append_follow_up_filter(
 ) -> None:
     if follow_up is FollowUpFilter.NEEDS_ATTENTION and today is not None:
         filters.append(
-            "(attribute_not_exists(follow_up_date) OR follow_up_date < :follow_up_today)"
+            "(attribute_not_exists(follow_up_date) OR follow_up_date <= :follow_up_today)"
         )
         values[":follow_up_today"] = today.isoformat()
 

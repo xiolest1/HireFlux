@@ -192,10 +192,16 @@ def test_stage_aging_uses_status_specific_thresholds_and_ignores_terminal_states
         application(7, TODAY - timedelta(days=40), status=ApplicationStatus.ARCHIVED, stage_age=40),
     )
     insight = next(item for item in health(items) if item["code"] == "STALLED_PIPELINE")
-    assert "1 in Offer for at least 7 days" in str(insight["evidence"])
+    assert "Offer" not in str(insight["evidence"])
     assert "1 in Interview for at least 9 days" in str(insight["evidence"])
     assert "1 in Applied for at least 21 days" in str(insight["evidence"])
-    assert "4 active applications" in str(insight["description"])
+    assert insight["tone"] == "WATCH"
+    assert insight["title"] == "3 applications haven't moved recently"
+    assert insight["action"] == {
+        "kind": "VIEW_APPLICATIONS",
+        "label": "Review pipeline",
+        "parameters": {"view": "ACTIVE"},
+    }
 
 
 def test_follow_up_combines_overdue_and_missing_work() -> None:
@@ -215,9 +221,51 @@ def test_follow_up_combines_overdue_and_missing_work() -> None:
         ),
     )
     insight = next(item for item in health(items) if item["code"] == "FOLLOW_UP_ATTENTION")
-    assert insight["tone"] == "ATTENTION"
-    assert "1 follow-up overdue and 1 without a next step scheduled" in str(insight["evidence"])
+    assert insight["tone"] == "ACTION_NEEDED"
+    assert insight["title"] == "1 follow-up is overdue"
+    assert insight["evidence_summary"] == "1 overdue · 1 due soon · 1 missing a next step"
+    assert "1 follow-up overdue" in str(insight["evidence"])
+    assert "1 without a next step scheduled" in str(insight["evidence"])
     assert "1 due in the next 3 days" in str(insight["evidence"])
+
+
+def test_follow_up_urgency_distinguishes_due_today_missing_and_due_soon() -> None:
+    due_today = health(
+        (
+            application(
+                1,
+                TODAY - timedelta(days=5),
+                status=ApplicationStatus.APPLIED,
+                follow_up=TODAY,
+            ),
+        )
+    )[0]
+    assert due_today["tone"] == "ACTION_NEEDED"
+    assert due_today["title"] == "1 follow-up is due today"
+
+    missing = health(
+        (application(2, TODAY - timedelta(days=5), status=ApplicationStatus.SCREENING),)
+    )[0]
+    assert missing["tone"] == "INFO"
+    assert missing["title"] == "1 active application needs a next step"
+
+    due_soon = health(
+        (
+            application(
+                3,
+                TODAY - timedelta(days=5),
+                status=ApplicationStatus.INTERVIEW,
+                follow_up=TODAY + timedelta(days=2),
+            ),
+        )
+    )[0]
+    assert due_soon["tone"] == "INFO"
+    assert due_soon["title"] == "1 follow-up is coming up"
+    assert due_soon["action"] == {
+        "kind": "VIEW_APPLICATIONS",
+        "label": "Review active applications",
+        "parameters": {"view": "ACTIVE"},
+    }
 
 
 def test_source_outperformance_needs_five_applications_and_exposes_evidence() -> None:
@@ -278,8 +326,30 @@ def test_standalone_response_decline_is_suppressed_when_denominator_is_too_small
         application(100 + index, TODAY - timedelta(days=50 + index), responded=True)
         for index in range(5)
     )
-    assert "RESPONSE_DECLINING" in codes(health(recent + historical))
+    insight = next(
+        item for item in health(recent + historical) if item["code"] == "RESPONSE_DECLINING"
+    )
+    assert insight["tone"] == "WATCH"
+    assert insight["evidence_strength"] == "LIMITED"
+    assert insight["evidence_label"] == "Early signal · Based on 10 applications"
     assert "RESPONSE_DECLINING" not in codes(health(recent[:4] + historical))
+
+
+def test_stronger_response_decline_remains_worth_watching_without_early_label() -> None:
+    recent = tuple(
+        application(index, TODAY - timedelta(days=10 + index), responded=index < 4)
+        for index in range(20)
+    )
+    historical = tuple(
+        application(100 + index, TODAY - timedelta(days=40 + index), responded=index < 16)
+        for index in range(20)
+    )
+    insight = next(
+        item for item in health(recent + historical) if item["code"] == "RESPONSE_DECLINING"
+    )
+    assert insight["tone"] == "WATCH"
+    assert insight["evidence_strength"] == "STRONG"
+    assert insight["evidence_label"] == "Based on 40 applications"
 
 
 def test_deeper_pipeline_combination_suppresses_simple_volume_warning() -> None:
@@ -326,6 +396,7 @@ def test_results_are_ranked_bounded_and_deterministic() -> None:
     first = health(active + baseline)
     second = health(active + baseline)
     assert first == second
-    assert len(first) <= 5
+    assert len(first) <= 4
     priorities = [int(item["priority"]) for item in first]
     assert priorities == sorted(priorities, reverse=True)
+    assert sum(item["tone"] == "ACTION_NEEDED" for item in first) <= 1

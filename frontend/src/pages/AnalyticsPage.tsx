@@ -1,4 +1,4 @@
-import { ArrowRight, BarChart3, CalendarCheck2, Filter, GitBranch, Lightbulb, Search, X } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarCheck2, CheckCircle2, ChevronDown, CircleAlert, Eye, Filter, GitBranch, Info, Lightbulb, Search, X, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -21,6 +21,37 @@ import { formatDateOnly, formatSource, formatStageAge, formatStatus, formatWorkM
 import { updateRecruiterGuide, useAnalytics } from "../features/workspace/queries";
 
 type AnalyticsSection = "overview" | "pipeline" | "sources";
+type SearchHealthInsight = Analytics["insights"][number];
+
+const insightPresentation: Record<
+  SearchHealthInsight["tone"],
+  { label: string; icon: LucideIcon; accent: string; badge: string }
+> = {
+  ACTION_NEEDED: {
+    label: "Action needed",
+    icon: CircleAlert,
+    accent: "border-l-warning",
+    badge: "bg-warning-soft text-warning",
+  },
+  WATCH: {
+    label: "Worth watching",
+    icon: Eye,
+    accent: "border-l-violet",
+    badge: "bg-violet-soft text-violet",
+  },
+  INFO: {
+    label: "Worth knowing",
+    icon: Info,
+    accent: "border-l-accent",
+    badge: "bg-accent-soft text-accent-strong",
+  },
+  POSITIVE: {
+    label: "Positive signal",
+    icon: CheckCircle2,
+    accent: "border-l-success",
+    badge: "bg-success-soft text-success",
+  },
+};
 
 const stageAgeGuidance: Record<StageAgeBucket, { description: string; tone: string }> = {
   "0-7": { description: "Recently entered this stage.", tone: "border-line" },
@@ -62,6 +93,20 @@ function insightHref(action: NonNullable<Analytics["insights"][number]["action"]
   }
   if (followUp === "NEEDS_ATTENTION") params.set("follow_up", followUp);
   return `/applications${params.size ? `?${params.toString()}` : ""}`;
+}
+
+function searchHealthSummary(insights: SearchHealthInsight[]) {
+  const actionCount = insights.filter((insight) => insight.tone === "ACTION_NEEDED").length;
+  const watchCount = insights.filter((insight) => insight.tone === "WATCH").length;
+  const infoCount = insights.filter((insight) => insight.tone === "INFO").length;
+  const positiveCount = insights.filter((insight) => insight.tone === "POSITIVE").length;
+  const parts = actionCount
+    ? [`${actionCount} ${actionCount === 1 ? "action needs" : "actions need"} you`]
+    : ["Nothing needs immediate attention"];
+  if (watchCount) parts.push(`${watchCount} ${watchCount === 1 ? "trend" : "trends"} worth watching`);
+  if (infoCount) parts.push(`${infoCount} ${infoCount === 1 ? "thing" : "things"} worth knowing`);
+  if (positiveCount) parts.push(`${positiveCount} positive ${positiveCount === 1 ? "signal" : "signals"}`);
+  return parts.join(" · ");
 }
 
 interface AdvancedDraft {
@@ -223,17 +268,10 @@ function Overview({ analytics }: { analytics: Analytics }) {
         <Lightbulb aria-hidden="true" className="size-5 text-brand-700" />
         <h2 id="search-health-title" className="text-xl font-bold text-slate-950">Search health</h2>
       </div>
-      <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">A curated view of what changed, why it matters, and what to do next—based only on this workspace&apos;s tracked data.</p>
-      <ul className="mt-4 grid gap-4 lg:grid-cols-2">
-        {analytics.insights.map((insight) => (
-          <li key={insight.code} className={`rounded-2xl border p-5 shadow-panel ${insight.tone === "ATTENTION" ? "border-amber-200 bg-amber-50" : insight.tone === "POSITIVE" ? "border-emerald-200 bg-emerald-50" : "border-blue-200 bg-blue-50"}`}>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-600">{insight.tone === "ATTENTION" ? "Needs attention" : insight.tone === "POSITIVE" ? "Positive signal" : "Worth knowing"}</p>
-            <h3 className="mt-2 text-base font-bold text-slate-950">{insight.title}</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-700">{insight.description}</p>
-            <p className="mt-3 border-t border-current/10 pt-3 text-xs font-semibold leading-5 text-slate-600"><span className="block uppercase tracking-wide text-slate-500">Why you&apos;re seeing this</span>{insight.evidence}</p>
-            {insight.action ? <Link to={insightHref(insight.action)} aria-label={`Suggested action: ${insight.action.label}`} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg font-bold text-brand-700 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">{insight.action.label}<ArrowRight aria-hidden="true" className="size-4" /></Link> : null}
-          </li>
-        ))}
+      <p className="mt-2 text-sm font-semibold text-ink">{searchHealthSummary(analytics.insights)}</p>
+      <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-muted">A curated view of what changed, why it matters, and what to do next, based only on this workspace&apos;s tracked data. These signals are observations, not hiring predictions.</p>
+      <ul className="mt-4 grid gap-3 lg:grid-cols-2">
+        {analytics.insights.map((insight) => <InsightCard key={insight.code} insight={insight} />)}
       </ul>
     </section>
     <section aria-labelledby="outcomes-title">
@@ -253,6 +291,37 @@ function Overview({ analytics }: { analytics: Analytics }) {
       <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="work-mode-title"><h2 id="work-mode-title" className="text-lg font-bold text-slate-950">Work mode breakdown</h2><ul className="mt-5 space-y-4">{analytics.work_mode_breakdown.map((item) => <li key={item.work_mode}><div className="flex items-center justify-between gap-3"><span className="font-semibold text-slate-800">{formatWorkMode(item.work_mode)}</span><span className="font-black text-slate-950">{item.count}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden="true"><div className="h-full rounded-full bg-brand-500" style={{ width: `${(item.count / maxWorkMode) * 100}%` }} /></div></li>)}</ul></section>
     </div>
   </>;
+}
+
+function InsightCard({ insight }: { insight: SearchHealthInsight }) {
+  const [expanded, setExpanded] = useState(false);
+  const evidenceId = `search-health-evidence-${insight.code.toLowerCase()}`;
+  const presentation = insightPresentation[insight.tone];
+  const Icon = presentation.icon;
+  return (
+    <li className={`rounded-lg border border-line border-l-4 bg-surface-raised p-4 shadow-panel ${presentation.accent}`}>
+      <div className="flex min-w-0 items-center gap-2">
+        <span className={`inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-bold ${presentation.badge}`}>
+          <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+          {presentation.label}
+        </span>
+        {insight.evidence_label ? <span className="min-w-0 text-xs font-semibold text-ink-muted">{insight.evidence_label}</span> : null}
+      </div>
+      <h3 className="mt-3 text-base font-bold text-ink">{insight.title}</h3>
+      <p className="mt-1 text-sm leading-5 text-ink-muted">{insight.description}</p>
+      <p className="mt-3 text-xs font-bold leading-5 text-ink">{insight.evidence_summary}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line pt-2">
+        {insight.action ? <Link to={insightHref(insight.action)} aria-label={`Suggested action: ${insight.action.label}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg font-bold text-accent hover:text-accent-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">{insight.action.label}<ArrowRight aria-hidden="true" className="size-4" /></Link> : null}
+        <button type="button" aria-expanded={expanded} aria-controls={evidenceId} aria-label={`Why you're seeing this: ${insight.title}`} onClick={() => setExpanded((current) => !current)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-semibold text-ink-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+          Why?
+          <ChevronDown aria-hidden="true" className={`size-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+      <div id={evidenceId} hidden={!expanded} className="mt-2 rounded-lg bg-surface-muted p-3 text-xs leading-5 text-ink-muted">
+        {insight.evidence}
+      </div>
+    </li>
+  );
 }
 
 function PeriodComparison({ analytics }: { analytics: Analytics }) {
