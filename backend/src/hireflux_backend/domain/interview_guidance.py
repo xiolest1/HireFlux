@@ -48,7 +48,10 @@ _TYPE_CHECKLIST: dict[InterviewType, InterviewChecklistItem] = {
     InterviewType.RECRUITER_CALL: InterviewChecklistItem(
         "career_summary",
         "Practice your career summary",
-        "Connect your recent experience, search goals, and interest in this role in under two minutes.",
+        (
+            "Connect your recent experience, search goals, and interest in this role "
+            "in under two minutes."
+        ),
     ),
     InterviewType.TECHNICAL_SCREEN: InterviewChecklistItem(
         "technical_tradeoffs",
@@ -63,7 +66,10 @@ _TYPE_CHECKLIST: dict[InterviewType, InterviewChecklistItem] = {
     InterviewType.CODING_ASSESSMENT: InterviewChecklistItem(
         "coding_environment",
         "Confirm the coding environment",
-        "Check the platform, language, permitted resources, and how you will communicate your reasoning.",
+        (
+            "Check the platform, language, permitted resources, and how you will "
+            "communicate your reasoning."
+        ),
     ),
     InterviewType.HIRING_MANAGER: InterviewChecklistItem(
         "first_ninety_days",

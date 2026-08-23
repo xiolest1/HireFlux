@@ -447,7 +447,9 @@ class WorkspaceResourceService:
         completed_items = tuple(dict.fromkeys(command.completed_checklist_items))
         allowed_items = checklist_ids_for(current.interview_type)
         if not set(completed_items).issubset(allowed_items):
-            raise ValidationError("One or more checklist items are invalid for this interview type.")
+            raise ValidationError(
+                "One or more checklist items are invalid for this interview type."
+            )
 
         preparation_notes = _optional_bounded_text(
             command.preparation_notes, field_name="preparation_notes", max_length=5_000
@@ -488,8 +490,12 @@ class WorkspaceResourceService:
                 debrief_next_step,
             )
         )
-        if (has_debrief or command.debrief_complete) and current.status is not InterviewStatus.COMPLETED:
-            raise ConflictError("An interview must be completed before its debrief can be recorded.")
+        if (
+            has_debrief or command.debrief_complete
+        ) and current.status is not InterviewStatus.COMPLETED:
+            raise ConflictError(
+                "An interview must be completed before its debrief can be recorded."
+            )
         if command.debrief_complete and (debrief_went_well is None or debrief_next_step is None):
             raise ValidationError(
                 "A completed debrief requires what went well and a concrete next step."
