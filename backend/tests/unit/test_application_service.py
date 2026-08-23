@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
@@ -230,3 +230,84 @@ def test_legacy_out_of_order_response_is_omitted_from_average() -> None:
     ).analytics(identity(), reporting_range="all", filters=InsightFilters())
 
     assert analytics["average_days_to_first_response"] is None
+
+
+def test_analytics_compares_adjacent_windows_and_tracks_follow_up_coverage() -> None:
+    now = datetime(2026, 8, 22, 12, tzinfo=UTC)
+
+    def application(
+        identifier: int,
+        applied_on: date,
+        *,
+        response_days: int | None = None,
+        follow_up_date: date | None = None,
+    ) -> Application:
+        submitted_at = datetime.combine(applied_on, datetime.min.time(), tzinfo=UTC)
+        return Application(
+            application_id=f"00000000-0000-4000-8000-{identifier:012d}",
+            owner_user_id="owner",
+            company_name=f"Company {identifier}",
+            job_title="Engineer",
+            status=ApplicationStatus.APPLIED,
+            applied_date=applied_on,
+            follow_up_date=follow_up_date,
+            job_url=None,
+            location=None,
+            work_mode=None,
+            source=None,
+            salary_text=None,
+            description=None,
+            created_at=submitted_at,
+            updated_at=submitted_at,
+            version=1,
+            submitted_at=submitted_at,
+            stage_entered_at=submitted_at,
+            first_response_at=(
+                submitted_at + timedelta(days=response_days) if response_days is not None else None
+            ),
+        )
+
+    applications = (
+        application(1, date(2026, 8, 22), response_days=2, follow_up_date=date(2026, 8, 22)),
+        application(2, date(2026, 7, 23), follow_up_date=date(2026, 8, 21)),
+        application(3, date(2026, 7, 22), response_days=4),
+        application(4, date(2026, 6, 22)),
+    )
+
+    class AnalyticsRepositoryStub:
+        def list_all(self, owner_user_id: str) -> tuple[Application, ...]:
+            return applications
+
+    analytics = InsightsService(AnalyticsRepositoryStub(), clock=lambda: now).analytics(  # type: ignore[arg-type]
+        identity(), reporting_range="30d", filters=InsightFilters()
+    )
+
+    comparison = analytics["period_comparison"]
+    assert isinstance(comparison, dict)
+    assert comparison["current_start"] == date(2026, 7, 23)
+    assert comparison["previous_end"] == date(2026, 7, 22)
+    assert comparison["current"] == {
+        "submitted_count": 2,
+        "response_rate": 0.5,
+        "interview_rate": 0.0,
+        "offer_rate": 0.0,
+        "acceptance_rate": 0.0,
+        "average_days_to_first_response": 2.0,
+    }
+    assert comparison["previous"] == {
+        "submitted_count": 2,
+        "response_rate": 0.5,
+        "interview_rate": 0.0,
+        "offer_rate": 0.0,
+        "acceptance_rate": 0.0,
+        "average_days_to_first_response": 4.0,
+    }
+    assert comparison["deltas"]["average_days_to_first_response"] == -2.0  # type: ignore[index]
+    assert analytics["follow_up_coverage"] == {
+        "active_count": 2,
+        "scheduled_count": 2,
+        "coverage_rate": 1.0,
+        "overdue_count": 1,
+        "due_today_count": 1,
+        "missing_count": 0,
+    }

@@ -2,6 +2,7 @@ from collections import Counter, defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from typing import cast
 from zoneinfo import ZoneInfo
 
 from hireflux_backend.application.ports import ApplicationRepository
@@ -147,6 +148,15 @@ class InsightsService:
             and item.submitted_at is not None
             and item.first_response_at >= item.submitted_at
         ]
+        period_comparison = _period_comparison(
+            filtered,
+            reporting_range,
+            today=local_today,
+            time_zone=workspace_time_zone,
+        )
+        follow_up_coverage = _follow_up_coverage(current_population, local_today)
+        source_performance = _source_performance(submitted)
+        stage_aging = _stage_aging(current_population, now)
         return {
             "range": reporting_range,
             "filters": {
@@ -164,13 +174,22 @@ class InsightsService:
                 time_zone=workspace_time_zone,
             ),
             "funnel": _funnel(submitted),
-            "stage_aging": _stage_aging(current_population, now),
-            "source_performance": _source_performance(submitted),
+            "stage_aging": stage_aging,
+            "source_performance": source_performance,
             "work_mode_breakdown": _work_mode_breakdown(submitted),
             "average_days_to_first_response": (
                 round(sum(response_days) / len(response_days), 1) if response_days else None
             ),
             "no_response_count": sum(item.first_response_at is None for item in submitted),
+            "period_comparison": period_comparison,
+            "follow_up_coverage": follow_up_coverage,
+            "insights": _analytics_insights(
+                rates=rates,
+                stage_aging=stage_aging,
+                follow_up_coverage=follow_up_coverage,
+                source_performance=source_performance,
+                period_comparison=period_comparison,
+            ),
             "disclaimer": (
                 "These analytics describe this demo workspace dataset and are not career "
                 "predictions. Source comparisons require at least three submitted applications."
@@ -253,6 +272,294 @@ def _summary(applications: tuple[Application, ...]) -> dict[str, int]:
         "withdrawn": counts[ApplicationStatus.WITHDRAWN],
         "archived": counts[ApplicationStatus.ARCHIVED],
     }
+
+
+def _average_days_to_first_response(applications: tuple[Application, ...]) -> float | None:
+    response_days = [
+        (item.first_response_at - item.submitted_at).total_seconds() / 86_400
+        for item in applications
+        if item.first_response_at is not None
+        and item.submitted_at is not None
+        and item.first_response_at >= item.submitted_at
+    ]
+    return round(sum(response_days) / len(response_days), 1) if response_days else None
+
+
+def _period_metrics(applications: tuple[Application, ...]) -> dict[str, int | float | None]:
+    rates = _rates(applications)
+    return {
+        "submitted_count": rates["submitted_count"],
+        "response_rate": rates["response_rate"],
+        "interview_rate": rates["interview_rate"],
+        "offer_rate": rates["offer_rate"],
+        "acceptance_rate": rates["acceptance_rate"],
+        "average_days_to_first_response": _average_days_to_first_response(applications),
+    }
+
+
+def _period_comparison(
+    applications: tuple[Application, ...],
+    reporting_range: str,
+    *,
+    today: date,
+    time_zone: ZoneInfo,
+) -> dict[str, object]:
+    if reporting_range == "all":
+        return {
+            "available": False,
+            "current_start": None,
+            "current_end": None,
+            "previous_start": None,
+            "previous_end": None,
+            "current": None,
+            "previous": None,
+            "deltas": None,
+        }
+
+    range_days = int(reporting_range.removesuffix("d"))
+    current_start = today - timedelta(days=range_days)
+    previous_end = current_start - timedelta(days=1)
+    previous_start = previous_end - timedelta(days=range_days)
+
+    def in_window(item: Application, start: date, end: date) -> bool:
+        submitted_on = _submission_date(item, time_zone)
+        return submitted_on is not None and start <= submitted_on <= end
+
+    current_items = tuple(item for item in applications if in_window(item, current_start, today))
+    previous_items = tuple(
+        item for item in applications if in_window(item, previous_start, previous_end)
+    )
+    current = _period_metrics(current_items)
+    previous = _period_metrics(previous_items)
+    current_average = current["average_days_to_first_response"]
+    previous_average = previous["average_days_to_first_response"]
+    average_delta = (
+        round(float(current_average) - float(previous_average), 1)
+        if current_average is not None and previous_average is not None
+        else None
+    )
+    deltas: dict[str, int | float | None] = {
+        "submitted_count": int(cast(int | float, current["submitted_count"]))
+        - int(cast(int | float, previous["submitted_count"])),
+        "response_rate": round(
+            float(cast(int | float, current["response_rate"]))
+            - float(cast(int | float, previous["response_rate"])),
+            4,
+        ),
+        "interview_rate": round(
+            float(cast(int | float, current["interview_rate"]))
+            - float(cast(int | float, previous["interview_rate"])),
+            4,
+        ),
+        "offer_rate": round(
+            float(cast(int | float, current["offer_rate"]))
+            - float(cast(int | float, previous["offer_rate"])),
+            4,
+        ),
+        "acceptance_rate": round(
+            float(cast(int | float, current["acceptance_rate"]))
+            - float(cast(int | float, previous["acceptance_rate"])),
+            4,
+        ),
+        "average_days_to_first_response": average_delta,
+    }
+    return {
+        "available": True,
+        "current_start": current_start,
+        "current_end": today,
+        "previous_start": previous_start,
+        "previous_end": previous_end,
+        "current": current,
+        "previous": previous,
+        "deltas": deltas,
+    }
+
+
+def _follow_up_coverage(
+    applications: tuple[Application, ...], local_today: date
+) -> dict[str, int | float]:
+    active = tuple(item for item in applications if item.status in ACTIVE_PURSUIT_STATUSES)
+    scheduled = tuple(item for item in active if item.follow_up_date is not None)
+    return {
+        "active_count": len(active),
+        "scheduled_count": len(scheduled),
+        "coverage_rate": round(len(scheduled) / len(active), 4) if active else 0.0,
+        "overdue_count": sum(
+            item.follow_up_date is not None and item.follow_up_date < local_today for item in active
+        ),
+        "due_today_count": sum(item.follow_up_date == local_today for item in active),
+        "missing_count": len(active) - len(scheduled),
+    }
+
+
+def _analytics_insights(
+    *,
+    rates: dict[str, int | float],
+    stage_aging: list[dict[str, object]],
+    follow_up_coverage: dict[str, int | float],
+    source_performance: list[dict[str, object]],
+    period_comparison: dict[str, object],
+) -> list[dict[str, object]]:
+    insights: list[dict[str, object]] = []
+    submitted_count = int(rates["submitted_count"])
+    if submitted_count < 5:
+        insights.append(
+            {
+                "code": "BUILD_SAMPLE",
+                "tone": "INFO",
+                "title": "Build a stronger sample",
+                "description": "Track a few more submitted applications before judging your rates.",
+                "evidence": f"This view contains {submitted_count} submitted applications.",
+                "action": {"kind": "ADD_APPLICATION", "label": "Add application", "parameters": {}},
+            }
+        )
+    elif float(rates["response_rate"]) < 0.2:
+        insights.append(
+            {
+                "code": "LOW_RESPONSE_RATE",
+                "tone": "ATTENTION",
+                "title": "Review applications that are not getting responses",
+                "description": (
+                    "Check role fit, application quality, and whether a follow-up is appropriate."
+                ),
+                "evidence": (
+                    f"{float(rates['response_rate']):.0%} response rate across "
+                    f"{submitted_count} submissions."
+                ),
+                "action": {
+                    "kind": "VIEW_APPLICATIONS",
+                    "label": "Review applications",
+                    "parameters": {"view": "ALL"},
+                },
+            }
+        )
+
+    stale_count = sum(
+        int(cast(int, item["count"])) for item in stage_aging if item["bucket"] in {"15-30", "31+"}
+    )
+    if stale_count >= 2:
+        insights.append(
+            {
+                "code": "STALE_PIPELINE",
+                "tone": "ATTENTION",
+                "title": "Several active applications may need attention",
+                "description": (
+                    "Review older stages and decide whether to follow up or update their status."
+                ),
+                "evidence": (
+                    f"{stale_count} active applications have been in their stage for at least "
+                    "15 days."
+                ),
+                "action": {
+                    "kind": "VIEW_APPLICATIONS",
+                    "label": "Review active applications",
+                    "parameters": {"view": "ACTIVE"},
+                },
+            }
+        )
+
+    active_count = int(follow_up_coverage["active_count"])
+    missing_count = int(follow_up_coverage["missing_count"])
+    coverage_rate = float(follow_up_coverage["coverage_rate"])
+    if active_count and missing_count:
+        insights.append(
+            {
+                "code": "MISSING_FOLLOW_UPS",
+                "tone": "ATTENTION" if coverage_rate < 0.5 else "INFO",
+                "title": "Add a next step to active applications",
+                "description": (
+                    "A scheduled follow-up makes the next action visible without changing "
+                    "application status."
+                ),
+                "evidence": (
+                    f"{missing_count} of {active_count} active applications have no follow-up date."
+                ),
+                "action": {
+                    "kind": "VIEW_APPLICATIONS",
+                    "label": "Review active applications",
+                    "parameters": {"view": "ACTIVE"},
+                },
+            }
+        )
+
+    eligible_sources = [
+        item
+        for item in source_performance
+        if bool(item["sample_sufficient"])
+        and float(cast(int | float, item["response_rate"]))
+        >= max(0.4, float(rates["response_rate"]) + 0.15)
+    ]
+    if eligible_sources:
+        strongest = max(
+            eligible_sources,
+            key=lambda item: float(cast(int | float, item["response_rate"])),
+        )
+        source = strongest["source"]
+        source_value = source.value if isinstance(source, ApplicationSource) else str(source)
+        insights.append(
+            {
+                "code": "STRONG_SOURCE",
+                "tone": "POSITIVE",
+                "title": "One source is producing stronger responses",
+                "description": "Consider whether this source deserves more of your search time.",
+                "evidence": (
+                    f"{source_value.replace('_', ' ').title()} has a "
+                    f"{float(cast(int | float, strongest['response_rate'])):.0%} response rate "
+                    f"across {int(cast(int, strongest['submitted_count']))} submissions."
+                ),
+                "action": {
+                    "kind": "VIEW_APPLICATIONS",
+                    "label": "View source applications",
+                    "parameters": {"view": "ALL", "source": source_value},
+                },
+            }
+        )
+
+    if period_comparison["available"]:
+        current = period_comparison["current"]
+        previous = period_comparison["previous"]
+        if isinstance(current, dict) and isinstance(previous, dict):
+            current_count = int(current["submitted_count"])
+            previous_count = int(previous["submitted_count"])
+            if previous_count >= 4 and current_count <= previous_count / 2:
+                insights.append(
+                    {
+                        "code": "ACTIVITY_DROP",
+                        "tone": "INFO",
+                        "title": "Application activity is lower than the prior period",
+                        "description": (
+                            "If you are actively searching, decide whether your weekly target "
+                            "needs attention."
+                        ),
+                        "evidence": (
+                            f"{current_count} submissions now compared with {previous_count} "
+                            "in the adjacent prior period."
+                        ),
+                        "action": {
+                            "kind": "ADD_APPLICATION",
+                            "label": "Add application",
+                            "parameters": {},
+                        },
+                    }
+                )
+
+    if submitted_count >= 5 and not any(item["tone"] == "ATTENTION" for item in insights):
+        insights.append(
+            {
+                "code": "HEALTHY_PIPELINE",
+                "tone": "POSITIVE",
+                "title": "Your tracked pipeline has no urgent signal",
+                "description": (
+                    "Keep statuses and follow-up dates current so this view remains useful."
+                ),
+                "evidence": f"{submitted_count} submissions are represented in this view.",
+                "action": None,
+            }
+        )
+
+    priorities = {"ATTENTION": 0, "INFO": 1, "POSITIVE": 2}
+    insights.sort(key=lambda item: priorities[str(item["tone"])])
+    return insights[:4]
 
 
 def _summary_from_counts(counts: dict[ApplicationStatus, int]) -> dict[str, int]:

@@ -25,6 +25,9 @@ The dashboard also shows an eight-week submission trend and a compact current-st
 - **Average first response:** mean elapsed days from `submitted_at` to `first_response_at` for submitted applications that received a response.
 - **No response:** submitted applications without `first_response_at`.
 - **Source performance:** rate comparisons are labeled as a small sample until the source contains at least three submitted applications.
+- **Adjacent-period comparison:** `30d` and `90d` compare the selected inclusive window with the equally sized window immediately before it. Rate deltas are percentage-point differences. `all` has no comparison because it has no finite adjacent window.
+- **Follow-up coverage:** active pursuits with a non-null `follow_up_date` divided by active pursuits in the current analytics population. Missing, overdue, and due-today counts use the workspace calendar.
+- **Search-health insights:** deterministic, server-owned rules summarize sample size, response rate, stage aging, follow-up coverage, source performance, and adjacent-period activity. Every signal includes the evidence that triggered it and uses only supported application-list or creation actions. These rules are descriptive guidance, not scoring or prediction.
 
 Ranges are `30d`, `90d`, and `all`; date windows and submission trends use the user-entered `applied_date`, while `submitted_at` remains the exact server instant used for elapsed-time metrics. This keeps direct `APPLIED` creation and `DRAFT` → `APPLIED` transitions in the same reporting window when they share an applied date. Analytics filters support current status, normalized source, and work mode. Results describe the temporary workspace and are not predictions about a user's career or future outcomes.
 
@@ -47,3 +50,4 @@ Each new 24-hour workspace receives 16 synthetic applications covering all statu
 Settings persist only for that isolated workspace: time zone, follow-up interval, default application view, dashboard range, and theme. Identity and production security controls are read-only previews; the demo has no password, MFA, external login, uploads, email delivery, or permanent account deletion.
 
 Analytics and authorization are server-owned. React validates the API response and presents it; it does not fetch every page to invent totals or decide ownership, workflow legality, or funnel membership.
+Outcome cards link to the supporting application workspace rather than claiming that a historical milestone is the same as current status. Insight action parameters are validated and reduced to the application list's supported `view` and `source` filters before navigation.

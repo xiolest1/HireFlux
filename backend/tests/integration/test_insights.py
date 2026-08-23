@@ -81,6 +81,21 @@ def test_analytics_ranges_filters_denominators_and_thresholds(dynamodb_client: A
             item for item in payload["source_performance"] if item["source"] == "REFERRAL"
         )
         assert referral["sample_sufficient"] is False
+        assert payload["period_comparison"] == {
+            "available": False,
+            "current_start": None,
+            "current_end": None,
+            "previous_start": None,
+            "previous_end": None,
+            "current": None,
+            "previous": None,
+            "deltas": None,
+        }
+        coverage = payload["follow_up_coverage"]
+        assert coverage["active_count"] == payload["summary"]["active_pursuits"]
+        assert coverage["scheduled_count"] + coverage["missing_count"] == coverage["active_count"]
+        assert payload["insights"]
+        assert all("evidence" in insight for insight in payload["insights"])
 
         thirty_days = client.get("/api/v1/analytics", params={"range": "30d"}, headers=headers)
         assert thirty_days.status_code == 200
@@ -98,6 +113,12 @@ def test_analytics_ranges_filters_denominators_and_thresholds(dynamodb_client: A
         assert thirty_payload["rates"]["submitted_count"] == (
             thirty_payload["summary"]["total_tracked"] - thirty_payload["summary"]["drafts"]
         )
+        comparison = thirty_payload["period_comparison"]
+        assert comparison["available"] is True
+        assert (
+            comparison["current"]["submitted_count"] == thirty_payload["rates"]["submitted_count"]
+        )
+        assert comparison["previous_end"] < comparison["current_start"]
 
         draft_only = client.get(
             "/api/v1/analytics",

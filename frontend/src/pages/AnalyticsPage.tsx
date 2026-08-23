@@ -1,6 +1,6 @@
-import { BarChart3, Filter, GitBranch, Search, X } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarCheck2, Filter, GitBranch, Lightbulb, Search, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   APPLICATION_SOURCES,
   APPLICATION_STATUSES,
@@ -26,6 +26,23 @@ function allowed<T extends string>(value: string | null, options: readonly T[]):
 
 function percent(value: number) {
   return new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 0 }).format(value);
+}
+
+function percentagePointDelta(value: number) {
+  const points = Math.round(value * 100);
+  return `${points > 0 ? "+" : ""}${points} pp`;
+}
+
+function insightHref(action: NonNullable<Analytics["insights"][number]["action"]>) {
+  if (action.kind === "ADD_APPLICATION") return "/applications/new";
+  const params = new URLSearchParams();
+  const view = action.parameters.view;
+  const source = action.parameters.source;
+  if (view === "ALL" || view === "ACTIVE") params.set("view", view);
+  if (source && APPLICATION_SOURCES.includes(source as ApplicationSource)) {
+    params.set("source", source);
+  }
+  return `/applications${params.size ? `?${params.toString()}` : ""}`;
 }
 
 interface AdvancedDraft {
@@ -182,18 +199,60 @@ function Overview({ analytics }: { analytics: Analytics }) {
   const maxTrend = Math.max(1, ...analytics.submission_trend.map((point) => point.count));
   const maxWorkMode = Math.max(1, ...analytics.work_mode_breakdown.map((item) => item.count));
   return <>
+    <section aria-labelledby="search-health-title">
+      <div className="flex items-center gap-2">
+        <Lightbulb aria-hidden="true" className="size-5 text-brand-700" />
+        <h2 id="search-health-title" className="text-xl font-bold text-slate-950">Search health</h2>
+      </div>
+      <p className="mt-1 text-sm text-slate-600">Explainable signals based only on this workspace&apos;s tracked data.</p>
+      <ul className="mt-4 grid gap-4 lg:grid-cols-2">
+        {analytics.insights.map((insight) => (
+          <li key={insight.code} className={`rounded-2xl border p-5 shadow-panel ${insight.tone === "ATTENTION" ? "border-amber-200 bg-amber-50" : insight.tone === "POSITIVE" ? "border-emerald-200 bg-emerald-50" : "border-blue-200 bg-blue-50"}`}>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-600">{insight.tone === "ATTENTION" ? "Needs attention" : insight.tone === "POSITIVE" ? "Positive signal" : "Worth knowing"}</p>
+            <h3 className="mt-2 text-base font-bold text-slate-950">{insight.title}</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-700">{insight.description}</p>
+            <p className="mt-3 text-xs font-semibold text-slate-600">Evidence: {insight.evidence}</p>
+            {insight.action ? <Link to={insightHref(insight.action)} aria-label={`Suggested action: ${insight.action.label}`} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg font-bold text-brand-700 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">{insight.action.label}<ArrowRight aria-hidden="true" className="size-4" /></Link> : null}
+          </li>
+        ))}
+      </ul>
+    </section>
     <section aria-labelledby="outcomes-title">
       <h2 id="outcomes-title" className="text-xl font-bold text-slate-950">Outcome snapshot</h2>
       <p className="mt-1 text-sm text-slate-600">Rates use submitted applications as the denominator.</p>
       {analytics.source_performance.some((row) => !row.sample_sufficient) ? <p className="mt-3 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-900">Small sample</p> : null}
-      <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[["Responses", analytics.rates.response_rate, analytics.rates.response_count], ["Interviews", analytics.rates.interview_rate, analytics.rates.interview_count], ["Offers", analytics.rates.offer_rate, analytics.rates.offer_count], ["Acceptances", analytics.rates.acceptance_rate, analytics.rates.acceptance_count]].map(([label, value, count]) => <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel"><dt className="text-sm font-semibold text-slate-600">{label}</dt><dd className="mt-2 text-3xl font-black text-slate-950">{percent(Number(value))}</dd><dd className="mt-2 text-xs text-slate-500">{count} of {analytics.rates.submitted_count} submitted</dd></div>)}</dl>
-      <dl className="mt-4 grid gap-4 sm:grid-cols-3"><Metric label="Average first response" value={analytics.average_days_to_first_response === null ? "Not enough data" : `${analytics.average_days_to_first_response.toFixed(1)} days`} /><Metric label="No response yet" value={String(analytics.no_response_count)} /><Metric label="Active pursuits" value={String(analytics.summary.active_pursuits)} /></dl>
+      <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[["Responses", analytics.rates.response_rate, analytics.rates.response_count], ["Interviews", analytics.rates.interview_rate, analytics.rates.interview_count], ["Offers", analytics.rates.offer_rate, analytics.rates.offer_count], ["Acceptances", analytics.rates.acceptance_rate, analytics.rates.acceptance_count]].map(([label, value, count]) => <li key={label}><Link to="/applications?view=ALL" className="group block h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-panel transition hover:border-brand-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"><p className="flex items-center justify-between gap-2 text-sm font-semibold text-slate-600"><span>{label}</span><ArrowRight aria-hidden="true" className="size-4 transition group-hover:translate-x-0.5" /></p><p className="mt-2 text-3xl font-black text-slate-950">{percent(Number(value))}</p><p className="mt-2 text-xs text-slate-500">{count} of {analytics.rates.submitted_count} submitted</p></Link></li>)}</ul>
+      <p className="mt-3 text-xs text-slate-500">Outcome links open the supporting workspace. Historical milestones may differ from an application&apos;s current status.</p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-3"><Metric label="Average first response" value={analytics.average_days_to_first_response === null ? "Not enough data" : `${analytics.average_days_to_first_response.toFixed(1)} days`} /><Metric label="No response yet" value={String(analytics.no_response_count)} /><Link to="/applications?view=ACTIVE" className="rounded-xl border border-slate-200 bg-white p-4 transition hover:border-brand-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"><p className="flex items-center justify-between text-sm text-slate-600"><span>Active pursuits</span><ArrowRight aria-hidden="true" className="size-4" /></p><p className="mt-1 text-xl font-bold text-slate-950">{analytics.summary.active_pursuits}</p></Link></div>
     </section>
+    <div className="grid gap-6 lg:grid-cols-2">
+      <PeriodComparison analytics={analytics} />
+      <FollowUpCoverage analytics={analytics} />
+    </div>
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
-      <figure className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="analytics-trend-title"><figcaption id="analytics-trend-title" className="text-lg font-bold text-slate-950">Submission trend</figcaption><div className="mt-6 flex h-48 items-end gap-2" role="img" aria-label="Weekly application submission chart">{analytics.submission_trend.map((point) => <div key={point.week_start} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2" title={`Week of ${formatDateOnly(point.week_start)}: ${point.count}`}><span className="text-xs font-bold text-slate-600">{point.count}</span><span aria-hidden="true" className="w-full max-w-12 rounded-t bg-gradient-to-t from-brand-600 to-violet-500" style={{ height: `${Math.max(4, (point.count / maxTrend) * 120)}px` }} /><time dateTime={point.week_start} className="truncate text-[0.68rem] font-semibold text-slate-500">{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${point.week_start}T00:00:00Z`))}</time></div>)}</div></figure>
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="work-mode-title"><h2 id="work-mode-title" className="text-lg font-bold text-slate-950">Work mode breakdown</h2><ul className="mt-5 space-y-4">{analytics.work_mode_breakdown.map((item) => <li key={item.work_mode}><div className="flex items-center justify-between gap-3"><span className="font-semibold text-slate-800">{formatWorkMode(item.work_mode)}</span><span className="font-black text-slate-950">{item.count}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden="true"><div className="h-full rounded-full bg-brand-500" style={{ width: `${(item.count / maxWorkMode) * 100}%` }} /></div></li>)}</ul></section>
+      <figure className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="analytics-trend-title"><figcaption id="analytics-trend-title" className="text-lg font-bold text-slate-950">Submission trend</figcaption><div className="mt-6 flex h-48 min-w-0 items-end gap-2" role="img" aria-label="Weekly application submission chart">{analytics.submission_trend.map((point) => <div key={point.week_start} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2" title={`Week of ${formatDateOnly(point.week_start)}: ${point.count}`}><span className="text-xs font-bold text-slate-600">{point.count}</span><span aria-hidden="true" className="w-full max-w-12 rounded-t bg-gradient-to-t from-brand-600 to-violet-500" style={{ height: `${Math.max(4, (point.count / maxTrend) * 120)}px` }} /><time dateTime={point.week_start} className="max-w-full truncate text-[0.68rem] font-semibold text-slate-500">{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${point.week_start}T00:00:00Z`))}</time></div>)}</div></figure>
+      <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="work-mode-title"><h2 id="work-mode-title" className="text-lg font-bold text-slate-950">Work mode breakdown</h2><ul className="mt-5 space-y-4">{analytics.work_mode_breakdown.map((item) => <li key={item.work_mode}><div className="flex items-center justify-between gap-3"><span className="font-semibold text-slate-800">{formatWorkMode(item.work_mode)}</span><span className="font-black text-slate-950">{item.count}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden="true"><div className="h-full rounded-full bg-brand-500" style={{ width: `${(item.count / maxWorkMode) * 100}%` }} /></div></li>)}</ul></section>
     </div>
   </>;
+}
+
+function PeriodComparison({ analytics }: { analytics: Analytics }) {
+  const comparison = analytics.period_comparison;
+  if (!comparison.available || !comparison.current || !comparison.previous || !comparison.deltas) {
+    return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="comparison-title"><h2 id="comparison-title" className="text-lg font-bold text-slate-950">Compared with the previous period</h2><p className="mt-2 text-sm leading-6 text-slate-600">Choose a 30- or 90-day range to compare it with the equally sized, immediately preceding window.</p></section>;
+  }
+  const rows = [
+    ["Submissions", String(comparison.current.submitted_count), `${comparison.deltas.submitted_count > 0 ? "+" : ""}${comparison.deltas.submitted_count}`],
+    ["Response rate", percent(comparison.current.response_rate), percentagePointDelta(comparison.deltas.response_rate)],
+    ["Interview rate", percent(comparison.current.interview_rate), percentagePointDelta(comparison.deltas.interview_rate)],
+    ["Offer rate", percent(comparison.current.offer_rate), percentagePointDelta(comparison.deltas.offer_rate)],
+  ];
+  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="comparison-title"><h2 id="comparison-title" className="text-lg font-bold text-slate-950">Compared with the previous period</h2><p className="mt-1 text-xs text-slate-500"><time dateTime={comparison.previous_start ?? undefined}>{comparison.previous_start ? formatDateOnly(comparison.previous_start) : ""}</time>–<time dateTime={comparison.previous_end ?? undefined}>{comparison.previous_end ? formatDateOnly(comparison.previous_end) : ""}</time> is the adjacent comparison window.</p><dl className="mt-5 divide-y divide-slate-100">{rows.map(([label, value, delta]) => <div key={label} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"><dt className="text-sm font-semibold text-slate-700">{label}</dt><dd className="text-right"><span className="font-black text-slate-950">{value}</span><span className="ml-2 text-xs font-semibold text-slate-500">{delta}</span></dd></div>)}</dl><p className="mt-4 text-xs text-slate-500">Rate changes are percentage-point differences, not predictions.</p></section>;
+}
+
+function FollowUpCoverage({ analytics }: { analytics: Analytics }) {
+  const coverage = analytics.follow_up_coverage;
+  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="follow-up-coverage-title"><div className="flex items-center gap-2"><CalendarCheck2 aria-hidden="true" className="size-5 text-brand-700" /><h2 id="follow-up-coverage-title" className="text-lg font-bold text-slate-950">Follow-up coverage</h2></div><p className="mt-1 text-sm text-slate-600">Active applications with a scheduled next step.</p><p className="mt-5 text-4xl font-black text-slate-950">{percent(coverage.coverage_rate)}</p><p className="mt-1 text-sm text-slate-600">{coverage.scheduled_count} of {coverage.active_count} active pursuits scheduled</p><div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden="true"><div className="h-full rounded-full bg-brand-500" style={{ width: `${coverage.coverage_rate * 100}%` }} /></div><div className="mt-5 grid grid-cols-3 gap-2 text-center"><Metric label="Missing" value={String(coverage.missing_count)} /><Metric label="Due today" value={String(coverage.due_today_count)} /><Metric label="Overdue" value={String(coverage.overdue_count)} /></div><Link to="/applications?view=ACTIVE" className="mt-4 inline-flex min-h-11 items-center gap-2 font-bold text-brand-700 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">Review active applications<ArrowRight aria-hidden="true" className="size-4" /></Link></section>;
 }
 
 function Pipeline({ analytics }: { analytics: Analytics }) {
@@ -211,6 +270,6 @@ function Sources({ analytics }: { analytics: Analytics }) {
   </section>;
 }
 
-function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-slate-200 bg-white p-4"><dt className="text-sm text-slate-600">{label}</dt><dd className="mt-1 text-xl font-bold text-slate-950">{value}</dd></div>; }
+function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-sm text-slate-600">{label}</p><p className="mt-1 text-xl font-bold text-slate-950">{value}</p></div>; }
 function SourceMetric({ label, value }: { label: string; value: string }) { return <div><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="mt-1 font-semibold text-slate-800">{value}</dd></div>; }
 function SmallSample() { return <span className="inline-flex rounded-full bg-amber-100 px-2 py-1 text-[0.68rem] font-bold text-amber-900">Small sample</span>; }

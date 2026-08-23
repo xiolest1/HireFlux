@@ -108,6 +108,62 @@ class WorkModeCountResponse(BaseModel):
     count: int
 
 
+class PeriodMetricsResponse(BaseModel):
+    submitted_count: int
+    response_rate: float
+    interview_rate: float
+    offer_rate: float
+    acceptance_rate: float
+    average_days_to_first_response: float | None
+
+
+class PeriodDeltasResponse(PeriodMetricsResponse):
+    pass
+
+
+class PeriodComparisonResponse(BaseModel):
+    available: bool
+    current_start: date | None
+    current_end: date | None
+    previous_start: date | None
+    previous_end: date | None
+    current: PeriodMetricsResponse | None
+    previous: PeriodMetricsResponse | None
+    deltas: PeriodDeltasResponse | None
+
+
+class FollowUpCoverageResponse(BaseModel):
+    active_count: int
+    scheduled_count: int
+    coverage_rate: float
+    overdue_count: int
+    due_today_count: int
+    missing_count: int
+
+
+class AnalyticsInsightActionResponse(BaseModel):
+    kind: Literal["VIEW_APPLICATIONS", "ADD_APPLICATION"]
+    label: str
+    parameters: dict[str, str]
+
+
+class AnalyticsInsightResponse(BaseModel):
+    code: Literal[
+        "BUILD_SAMPLE",
+        "LOW_RESPONSE_RATE",
+        "STALE_PIPELINE",
+        "MISSING_FOLLOW_UPS",
+        "STRONG_SOURCE",
+        "ACTIVITY_DROP",
+        "HEALTHY_PIPELINE",
+    ]
+    tone: Literal["INFO", "ATTENTION", "POSITIVE"]
+    title: str
+    description: str
+    evidence: str
+    action: AnalyticsInsightActionResponse | None
+
+
 class AnalyticsResponse(BaseModel):
     range: DashboardRange
     filters: AnalyticsFiltersResponse
@@ -122,4 +178,7 @@ class AnalyticsResponse(BaseModel):
     work_mode_breakdown: list[WorkModeCountResponse]
     average_days_to_first_response: float | None
     no_response_count: int
+    period_comparison: PeriodComparisonResponse
+    follow_up_coverage: FollowUpCoverageResponse
+    insights: list[AnalyticsInsightResponse]
     disclaimer: str

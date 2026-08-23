@@ -99,6 +99,18 @@ describe("workspace milestone features", () => {
           work_mode_breakdown: [{ work_mode: "HYBRID", count: 2 }],
           average_days_to_first_response: 3.5,
           no_response_count: 1,
+          period_comparison: {
+            available: true,
+            current_start: "2026-07-23",
+            current_end: "2026-08-22",
+            previous_start: "2026-06-22",
+            previous_end: "2026-07-22",
+            current: { submitted_count: 2, response_rate: 0.5, interview_rate: 0.5, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: 3.5 },
+            previous: { submitted_count: 1, response_rate: 0, interview_rate: 0, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: null },
+            deltas: { submitted_count: 1, response_rate: 0.5, interview_rate: 0.5, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: null },
+          },
+          follow_up_coverage: { active_count: 1, scheduled_count: 0, coverage_rate: 0, overdue_count: 0, due_today_count: 0, missing_count: 1 },
+          insights: [{ code: "BUILD_SAMPLE", tone: "INFO", title: "Build a stronger sample", description: "Track more applications before judging rates.", evidence: "This view contains 2 submitted applications.", action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } }],
           disclaimer: "This dataset is descriptive, not predictive.",
         });
       }),
@@ -106,6 +118,19 @@ describe("workspace milestone features", () => {
 
     renderApp("/analytics?range=30d&source=REFERRAL");
     expect(await screen.findByRole("heading", { name: "Outcome snapshot" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Search health" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Build a stronger sample" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Suggested action: Add application" })).toHaveAttribute(
+      "href",
+      "/applications/new",
+    );
+    expect(screen.getByRole("heading", { name: "Compared with the previous period" })).toBeVisible();
+    expect(screen.getAllByText("+50 pp")).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "Follow-up coverage" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Review active applications" })).toHaveAttribute(
+      "href",
+      "/applications?view=ACTIVE",
+    );
     expect(screen.getByText("Small sample")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Work mode breakdown" })).toBeVisible();
     expect(screen.getByText("Hybrid", { selector: "span" })).toBeVisible();
@@ -131,6 +156,18 @@ describe("workspace milestone features", () => {
           work_mode_breakdown: [{ work_mode: "HYBRID", count: 2 }],
           average_days_to_first_response: 3.5,
           no_response_count: 1,
+          period_comparison: {
+            available: true,
+            current_start: "2026-07-23",
+            current_end: "2026-08-22",
+            previous_start: "2026-06-22",
+            previous_end: "2026-07-22",
+            current: { submitted_count: 2, response_rate: 0.5, interview_rate: 0.5, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: 3.5 },
+            previous: { submitted_count: 1, response_rate: 0, interview_rate: 0, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: null },
+            deltas: { submitted_count: 1, response_rate: 0.5, interview_rate: 0.5, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: null },
+          },
+          follow_up_coverage: { active_count: 1, scheduled_count: 0, coverage_rate: 0, overdue_count: 0, due_today_count: 0, missing_count: 1 },
+          insights: [{ code: "BUILD_SAMPLE", tone: "INFO", title: "Build a stronger sample", description: "Track more applications before judging rates.", evidence: "This view contains 2 submitted applications.", action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } }],
           disclaimer: "This dataset is descriptive, not predictive.",
         }),
       ),

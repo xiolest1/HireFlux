@@ -124,6 +124,75 @@ export const analyticsSchema = z.object({
   ),
   average_days_to_first_response: z.number().nonnegative().nullable(),
   no_response_count: z.number().int().nonnegative(),
+  period_comparison: z.object({
+    available: z.boolean(),
+    current_start: dateOnlySchema.nullable(),
+    current_end: dateOnlySchema.nullable(),
+    previous_start: dateOnlySchema.nullable(),
+    previous_end: dateOnlySchema.nullable(),
+    current: z
+      .object({
+        submitted_count: z.number().int().nonnegative(),
+        response_rate: z.number().min(0).max(1),
+        interview_rate: z.number().min(0).max(1),
+        offer_rate: z.number().min(0).max(1),
+        acceptance_rate: z.number().min(0).max(1),
+        average_days_to_first_response: z.number().nonnegative().nullable(),
+      })
+      .nullable(),
+    previous: z
+      .object({
+        submitted_count: z.number().int().nonnegative(),
+        response_rate: z.number().min(0).max(1),
+        interview_rate: z.number().min(0).max(1),
+        offer_rate: z.number().min(0).max(1),
+        acceptance_rate: z.number().min(0).max(1),
+        average_days_to_first_response: z.number().nonnegative().nullable(),
+      })
+      .nullable(),
+    deltas: z
+      .object({
+        submitted_count: z.number().int(),
+        response_rate: z.number().min(-1).max(1),
+        interview_rate: z.number().min(-1).max(1),
+        offer_rate: z.number().min(-1).max(1),
+        acceptance_rate: z.number().min(-1).max(1),
+        average_days_to_first_response: z.number().nullable(),
+      })
+      .nullable(),
+  }),
+  follow_up_coverage: z.object({
+    active_count: z.number().int().nonnegative(),
+    scheduled_count: z.number().int().nonnegative(),
+    coverage_rate: z.number().min(0).max(1),
+    overdue_count: z.number().int().nonnegative(),
+    due_today_count: z.number().int().nonnegative(),
+    missing_count: z.number().int().nonnegative(),
+  }),
+  insights: z.array(
+    z.object({
+      code: z.enum([
+        "BUILD_SAMPLE",
+        "LOW_RESPONSE_RATE",
+        "STALE_PIPELINE",
+        "MISSING_FOLLOW_UPS",
+        "STRONG_SOURCE",
+        "ACTIVITY_DROP",
+        "HEALTHY_PIPELINE",
+      ]),
+      tone: z.enum(["INFO", "ATTENTION", "POSITIVE"]),
+      title: z.string().min(1),
+      description: z.string().min(1),
+      evidence: z.string().min(1),
+      action: z
+        .object({
+          kind: z.enum(["VIEW_APPLICATIONS", "ADD_APPLICATION"]),
+          label: z.string().min(1),
+          parameters: z.record(z.string(), z.string()),
+        })
+        .nullable(),
+    }),
+  ),
   disclaimer: z.string().min(1),
 });
 

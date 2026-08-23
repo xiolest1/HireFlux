@@ -302,6 +302,18 @@ export async function installDeterministicApi(page: Page) {
         ],
         average_days_to_first_response: 3.2,
         no_response_count: 5,
+        period_comparison: {
+          available: true,
+          current_start: "2026-07-23",
+          current_end: "2026-08-22",
+          previous_start: "2026-06-22",
+          previous_end: "2026-07-22",
+          current: { submitted_count: 2, response_rate: 0.5, interview_rate: 0.5, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: 3.5 },
+          previous: { submitted_count: 1, response_rate: 0, interview_rate: 0, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: null },
+          deltas: { submitted_count: 1, response_rate: 0.5, interview_rate: 0.5, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: null },
+        },
+        follow_up_coverage: { active_count: 1, scheduled_count: 0, coverage_rate: 0, overdue_count: 0, due_today_count: 0, missing_count: 1 },
+        insights: [{ code: "BUILD_SAMPLE", tone: "INFO", title: "Build a stronger sample", description: "Track more applications before judging rates.", evidence: "This view contains 2 submitted applications.", action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } }],
         disclaimer: "These analytics describe this fictional demo workspace and are not career predictions.",
       });
       return;
