@@ -81,11 +81,24 @@ function readSidebarPreference(): boolean {
   }
 }
 
-function navClassName({ isActive }: { isActive: boolean }): string {
+function navClassName(
+  { isActive }: { isActive: boolean },
+): string {
   return `group flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-[color,background-color,box-shadow] duration-200 ${
     isActive
       ? "bg-accent-soft text-accent-strong shadow-sm ring-1 ring-accent/15"
       : "text-ink-muted hover:bg-surface-muted hover:text-ink"
+  }`;
+}
+
+function sidebarNavClassName(
+  { isActive }: { isActive: boolean },
+  collapsed: boolean,
+): string {
+  return `${navClassName({ isActive })} md:justify-center md:gap-0 md:px-0 ${
+    collapsed
+      ? "lg:justify-center lg:gap-0 lg:px-0"
+      : "lg:justify-start lg:gap-3 lg:px-3"
   }`;
 }
 
@@ -136,9 +149,11 @@ export function AppLayout() {
   const updateSettingsMutation = useUpdateSettings();
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [tabletNavOpen, setTabletNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarPreference);
   const resetTriggerRef = useRef<HTMLButtonElement>(null);
   const resetButtonRef = useRef<HTMLButtonElement>(null);
+  const tabletNavTriggerRef = useRef<HTMLButtonElement>(null);
   const resetErrorRef = useRef<HTMLParagraphElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const expiry = useExpiryLabel(session?.expires_at);
@@ -239,7 +254,7 @@ export function AppLayout() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-canvas text-ink lg:flex">
+      <div className="min-h-screen bg-canvas text-ink md:flex">
         <a
           href="#main-content"
           className="fixed left-4 top-4 z-[70] -translate-y-24 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-accent-contrast shadow-float focus:translate-y-0"
@@ -248,8 +263,8 @@ export function AppLayout() {
         </a>
 
         <aside
-          className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-line bg-surface/95 backdrop-blur-xl transition-[width] duration-200 lg:flex ${
-            sidebarCollapsed ? "w-[4.5rem]" : "w-60"
+          className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-line bg-surface/95 backdrop-blur-xl transition-[width] duration-200 md:flex md:w-[4.5rem] ${
+            sidebarCollapsed ? "lg:w-[4.5rem]" : "lg:w-60"
           }`}
           aria-label="Workspace navigation"
         >
@@ -266,7 +281,9 @@ export function AppLayout() {
                 HF
               </span>
               {!sidebarCollapsed ? (
-                <span className="font-display text-lg font-bold tracking-tight">HireFlux</span>
+                <span className="hidden font-display text-lg font-bold tracking-tight lg:inline">
+                  HireFlux
+                </span>
               ) : null}
             </NavLink>
           </div>
@@ -274,14 +291,16 @@ export function AppLayout() {
           <div className="flex min-h-0 flex-1 flex-col gap-5 px-3 py-5">
             <Link
               to="/applications/new"
-              className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-sm font-bold text-accent-contrast shadow-sm transition-[background-color,transform] duration-200 hover:bg-accent-strong active:scale-[0.98] ${
-                sidebarCollapsed ? "px-0" : ""
+              className={`flex min-h-11 items-center justify-center rounded-xl bg-accent px-3 text-sm font-bold text-accent-contrast shadow-sm transition-[background-color,transform] duration-200 hover:bg-accent-strong active:scale-[0.98] md:gap-0 md:px-0 ${
+                sidebarCollapsed
+                  ? "lg:gap-0 lg:px-0"
+                  : "lg:gap-2 lg:px-3"
               }`}
               aria-label="Add application"
-              title={sidebarCollapsed ? "Add application" : undefined}
+              title="Add application"
             >
               <Plus aria-hidden="true" className="size-5 shrink-0" />
-              {!sidebarCollapsed ? <span>Add application</span> : null}
+              {!sidebarCollapsed ? <span className="hidden lg:inline">Add application</span> : null}
             </Link>
 
             <nav className="space-y-1" aria-label="Primary navigation">
@@ -289,12 +308,12 @@ export function AppLayout() {
                 <NavLink
                   key={to}
                   to={to}
-                  className={navClassName}
-                  aria-label={sidebarCollapsed ? label : undefined}
-                  title={sidebarCollapsed ? label : undefined}
+                  className={(state) => sidebarNavClassName(state, sidebarCollapsed)}
+                  aria-label={label}
+                  title={label}
                 >
                   <Icon aria-hidden="true" className="size-5 shrink-0" strokeWidth={1.8} />
-                  {!sidebarCollapsed ? <span>{label}</span> : null}
+                  {!sidebarCollapsed ? <span className="hidden lg:inline">{label}</span> : null}
                 </NavLink>
               ))}
             </nav>
@@ -302,7 +321,7 @@ export function AppLayout() {
 
           <div className="space-y-3 border-t border-line p-3">
             {!sidebarCollapsed ? (
-              <div className="rounded-xl bg-surface-muted p-3">
+              <div className="hidden rounded-xl bg-surface-muted p-3 lg:block">
                 <div className="flex items-center gap-2.5">
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-soft text-violet">
                     <UserRound aria-hidden="true" className="size-4" />
@@ -321,7 +340,11 @@ export function AppLayout() {
               onClick={toggleSidebar}
               aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
+              className={`hidden min-h-10 w-full items-center justify-center rounded-xl font-semibold text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink lg:flex ${
+                sidebarCollapsed
+                  ? "text-sm"
+                  : "gap-2 text-sm"
+              }`}
             >
               {sidebarCollapsed ? (
                 <PanelLeftOpen aria-hidden="true" className="size-5" />
@@ -332,15 +355,77 @@ export function AppLayout() {
                 </>
               )}
             </button>
+            <button
+              ref={tabletNavTriggerRef}
+              type="button"
+              onClick={() => setTabletNavOpen(true)}
+              aria-label="Open navigation"
+              aria-expanded={tabletNavOpen}
+              aria-controls="tablet-navigation-drawer"
+              title="Open navigation"
+              className="hidden min-h-10 w-full items-center justify-center rounded-xl text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink md:flex lg:hidden"
+            >
+              <PanelLeftOpen aria-hidden="true" className="size-5" />
+            </button>
           </div>
         </aside>
 
+        <Drawer
+          id="tablet-navigation-drawer"
+          open={tabletNavOpen}
+          onClose={() => setTabletNavOpen(false)}
+          title="Workspace navigation"
+          description="Navigate your isolated HireFlux demo workspace."
+          size="sm"
+          placement="left"
+          sideBreakpoint="md"
+        >
+          <Link
+            to="/applications/new"
+            onClick={() => setTabletNavOpen(false)}
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-sm font-bold text-accent-contrast shadow-sm transition-[background-color,transform] duration-200 hover:bg-accent-strong active:scale-[0.98]"
+          >
+            <Plus aria-hidden="true" className="size-5 shrink-0" />
+            <span>Add application</span>
+          </Link>
+
+          <nav className="mt-5 space-y-1" aria-label="Primary navigation">
+            {primaryNavigation.map(({ to, label, icon: Icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                onClick={() => setTabletNavOpen(false)}
+                className={navClassName}
+              >
+                <Icon aria-hidden="true" className="size-5 shrink-0" strokeWidth={1.8} />
+                <span>{label}</span>
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="mt-6 border-t border-line pt-5">
+            <div className="rounded-xl bg-surface-muted p-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-soft text-violet">
+                  <UserRound aria-hidden="true" className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">
+                    {meQuery.data?.name ?? (meQuery.isError ? "Demo guest" : "Connecting…")}
+                  </p>
+                  <p className="truncate text-xs text-ink-muted">Isolated demo</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Drawer>
+
         <div className="min-w-0 flex-1">
           <header className="hf-glass sticky top-0 z-30 border-b">
-            <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6 lg:min-h-14 lg:px-8">
+            <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6 md:min-h-14 lg:px-8">
               <NavLink
                 to="/dashboard"
-                className="flex items-center gap-2.5 rounded-xl lg:hidden"
+                className="flex items-center gap-2.5 rounded-xl md:hidden"
                 aria-label="HireFlux home"
               >
                 <span
@@ -352,7 +437,7 @@ export function AppLayout() {
                 <span className="font-display font-bold tracking-tight text-ink">HireFlux</span>
               </NavLink>
 
-              <div className="hidden min-w-0 items-center gap-2 lg:flex">
+              <div className="hidden min-w-0 items-center gap-2 md:flex">
                 <Sparkles aria-hidden="true" className="size-4 text-accent" />
                 <p className="truncate text-sm font-semibold text-ink">{currentRouteTitle}</p>
               </div>
@@ -404,7 +489,7 @@ export function AppLayout() {
             ref={mainRef}
             id="main-content"
             tabIndex={-1}
-            className="mx-auto w-full max-w-[100rem] px-4 py-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 lg:px-8 lg:py-10 lg:pb-10 xl:px-10"
+            className="mx-auto w-full max-w-[100rem] px-4 py-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 sm:pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-10 lg:px-8 lg:py-10 xl:px-10"
           >
             {status === "replacing" ? (
               <LoadingState label="Preparing a fresh demo workspace..." />
@@ -415,7 +500,7 @@ export function AppLayout() {
         </div>
 
         <nav
-          className="hf-glass fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 lg:hidden"
+          className="hf-glass fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
           aria-label="Mobile navigation"
         >
           {primaryNavigation.slice(0, 2).map(({ to, label, shortLabel, icon: Icon }) => (

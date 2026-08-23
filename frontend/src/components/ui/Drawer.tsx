@@ -18,14 +18,25 @@ interface DrawerProps {
   children: ReactNode;
   footer?: ReactNode;
   initialFocusRef?: RefObject<HTMLElement | null>;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   ariaLabel?: string;
+  id?: string;
+  placement?: "left" | "right";
+  sideBreakpoint?: "md" | "lg";
 }
 
 const sizeClasses = {
   sm: "lg:max-w-sm",
   md: "lg:max-w-md",
   lg: "lg:max-w-xl",
+  xl: "lg:max-w-2xl",
+};
+
+const mediumSizeClasses = {
+  sm: "md:max-w-sm",
+  md: "md:max-w-md",
+  lg: "md:max-w-xl",
+  xl: "md:max-w-2xl",
 };
 
 export function Drawer({
@@ -38,6 +49,9 @@ export function Drawer({
   initialFocusRef,
   size = "md",
   ariaLabel,
+  id,
+  placement = "right",
+  sideBreakpoint = "lg",
 }: DrawerProps) {
   const titleId = useId();
   const descriptionId = useId();
@@ -62,8 +76,29 @@ export function Drawer({
 
   if (!open) return null;
 
+  const isMediumSideDrawer = sideBreakpoint === "md";
+  const sideClasses = isMediumSideDrawer
+    ? {
+        container: placement === "left" ? "md:justify-start" : "md:justify-end",
+        panel: "md:h-full md:max-h-none md:rounded-none",
+        corner: placement === "left" ? "md:rounded-r-3xl" : "md:rounded-l-3xl",
+        size: mediumSizeClasses[size],
+        handle: "md:hidden",
+      }
+    : {
+        container: placement === "left" ? "lg:justify-start" : "lg:justify-end",
+        panel: "lg:h-full lg:max-h-none lg:rounded-none",
+        corner: placement === "left" ? "lg:rounded-r-3xl" : "lg:rounded-l-3xl",
+        size: sizeClasses[size],
+        handle: "lg:hidden",
+      };
+
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-end lg:items-stretch">
+    <div
+      className={`fixed inset-0 z-50 flex items-end justify-end ${
+        isMediumSideDrawer ? "md:items-stretch" : "lg:items-stretch"
+      } ${sideClasses.container}`}
+    >
       <div
         className="absolute inset-0 cursor-default bg-slate-950/65 backdrop-blur-sm"
         aria-hidden="true"
@@ -71,15 +106,16 @@ export function Drawer({
       />
       <section
         ref={panelRef}
+        id={id}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
         aria-labelledby={ariaLabel ? undefined : titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className={`relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-line bg-surface-raised shadow-float lg:h-full lg:max-h-none lg:rounded-none lg:rounded-l-3xl ${sizeClasses[size]}`}
+        className={`relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-line bg-surface-raised shadow-float ${sideClasses.panel} ${sideClasses.corner} ${sideClasses.size}`}
       >
-        <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-line-strong lg:hidden" />
+        <div className={`mx-auto mt-2 h-1 w-10 rounded-full bg-line-strong ${sideClasses.handle}`} />
         <div className="flex items-start gap-4 border-b border-line px-5 py-5 sm:px-6">
           <div className="min-w-0 flex-1">
             <h2 id={titleId} className="font-display text-xl font-bold text-ink">

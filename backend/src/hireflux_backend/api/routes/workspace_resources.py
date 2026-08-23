@@ -14,6 +14,7 @@ from hireflux_backend.api.resource_schemas import (
     InterviewResponse,
     InterviewStatusRequest,
     InterviewUpdateRequest,
+    InterviewWorkspaceUpdateRequest,
     NoteCreateRequest,
     NoteListResponse,
     NoteResponse,
@@ -24,6 +25,7 @@ from hireflux_backend.application.resource_services import (
     CreateNoteCommand,
     TransitionInterviewCommand,
     UpdateInterviewCommand,
+    UpdateInterviewWorkspaceCommand,
     UpdateNoteCommand,
 )
 
@@ -191,6 +193,33 @@ def transition_interview(
         TransitionInterviewCommand(
             status=request.status,
             expected_version=request.expected_version,
+        ),
+    )
+    return InterviewResponse.from_domain(interview)
+
+
+@applications_router.patch("/interviews/{interview_id}/workspace", response_model=InterviewResponse)
+def update_interview_workspace(
+    application_id: UUID,
+    interview_id: UUID,
+    request: InterviewWorkspaceUpdateRequest,
+    identity: IdentityDependency,
+    service: WorkspaceResourceServiceDependency,
+) -> InterviewResponse:
+    interview = service.update_interview_workspace(
+        identity,
+        str(application_id),
+        str(interview_id),
+        UpdateInterviewWorkspaceCommand(
+            expected_version=request.expected_version,
+            completed_checklist_items=tuple(request.completed_checklist_items),
+            preparation_notes=request.preparation_notes,
+            candidate_questions=tuple(request.candidate_questions),
+            debrief_went_well=request.debrief_went_well,
+            debrief_improve=request.debrief_improve,
+            debrief_signals=request.debrief_signals,
+            debrief_next_step=request.debrief_next_step,
+            debrief_complete=request.debrief_complete,
         ),
     )
     return InterviewResponse.from_domain(interview)

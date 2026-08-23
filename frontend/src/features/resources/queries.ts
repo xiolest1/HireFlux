@@ -9,13 +9,14 @@ import {
   listUpcomingInterviews,
   transitionInterview,
   updateInterview,
+  updateInterviewWorkspace,
   updateNote,
   updateSettings,
   exportWorkspace,
   type InterviewFields,
   type UpdateSettingsRequest,
 } from "../../api/resources";
-import type { InterviewStatus } from "../../api/schemas";
+import type { InterviewStatus, InterviewWorkspace } from "../../api/schemas";
 import { applicationKeys } from "../applications/queries";
 
 export const resourceKeys = {
@@ -153,6 +154,31 @@ export function useTransitionInterview(applicationId: string) {
   return useMutation({
     mutationFn: ({ interviewId, version, status }: { interviewId: string; version: number; status: Extract<InterviewStatus, "COMPLETED" | "CANCELED"> }) =>
       transitionInterview(applicationId, interviewId, version, status),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateInterviewWorkspace(applicationId: string) {
+  const invalidate = useInterviewInvalidation(applicationId);
+  return useMutation({
+    mutationFn: ({
+      interviewId,
+      version,
+      workspace,
+      debriefComplete,
+    }: {
+      interviewId: string;
+      version: number;
+      workspace: InterviewWorkspace;
+      debriefComplete: boolean;
+    }) =>
+      updateInterviewWorkspace(
+        applicationId,
+        interviewId,
+        version,
+        workspace,
+        debriefComplete,
+      ),
     onSuccess: invalidate,
   });
 }

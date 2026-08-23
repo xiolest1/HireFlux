@@ -136,6 +136,18 @@ def interview_to_item(interview: Interview) -> dict[str, Any]:
         "location": interview.location,
         "meeting_url": interview.meeting_url,
         "details": interview.details,
+        "preparation_notes": interview.preparation_notes,
+        "completed_checklist_items": list(interview.completed_checklist_items),
+        "candidate_questions": list(interview.candidate_questions),
+        "debrief_went_well": interview.debrief_went_well,
+        "debrief_improve": interview.debrief_improve,
+        "debrief_signals": interview.debrief_signals,
+        "debrief_next_step": interview.debrief_next_step,
+        "debrief_completed_at": (
+            format_timestamp(interview.debrief_completed_at)
+            if interview.debrief_completed_at is not None
+            else None
+        ),
         "created_at": format_timestamp(interview.created_at),
         "updated_at": format_timestamp(interview.updated_at),
         "version": interview.version,
@@ -161,6 +173,20 @@ def interview_from_item(item: dict[str, Any]) -> Interview:
         location=_optional_string(item, "location"),
         meeting_url=_optional_string(item, "meeting_url"),
         details=_optional_string(item, "details"),
+        preparation_notes=_optional_string(item, "preparation_notes"),
+        completed_checklist_items=tuple(
+            str(value) for value in item.get("completed_checklist_items", [])
+        ),
+        candidate_questions=tuple(str(value) for value in item.get("candidate_questions", [])),
+        debrief_went_well=_optional_string(item, "debrief_went_well"),
+        debrief_improve=_optional_string(item, "debrief_improve"),
+        debrief_signals=_optional_string(item, "debrief_signals"),
+        debrief_next_step=_optional_string(item, "debrief_next_step"),
+        debrief_completed_at=(
+            parse_timestamp(str(item["debrief_completed_at"]))
+            if item.get("debrief_completed_at") is not None
+            else None
+        ),
         created_at=parse_timestamp(str(item["created_at"])),
         updated_at=parse_timestamp(str(item["updated_at"])),
         version=int(item["version"]),

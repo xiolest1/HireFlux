@@ -138,6 +138,24 @@ export const noteListResponseSchema = z.object({
   next_cursor: z.string().min(1).nullable(),
 });
 
+const interviewChecklistItemSchema = z.object({
+  item_id: z.string().min(1),
+  label: z.string().min(1),
+  description: z.string().min(1),
+});
+
+const interviewGuidanceSchema = z.object({
+  checklist_items: z.array(interviewChecklistItemSchema),
+  focus_prompts: z.array(z.string().min(1)),
+  suggested_questions: z.array(z.string().min(1)),
+  readiness: z.object({
+    completed_steps: z.number().int().nonnegative(),
+    total_steps: z.number().int().positive(),
+    ready_for_interview: z.boolean(),
+    missing_actions: z.array(z.string().min(1)),
+  }),
+});
+
 export const interviewSchema = z.object({
   interview_id: z.string().uuid(),
   application_id: z.string().uuid(),
@@ -150,6 +168,15 @@ export const interviewSchema = z.object({
   location: z.string().nullable(),
   meeting_url: httpUrlSchema.nullable(),
   details: z.string().nullable(),
+  preparation_notes: z.string().nullable(),
+  completed_checklist_items: z.array(z.string().min(1)),
+  candidate_questions: z.array(z.string().min(1)),
+  debrief_went_well: z.string().nullable(),
+  debrief_improve: z.string().nullable(),
+  debrief_signals: z.string().nullable(),
+  debrief_next_step: z.string().nullable(),
+  debrief_completed_at: timestampSchema.nullable(),
+  guidance: interviewGuidanceSchema,
   created_at: timestampSchema,
   updated_at: timestampSchema,
   version: z.number().int().positive(),
@@ -207,5 +234,15 @@ export type Activity = z.infer<typeof activitySchema>;
 export type DemoSession = z.infer<typeof demoSessionSchema>;
 export type Note = z.infer<typeof noteSchema>;
 export type Interview = z.infer<typeof interviewSchema>;
+export type InterviewWorkspace = Pick<
+  Interview,
+  | "completed_checklist_items"
+  | "preparation_notes"
+  | "candidate_questions"
+  | "debrief_went_well"
+  | "debrief_improve"
+  | "debrief_signals"
+  | "debrief_next_step"
+>;
 export type Settings = z.infer<typeof settingsSchema>;
 export type WorkspaceExport = z.infer<typeof workspaceExportSchema>;

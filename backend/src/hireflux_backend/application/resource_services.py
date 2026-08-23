@@ -8,6 +8,7 @@ from hireflux_backend.application.errors import ConflictError, NotFoundError, Va
 from hireflux_backend.application.ports import ApplicationRepository
 from hireflux_backend.application.resource_ports import ResourcePage, WorkspaceResourceRepository
 from hireflux_backend.domain.enums import ActivityType
+from hireflux_backend.domain.interview_guidance import checklist_ids_for, guidance_for
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity
 from hireflux_backend.domain.resources import (
     INTERVIEW_STATUS_TRANSITIONS,
@@ -67,6 +68,19 @@ class UpdateInterviewCommand:
 class TransitionInterviewCommand:
     status: InterviewStatus
     expected_version: int
+
+
+@dataclass(frozen=True, slots=True)
+class UpdateInterviewWorkspaceCommand:
+    expected_version: int
+    completed_checklist_items: tuple[str, ...]
+    preparation_notes: str | None
+    candidate_questions: tuple[str, ...]
+    debrief_went_well: str | None
+    debrief_improve: str | None
+    debrief_signals: str | None
+    debrief_next_step: str | None
+    debrief_complete: bool = False
 
 
 class WorkspaceResourceService:
@@ -301,6 +315,14 @@ class WorkspaceResourceService:
             location=command.location,
             meeting_url=command.meeting_url,
             details=command.details,
+            preparation_notes=None,
+            completed_checklist_items=(),
+            candidate_questions=(),
+            debrief_went_well=None,
+            debrief_improve=None,
+            debrief_signals=None,
+            debrief_next_step=None,
+            debrief_completed_at=None,
             created_at=now,
             updated_at=now,
             version=1,
@@ -399,6 +421,116 @@ class WorkspaceResourceService:
             ActivityType.INTERVIEW_UPDATED,
             "Interview updated.",
             {"interview_id": interview_id},
+        )
+        self._resources.replace_interview(
+            updated,
+            expected_version=command.expected_version,
+            activity=activity,
+        )
+        return updated
+
+    def update_interview_workspace(
+        self,
+        identity: CurrentIdentity,
+        application_id: str,
+        interview_id: str,
+        command: UpdateInterviewWorkspaceCommand,
+    ) -> Interview:
+        self._require_application(identity, application_id)
+        current = self._resources.get_interview(identity.user_id, application_id, interview_id)
+        if current is None:
+            raise NotFoundError("Interview not found.")
+        self._require_version(current.version, command.expected_version, "interview")
+        if current.status is InterviewStatus.CANCELED:
+            raise ConflictError("Canceled interviews cannot be prepared or debriefed.")
+
+        completed_items = tuple(dict.fromkeys(command.completed_checklist_items))
+        allowed_items = checklist_ids_for(current.interview_type)
+        if not set(completed_items).issubset(allowed_items):
+            raise ValidationError("One or more checklist items are invalid for this interview type.")
+
+        preparation_notes = _optional_bounded_text(
+            command.preparation_notes, field_name="preparation_notes", max_length=5_000
+        )
+        candidate_questions = _normalize_text_list(
+            command.candidate_questions,
+            field_name="candidate_questions",
+            max_items=8,
+            max_length=300,
+        )
+        if "prepare_examples" in completed_items and preparation_notes is None:
+            raise ValidationError(
+                "Preparation notes are required before the evidence-story step can be completed."
+            )
+        if "prepare_questions" in completed_items and len(candidate_questions) < 2:
+            raise ValidationError(
+                "At least two candidate questions are required before that step can be completed."
+            )
+
+        debrief_went_well = _optional_bounded_text(
+            command.debrief_went_well, field_name="debrief_went_well", max_length=2_000
+        )
+        debrief_improve = _optional_bounded_text(
+            command.debrief_improve, field_name="debrief_improve", max_length=2_000
+        )
+        debrief_signals = _optional_bounded_text(
+            command.debrief_signals, field_name="debrief_signals", max_length=2_000
+        )
+        debrief_next_step = _optional_bounded_text(
+            command.debrief_next_step, field_name="debrief_next_step", max_length=500
+        )
+        has_debrief = any(
+            value is not None
+            for value in (
+                debrief_went_well,
+                debrief_improve,
+                debrief_signals,
+                debrief_next_step,
+            )
+        )
+        if (has_debrief or command.debrief_complete) and current.status is not InterviewStatus.COMPLETED:
+            raise ConflictError("An interview must be completed before its debrief can be recorded.")
+        if command.debrief_complete and (debrief_went_well is None or debrief_next_step is None):
+            raise ValidationError(
+                "A completed debrief requires what went well and a concrete next step."
+            )
+
+        debrief_completed_at = current.debrief_completed_at
+        if command.debrief_complete and debrief_completed_at is None:
+            debrief_completed_at = self._aware_utc_now()
+        updated = replace(
+            current,
+            completed_checklist_items=completed_items,
+            preparation_notes=preparation_notes,
+            candidate_questions=candidate_questions,
+            debrief_went_well=debrief_went_well,
+            debrief_improve=debrief_improve,
+            debrief_signals=debrief_signals,
+            debrief_next_step=debrief_next_step,
+            debrief_completed_at=debrief_completed_at,
+        )
+        if updated == current:
+            return current
+        updated = replace(
+            updated,
+            updated_at=self._aware_utc_now(),
+            version=current.version + 1,
+        )
+        guidance = guidance_for(updated)
+        activity = self._activity(
+            identity,
+            application_id,
+            ActivityType.INTERVIEW_WORKSPACE_UPDATED,
+            (
+                "Interview debrief completed."
+                if command.debrief_complete and current.debrief_completed_at is None
+                else "Interview preparation updated."
+            ),
+            {
+                "interview_id": interview_id,
+                "completed_steps": str(guidance.completed_steps),
+                "total_steps": str(guidance.total_steps),
+            },
         )
         self._resources.replace_interview(
             updated,
@@ -516,6 +648,37 @@ def _require_content(value: str) -> str:
 def _validate_duration(value: int) -> None:
     if not 15 <= value <= 480:
         raise ValidationError("duration_minutes must be between 15 and 480.")
+
+
+def _optional_bounded_text(value: str | None, *, field_name: str, max_length: int) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    if len(normalized) > max_length:
+        raise ValidationError(f"{field_name} cannot exceed {max_length} characters.")
+    return normalized
+
+
+def _normalize_text_list(
+    values: tuple[str, ...], *, field_name: str, max_items: int, max_length: int
+) -> tuple[str, ...]:
+    if len(values) > max_items:
+        raise ValidationError(f"{field_name} cannot contain more than {max_items} items.")
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        item = value.strip()
+        if not item:
+            continue
+        if len(item) > max_length:
+            raise ValidationError(f"Each {field_name} item cannot exceed {max_length} characters.")
+        fingerprint = item.casefold()
+        if fingerprint not in seen:
+            normalized.append(item)
+            seen.add(fingerprint)
+    return tuple(normalized)
 
 
 def _optional_string_change(

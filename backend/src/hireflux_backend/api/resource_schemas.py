@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, HttpUrl
 
 from hireflux_backend.api.schemas import RequestModel
+from hireflux_backend.domain.interview_guidance import InterviewGuidance, guidance_for
 from hireflux_backend.domain.resources import (
     DashboardRange,
     DefaultApplicationView,
@@ -113,6 +114,63 @@ class InterviewStatusRequest(RequestModel):
     expected_version: int = Field(ge=1)
 
 
+InterviewQuestion = Annotated[str, Field(min_length=1, max_length=300)]
+ChecklistItemId = Annotated[str, Field(min_length=1, max_length=80)]
+
+
+class InterviewWorkspaceUpdateRequest(RequestModel):
+    expected_version: int = Field(ge=1)
+    completed_checklist_items: list[ChecklistItemId] = Field(max_length=5)
+    preparation_notes: str | None = Field(min_length=1, max_length=5_000)
+    candidate_questions: list[InterviewQuestion] = Field(max_length=8)
+    debrief_went_well: str | None = Field(min_length=1, max_length=2_000)
+    debrief_improve: str | None = Field(min_length=1, max_length=2_000)
+    debrief_signals: str | None = Field(min_length=1, max_length=2_000)
+    debrief_next_step: str | None = Field(min_length=1, max_length=500)
+    debrief_complete: bool
+
+
+class InterviewChecklistItemResponse(BaseModel):
+    item_id: str
+    label: str
+    description: str
+
+
+class InterviewReadinessResponse(BaseModel):
+    completed_steps: int
+    total_steps: int
+    ready_for_interview: bool
+    missing_actions: list[str]
+
+
+class InterviewGuidanceResponse(BaseModel):
+    checklist_items: list[InterviewChecklistItemResponse]
+    focus_prompts: list[str]
+    suggested_questions: list[str]
+    readiness: InterviewReadinessResponse
+
+    @classmethod
+    def from_domain(cls, guidance: InterviewGuidance) -> "InterviewGuidanceResponse":
+        return cls(
+            checklist_items=[
+                InterviewChecklistItemResponse(
+                    item_id=item.item_id,
+                    label=item.label,
+                    description=item.description,
+                )
+                for item in guidance.checklist_items
+            ],
+            focus_prompts=list(guidance.focus_prompts),
+            suggested_questions=list(guidance.suggested_questions),
+            readiness=InterviewReadinessResponse(
+                completed_steps=guidance.completed_steps,
+                total_steps=guidance.total_steps,
+                ready_for_interview=guidance.ready_for_interview,
+                missing_actions=list(guidance.missing_actions),
+            ),
+        )
+
+
 class InterviewResponse(BaseModel):
     interview_id: str
     application_id: str
@@ -125,6 +183,15 @@ class InterviewResponse(BaseModel):
     location: str | None
     meeting_url: str | None
     details: str | None
+    preparation_notes: str | None
+    completed_checklist_items: list[str]
+    candidate_questions: list[str]
+    debrief_went_well: str | None
+    debrief_improve: str | None
+    debrief_signals: str | None
+    debrief_next_step: str | None
+    debrief_completed_at: datetime | None
+    guidance: InterviewGuidanceResponse
     created_at: datetime
     updated_at: datetime
     version: int
@@ -144,6 +211,15 @@ class InterviewResponse(BaseModel):
             location=interview.location,
             meeting_url=interview.meeting_url,
             details=interview.details,
+            preparation_notes=interview.preparation_notes,
+            completed_checklist_items=list(interview.completed_checklist_items),
+            candidate_questions=list(interview.candidate_questions),
+            debrief_went_well=interview.debrief_went_well,
+            debrief_improve=interview.debrief_improve,
+            debrief_signals=interview.debrief_signals,
+            debrief_next_step=interview.debrief_next_step,
+            debrief_completed_at=interview.debrief_completed_at,
+            guidance=InterviewGuidanceResponse.from_domain(guidance_for(interview)),
             created_at=interview.created_at,
             updated_at=interview.updated_at,
             version=interview.version,

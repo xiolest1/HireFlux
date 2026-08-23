@@ -12,6 +12,7 @@ import {
   type Interview,
   type InterviewStatus,
   type InterviewType,
+  type InterviewWorkspace,
   type Note,
   type Settings,
 } from "./schemas";
@@ -149,5 +150,26 @@ export function transitionInterview(
     `/api/v1/applications/${encodeURIComponent(applicationId)}/interviews/${encodeURIComponent(interviewId)}/status`,
     interviewSchema,
     { method: "POST", json: { expected_version: expectedVersion, status } },
+  );
+}
+
+export function updateInterviewWorkspace(
+  applicationId: string,
+  interviewId: string,
+  expectedVersion: number,
+  workspace: InterviewWorkspace,
+  debriefComplete: boolean,
+): Promise<Interview> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/interviews/${encodeURIComponent(interviewId)}/workspace`,
+    interviewSchema,
+    {
+      method: "PATCH",
+      json: {
+        expected_version: expectedVersion,
+        ...workspace,
+        debrief_complete: debriefComplete,
+      },
+    },
   );
 }

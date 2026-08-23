@@ -34,4 +34,26 @@ describe("AppLayout", () => {
     await waitFor(() => expect(sheet).not.toBeInTheDocument());
     expect(trigger).toHaveFocus();
   });
+
+  it("opens the labeled tablet navigation drawer and restores focus", async () => {
+    const { user } = renderApp("/dashboard");
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+
+    const trigger = screen.getByRole("button", { name: "Open navigation" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(trigger);
+    const drawer = screen.getByRole("dialog", { name: "Workspace navigation" });
+    expect(drawer).toBeVisible();
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(within(drawer).getByRole("link", { name: "Analytics" })).toHaveAttribute(
+      "href",
+      "/analytics",
+    );
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(drawer).not.toBeInTheDocument());
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveFocus();
+  });
 });

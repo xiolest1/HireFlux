@@ -80,6 +80,68 @@ for (const route of routes) {
   });
 }
 
+test("keeps navigation present and consistent at breakpoint edges", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280", "Run the breakpoint contract once.");
+  await page.addInitScript(() =>
+    window.localStorage.setItem("hireflux-sidebar-collapsed", "false"),
+  );
+
+  for (const viewport of [
+    { width: 320, height: 720 },
+    { width: 390, height: 844 },
+    { width: 767, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1023, height: 1024 },
+    { width: 1024, height: 900 },
+    { width: 1280, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/dashboard");
+    await expect(page.getByRole("heading", { name: "Welcome back", level: 1 })).toBeVisible();
+    await expectNoHorizontalPageOverflow(page);
+
+    const sidebar = page.getByRole("complementary", { name: "Workspace navigation" });
+    const mobileNavigation = page.getByRole("navigation", { name: "Mobile navigation" });
+
+    if (viewport.width < 768) {
+      await expect(sidebar).toBeHidden();
+      await expect(mobileNavigation).toBeVisible();
+      continue;
+    }
+
+    await expect(sidebar).toBeVisible();
+    await expect(mobileNavigation).toBeHidden();
+
+    if (viewport.width < 1024) {
+      await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
+      await expect(
+        sidebar.locator('nav[aria-label="Primary navigation"]'),
+      ).toBeVisible();
+      const sidebarWidth = await sidebar.evaluate((element) =>
+        Math.round(element.getBoundingClientRect().width),
+      );
+      expect(sidebarWidth).toBe(72);
+
+      const trigger = page.getByRole("button", { name: "Open navigation" });
+      await trigger.click();
+      const drawer = page.getByRole("dialog", { name: "Workspace navigation" });
+      await expect(drawer).toBeVisible();
+      await expect(drawer.getByRole("link", { name: "Analytics" })).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(drawer).toBeHidden();
+      await expect(trigger).toBeFocused();
+      continue;
+    }
+
+    await expect(page.getByRole("button", { name: "Open navigation" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Collapse sidebar" })).toBeVisible();
+    const expandedWidth = await sidebar.evaluate((element) =>
+      Math.round(element.getBoundingClientRect().width),
+    );
+    expect(expandedWidth).toBe(240);
+  }
+});
+
 test("tabs, staged filters, and drawer focus work with the keyboard", async ({ page }) => {
   await page.goto("/applications");
   const filtersButton = page.getByRole("button", { name: /^Filters/ });

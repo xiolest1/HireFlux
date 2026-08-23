@@ -98,6 +98,14 @@ class Interview:
     location: str | None
     meeting_url: str | None
     details: str | None
+    preparation_notes: str | None
+    completed_checklist_items: tuple[str, ...]
+    candidate_questions: tuple[str, ...]
+    debrief_went_well: str | None
+    debrief_improve: str | None
+    debrief_signals: str | None
+    debrief_next_step: str | None
+    debrief_completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
     version: int
