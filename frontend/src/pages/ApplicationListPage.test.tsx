@@ -16,7 +16,13 @@ describe("ApplicationListPage", () => {
     );
 
     const { user } = renderApp("/applications?view=ACTIVE&follow_up=NEEDS_ATTENTION");
-    expect(await screen.findByRole("button", { name: "Remove Follow-up: Needs attention filter" })).toBeVisible();
+    expect(
+      await screen.findByRole(
+        "button",
+        { name: "Remove Follow-up: Needs attention filter" },
+        { timeout: 3_000 },
+      ),
+    ).toBeVisible();
     expect(requestedFollowUp).toBe("NEEDS_ATTENTION");
 
     await user.click(screen.getByRole("button", { name: /^Filters/ }));

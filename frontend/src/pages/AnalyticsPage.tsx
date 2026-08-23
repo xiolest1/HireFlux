@@ -18,7 +18,7 @@ import { ErrorPanel } from "../components/ui/Feedback";
 import { PanelSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { Tabs } from "../components/ui/Tabs";
 import { formatDateOnly, formatSource, formatStageAge, formatStatus, formatWorkMode } from "../features/applications/format";
-import { updateRecruiterGuide, useAnalytics } from "../features/workspace/queries";
+import { updateSearchTour, useAnalytics } from "../features/workspace/queries";
 
 type AnalyticsSection = "overview" | "pipeline" | "sources";
 type SearchHealthInsight = Analytics["insights"][number];
@@ -127,7 +127,7 @@ export function AnalyticsPage() {
   const analyticsQuery = useAnalytics({ range, status, source, workMode });
 
   useEffect(() => {
-    updateRecruiterGuide("analytics");
+    updateSearchTour("analytics");
   }, []);
 
   function updateParam(name: string, value?: string) {

@@ -8,7 +8,7 @@ Every application belongs to exactly one user. Every note, interview, attachment
 
 The local demo bounds resource growth per application: 100 notes, 25 interviews, and 500 activity entries by default. Notes, interviews, and activity list endpoints return bounded pages with signed cursors; quota counters are server-owned and updated atomically with the corresponding write.
 
-`STANDARD_USER` and `ADMIN` are the only roles. Clients cannot mutate a role. In AWS, a verified Cognito group/custom claim is authoritative and the DynamoDB profile value is only a projection.
+`STANDARD_USER` and `ADMIN` are the only server-side roles. Clients cannot mutate a role. The current candidate demo exposes only the standard owner-scoped workspace and has no role selector; `ADMIN` remains reserved for a future separately guarded service. In AWS, a verified Cognito group/custom claim is authoritative and the DynamoDB profile value is only a projection.
 
 ## User
 

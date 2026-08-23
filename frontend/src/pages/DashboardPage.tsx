@@ -23,13 +23,13 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 import { formatDateOnly, formatStatus, formatTimestamp } from "../features/applications/format";
 import { useSettings } from "../features/resources/queries";
 import {
-  readRecruiterGuide,
-  RECRUITER_GUIDE_EVENT,
-  updateRecruiterGuide,
+  readSearchTour,
+  SEARCH_TOUR_EVENT,
+  updateSearchTour,
   useCompleteFollowUp,
   useDashboard,
   useRescheduleFollowUp,
-  type RecruiterGuideState,
+  type SearchTourState,
 } from "../features/workspace/queries";
 
 function percent(value: number) {
@@ -144,7 +144,7 @@ export function DashboardPage() {
   const { showToast } = useToast();
   const [rescheduling, setRescheduling] = useState<string | null>(null);
   const [followUpDate, setFollowUpDate] = useState("");
-  const [guide, setGuide] = useState<RecruiterGuideState>(readRecruiterGuide);
+  const [tour, setTour] = useState<SearchTourState>(readSearchTour);
   const [notice, setNotice] = useState<string | null>(() => {
     const state = location.state;
     return state && typeof state === "object" && "notice" in state && typeof state.notice === "string"
@@ -175,9 +175,9 @@ export function DashboardPage() {
   }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
-    const syncGuide = () => setGuide(readRecruiterGuide());
-    window.addEventListener(RECRUITER_GUIDE_EVENT, syncGuide);
-    return () => window.removeEventListener(RECRUITER_GUIDE_EVENT, syncGuide);
+    const syncTour = () => setTour(readSearchTour());
+    window.addEventListener(SEARCH_TOUR_EVENT, syncTour);
+    return () => window.removeEventListener(SEARCH_TOUR_EVENT, syncTour);
   }, []);
 
   if (dashboardQuery.isPending) {
@@ -236,14 +236,14 @@ export function DashboardPage() {
     }
   }
 
-  function dismissGuide() {
-    setGuide(updateRecruiterGuide("dismissed"));
+  function dismissTour() {
+    setTour(updateSearchTour("dismissed"));
   }
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <header className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+        <div className="min-w-0">
           <p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">Workspace home</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Welcome back</h1>
           <p className="mt-2 max-w-2xl text-base leading-7 text-slate-600">
@@ -274,7 +274,7 @@ export function DashboardPage() {
         <ErrorPanel compact title="Follow-up could not be updated" error={completeMutation.error ?? rescheduleMutation.error} />
       ) : null}
 
-      {!guide.dismissed ? <RecruiterGuide guide={guide} onDismiss={dismissGuide} /> : null}
+      {!tour.dismissed ? <SearchTour tour={tour} onDismiss={dismissTour} /> : null}
 
       <section aria-labelledby="search-overview-title">
         <div className="flex items-end justify-between gap-4">
@@ -470,26 +470,26 @@ function DashboardSkeleton() {
   );
 }
 
-function RecruiterGuide({ guide, onDismiss }: { guide: RecruiterGuideState; onDismiss: () => void }) {
-  const steps: Array<[keyof Pick<RecruiterGuideState, "status" | "engagement" | "analytics">, string, string, string]> = [
+function SearchTour({ tour, onDismiss }: { tour: SearchTourState; onDismiss: () => void }) {
+  const steps: Array<[keyof Pick<SearchTourState, "status" | "engagement" | "analytics">, string, string, string]> = [
     ["status", "Move an application forward", "Try the status control on an application.", "/applications"],
     ["engagement", "Capture the next conversation", "Add a note or schedule an interview.", "/applications"],
     ["analytics", "Explore search insights", "See the story behind the sample workspace.", "/analytics"],
   ];
-  const completed = steps.filter(([key]) => guide[key]).length;
+  const completed = steps.filter(([key]) => tour[key]).length;
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-accent-soft via-surface-raised to-violet-soft p-5 shadow-panel sm:p-6" aria-labelledby="recruiter-guide-title">
+    <section className="relative overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-accent-soft via-surface-raised to-violet-soft p-5 shadow-panel sm:p-6" aria-labelledby="search-tour-title">
       <Sparkles aria-hidden="true" className="absolute -right-6 -top-6 size-32 text-accent opacity-20" />
       <div className="relative flex items-start justify-between gap-4">
-        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">Recruiter tour · {completed}/3</p><h2 id="recruiter-guide-title" className="mt-2 text-xl font-bold text-slate-950">Three ways to explore HireFlux</h2><p className="mt-1 text-sm text-slate-600">A short hands-on tour of the core workflow.</p></div>
-        <button type="button" className="flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-white" onClick={onDismiss} aria-label="Dismiss recruiter tour"><X aria-hidden="true" className="size-4" /></button>
+        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">Search tour · {completed}/3</p><h2 id="search-tour-title" className="mt-2 text-xl font-bold text-slate-950">Three ways to explore HireFlux</h2><p className="mt-1 text-sm text-slate-600">A short hands-on tour of your personal job-search workflow.</p></div>
+        <button type="button" className="flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-white" onClick={onDismiss} aria-label="Dismiss search tour"><X aria-hidden="true" className="size-4" /></button>
       </div>
       <ol className="relative mt-5 grid gap-3 lg:grid-cols-3">
         {steps.map(([key, title, description, href]) => (
           <li key={key} className="rounded-2xl border border-slate-200 bg-white/90 p-4">
             <div className="flex gap-3">
-              {guide[key] ? <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><Check aria-hidden="true" className="size-4" /></span> : <Circle aria-hidden="true" className="size-7 shrink-0 text-slate-300" />}
-              <div className="min-w-0"><p className="font-bold text-slate-950">{title}</p><p className="mt-1 text-sm leading-5 text-slate-600">{description}</p>{!guide[key] ? <Link to={href} className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">Try it <ArrowRight aria-hidden="true" className="size-3.5" /></Link> : <p className="mt-3 text-sm font-semibold text-emerald-800">Completed</p>}</div>
+              {tour[key] ? <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><Check aria-hidden="true" className="size-4" /></span> : <Circle aria-hidden="true" className="size-7 shrink-0 text-slate-300" />}
+              <div className="min-w-0"><p className="font-bold text-slate-950">{title}</p><p className="mt-1 text-sm leading-5 text-slate-600">{description}</p>{!tour[key] ? <Link to={href} className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">Try it <ArrowRight aria-hidden="true" className="size-3.5" /></Link> : <p className="mt-3 text-sm font-semibold text-emerald-800">Completed</p>}</div>
             </div>
           </li>
         ))}

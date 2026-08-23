@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { renderApp } from "../test/renderApp";
@@ -132,12 +132,19 @@ describe("workspace milestone features", () => {
     expect(await screen.findByRole("button", { name: "Collapse action center" })).toBeVisible();
   });
 
-  it("persists and dismisses the recruiter guide within the demo session", async () => {
+  it("migrates, persists, and dismisses the candidate search tour", async () => {
+    window.sessionStorage.setItem(
+      "hireflux-recruiter-guide",
+      JSON.stringify({ status: true, engagement: false, analytics: false, dismissed: false }),
+    );
     const { user } = renderApp("/dashboard");
     expect(await screen.findByRole("heading", { name: "Three ways to explore HireFlux" })).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Dismiss recruiter tour" }));
+    expect(screen.getByText("Search tour · 1/3")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Dismiss search tour" }));
     expect(screen.queryByRole("heading", { name: "Three ways to explore HireFlux" })).not.toBeInTheDocument();
-    expect(window.sessionStorage.getItem("hireflux-recruiter-guide")).toContain('"dismissed":true');
+    expect(window.sessionStorage.getItem("hireflux-search-tour")).toContain('"dismissed":true');
+    expect(window.sessionStorage.getItem("hireflux-search-tour")).toContain('"status":true');
+    expect(window.sessionStorage.getItem("hireflux-recruiter-guide")).toBeNull();
   });
 
   it("binds analytics filters to the API and labels small samples", async () => {
@@ -333,7 +340,7 @@ describe("workspace milestone features", () => {
     expect(save).toBeDisabled();
     expect(screen.getByRole("heading", { name: "Profile" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Temporary by design" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "What a registered account could unlock" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "What a personal HireFlux account could unlock" })).toBeVisible();
     expect(screen.queryByRole("navigation", { name: "Settings sections" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Account preview" })).not.toBeInTheDocument();
 
@@ -374,14 +381,20 @@ describe("workspace milestone features", () => {
     revokeObjectUrl.mockRestore();
   });
 
-  it("keeps recruiter role local and blocks email notifications", async () => {
-    const { user } = renderApp("/settings");
-    expect(await screen.findByRole("heading", { name: "Role & access preview" })).toBeVisible();
-    const recruiterRole = screen.getByRole("radio", { name: "Recruiter" });
-    await user.click(recruiterRole);
-    expect(recruiterRole).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByText("Preview only · authorization unchanged")).toBeVisible();
-
+  it("shows the candidate workflow without ATS role controls and blocks email notifications", async () => {
+    renderApp("/settings");
+    const workflowHeading = await screen.findByRole("heading", { name: "Your candidate workflow" });
+    expect(workflowHeading).toBeVisible();
+    const workflow = workflowHeading.closest("section");
+    expect(workflow).not.toBeNull();
+    if (!workflow) throw new Error("Candidate workflow section was not rendered.");
+    expect(within(workflow).getByRole("link", { name: /Applications/ })).toHaveAttribute("href", "/applications");
+    expect(within(workflow).getByRole("link", { name: /Interviews & notes/ })).toHaveAttribute("href", "/interviews");
+    expect(within(workflow).getByRole("link", { name: /Analytics/ })).toHaveAttribute("href", "/analytics");
+    expect(screen.queryByRole("radiogroup", { name: "Preview role" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Recruiter")).not.toBeInTheDocument();
+    expect(screen.queryByText("Hiring manager")).not.toBeInTheDocument();
+    expect(screen.queryByText("Administrator")).not.toBeInTheDocument();
     const digest = screen.getByRole("checkbox", { name: /Weekly search digest/ });
     expect(digest).toBeDisabled();
     expect(screen.getByText(/Notification preferences are intentionally blocked/)).toBeVisible();

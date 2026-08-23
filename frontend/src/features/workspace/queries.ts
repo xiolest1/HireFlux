@@ -22,32 +22,35 @@ export const workspaceKeys = {
   analytics: (filters: AnalyticsFilters) => ["analytics", filters] as const,
 };
 
-export const RECRUITER_GUIDE_EVENT = "hireflux:recruiter-guide";
+export const SEARCH_TOUR_EVENT = "hireflux:search-tour";
 
-export type RecruiterGuideStep = "status" | "engagement" | "analytics";
+export type SearchTourStep = "status" | "engagement" | "analytics";
 
-export interface RecruiterGuideState {
+export interface SearchTourState {
   status: boolean;
   engagement: boolean;
   analytics: boolean;
   dismissed: boolean;
 }
 
-const EMPTY_GUIDE: RecruiterGuideState = {
+const EMPTY_TOUR: SearchTourState = {
   status: false,
   engagement: false,
   analytics: false,
   dismissed: false,
 };
 
-const RECRUITER_GUIDE_STORAGE_KEY = "hireflux-recruiter-guide";
+export const SEARCH_TOUR_STORAGE_KEY = "hireflux-search-tour";
+export const LEGACY_RECRUITER_GUIDE_STORAGE_KEY = "hireflux-recruiter-guide";
 
-export function readRecruiterGuide(): RecruiterGuideState {
-  if (typeof window === "undefined") return EMPTY_GUIDE;
+export function readSearchTour(): SearchTourState {
+  if (typeof window === "undefined") return EMPTY_TOUR;
   try {
-    const value = window.sessionStorage.getItem(RECRUITER_GUIDE_STORAGE_KEY);
-    if (!value) return EMPTY_GUIDE;
-    const parsed = JSON.parse(value) as Partial<RecruiterGuideState>;
+    const value =
+      window.sessionStorage.getItem(SEARCH_TOUR_STORAGE_KEY) ??
+      window.sessionStorage.getItem(LEGACY_RECRUITER_GUIDE_STORAGE_KEY);
+    if (!value) return EMPTY_TOUR;
+    const parsed = JSON.parse(value) as Partial<SearchTourState>;
     return {
       status: parsed.status === true,
       engagement: parsed.engagement === true,
@@ -55,20 +58,29 @@ export function readRecruiterGuide(): RecruiterGuideState {
       dismissed: parsed.dismissed === true,
     };
   } catch {
-    return EMPTY_GUIDE;
+    return EMPTY_TOUR;
   }
 }
 
-export function updateRecruiterGuide(
-  update: RecruiterGuideStep | "dismissed",
-) {
-  if (typeof window === "undefined") return EMPTY_GUIDE;
-  const next = { ...readRecruiterGuide(), [update]: true };
-  window.sessionStorage.setItem(RECRUITER_GUIDE_STORAGE_KEY, JSON.stringify(next));
+export function updateSearchTour(update: SearchTourStep | "dismissed") {
+  if (typeof window === "undefined") return EMPTY_TOUR;
+  const next = { ...readSearchTour(), [update]: true };
+  window.sessionStorage.setItem(SEARCH_TOUR_STORAGE_KEY, JSON.stringify(next));
+  window.sessionStorage.removeItem(LEGACY_RECRUITER_GUIDE_STORAGE_KEY);
   window.dispatchEvent(
-    new CustomEvent(RECRUITER_GUIDE_EVENT, { detail: { step: update } }),
+    new CustomEvent(SEARCH_TOUR_EVENT, { detail: { step: update } }),
   );
   return next;
+}
+
+export function clearSearchTour() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(SEARCH_TOUR_STORAGE_KEY);
+    window.sessionStorage.removeItem(LEGACY_RECRUITER_GUIDE_STORAGE_KEY);
+  } catch {
+    // Reset and exit remain available when browser storage is unavailable.
+  }
 }
 
 export function useDashboard(range: DashboardRange) {

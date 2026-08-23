@@ -27,7 +27,7 @@ import {
   formatInterviewType,
   formatTimestamp,
 } from "../applications/format";
-import { updateRecruiterGuide } from "../workspace/queries";
+import { updateSearchTour } from "../workspace/queries";
 import {
   useApplicationInterviews,
   useCreateInterview,
@@ -166,7 +166,7 @@ export function InterviewsPanel({
           title: "Interview scheduled",
           tone: "success",
         });
-        updateRecruiterGuide("engagement");
+        updateSearchTour("engagement");
       }
       closeForm();
     } catch {

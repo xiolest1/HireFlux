@@ -3,7 +3,7 @@ import type { Application, ApplicationStatus } from "../../api/schemas";
 import { Button } from "../../components/ui/Button";
 import { ErrorPanel } from "../../components/ui/Feedback";
 import { useToast } from "../../components/ui/toastContext";
-import { updateRecruiterGuide } from "../workspace/queries";
+import { updateSearchTour } from "../workspace/queries";
 import { formatStatus } from "./format";
 import { currentDateInTimeZone } from "./formSchema";
 import { useTransitionApplication } from "./queries";
@@ -74,7 +74,7 @@ export function StatusTransitionForm({
         tone: "success",
       });
       setTargetStatus("");
-      updateRecruiterGuide("status");
+      updateSearchTour("status");
     } catch {
       return;
     }

@@ -63,6 +63,8 @@ describe("demo workspace flow", () => {
     );
     const { user } = renderApp("/dashboard");
     expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    window.sessionStorage.setItem("hireflux-search-tour", '{"dismissed":true}');
+    window.sessionStorage.setItem("hireflux-recruiter-guide", '{"dismissed":true}');
 
     await user.click(screen.getByRole("button", { name: "Reset demo" }));
     expect(screen.getByRole("alertdialog", { name: "Reset this demo?" })).toBeVisible();
@@ -70,6 +72,8 @@ describe("demo workspace flow", () => {
 
     expect(await screen.findByText("Demo workspace reset.")).toBeVisible();
     expect(getDemoSession()?.access_token).toBe(issuedSession.access_token);
+    expect(window.sessionStorage.getItem("hireflux-search-tour")).toBeNull();
+    expect(window.sessionStorage.getItem("hireflux-recruiter-guide")).toBeNull();
   });
 
   it("keeps the reset dialog and restores the prior workspace only after reset fails", async () => {

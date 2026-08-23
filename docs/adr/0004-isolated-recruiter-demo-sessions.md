@@ -5,7 +5,7 @@
 
 ## Context
 
-A literal shared demo account would give every recruiter the same owner identity and therefore the same applications. Creating a Cognito account for every anonymous visit would add account lifecycle, quota, cleanup, and user-interface complexity to a demo that intentionally has no signup.
+A literal shared demo account would give every visitor the same owner identity and therefore the same applications. Creating a Cognito account for every anonymous visit would add account lifecycle, quota, cleanup, and user-interface complexity to a demo that intentionally has no signup.
 
 ## Decision
 
@@ -30,4 +30,4 @@ workspaces after a client timeout.
 
 ## Consequences
 
-Simultaneous recruiters can safely use the same one-click entry point without sharing data. The demo has no passwords, signup, recovery, or email cost. Production still requires edge throttling, constrained compute, workspace record limits, monitoring, and budget alerts because a public button can be automated.
+Simultaneous visitors can safely use the same one-click entry point without sharing data. The demo has no passwords, signup, recovery, or email cost. Production still requires edge throttling, constrained compute, workspace record limits, monitoring, and budget alerts because a public button can be automated.

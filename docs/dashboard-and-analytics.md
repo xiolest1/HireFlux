@@ -1,6 +1,6 @@
 # Dashboard and analytics contract
 
-The protected `/dashboard` route is the workspace Home. It is the default destination after starting or resetting a demo, while `/` remains the public recruiter landing page. Direct protected deep links remain intact when a valid session already exists.
+The protected `/dashboard` route is the workspace Home. It is the default destination after starting or resetting a demo, while `/` remains the public candidate-focused landing page. Direct protected deep links remain intact when a valid session already exists.
 
 ## Workspace Home
 
@@ -53,7 +53,7 @@ Interviews and historical milestones are different from date-only fields: they a
 
 ## Demo behavior
 
-Each new 24-hour workspace receives 16 synthetic applications covering all statuses, multiple sources and work modes, overdue/today/upcoming follow-ups, scheduled/completed/canceled interviews, notes, and enough historical activity to exercise the metrics. The dataset contains no real applicant or recruiter information.
+Each new 24-hour workspace receives 16 synthetic applications covering all statuses, multiple sources and work modes, overdue/today/upcoming follow-ups, scheduled/completed/canceled interviews, notes, and enough historical activity to exercise the metrics. The dataset contains no real candidate, employer, or contact information.
 
 Settings persist only for that isolated workspace: time zone, follow-up interval, default application view, dashboard range, and theme. Identity and production security controls are read-only previews; the demo has no password, MFA, external login, uploads, email delivery, or permanent account deletion.
 

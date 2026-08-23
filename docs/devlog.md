@@ -24,7 +24,7 @@ The repository contained a short vision README and eight UML/DFD PDFs. It did no
 
 Important conflicts were resolved in favor of the current architecture requirements:
 
-- The initial target assumed Cognito would own passwords and sessions; the later recruiter-demo decision replaced that requirement with temporary signed workspaces while preserving the rule that HireFlux never stores password hashes.
+- The initial target assumed Cognito would own passwords and sessions; the later public-demo decision replaced that requirement with temporary signed workspaces while preserving the rule that HireFlux never stores password hashes.
 - UUIDs and Cognito `sub` replace integer user/application identifiers.
 - The logical DFD data stores become item types in one DynamoDB table.
 - `company_name` remains on the application instead of introducing a relational Company table.
@@ -161,7 +161,7 @@ The reproducible commands remain in the repository [README](../README.md). The l
 
 ### Objective
 
-Turn the fixed-user local application into a recruiter-facing experience that still feels like a one-click shared demo while giving every visitor a private, temporary owner identity. Two recruiters entering at the same time must never see or modify one another's records.
+Turn the fixed-user local application into a candidate-focused experience that still feels like a one-click public demo while giving every visitor a private, temporary owner identity. Two visitors entering at the same time must never see or modify one another's records.
 
 ### Backend session implementation
 
@@ -187,7 +187,7 @@ Every new workspace starts with fictional applications across:
 - Offer;
 - Rejected.
 
-The seed path deliberately uses ordinary application creation and transition services instead of bypassing domain rules. The examples therefore produce the same transactionally written activity history, versions, allowed transitions, and ownership behavior as recruiter-created records.
+The seed path deliberately uses ordinary application creation and transition services instead of bypassing domain rules. The examples therefore produce the same transactionally written activity history, versions, allowed transitions, and ownership behavior as candidate-created records.
 
 Application creation now transactionally increments a workspace quota item. The configured lifetime limit defaults to 100 applications, and the same DynamoDB transaction rolls the increment back if the application/activity write fails. This bounds database growth within one temporary identity without using `Scan` or trusting a browser-side count.
 
@@ -201,7 +201,7 @@ Archived applications were also removed from the active GSI projection. They rem
 
 ### Frontend experience
 
-Replaced the root redirect with a public, responsive recruiter landing page. **Explore the Demo** requests a workspace, stores the validated token in tab-scoped session storage, clears identity-specific TanStack Query data, and redirects to `/applications`.
+Replaced the root redirect with a public, responsive candidate-focused landing page. **Explore the Demo** requests a workspace, stores the validated token in tab-scoped session storage, clears identity-specific TanStack Query data, and redirects to `/applications`.
 
 Application list, create, detail, and edit routes now require an active demo session. Opening one directly without a token returns to the landing page with an explanation. The centralized API client attaches `Authorization: Bearer ...` and clears the token/cache when the API reports a missing or expired session.
 
@@ -351,7 +351,7 @@ infrastructure milestone; no AWS resources were created during this audit.
 ### Milestone sequencing decision
 
 The local functional baseline now satisfies the prerequisite for AWS work. For
-a recruiter-accessible demo, the next milestone is a cost-bounded staging stack,
+a publicly accessible candidate demo, the next milestone is a cost-bounded staging stack,
 implemented as TypeScript CDK: Python 3.14 Lambda and Mangum, HTTP API, DynamoDB,
 Secrets Manager, CloudWatch, and an Amplify staging branch with explicit CORS,
 SPA routing, security headers, and budget controls. Staging should be deployed
@@ -391,7 +391,7 @@ Validation results:
 ### Objective and route flow
 
 Completed the local product milestone before beginning any AWS architecture or
-deployment work. The public `/` route remains a recruiter-facing landing page,
+deployment work. The public `/` route remains a candidate-focused landing page,
 while a newly created or reset 24-hour demo workspace now enters the protected
 `/dashboard` Home. Valid direct links to applications, interviews, analytics,
 and settings remain intact instead of being forced through Home.
@@ -502,7 +502,7 @@ interviews, and rebuilds status and funnel counters. A separate guarded local
 reset command supports intentional clean-room testing without making table
 creation or destructive maintenance an application-startup behavior.
 
-### Recruiter dataset, TTL, and security boundaries
+### Candidate dataset, TTL, and security boundaries
 
 Expanded each new demo from five examples to 16 deterministic fictional
 applications covering every status, varied sources and work modes,
@@ -598,7 +598,7 @@ Redesign the local demo workspace from a functional CRUD workspace into a
 polished portfolio product experience. The goal was to make HireFlux feel like
 a focused job-search command center: dark-first, easier to scan, more
 comfortable for repeated use, stronger on mobile, and clearer about what a
-recruiter should try during a short demo session.
+candidate or visitor should try during a short demo session.
 
 The redesign deliberately stayed inside the frontend boundary. Backend routes,
 payloads, authentication/session behavior, ownership rules, application status
@@ -621,7 +621,7 @@ contextual utility bar, mobile top bar, safe-area-aware bottom navigation, and a
 focused More sheet. Route changes restore scroll, announce the destination,
 focus the new page heading, and update the document title. Reset and exit retain
 their confirmation/session protections and also clear the session-only
-recruiter guide. The landing experience keeps the direct demo entry while
+search tour. The landing experience keeps the direct demo entry while
 adding a stronger product-proof narrative and an explicitly decorative,
 screen-reader-described workspace preview.
 
@@ -644,7 +644,7 @@ until requested, pre-populated, or invalid. Required fields are semantic,
 validation summaries link to invalid controls, and form actions remain visible
 in a sticky footer.
 
-Home now leads with a dismissible three-action recruiter tour, a linked metric
+Home now leads with a dismissible three-action search tour, a linked metric
 strip, and a dominant action center grouped into Overdue, Today, and Upcoming.
 Successful status, note, and interview actions alone advance session-only guide
 progress. Analytics is divided into URL-backed Overview, Pipeline, and Sources
@@ -722,7 +722,7 @@ page structure already present in the working tree. `git diff --check` passed.
 
 ### Purpose
 
-Completed a correctness and resilience pass based on recruiter-facing review.
+Completed a correctness and resilience pass based on candidate-workflow review.
 The work focused on preventing date-only values from becoming invalid
 timestamps, keeping analytics consistent across equivalent workflows, making
 bounded resources complete and affordable to read, and preserving recoverable
@@ -924,47 +924,47 @@ S3 export path before AWS staging relies on production-scale data export.
 Settings & profile is now a single page: profile editing, workspace lifecycle,
 preferences, and account controls render together without the former
 Preferences/Demo workspace/Account preview section navigation. The page keeps
-one real, useful account-control action for recruiters to try:
-`GET /api/v1/me/export` produces a validated JSON
-snapshot of the signed-in demo workspace. The export includes the owner-scoped
-profile, preferences, applications, append-only activity, notes, and interview
-records, along with counts and an explicit export version. It walks the existing
-bounded Query-based pagination paths rather than introducing a DynamoDB Scan,
-and never accepts an owner identifier from the client.
+a useful candidate-facing export action for demo visitors:
+`GET /api/v1/me/applications/export` produces a spreadsheet-friendly CSV of
+the signed-in workspace's applications. The full versioned JSON export at
+`GET /api/v1/me/export` remains reserved for future persistent accounts and is
+rejected for demo identities. Both paths are owner-scoped, use bounded
+Query-based access rather than a DynamoDB Scan, and never accept an owner
+identifier from the client.
 
-The frontend validates the export with Zod and downloads it locally as
-`hireflux-workspace-export.json`. The unified page also presents a
+The frontend downloads the server-produced CSV with its attachment filename.
+The unified page also presents a
 production-readiness checklist for identity recovery, MFA/session controls,
 notifications, retention, and portability. These remain clearly labeled
 production concepts: the demo does not pretend to provide passwords, MFA,
 email notification delivery, role switching, persistent login, or permanent
-deletion. The export is the only active account-control action in this
+deletion. Application CSV export is the active account-control action in this
 milestone. The profile name field is an explicit local simulation; email remains
 read-only because there is no profile-write or delivery service in the local
 demo.
 
-Added API coverage proving the export contains application, note, interview,
-activity, profile, and settings data and remains owner-scoped. Frontend lint,
+Added API coverage proving application CSV export remains owner-scoped and
+properly escaped, the full JSON export remains isolated for persistent
+identities, and demo identities cannot bypass the UI boundary. Frontend lint,
 typecheck, tests, and production build were rerun for the account-preview
 change. This is still local demo functionality; no AWS identity, storage, or
 notification resources were created.
 
-### Recruiter simulation controls
+### Candidate account and workflow preview
 
-The unified page includes one interactive, deliberately non-authoritative
-experience. The Role & access preview lets a recruiter
-inspect Candidate, Recruiter, Hiring manager, and Administrator lenses and
-explains the access model each would eventually represent. It never changes
-the signed-in role, authorization, or server identity. Email notification
-controls remain visibly blocked: the reminder checkboxes are disabled and
-explain that no delivery system exists in the demo.
+The unified page includes candidate-focused, deliberately non-authoritative
+account previews. A candidate workflow guide connects Applications,
+Interviews and notes, and Analytics without implying an ATS or organization
+role model. It never changes the signed-in authorization or server identity.
+Email notification controls remain visibly blocked: the reminder checkboxes
+are disabled and explain that no delivery system exists in the demo.
 
-The page distinguishes the one active account action (workspace export)
+The page distinguishes the active application CSV export
 from production concepts such as recovery, MFA, session controls, retention,
-and permanent deletion. Added frontend coverage for role selection,
+and permanent deletion. Added frontend coverage for the candidate workflow,
 the local-only profile simulation, disabled email notifications, and the
 explicit authorization/message-delivery boundary. This keeps the demo useful
-for recruiter review while preserving the server-owned security and business
+for public product review while preserving the server-owned security and business
 rules.
 
 ## Localhost development reliability - August 22, 2026
@@ -974,6 +974,28 @@ The Vite development and preview servers now bind explicitly to IPv4
 working on Windows systems where `localhost` may resolve first to IPv6 `::1`.
 The local FastAPI process remains a separate service on port 8000, with
 DynamoDB Local on port 8001.
+
+## Candidate-first product framing - August 23, 2026
+
+Removed the Settings role-and-access simulation for Candidate, Recruiter,
+Hiring manager, and Administrator because those organization personas implied
+an applicant-tracking system that HireFlux does not provide. Settings now
+describes a private personal account, labels the demo's focus as a candidate
+job search, and links Applications, Interviews and notes, and Analytics as one
+candidate workflow.
+
+The dashboard's three-step walkthrough is now the Search tour. Its internal
+event, types, and storage use candidate-neutral names while still reading the
+legacy `hireflux-recruiter-guide` session value once so an existing visitor's
+dismissed or completed state is not lost. Reset and exit clear both storage
+keys. The public landing and current architecture/product documentation now
+describe a candidate-focused demo available to any visitor.
+
+Recruiter and hiring-manager vocabulary remains only where it represents real
+candidate-side application data, such as an application source, recruiter call,
+or interview participant. Server-side role fields remain authoritative and
+reserved for future separately guarded capabilities; no role switcher, ATS
+workflow, backend authorization change, or data migration was introduced.
 
 ## Next recommended work
 

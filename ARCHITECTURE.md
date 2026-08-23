@@ -30,7 +30,7 @@ are later capabilities, not dependencies of the current demo.
 
 ```mermaid
 flowchart LR
-    User["Visitor or recruiter"] --> Landing["Public React landing page"]
+    User["Candidate or demo visitor"] --> Landing["Public React landing page"]
     Landing -->|"Start demo"| DemoAPI["POST /api/v1/demo-sessions"]
     DemoAPI --> Identity["Signed 24-hour workspace identity"]
     Identity -->|"Bearer token"| SPA["Protected React workspace"]

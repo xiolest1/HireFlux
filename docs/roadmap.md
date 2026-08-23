@@ -17,13 +17,13 @@ Acceptance criteria:
 
 ## Milestone 1.1 - isolated demo workspace (implemented)
 
-Acceptance criteria: public recruiter landing page; one-click signed 24-hour workspace; uniquely derived owner identity; fictional seeded applications and activity; protected application routes; bearer-token API calls; reset/exit and expiry behavior; query-cache clearing on identity changes; unsaved-form navigation warning; DynamoDB TTL metadata; and isolation, tamper, expiry, routing, and reset tests.
+Acceptance criteria: public candidate-focused landing page; one-click signed 24-hour workspace; uniquely derived owner identity; fictional seeded applications and activity; protected application routes; bearer-token API calls; reset/exit and expiry behavior; query-cache clearing on identity changes; unsaved-form navigation warning; DynamoDB TTL metadata; and isolation, tamper, expiry, routing, and reset tests.
 
 ## Milestone 2 - local workspace home and richer workflow (implemented)
 
 Dependencies: stable Milestone 1 keys and service boundaries.
 
-Acceptance criteria: production-style protected workspace Home at `/dashboard`; expanded nine-status workflow; deterministic 16-application recruiter dataset; owner-scoped notes and interviews; actionable follow-ups; dashboard and filterable analytics with server-owned historical milestones and explicit denominators; dashboard status/funnel counters; GSI3 scheduling; status/search/source/work-mode filters and sorting; persisted temporary-workspace settings; richer activity history; idempotent local reconciliation; and transactional projection maintenance. No scans in request paths.
+Acceptance criteria: production-style protected workspace Home at `/dashboard`; expanded nine-status workflow; deterministic 16-application candidate dataset; owner-scoped notes and interviews; actionable follow-ups; dashboard and filterable analytics with server-owned historical milestones and explicit denominators; dashboard status/funnel counters; GSI3 scheduling; status/search/source/work-mode filters and sorting; persisted temporary-workspace settings; richer activity history; idempotent local reconciliation; and transactional projection maintenance. No scans in request paths.
 
 AWS infrastructure, persistent accounts, attachments, email delivery, and real notification delivery remain outside this local milestone.
 
@@ -61,7 +61,7 @@ Acceptance criteria: GitHub Actions test/lint/build gates, AWS OIDC with scoped 
 
 Dependencies: deployed end-to-end app and measured behavior.
 
-Acceptance criteria: low budget alerts, API throttling, appropriate concurrency/throughput guards, short log retention, data lifecycle rules, safe seeded demo/reset approach, per-user and attachment limits, cleanup automation, accessibility/performance review, and recruiter-facing documentation.
+Acceptance criteria: low budget alerts, API throttling, appropriate concurrency/throughput guards, short log retention, data lifecycle rules, safe seeded demo/reset approach, per-user and attachment limits, cleanup automation, accessibility/performance review, and candidate-focused public-demo documentation.
 
 ## Deferred production evolution
 

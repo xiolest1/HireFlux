@@ -19,7 +19,7 @@ HireFlux uses three intentionally separate environments. The repository currentl
 
 ## Production
 
-- Only reviewed `main` changes deploy to the recruiter-facing origin.
+- Only reviewed `main` changes deploy to the public candidate-demo origin.
 - Production uses a separate DynamoDB table and secret values supplied by the deployment platform.
 - Lambda uses its IAM execution role; deployed configuration omits local endpoints and explicit AWS credentials.
 - API Gateway throttling, constrained Lambda concurrency, a workspace record limit, short log retention, low budget alerts, and monitoring are release gates rather than assumptions in browser code.

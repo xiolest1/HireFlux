@@ -7,7 +7,7 @@ import {
 import { useToast } from "../../components/ui/toastContext";
 import { ResourcePanelSkeleton } from "../applications/ApplicationSkeletons";
 import { formatTimestamp } from "../applications/format";
-import { updateRecruiterGuide } from "../workspace/queries";
+import { updateSearchTour } from "../workspace/queries";
 import {
   useCreateNote,
   useDeleteNote,
@@ -68,7 +68,7 @@ export function NotesPanel({
     try {
       await createMutation.mutateAsync(content.trim());
       showToast("Note added.", { title: "Notes updated", tone: "success" });
-      updateRecruiterGuide("engagement");
+      updateSearchTour("engagement");
       closeComposer();
     } catch {
       return;

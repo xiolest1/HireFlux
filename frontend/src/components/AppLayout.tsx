@@ -30,6 +30,7 @@ import {
   useSettings,
   useUpdateSettings,
 } from "../features/resources/queries";
+import { clearSearchTour } from "../features/workspace/queries";
 import { Button } from "./ui/Button";
 import { Dialog } from "./ui/Dialog";
 import { Drawer } from "./ui/Drawer";
@@ -43,7 +44,6 @@ import {
 } from "./ui/themePreference";
 
 const SIDEBAR_STORAGE_KEY = "hireflux-sidebar-collapsed";
-const RECRUITER_GUIDE_STORAGE_KEY = "hireflux-recruiter-guide";
 
 interface NavigationItem {
   to: string;
@@ -133,14 +133,6 @@ function useExpiryLabel(expiresAt: string | undefined): {
   }
   const hours = Math.ceil(minutes / 60);
   return { label: `Expires in ${hours} hr`, isExpiringSoon: hours <= 2 };
-}
-
-function clearRecruiterGuide() {
-  try {
-    window.sessionStorage.removeItem(RECRUITER_GUIDE_STORAGE_KEY);
-  } catch {
-    // The workspace can still be reset or exited when storage is unavailable.
-  }
 }
 
 export function AppLayout() {
@@ -233,7 +225,7 @@ export function AppLayout() {
   async function resetWorkspace() {
     try {
       await reset();
-      clearRecruiterGuide();
+      clearSearchTour();
       setConfirmingReset(false);
       navigate("/dashboard", {
         replace: true,
@@ -245,7 +237,7 @@ export function AppLayout() {
   }
 
   function exitWorkspace() {
-    clearRecruiterGuide();
+    clearSearchTour();
     exit();
     navigate("/", { replace: true });
   }
