@@ -66,10 +66,71 @@ describe("workspace milestone features", () => {
       screen.getByText(/Prepare for upcoming interview.*Aug 13, 2026, 6:00 PM/),
     ).toBeVisible();
 
+    const collapseActionCenter = screen.getByRole("button", { name: "Collapse action center" });
+    expect(collapseActionCenter).toHaveAttribute("aria-expanded", "true");
+    expect(collapseActionCenter).toHaveAttribute("aria-controls", "action-center-content");
+    await user.click(collapseActionCenter);
+    expect(screen.getByRole("button", { name: "Expand action center" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("2 actions · 1 overdue · 0 today · 1 upcoming")).toBeVisible();
+    expect(document.getElementById("action-center-content")).toHaveAttribute("hidden");
+    expect(screen.queryByRole("button", { name: "Complete" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Expand action center" }));
+    expect(screen.getByRole("button", { name: "Complete" })).toBeVisible();
+
     await user.click(screen.getByRole("button", { name: "Complete" }));
     expect(await screen.findByText("Follow-up completed.")).toBeVisible();
     expect(body).toEqual({ expected_version: 3 });
     expect(queryClient.getQueryState(analyticsKey)?.isInvalidated).toBe(true);
+  });
+
+  it("remembers the Action Center per workspace and preserves a reschedule draft", async () => {
+    const application = makeApplication({ follow_up_date: "2026-08-11" });
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/dashboard`, () =>
+        HttpResponse.json({
+          ...testDashboard,
+          actions: [
+            {
+              kind: "FOLLOW_UP_OVERDUE",
+              application_id: application.application_id,
+              company_name: application.company_name,
+              job_title: application.job_title,
+              due_date: "2026-08-11",
+              priority: "HIGH",
+              label: "Complete overdue follow-up",
+            },
+          ],
+        }),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/settings`, () => HttpResponse.json(testSettings)),
+    );
+
+    const firstRender = renderApp("/dashboard");
+    const reschedule = await screen.findByRole("button", { name: "Reschedule" });
+    await firstRender.user.click(reschedule);
+    const date = screen.getByLabelText("New follow-up date");
+    await firstRender.user.type(date, "2026-08-20");
+    await firstRender.user.click(screen.getByRole("button", { name: "Collapse action center" }));
+    expect(document.getElementById("action-center-content")).toHaveAttribute("hidden");
+    expect(screen.getByLabelText("New follow-up date")).toHaveValue("2026-08-20");
+    expect(window.sessionStorage.getItem("hireflux-action-center.v1")).toContain('"collapsed":true');
+    await firstRender.user.click(screen.getByRole("button", { name: "Expand action center" }));
+    expect(screen.getByLabelText("New follow-up date")).toHaveValue("2026-08-20");
+    await firstRender.user.click(screen.getByRole("button", { name: "Collapse action center" }));
+
+    firstRender.unmount();
+    const sameWorkspace = renderApp("/dashboard");
+    expect(await screen.findByRole("button", { name: "Expand action center" })).toBeVisible();
+    sameWorkspace.unmount();
+
+    renderApp("/dashboard", {
+      session: {
+        access_token: "different.demo.session.token.value.123456789",
+        token_type: "Bearer",
+        expires_at: "2099-08-11T12:00:00Z",
+      },
+    });
+    expect(await screen.findByRole("button", { name: "Collapse action center" })).toBeVisible();
   });
 
   it("persists and dismisses the recruiter guide within the demo session", async () => {

@@ -9,6 +9,7 @@ import {
 import { createQueryClient } from "../app/queryClient";
 import { appRoutes } from "../app/router";
 import { DemoSessionProvider } from "../auth/DemoSessionProvider";
+import type { DemoSession } from "../api/schemas";
 import { clearDemoSession, saveDemoSession } from "../auth/sessionStore";
 import {
   clearManualTimeZonePreference,
@@ -23,14 +24,14 @@ const testSession = {
 
 export function renderApp(
   initialEntry: InitialEntry = "/applications",
-  options: { withSession?: boolean; autoDetectTimeZone?: boolean } = {},
+  options: { withSession?: boolean; autoDetectTimeZone?: boolean; session?: DemoSession } = {},
 ) {
   if (options.autoDetectTimeZone) clearManualTimeZonePreference();
   else markManualTimeZonePreference();
   if (options.withSession === false) {
     clearDemoSession();
   } else {
-    saveDemoSession(testSession);
+    saveDemoSession(options.session ?? testSession);
   }
   const queryClient = createQueryClient();
   queryClient.setDefaultOptions({

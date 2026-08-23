@@ -3,6 +3,7 @@ import {
   CalendarClock,
   Check,
   CheckCircle2,
+  ChevronDown,
   Circle,
   Clock3,
   Sparkles,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useDemoSession } from "../auth/demoSessionContext";
 import type { DashboardRange } from "../api/schemas";
 import type { Dashboard } from "../api/workspace";
 import { buttonClassName } from "../components/ui/buttonStyles";
@@ -39,6 +41,60 @@ function percent(value: number) {
 
 type DashboardAction = Dashboard["actions"][number];
 type AttentionGroup = "Overdue" | "Today" | "Upcoming";
+
+const ACTION_CENTER_STORAGE_KEY = "hireflux-action-center.v1";
+
+interface ActionCenterPreference {
+  version: 1;
+  workspace_marker: string;
+  collapsed: boolean;
+}
+
+function workspaceMarker(accessToken: string | undefined): string | null {
+  if (!accessToken) return null;
+
+  // The preference only needs a stable, non-secret workspace key. Do not store
+  // the demo token itself alongside the UI preference.
+  let hash = 2_166_136_261;
+  for (const character of accessToken) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return `demo-${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+
+function readActionCenterPreference(marker: string | null): boolean {
+  if (!marker || typeof window === "undefined") return false;
+  try {
+    const stored = window.sessionStorage.getItem(ACTION_CENTER_STORAGE_KEY);
+    if (!stored) return false;
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object") return false;
+    const preference = parsed as Partial<ActionCenterPreference>;
+    return (
+      preference.version === 1 &&
+      preference.workspace_marker === marker &&
+      typeof preference.collapsed === "boolean" &&
+      preference.collapsed
+    );
+  } catch {
+    return false;
+  }
+}
+
+function writeActionCenterPreference(marker: string | null, collapsed: boolean): void {
+  if (!marker || typeof window === "undefined") return;
+  const preference: ActionCenterPreference = {
+    version: 1,
+    workspace_marker: marker,
+    collapsed,
+  };
+  try {
+    window.sessionStorage.setItem(ACTION_CENTER_STORAGE_KEY, JSON.stringify(preference));
+  } catch {
+    // The panel remains usable if browser storage is unavailable.
+  }
+}
 
 function actionDueLabel(action: DashboardAction, timeZone: string) {
   return "due_date" in action
@@ -77,8 +133,13 @@ const groupMeta: Record<AttentionGroup, { description: string; icon: typeof Cloc
 export function DashboardPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { session } = useDemoSession();
   const [range, setRange] = useState<DashboardRange>("30d");
   const rangeInitialized = useRef(false);
+  const actionCenterWorkspaceMarker = workspaceMarker(session?.access_token);
+  const [actionCenterCollapsed, setActionCenterCollapsed] = useState(() =>
+    readActionCenterPreference(actionCenterWorkspaceMarker),
+  );
   const settingsQuery = useSettings();
   const { showToast } = useToast();
   const [rescheduling, setRescheduling] = useState<string | null>(null);
@@ -100,6 +161,10 @@ export function DashboardPage() {
       setRange(settingsQuery.data.default_dashboard_range);
     }
   }, [settingsQuery.data]);
+
+  useEffect(() => {
+    setActionCenterCollapsed(readActionCenterPreference(actionCenterWorkspaceMarker));
+  }, [actionCenterWorkspaceMarker]);
 
   useEffect(() => {
     const state = location.state;
@@ -135,6 +200,20 @@ export function DashboardPage() {
     name,
     items: dashboard.actions.filter((action) => attentionGroup(action) === name),
   }));
+  const actionSummary = [
+    `${dashboard.actions.length} ${dashboard.actions.length === 1 ? "action" : "actions"}`,
+    `${groupedActions[0].items.length} overdue`,
+    `${groupedActions[1].items.length} today`,
+    `${groupedActions[2].items.length} upcoming`,
+  ].join(" · ");
+
+  function toggleActionCenter() {
+    setActionCenterCollapsed((collapsed) => {
+      const next = !collapsed;
+      writeActionCenterPreference(actionCenterWorkspaceMarker, next);
+      return next;
+    });
+  }
 
   async function complete(applicationId: string) {
     try {
@@ -228,67 +307,84 @@ export function DashboardPage() {
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel" aria-labelledby="attention-title">
         <div className="border-b border-line bg-gradient-to-r from-accent-soft via-surface-raised to-violet-soft p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">Action center</p>
               <h2 id="attention-title" className="mt-2 text-2xl font-bold text-slate-950">What needs my attention today?</h2>
               <p className="mt-1 text-sm leading-6 text-slate-600">Prioritized follow-ups, interview preparation, and stalled opportunities.</p>
+              {actionCenterCollapsed && dashboard.actions.length > 0 ? (
+                <p className="mt-3 text-sm font-semibold text-slate-700" aria-live="polite">{actionSummary}</p>
+              ) : null}
             </div>
-            <span className="rounded-full bg-slate-950 px-3 py-1.5 text-sm font-bold text-white">{dashboard.actions.length}</span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="rounded-full bg-slate-950 px-3 py-1.5 text-sm font-bold text-white" aria-label={`${dashboard.actions.length} ${dashboard.actions.length === 1 ? "action" : "actions"}`}>{dashboard.actions.length}</span>
+              <button
+                type="button"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-accent-soft"
+                aria-expanded={!actionCenterCollapsed}
+                aria-controls="action-center-content"
+                aria-label={actionCenterCollapsed ? "Expand action center" : "Collapse action center"}
+                onClick={toggleActionCenter}
+              >
+                <ChevronDown aria-hidden="true" className={`size-5 transition-transform ${actionCenterCollapsed ? "" : "rotate-180"}`} />
+              </button>
+            </div>
           </div>
         </div>
-        {dashboard.actions.length === 0 ? (
-          <div className="m-5 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950 sm:m-6">
-            <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
-            <div><p className="font-semibold">You are caught up.</p><p className="mt-1 text-sm">There are no urgent actions in this workspace.</p></div>
-          </div>
-        ) : (
-          <div className="grid divide-y divide-slate-200 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
-            {groupedActions.map(({ name, items }) => {
-              const meta = groupMeta[name];
-              const Icon = meta.icon;
-              return (
-                <section key={name} className="min-w-0 p-5 sm:p-6" aria-labelledby={`attention-${name.toLowerCase()}`}>
-                  <div className="flex items-center gap-3">
-                    <span className={`flex size-9 items-center justify-center rounded-xl border ${meta.tone}`}><Icon aria-hidden="true" className="size-4" /></span>
-                    <div><h3 id={`attention-${name.toLowerCase()}`} className="font-bold text-slate-950">{name} <span className="text-slate-500">({items.length})</span></h3><p className="text-xs text-slate-500">{meta.description}</p></div>
-                  </div>
-                  {items.length === 0 ? <p className="mt-5 text-sm text-slate-500">Nothing here right now.</p> : (
-                    <ul className="mt-4 space-y-3">
-                      {items.map((action) => {
-                        const isFollowUp = action.kind.startsWith("FOLLOW_UP");
-                        return (
-                          <li key={`${action.kind}-${action.application_id}-${actionDueKey(action)}`} className="rounded-2xl border border-slate-200 p-4">
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-xs font-bold uppercase tracking-wide text-brand-700">{action.priority} priority</span>
-                              <time className="text-xs font-semibold text-slate-500" dateTime={actionDueKey(action)}>{actionDueLabel(action, timeZone)}</time>
-                            </div>
-                            <Link to={`/applications/${action.application_id}`} className="mt-2 block font-bold text-slate-950 hover:text-brand-700 hover:underline">{action.job_title}</Link>
-                            <p className="mt-0.5 text-sm text-slate-600">{action.company_name}</p>
-                            <p className="mt-2 text-xs leading-5 text-slate-500">{action.label}</p>
-                            <span className="sr-only">{action.label} · {actionDueLabel(action, timeZone)}</span>
-                            {isFollowUp ? (
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                <button type="button" className={buttonClassName("secondary", "min-h-10 px-3 py-1.5")} disabled={completeMutation.isPending} onClick={() => void complete(action.application_id)}>Complete</button>
-                                <button type="button" className="min-h-10 rounded-lg px-3 text-sm font-semibold text-brand-700 hover:bg-brand-50" onClick={() => { setRescheduling(action.application_id); setFollowUpDate(""); }}>Reschedule</button>
+        <div id="action-center-content" hidden={actionCenterCollapsed && dashboard.actions.length > 0}>
+          {dashboard.actions.length === 0 ? (
+            <div className="m-5 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950 sm:m-6">
+              <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+              <div><p className="font-semibold">You are caught up.</p><p className="mt-1 text-sm">There are no urgent actions in this workspace.</p></div>
+            </div>
+          ) : (
+            <div className="grid divide-y divide-slate-200 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+              {groupedActions.map(({ name, items }) => {
+                const meta = groupMeta[name];
+                const Icon = meta.icon;
+                return (
+                  <section key={name} className="min-w-0 p-5 sm:p-6" aria-labelledby={`attention-${name.toLowerCase()}`}>
+                    <div className="flex items-center gap-3">
+                      <span className={`flex size-9 items-center justify-center rounded-xl border ${meta.tone}`}><Icon aria-hidden="true" className="size-4" /></span>
+                      <div><h3 id={`attention-${name.toLowerCase()}`} className="font-bold text-slate-950">{name} <span className="text-slate-500">({items.length})</span></h3><p className="text-xs text-slate-500">{meta.description}</p></div>
+                    </div>
+                    {items.length === 0 ? <p className="mt-5 text-sm text-slate-500">Nothing here right now.</p> : (
+                      <ul className="mt-4 space-y-3">
+                        {items.map((action) => {
+                          const isFollowUp = action.kind.startsWith("FOLLOW_UP");
+                          return (
+                            <li key={`${action.kind}-${action.application_id}-${actionDueKey(action)}`} className="rounded-2xl border border-slate-200 p-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-xs font-bold uppercase tracking-wide text-brand-700">{action.priority} priority</span>
+                                <time className="text-xs font-semibold text-slate-500" dateTime={actionDueKey(action)}>{actionDueLabel(action, timeZone)}</time>
                               </div>
-                            ) : null}
-                            {rescheduling === action.application_id ? (
-                              <div className="mt-3 space-y-2 rounded-xl bg-slate-50 p-3">
-                                <label htmlFor={`reschedule-${action.application_id}`} className="text-xs font-bold text-slate-700">New follow-up date</label>
-                                <input id={`reschedule-${action.application_id}`} type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900" />
-                                <div className="flex gap-2"><button type="button" className={buttonClassName("primary", "min-h-10 px-3")} disabled={!followUpDate || rescheduleMutation.isPending} onClick={() => void reschedule(action.application_id)}>Save date</button><button type="button" className={buttonClassName("ghost", "min-h-10 px-3")} onClick={() => setRescheduling(null)}>Cancel</button></div>
-                              </div>
-                            ) : null}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </section>
-              );
-            })}
-          </div>
-        )}
+                              <Link to={`/applications/${action.application_id}`} className="mt-2 block font-bold text-slate-950 hover:text-brand-700 hover:underline">{action.job_title}</Link>
+                              <p className="mt-0.5 text-sm text-slate-600">{action.company_name}</p>
+                              <p className="mt-2 text-xs leading-5 text-slate-500">{action.label}</p>
+                              <span className="sr-only">{action.label} · {actionDueLabel(action, timeZone)}</span>
+                              {isFollowUp ? (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <button type="button" className={buttonClassName("secondary", "min-h-10 px-3 py-1.5")} disabled={completeMutation.isPending} onClick={() => void complete(action.application_id)}>Complete</button>
+                                  <button type="button" className="min-h-10 rounded-lg px-3 text-sm font-semibold text-brand-700 hover:bg-brand-50" onClick={() => { setRescheduling(action.application_id); setFollowUpDate(""); }}>Reschedule</button>
+                                </div>
+                              ) : null}
+                              {rescheduling === action.application_id ? (
+                                <div className="mt-3 space-y-2 rounded-xl bg-slate-50 p-3">
+                                  <label htmlFor={`reschedule-${action.application_id}`} className="text-xs font-bold text-slate-700">New follow-up date</label>
+                                  <input id={`reschedule-${action.application_id}`} type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900" />
+                                  <div className="flex gap-2"><button type="button" className={buttonClassName("primary", "min-h-10 px-3")} disabled={!followUpDate || rescheduleMutation.isPending} onClick={() => void reschedule(action.application_id)}>Save date</button><button type="button" className={buttonClassName("ghost", "min-h-10 px-3")} onClick={() => setRescheduling(null)}>Cancel</button></div>
+                                </div>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </section>
 
       <section aria-labelledby="success-title">
