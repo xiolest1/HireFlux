@@ -96,6 +96,11 @@ def test_analytics_ranges_filters_denominators_and_thresholds(dynamodb_client: A
         assert coverage["scheduled_count"] + coverage["missing_count"] == coverage["active_count"]
         assert payload["insights"]
         assert all("evidence" in insight for insight in payload["insights"])
+        assert all("category" in insight for insight in payload["insights"])
+        assert all("semantic_type" in insight for insight in payload["insights"])
+        assert [insight["priority"] for insight in payload["insights"]] == sorted(
+            (insight["priority"] for insight in payload["insights"]), reverse=True
+        )
 
         thirty_days = client.get("/api/v1/analytics", params={"range": "30d"}, headers=headers)
         assert thirty_days.status_code == 200

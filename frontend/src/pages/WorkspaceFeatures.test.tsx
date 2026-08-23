@@ -171,7 +171,10 @@ describe("workspace milestone features", () => {
             deltas: { submitted_count: 1, response_rate: 0.5, interview_rate: 0.5, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: null },
           },
           follow_up_coverage: { active_count: 1, scheduled_count: 0, coverage_rate: 0, overdue_count: 0, due_today_count: 0, missing_count: 1 },
-          insights: [{ code: "BUILD_SAMPLE", tone: "INFO", title: "Build a stronger sample", description: "Track more applications before judging rates.", evidence: "This view contains 2 submitted applications.", action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } }],
+          insights: [
+            { code: "FOLLOW_UP_ATTENTION", category: "follow_up", semantic_type: "action", tone: "ATTENTION", title: "1 active application needs follow-up planning", description: "1 without a next step scheduled.", evidence: "1 without a next step scheduled across 1 active application.", priority: 72, action: { kind: "VIEW_APPLICATIONS", label: "Review follow-ups", parameters: { view: "ACTIVE", follow_up: "NEEDS_ATTENTION" } } },
+            { code: "BUILD_SAMPLE", category: "response", semantic_type: "observation", tone: "INFO", title: "Search Health is still building your picture", description: "Track more applications before judging rates.", evidence: "This view contains 2 submitted applications.", priority: 20, action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } },
+          ],
           disclaimer: "This dataset is descriptive, not predictive.",
         });
       }),
@@ -180,10 +183,16 @@ describe("workspace milestone features", () => {
     const { user } = renderApp("/analytics?range=30d&source=REFERRAL");
     expect(await screen.findByRole("heading", { name: "Outcome snapshot" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Search health" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Build a stronger sample" })).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Search Health is still building your picture" }),
+    ).toBeVisible();
     expect(screen.getByRole("link", { name: "Suggested action: Add application" })).toHaveAttribute(
       "href",
       "/applications/new",
+    );
+    expect(screen.getByRole("link", { name: "Suggested action: Review follow-ups" })).toHaveAttribute(
+      "href",
+      "/applications?view=ACTIVE&follow_up=NEEDS_ATTENTION",
     );
     expect(screen.getByRole("heading", { name: "Compared with the previous period" })).toBeVisible();
     expect(screen.getAllByText("+50 pp")).toHaveLength(2);
@@ -242,7 +251,7 @@ describe("workspace milestone features", () => {
             deltas: { submitted_count: 1, response_rate: 0.5, interview_rate: 0.5, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: null },
           },
           follow_up_coverage: { active_count: 1, scheduled_count: 0, coverage_rate: 0, overdue_count: 0, due_today_count: 0, missing_count: 1 },
-          insights: [{ code: "BUILD_SAMPLE", tone: "INFO", title: "Build a stronger sample", description: "Track more applications before judging rates.", evidence: "This view contains 2 submitted applications.", action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } }],
+          insights: [{ code: "BUILD_SAMPLE", category: "response", semantic_type: "observation", tone: "INFO", title: "Search Health is still building your picture", description: "Track more applications before judging rates.", evidence: "This view contains 2 submitted applications.", priority: 20, action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } }],
           disclaimer: "This dataset is descriptive, not predictive.",
         }),
       ),

@@ -51,10 +51,16 @@ function insightHref(action: NonNullable<Analytics["insights"][number]["action"]
   const params = new URLSearchParams();
   const view = action.parameters.view;
   const source = action.parameters.source;
+  const status = action.parameters.status;
+  const followUp = action.parameters.follow_up;
   if (view === "ALL" || view === "ACTIVE") params.set("view", view);
   if (source && APPLICATION_SOURCES.includes(source as ApplicationSource)) {
     params.set("source", source);
   }
+  if (status && APPLICATION_STATUSES.includes(status as ApplicationStatus)) {
+    params.set("status", status);
+  }
+  if (followUp === "NEEDS_ATTENTION") params.set("follow_up", followUp);
   return `/applications${params.size ? `?${params.toString()}` : ""}`;
 }
 
@@ -217,14 +223,14 @@ function Overview({ analytics }: { analytics: Analytics }) {
         <Lightbulb aria-hidden="true" className="size-5 text-brand-700" />
         <h2 id="search-health-title" className="text-xl font-bold text-slate-950">Search health</h2>
       </div>
-      <p className="mt-1 text-sm text-slate-600">Explainable signals based only on this workspace&apos;s tracked data.</p>
+      <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">A curated view of what changed, why it matters, and what to do next—based only on this workspace&apos;s tracked data.</p>
       <ul className="mt-4 grid gap-4 lg:grid-cols-2">
         {analytics.insights.map((insight) => (
           <li key={insight.code} className={`rounded-2xl border p-5 shadow-panel ${insight.tone === "ATTENTION" ? "border-amber-200 bg-amber-50" : insight.tone === "POSITIVE" ? "border-emerald-200 bg-emerald-50" : "border-blue-200 bg-blue-50"}`}>
             <p className="text-xs font-bold uppercase tracking-wide text-slate-600">{insight.tone === "ATTENTION" ? "Needs attention" : insight.tone === "POSITIVE" ? "Positive signal" : "Worth knowing"}</p>
             <h3 className="mt-2 text-base font-bold text-slate-950">{insight.title}</h3>
             <p className="mt-2 text-sm leading-6 text-slate-700">{insight.description}</p>
-            <p className="mt-3 text-xs font-semibold text-slate-600">Evidence: {insight.evidence}</p>
+            <p className="mt-3 border-t border-current/10 pt-3 text-xs font-semibold leading-5 text-slate-600"><span className="block uppercase tracking-wide text-slate-500">Why you&apos;re seeing this</span>{insight.evidence}</p>
             {insight.action ? <Link to={insightHref(insight.action)} aria-label={`Suggested action: ${insight.action.label}`} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg font-bold text-brand-700 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">{insight.action.label}<ArrowRight aria-hidden="true" className="size-4" /></Link> : null}
           </li>
         ))}
@@ -278,7 +284,7 @@ function Pipeline({ analytics }: { analytics: Analytics }) {
 }
 
 function Sources({ analytics }: { analytics: Analytics }) {
-  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="source-title"><h2 id="source-title" className="text-xl font-bold text-slate-950">Source performance</h2><p className="mt-1 text-sm text-slate-600">Comparisons require at least three submitted applications from a source.</p>
+  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="source-title"><h2 id="source-title" className="text-xl font-bold text-slate-950">Source performance</h2><p className="mt-1 text-sm text-slate-600">Table comparisons require three submissions; Search Health source conclusions require five.</p>
     <ul className="mt-5 space-y-3 md:hidden">{analytics.source_performance.map((row) => <li key={row.source} className="rounded-2xl border border-slate-200 p-4"><div className="flex items-center justify-between gap-3"><h3 className="font-bold text-slate-950">{formatSource(row.source)}</h3>{!row.sample_sufficient ? <SmallSample /> : null}</div><dl className="mt-4 grid grid-cols-2 gap-3 text-sm"><SourceMetric label="Submitted" value={String(row.submitted_count)} /><SourceMetric label="Response" value={`${percent(row.response_rate)} (${row.response_count})`} /><SourceMetric label="Interview" value={`${percent(row.interview_rate)} (${row.interview_count})`} /><SourceMetric label="Offer" value={`${percent(row.offer_rate)} (${row.offer_count})`} /></dl></li>)}</ul>
     <div className="mt-5 hidden overflow-x-auto md:block"><table className="w-full min-w-[42rem] border-collapse text-left text-sm"><caption className="sr-only">Application outcome rates grouped by source</caption><thead><tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500"><th scope="col" className="px-3 py-3">Source</th><th scope="col" className="px-3 py-3">Submitted</th><th scope="col" className="px-3 py-3">Response</th><th scope="col" className="px-3 py-3">Interview</th><th scope="col" className="px-3 py-3">Offer</th></tr></thead><tbody>{analytics.source_performance.map((row) => <tr key={row.source} className="border-b border-slate-100 last:border-0"><th scope="row" className="px-3 py-4 font-semibold text-slate-800">{formatSource(row.source)}{!row.sample_sufficient ? <span className="ml-2"><SmallSample /></span> : null}</th><td className="px-3 py-4 text-slate-700">{row.submitted_count}</td><td className="px-3 py-4 text-slate-700">{percent(row.response_rate)} <span className="text-xs text-slate-500">({row.response_count})</span></td><td className="px-3 py-4 text-slate-700">{percent(row.interview_rate)} <span className="text-xs text-slate-500">({row.interview_count})</span></td><td className="px-3 py-4 text-slate-700">{percent(row.offer_rate)} <span className="text-xs text-slate-500">({row.offer_count})</span></td></tr>)}</tbody></table></div>
   </section>;

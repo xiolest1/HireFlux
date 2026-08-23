@@ -47,6 +47,10 @@ class StageAgeBucket(StrEnum):
     THIRTY_ONE_PLUS = "31+"
 
 
+class FollowUpFilter(StrEnum):
+    NEEDS_ATTENTION = "NEEDS_ATTENTION"
+
+
 class ActivityType(StrEnum):
     APPLICATION_CREATED = "APPLICATION_CREATED"
     STATUS_CHANGED = "STATUS_CHANGED"

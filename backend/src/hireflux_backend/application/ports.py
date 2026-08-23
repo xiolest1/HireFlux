@@ -6,6 +6,7 @@ from hireflux_backend.domain.enums import (
     ApplicationSort,
     ApplicationSource,
     ApplicationStatus,
+    FollowUpFilter,
     WorkMode,
 )
 from hireflux_backend.domain.models import (
@@ -65,6 +66,8 @@ class ApplicationRepository(Protocol):
         source: ApplicationSource | None = None,
         work_mode: WorkMode | None = None,
         stage_age: StageAgeBounds | None = None,
+        follow_up: FollowUpFilter | None = None,
+        follow_up_today: date | None = None,
         sort: ApplicationSort = ApplicationSort.UPDATED_DESC,
         view: DefaultApplicationView | None = None,
     ) -> ApplicationPage: ...

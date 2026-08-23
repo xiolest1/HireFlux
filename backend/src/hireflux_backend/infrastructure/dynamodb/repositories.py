@@ -14,6 +14,7 @@ from hireflux_backend.domain.enums import (
     ApplicationSort,
     ApplicationSource,
     ApplicationStatus,
+    FollowUpFilter,
     WorkMode,
 )
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity, UserProfile
@@ -226,6 +227,8 @@ class DynamoApplicationRepository:
         source: ApplicationSource | None = None,
         work_mode: WorkMode | None = None,
         stage_age: StageAgeBounds | None = None,
+        follow_up: FollowUpFilter | None = None,
+        follow_up_today: date | None = None,
         sort: ApplicationSort = ApplicationSort.UPDATED_DESC,
         view: DefaultApplicationView | None = None,
     ) -> ApplicationPage:
@@ -238,6 +241,8 @@ class DynamoApplicationRepository:
                 source.value if source else "",
                 work_mode.value if work_mode else "",
                 stage_age.cursor_scope if stage_age else "",
+                follow_up.value if follow_up else "",
+                follow_up_today.isoformat() if follow_up_today else "",
                 sort.value,
             )
         )
@@ -252,6 +257,8 @@ class DynamoApplicationRepository:
                 source=source,
                 work_mode=work_mode,
                 stage_age=stage_age,
+                follow_up=follow_up,
+                follow_up_today=follow_up_today,
                 sort=sort,
                 scope=scope,
             )
@@ -286,6 +293,7 @@ class DynamoApplicationRepository:
             filters.append("work_mode = :work_mode")
             values[":work_mode"] = work_mode.value
         _append_stage_age_filter(filters, values, stage_age)
+        _append_follow_up_filter(filters, values, follow_up, follow_up_today)
         arguments["ExpressionAttributeValues"] = serialize_item(values)
         if filters:
             arguments["FilterExpression"] = " AND ".join(filters)
@@ -341,6 +349,8 @@ class DynamoApplicationRepository:
         source: ApplicationSource | None,
         work_mode: WorkMode | None,
         stage_age: StageAgeBounds | None,
+        follow_up: FollowUpFilter | None,
+        follow_up_today: date | None,
         sort: ApplicationSort,
         scope: str,
     ) -> ApplicationPage:
@@ -372,6 +382,7 @@ class DynamoApplicationRepository:
                     filters.append("work_mode = :work_mode")
                     values[":work_mode"] = work_mode.value
                 _append_stage_age_filter(filters, values, stage_age)
+                _append_follow_up_filter(filters, values, follow_up, follow_up_today)
 
                 arguments: dict[str, Any] = {
                     "TableName": self._table_name,
@@ -725,6 +736,19 @@ def _append_stage_age_filter(
     if bounds.entered_before is not None:
         filters.append("stage_entered_at < :stage_entered_before")
         values[":stage_entered_before"] = bounds.entered_before.isoformat()
+
+
+def _append_follow_up_filter(
+    filters: list[str],
+    values: dict[str, object],
+    follow_up: FollowUpFilter | None,
+    today: date | None,
+) -> None:
+    if follow_up is FollowUpFilter.NEEDS_ATTENTION and today is not None:
+        filters.append(
+            "(attribute_not_exists(follow_up_date) OR follow_up_date < :follow_up_today)"
+        )
+        values[":follow_up_today"] = today.isoformat()
 
 
 def _error_code(error: ClientError) -> str:

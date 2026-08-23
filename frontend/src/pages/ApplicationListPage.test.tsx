@@ -6,6 +6,22 @@ import { makeApplication, testSettings } from "../test/fixtures";
 import { renderApp } from "../test/renderApp";
 
 describe("ApplicationListPage", () => {
+  it("preserves the Search Health follow-up deep link in requests and filter controls", async () => {
+    let requestedFollowUp: string | null = null;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
+        requestedFollowUp = new URL(request.url).searchParams.get("follow_up");
+        return HttpResponse.json({ items: [], next_cursor: null });
+      }),
+    );
+
+    const { user } = renderApp("/applications?view=ACTIVE&follow_up=NEEDS_ATTENTION");
+    expect(await screen.findByRole("button", { name: "Remove Follow-up: Needs attention filter" })).toBeVisible();
+    expect(requestedFollowUp).toBe("NEEDS_ATTENTION");
+
+    await user.click(screen.getByRole("button", { name: /^Filters/ }));
+    expect(screen.getByLabelText("Follow-up planning")).toHaveValue("NEEDS_ATTENTION");
+  });
   it("uses an accessible card-shaped skeleton for the initial load", async () => {
     server.use(
       http.get(`${API_ORIGIN}/api/v1/applications`, async () => {

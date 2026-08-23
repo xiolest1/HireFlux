@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from hireflux_backend.api.resource_schemas import InterviewResponse
 from hireflux_backend.api.schemas import ApplicationResponse
@@ -155,17 +155,25 @@ class AnalyticsInsightActionResponse(BaseModel):
 class AnalyticsInsightResponse(BaseModel):
     code: Literal[
         "BUILD_SAMPLE",
-        "LOW_RESPONSE_RATE",
-        "STALE_PIPELINE",
-        "MISSING_FOLLOW_UPS",
+        "FOLLOW_UP_ATTENTION",
+        "STALLED_PIPELINE",
+        "MOMENTUM_WITH_INTERVIEWS",
+        "VOLUME_UP_RESPONSE_DOWN",
+        "SEARCH_CONVERTING",
+        "MOMENTUM_DOWN",
+        "MOMENTUM_UP",
+        "RESPONSE_IMPROVING",
+        "RESPONSE_DECLINING",
         "STRONG_SOURCE",
-        "ACTIVITY_DROP",
         "HEALTHY_PIPELINE",
     ]
+    category: Literal["momentum", "response", "pipeline", "follow_up", "source"]
+    semantic_type: Literal["action", "trend", "observation", "achievement"]
     tone: Literal["INFO", "ATTENTION", "POSITIVE"]
     title: str
     description: str
     evidence: str
+    priority: int = Field(ge=0, le=100)
     action: AnalyticsInsightActionResponse | None
 
 

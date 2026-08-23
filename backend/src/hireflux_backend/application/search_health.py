@@ -1,0 +1,498 @@
+from __future__ import annotations
+
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+from datetime import date, timedelta
+from typing import Literal, cast
+from zoneinfo import ZoneInfo
+
+from hireflux_backend.domain.enums import ApplicationSource, ApplicationStatus
+from hireflux_backend.domain.models import Application
+
+Category = Literal["momentum", "response", "pipeline", "follow_up", "source"]
+Tone = Literal["INFO", "ATTENTION", "POSITIVE"]
+SemanticType = Literal["action", "trend", "observation", "achievement"]
+
+# Conservative product heuristics, not scientific or cross-user benchmarks.
+MAX_INSIGHTS = 5
+MIN_RATE_SAMPLE = 5
+MIN_SOURCE_SAMPLE = 5
+RATE_DELTA = 0.15
+STAGE_STALE_DAYS = {
+    ApplicationStatus.APPLIED: 21,
+    ApplicationStatus.SCREENING: 14,
+    ApplicationStatus.INTERVIEW: 9,
+    ApplicationStatus.OFFER: 7,
+}
+STAGE_PRIORITIES = {
+    ApplicationStatus.APPLIED: 76,
+    ApplicationStatus.SCREENING: 84,
+    ApplicationStatus.INTERVIEW: 90,
+    ApplicationStatus.OFFER: 94,
+}
+
+
+@dataclass(frozen=True, slots=True)
+class Candidate:
+    code: str
+    category: Category
+    semantic_type: SemanticType
+    tone: Tone
+    title: str
+    description: str
+    evidence: str
+    priority: int
+    action: dict[str, object] | None = None
+    suppresses: frozenset[str] = field(default_factory=frozenset)
+
+    def response(self) -> dict[str, object]:
+        return {
+            "code": self.code,
+            "category": self.category,
+            "semantic_type": self.semantic_type,
+            "tone": self.tone,
+            "title": self.title,
+            "description": self.description,
+            "evidence": self.evidence,
+            "priority": self.priority,
+            "action": self.action,
+        }
+
+
+def submission_date(application: Application, time_zone: ZoneInfo) -> date | None:
+    if application.submitted_at is None:
+        return None
+    return application.applied_date or application.submitted_at.astimezone(time_zone).date()
+
+
+def build_search_health(
+    applications: tuple[Application, ...],
+    *,
+    local_today: date,
+    time_zone: ZoneInfo,
+    period_comparison: dict[str, object],
+) -> list[dict[str, object]]:
+    submitted = tuple(item for item in applications if submission_date(item, time_zone))
+    candidates = [
+        *_follow_up(applications, local_today),
+        *_pipeline(applications, local_today, time_zone),
+        *_combined(period_comparison),
+        *_momentum(submitted, local_today, time_zone),
+        *_responses(submitted, local_today, time_zone),
+        *_sources(submitted),
+    ]
+    if len(submitted) < MIN_RATE_SAMPLE:
+        candidates.append(
+            Candidate(
+                "BUILD_SAMPLE",
+                "response",
+                "observation",
+                "INFO",
+                "Search Health is still building your picture",
+                (
+                    "Track a few more submitted applications to unlock stronger response, "
+                    "momentum, and source comparisons. Valid follow-up and pipeline signals "
+                    "still appear when they exist."
+                ),
+                (
+                    f"Based on {len(submitted)} submitted "
+                    f"{_plural(len(submitted), 'application')}; rate trends begin at "
+                    f"{MIN_RATE_SAMPLE}."
+                ),
+                20,
+                _add_action(),
+            )
+        )
+    selected = _rank(candidates)
+    if not selected and len(submitted) >= MIN_RATE_SAMPLE:
+        selected = [
+            Candidate(
+                "HEALTHY_PIPELINE",
+                "pipeline",
+                "observation",
+                "POSITIVE",
+                "No urgent search signal is visible",
+                (
+                    "Your tracked data does not currently meet an attention threshold. Keep "
+                    "statuses and follow-up dates current so the picture stays useful."
+                ),
+                f"Search Health reviewed {len(submitted)} submitted applications.",
+                10,
+            )
+        ]
+    return [item.response() for item in selected]
+
+
+def _follow_up(applications: tuple[Application, ...], today: date) -> list[Candidate]:
+    active = tuple(item for item in applications if item.status in STAGE_STALE_DAYS)
+    overdue = sum(bool(item.follow_up_date and item.follow_up_date < today) for item in active)
+    missing = sum(item.follow_up_date is None for item in active)
+    due_today = sum(item.follow_up_date == today for item in active)
+    due_soon = sum(
+        bool(item.follow_up_date and today < item.follow_up_date <= today + timedelta(days=3))
+        for item in active
+    )
+    total = overdue + missing
+    if not total:
+        return []
+    parts = []
+    if overdue:
+        parts.append(f"{overdue} {_plural(overdue, 'follow-up')} overdue")
+    if missing:
+        parts.append(f"{missing} without a next step scheduled")
+    evidence = f"{_join(parts)} across {len(active)} active applications."
+    if due_today or due_soon:
+        evidence += f" Also {due_today} due today and {due_soon} due in the next 3 days."
+    return [
+        Candidate(
+            "FOLLOW_UP_ATTENTION",
+            "follow_up",
+            "action",
+            "ATTENTION" if overdue else "INFO",
+            f"{total} active {_plural(total, 'application')} need follow-up planning",
+            (
+                f"{_join(parts)}. Review overdue work first, then add a clear "
+                "next step where one is missing."
+            ),
+            evidence,
+            100 if overdue else 72,
+            _view_action("Review follow-ups", view="ACTIVE", follow_up="NEEDS_ATTENTION"),
+        )
+    ]
+
+
+def _pipeline(
+    applications: tuple[Application, ...], today: date, time_zone: ZoneInfo
+) -> list[Candidate]:
+    stale: Counter[ApplicationStatus] = Counter()
+    for item in applications:
+        threshold = STAGE_STALE_DAYS.get(item.status)
+        if threshold is None or item.stage_entered_at is None:
+            continue
+        age = max(0, (today - item.stage_entered_at.astimezone(time_zone).date()).days)
+        if age >= threshold:
+            stale[item.status] += 1
+    if not stale:
+        return []
+    ordered = sorted(stale, key=STAGE_PRIORITIES.__getitem__, reverse=True)
+    strongest = ordered[0]
+    evidence = _join(
+        [
+            f"{stale[status]} in {status.value.title()} for at least "
+            f"{STAGE_STALE_DAYS[status]} days"
+            for status in ordered
+        ]
+    )
+    title = (
+        "Post-interview pipeline movement may need attention"
+        if strongest in {ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER}
+        else "Some active applications have been waiting longer than expected"
+    )
+    count = sum(stale.values())
+    return [
+        Candidate(
+            "STALLED_PIPELINE",
+            "pipeline",
+            "action",
+            "ATTENTION",
+            title,
+            (
+                f"{count} active {_plural(count, 'application')} crossed the review threshold "
+                "for its current stage. These are review signals, not employer-response "
+                "predictions."
+            ),
+            f"{evidence}.",
+            STAGE_PRIORITIES[strongest],
+            _view_action(
+                f"Review {strongest.value.title()} applications",
+                view="ACTIVE",
+                status=strongest.value,
+            ),
+        )
+    ]
+
+
+def _combined(comparison: dict[str, object]) -> list[Candidate]:
+    if not comparison.get("available"):
+        return []
+    current = comparison.get("current")
+    previous = comparison.get("previous")
+    if not isinstance(current, dict) or not isinstance(previous, dict):
+        return []
+    current_count = int(cast(int | float, current["submitted_count"]))
+    previous_count = int(cast(int | float, previous["submitted_count"]))
+    current_response = float(cast(int | float, current["response_rate"]))
+    previous_response = float(cast(int | float, previous["response_rate"]))
+    current_interview = float(cast(int | float, current["interview_rate"]))
+    previous_interview = float(cast(int | float, previous["interview_rate"]))
+    down = previous_count - current_count >= 3 and current_count <= previous_count * 0.75
+    up = current_count - previous_count >= 3 and current_count >= previous_count * 1.5
+    if (
+        previous_count >= MIN_RATE_SAMPLE
+        and current_count >= 3
+        and down
+        and current_interview - previous_interview >= RATE_DELTA
+    ):
+        return [
+            Candidate(
+                "MOMENTUM_WITH_INTERVIEWS",
+                "momentum",
+                "trend",
+                "INFO",
+                "Application pace is lower, but the pipeline is moving deeper",
+                (
+                    "Submission volume fell while interview conversion increased. That "
+                    "combination is more informative than application volume alone."
+                ),
+                (
+                    f"{current_count} submissions versus {previous_count} previously; "
+                    f"interview rate {current_interview:.0%} versus {previous_interview:.0%}."
+                ),
+                78,
+                suppresses=frozenset({"MOMENTUM_DOWN", "RESPONSE_DECLINING"}),
+            )
+        ]
+    if (
+        min(current_count, previous_count) >= MIN_RATE_SAMPLE
+        and up
+        and previous_response - current_response >= RATE_DELTA
+    ):
+        return [
+            Candidate(
+                "VOLUME_UP_RESPONSE_DOWN",
+                "response",
+                "trend",
+                "ATTENTION",
+                "Higher application volume is converting less often",
+                (
+                    "You submitted more applications while the comparison-period response "
+                    "rate was lower. This describes the tracked outcomes without assigning "
+                    "a cause."
+                ),
+                (
+                    f"{current_count} submissions at {current_response:.0%} response versus "
+                    f"{previous_count} at {previous_response:.0%} previously."
+                ),
+                82,
+                _view_action("Review recent applications", view="ALL"),
+                frozenset({"MOMENTUM_UP", "RESPONSE_DECLINING"}),
+            )
+        ]
+    stable = abs(current_count - previous_count) <= 1
+    if (
+        min(current_count, previous_count) >= MIN_RATE_SAMPLE
+        and stable
+        and current_response - previous_response >= RATE_DELTA
+        and current_interview - previous_interview >= RATE_DELTA
+    ):
+        return [
+            Candidate(
+                "SEARCH_CONVERTING",
+                "response",
+                "achievement",
+                "POSITIVE",
+                "Your recent search is converting more effectively",
+                (
+                    "Application volume stayed steady while both response and interview "
+                    "rates improved."
+                ),
+                (
+                    f"{current_count} submissions versus {previous_count}; response rate "
+                    f"{current_response:.0%} versus {previous_response:.0%}, and interview "
+                    f"rate {current_interview:.0%} versus {previous_interview:.0%}."
+                ),
+                60,
+                suppresses=frozenset({"RESPONSE_IMPROVING"}),
+            )
+        ]
+    return []
+
+
+def _momentum(
+    applications: tuple[Application, ...], today: date, time_zone: ZoneInfo
+) -> list[Candidate]:
+    current = _count_between(applications, today - timedelta(days=6), today, time_zone)
+    previous = _count_between(
+        applications, today - timedelta(days=13), today - timedelta(days=7), time_zone
+    )
+    if previous >= 5 and previous - current >= 3 and current <= previous * 0.75:
+        return [
+            Candidate(
+                "MOMENTUM_DOWN",
+                "momentum",
+                "trend",
+                "INFO",
+                "Application activity has slowed",
+                (
+                    "If you are actively searching, consider whether your weekly target or "
+                    "available search time needs an adjustment."
+                ),
+                (
+                    f"{current} submissions in the last 7 days, compared with {previous} "
+                    "in the previous 7 days."
+                ),
+                58,
+                _add_action(),
+            )
+        ]
+    if previous >= 3 and current - previous >= 3 and current >= previous * 1.5:
+        return [
+            Candidate(
+                "MOMENTUM_UP",
+                "momentum",
+                "trend",
+                "POSITIVE",
+                "Application momentum has increased",
+                "You tracked a meaningfully higher submission pace this week.",
+                (
+                    f"{current} submissions in the last 7 days, compared with {previous} "
+                    "in the previous 7 days."
+                ),
+                40,
+            )
+        ]
+    return []
+
+
+def _responses(
+    applications: tuple[Application, ...], today: date, time_zone: ZoneInfo
+) -> list[Candidate]:
+    start = today - timedelta(days=29)
+    recent = tuple(
+        item
+        for item in applications
+        if (value := submission_date(item, time_zone)) is not None and start <= value <= today
+    )
+    historical = tuple(
+        item
+        for item in applications
+        if (value := submission_date(item, time_zone)) is not None and value < start
+    )
+    if min(len(recent), len(historical)) < MIN_RATE_SAMPLE:
+        return []
+    recent_rate = _response_rate(recent)
+    historical_rate = _response_rate(historical)
+    overall_rate = _response_rate(applications)
+    common = (
+        f"{recent_rate:.0%} across {len(recent)} recent applications, compared with "
+        f"{historical_rate:.0%} across {len(historical)} earlier applications "
+        f"({overall_rate:.0%} overall)."
+    )
+    if recent_rate - historical_rate >= RATE_DELTA:
+        return [
+            Candidate(
+                "RESPONSE_IMPROVING",
+                "response",
+                "trend",
+                "POSITIVE",
+                "Recent applications are getting more responses",
+                "Your 30-day response rate is meaningfully above your earlier tracked baseline.",
+                common,
+                52,
+            )
+        ]
+    if historical_rate - recent_rate >= RATE_DELTA:
+        return [
+            Candidate(
+                "RESPONSE_DECLINING",
+                "response",
+                "trend",
+                "ATTENTION",
+                "Recent response performance is lower",
+                (
+                    "Your latest tracked applications are receiving responses less often than "
+                    "earlier applications. Review the records and follow-up plan without "
+                    "assuming a single cause."
+                ),
+                common,
+                70,
+                _view_action("Review applications", view="ALL"),
+            )
+        ]
+    return []
+
+
+def _sources(applications: tuple[Application, ...]) -> list[Candidate]:
+    overall = _response_rate(applications)
+    grouped: defaultdict[ApplicationSource, list[Application]] = defaultdict(list)
+    for item in applications:
+        if item.source:
+            grouped[item.source].append(item)
+    eligible = [
+        (source, tuple(items), _response_rate(tuple(items)))
+        for source, items in grouped.items()
+        if len(items) >= MIN_SOURCE_SAMPLE
+        and _response_rate(tuple(items)) >= max(0.4, overall + RATE_DELTA)
+    ]
+    if not eligible:
+        return []
+    source, items, rate = max(eligible, key=lambda row: (row[2], len(row[1]), row[0].value))
+    responses = sum(item.first_response_at is not None for item in items)
+    label = source.value.replace("_", " ").title()
+    return [
+        Candidate(
+            "STRONG_SOURCE",
+            "source",
+            "achievement",
+            "POSITIVE",
+            f"{label} is outperforming your overall search",
+            "This source has a meaningfully stronger response rate within your own tracked data.",
+            (
+                f"{responses} of {len(items)} {label.lower()} applications received a response "
+                f"({rate:.0%}), compared with {overall:.0%} overall. Based on "
+                f"{len(items)} applications."
+            ),
+            45,
+            _view_action(f"View {label.lower()} applications", view="ALL", source=source.value),
+        )
+    ]
+
+
+def _rank(candidates: list[Candidate]) -> list[Candidate]:
+    suppressed: set[str] = set()
+    selected: list[Candidate] = []
+    for candidate in sorted(candidates, key=lambda item: (-item.priority, item.code)):
+        if candidate.code in suppressed:
+            continue
+        selected.append(candidate)
+        suppressed.update(candidate.suppresses)
+        if len(selected) == MAX_INSIGHTS:
+            break
+    return selected
+
+
+def _count_between(
+    applications: tuple[Application, ...], start: date, end: date, time_zone: ZoneInfo
+) -> int:
+    return sum(
+        (value := submission_date(item, time_zone)) is not None and start <= value <= end
+        for item in applications
+    )
+
+
+def _response_rate(applications: tuple[Application, ...]) -> float:
+    return (
+        sum(item.first_response_at is not None for item in applications) / len(applications)
+        if applications
+        else 0.0
+    )
+
+
+def _view_action(label: str, **parameters: str) -> dict[str, object]:
+    return {"kind": "VIEW_APPLICATIONS", "label": label, "parameters": parameters}
+
+
+def _add_action() -> dict[str, object]:
+    return {"kind": "ADD_APPLICATION", "label": "Add application", "parameters": {}}
+
+
+def _plural(count: int, noun: str) -> str:
+    return noun if count == 1 else f"{noun}s"
+
+
+def _join(parts: list[str]) -> str:
+    if len(parts) < 2:
+        return parts[0] if parts else ""
+    if len(parts) == 2:
+        return f"{parts[0]} and {parts[1]}"
+    return f"{', '.join(parts[:-1])}, and {parts[-1]}"

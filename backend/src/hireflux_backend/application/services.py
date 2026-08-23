@@ -17,6 +17,7 @@ from hireflux_backend.domain.enums import (
     ApplicationSort,
     ApplicationSource,
     ApplicationStatus,
+    FollowUpFilter,
     StageAgeBucket,
     WorkMode,
 )
@@ -188,9 +189,23 @@ class ApplicationService:
         source: ApplicationSource | None = None,
         work_mode: WorkMode | None = None,
         stage_age: StageAgeBucket | None = None,
+        follow_up: FollowUpFilter | None = None,
         sort: ApplicationSort = ApplicationSort.UPDATED_DESC,
         view: DefaultApplicationView | None = None,
     ) -> ApplicationPage:
+        if follow_up is not None and view is not DefaultApplicationView.ACTIVE:
+            raise ValidationError("follow_up requires the ACTIVE application view.")
+        if (
+            follow_up is not None
+            and status is not None
+            and status not in ACTIVE_APPLICATION_STATUSES
+        ):
+            raise ValidationError("follow_up can only be combined with an active status.")
+        follow_up_today = None
+        if follow_up is not None:
+            now = self._clock()
+            _require_aware(now)
+            follow_up_today = _workspace_today(identity, now, self._workspace_time_zone)
         if stage_age is not None and view is not DefaultApplicationView.ACTIVE:
             raise ValidationError("stage_age requires the ACTIVE application view.")
         if (
@@ -216,6 +231,8 @@ class ApplicationService:
             source=source,
             work_mode=work_mode,
             stage_age=stage_age_bounds,
+            follow_up=follow_up,
+            follow_up_today=follow_up_today,
             sort=sort,
             view=view,
         )

@@ -27,6 +27,7 @@ from hireflux_backend.domain.enums import (
     ApplicationSort,
     ApplicationSource,
     ApplicationStatus,
+    FollowUpFilter,
     StageAgeBucket,
     WorkMode,
 )
@@ -72,6 +73,7 @@ def list_applications(
     source: ApplicationSource | None = None,
     work_mode: WorkMode | None = None,
     stage_age: StageAgeBucket | None = None,
+    follow_up: FollowUpFilter | None = None,
     sort: ApplicationSort = ApplicationSort.UPDATED_DESC,
     view: DefaultApplicationView | None = None,
 ) -> ApplicationListResponse:
@@ -84,6 +86,7 @@ def list_applications(
         source=source,
         work_mode=work_mode,
         stage_age=stage_age,
+        follow_up=follow_up,
         sort=sort,
         view=view,
     )

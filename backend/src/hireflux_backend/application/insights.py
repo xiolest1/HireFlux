@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 from hireflux_backend.application.ports import ApplicationRepository
 from hireflux_backend.application.resource_services import WorkspaceResourceService
+from hireflux_backend.application.search_health import build_search_health, submission_date
 from hireflux_backend.application.services import utc_now
 from hireflux_backend.domain.enums import ApplicationSource, ApplicationStatus, WorkMode
 from hireflux_backend.domain.models import Application, CurrentIdentity
@@ -187,16 +188,15 @@ class InsightsService:
             "no_response_count": sum(item.first_response_at is None for item in submitted),
             "period_comparison": period_comparison,
             "follow_up_coverage": follow_up_coverage,
-            "insights": _analytics_insights(
-                rates=rates,
-                stage_aging=stage_aging,
-                follow_up_coverage=follow_up_coverage,
-                source_performance=source_performance,
+            "insights": build_search_health(
+                filtered,
+                local_today=local_today,
+                time_zone=workspace_time_zone,
                 period_comparison=period_comparison,
             ),
             "disclaimer": (
                 "These analytics describe this demo workspace dataset and are not career "
-                "predictions. Source comparisons require at least three submitted applications."
+                "predictions. Rate-based Search Health signals require meaningful sample sizes."
             ),
         }
 
@@ -260,9 +260,7 @@ def _submission_date(application: Application, time_zone: ZoneInfo) -> date | No
     The user-entered `applied_date` is the stable calendar date used for reporting
     windows and trends, including when a draft is later submitted.
     """
-    if application.submitted_at is None:
-        return None
-    return application.applied_date or application.submitted_at.astimezone(time_zone).date()
+    return submission_date(application, time_zone)
 
 
 def _summary(applications: tuple[Application, ...]) -> dict[str, int]:
@@ -394,176 +392,6 @@ def _follow_up_coverage(
         "due_today_count": sum(item.follow_up_date == local_today for item in active),
         "missing_count": len(active) - len(scheduled),
     }
-
-
-def _analytics_insights(
-    *,
-    rates: dict[str, int | float],
-    stage_aging: list[dict[str, object]],
-    follow_up_coverage: dict[str, int | float],
-    source_performance: list[dict[str, object]],
-    period_comparison: dict[str, object],
-) -> list[dict[str, object]]:
-    insights: list[dict[str, object]] = []
-    submitted_count = int(rates["submitted_count"])
-    if submitted_count < 5:
-        insights.append(
-            {
-                "code": "BUILD_SAMPLE",
-                "tone": "INFO",
-                "title": "Build a stronger sample",
-                "description": "Track a few more submitted applications before judging your rates.",
-                "evidence": f"This view contains {submitted_count} submitted applications.",
-                "action": {"kind": "ADD_APPLICATION", "label": "Add application", "parameters": {}},
-            }
-        )
-    elif float(rates["response_rate"]) < 0.2:
-        insights.append(
-            {
-                "code": "LOW_RESPONSE_RATE",
-                "tone": "ATTENTION",
-                "title": "Review applications that are not getting responses",
-                "description": (
-                    "Check role fit, application quality, and whether a follow-up is appropriate."
-                ),
-                "evidence": (
-                    f"{float(rates['response_rate']):.0%} response rate across "
-                    f"{submitted_count} submissions."
-                ),
-                "action": {
-                    "kind": "VIEW_APPLICATIONS",
-                    "label": "Review applications",
-                    "parameters": {"view": "ALL"},
-                },
-            }
-        )
-
-    stale_count = sum(
-        int(cast(int, item["count"])) for item in stage_aging if item["bucket"] in {"15-30", "31+"}
-    )
-    if stale_count >= 2:
-        insights.append(
-            {
-                "code": "STALE_PIPELINE",
-                "tone": "ATTENTION",
-                "title": "Several active applications may need attention",
-                "description": (
-                    "Review older stages and decide whether to follow up or update their status."
-                ),
-                "evidence": (
-                    f"{stale_count} active applications have been in their stage for at least "
-                    "15 days."
-                ),
-                "action": {
-                    "kind": "VIEW_APPLICATIONS",
-                    "label": "Review active applications",
-                    "parameters": {"view": "ACTIVE"},
-                },
-            }
-        )
-
-    active_count = int(follow_up_coverage["active_count"])
-    missing_count = int(follow_up_coverage["missing_count"])
-    coverage_rate = float(follow_up_coverage["coverage_rate"])
-    if active_count and missing_count:
-        insights.append(
-            {
-                "code": "MISSING_FOLLOW_UPS",
-                "tone": "ATTENTION" if coverage_rate < 0.5 else "INFO",
-                "title": "Add a next step to active applications",
-                "description": (
-                    "A scheduled follow-up makes the next action visible without changing "
-                    "application status."
-                ),
-                "evidence": (
-                    f"{missing_count} of {active_count} active applications have no follow-up date."
-                ),
-                "action": {
-                    "kind": "VIEW_APPLICATIONS",
-                    "label": "Review active applications",
-                    "parameters": {"view": "ACTIVE"},
-                },
-            }
-        )
-
-    eligible_sources = [
-        item
-        for item in source_performance
-        if bool(item["sample_sufficient"])
-        and float(cast(int | float, item["response_rate"]))
-        >= max(0.4, float(rates["response_rate"]) + 0.15)
-    ]
-    if eligible_sources:
-        strongest = max(
-            eligible_sources,
-            key=lambda item: float(cast(int | float, item["response_rate"])),
-        )
-        source = strongest["source"]
-        source_value = source.value if isinstance(source, ApplicationSource) else str(source)
-        insights.append(
-            {
-                "code": "STRONG_SOURCE",
-                "tone": "POSITIVE",
-                "title": "One source is producing stronger responses",
-                "description": "Consider whether this source deserves more of your search time.",
-                "evidence": (
-                    f"{source_value.replace('_', ' ').title()} has a "
-                    f"{float(cast(int | float, strongest['response_rate'])):.0%} response rate "
-                    f"across {int(cast(int, strongest['submitted_count']))} submissions."
-                ),
-                "action": {
-                    "kind": "VIEW_APPLICATIONS",
-                    "label": "View source applications",
-                    "parameters": {"view": "ALL", "source": source_value},
-                },
-            }
-        )
-
-    if period_comparison["available"]:
-        current = period_comparison["current"]
-        previous = period_comparison["previous"]
-        if isinstance(current, dict) and isinstance(previous, dict):
-            current_count = int(current["submitted_count"])
-            previous_count = int(previous["submitted_count"])
-            if previous_count >= 4 and current_count <= previous_count / 2:
-                insights.append(
-                    {
-                        "code": "ACTIVITY_DROP",
-                        "tone": "INFO",
-                        "title": "Application activity is lower than the prior period",
-                        "description": (
-                            "If you are actively searching, decide whether your weekly target "
-                            "needs attention."
-                        ),
-                        "evidence": (
-                            f"{current_count} submissions now compared with {previous_count} "
-                            "in the adjacent prior period."
-                        ),
-                        "action": {
-                            "kind": "ADD_APPLICATION",
-                            "label": "Add application",
-                            "parameters": {},
-                        },
-                    }
-                )
-
-    if submitted_count >= 5 and not any(item["tone"] == "ATTENTION" for item in insights):
-        insights.append(
-            {
-                "code": "HEALTHY_PIPELINE",
-                "tone": "POSITIVE",
-                "title": "Your tracked pipeline has no urgent signal",
-                "description": (
-                    "Keep statuses and follow-up dates current so this view remains useful."
-                ),
-                "evidence": f"{submitted_count} submissions are represented in this view.",
-                "action": None,
-            }
-        )
-
-    priorities = {"ATTENTION": 0, "INFO": 1, "POSITIVE": 2}
-    insights.sort(key=lambda item: priorities[str(item["tone"])])
-    return insights[:4]
 
 
 def _summary_from_counts(counts: dict[ApplicationStatus, int]) -> dict[str, int]:

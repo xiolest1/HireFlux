@@ -488,6 +488,35 @@ def test_application_list_views_are_server_owned_complete_and_cursor_bound(
     assert bucket_cursor_scope.status_code == 400
     assert bucket_cursor_scope.json()["error"]["code"] == "INVALID_CURSOR"
 
+    follow_up_attention = client.get(
+        "/api/v1/applications",
+        params={"view": "ACTIVE", "follow_up": "NEEDS_ATTENTION", "limit": 100},
+    )
+    assert follow_up_attention.status_code == 200
+    assert {item["status"] for item in follow_up_attention.json()["items"]} == {
+        "APPLIED",
+        "SCREENING",
+        "INTERVIEW",
+        "OFFER",
+    }
+    assert all(item["follow_up_date"] is None for item in follow_up_attention.json()["items"])
+    invalid_follow_up_view = client.get(
+        "/api/v1/applications",
+        params={"view": "ALL", "follow_up": "NEEDS_ATTENTION"},
+    )
+    assert invalid_follow_up_view.status_code == 422
+    follow_up_cursor_scope = client.get(
+        "/api/v1/applications",
+        params={
+            "view": "ACTIVE",
+            "follow_up": "NEEDS_ATTENTION",
+            "limit": 1,
+            "cursor": active_page_one["next_cursor"],
+        },
+    )
+    assert follow_up_cursor_scope.status_code == 400
+    assert follow_up_cursor_scope.json()["error"]["code"] == "INVALID_CURSOR"
+
     all_items = client.get("/api/v1/applications", params={"view": "ALL", "limit": 100})
     assert all_items.status_code == 200
     assert {item["application_id"] for item in all_items.json()["items"]} == {

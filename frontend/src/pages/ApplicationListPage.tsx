@@ -20,6 +20,7 @@ import {
   APPLICATION_STATUSES,
   APPLICATION_SORTS,
   APPLICATION_VIEWS,
+  FOLLOW_UP_FILTERS,
   STAGE_AGE_BUCKETS,
   WORK_MODES,
   type Application,
@@ -54,6 +55,7 @@ interface FilterDraft {
   source: string;
   workMode: string;
   stageAge: string;
+  followUp: string;
   sort: string;
 }
 
@@ -62,6 +64,7 @@ const defaultFilterDraft: FilterDraft = {
   source: "",
   workMode: "",
   stageAge: "",
+  followUp: "",
   sort: "updated_desc",
 };
 
@@ -129,6 +132,11 @@ export function ApplicationListPage() {
     STAGE_AGE_BUCKETS,
   );
   const stageAge = applicationView === "ACTIVE" ? requestedStageAge : undefined;
+  const requestedFollowUp = optionFromSearchParam(
+    searchParams.get("follow_up"),
+    FOLLOW_UP_FILTERS,
+  );
+  const followUp = applicationView === "ACTIVE" ? requestedFollowUp : undefined;
   const sort =
     optionFromSearchParam(searchParams.get("sort"), APPLICATION_SORTS) ??
     "updated_desc";
@@ -139,22 +147,25 @@ export function ApplicationListPage() {
     source: source ?? "",
     workMode: workMode ?? "",
     stageAge: stageAge ?? "",
+    followUp: followUp ?? "",
     sort,
   });
 
   useEffect(() => setSearchDraft(q), [q]);
   useEffect(() => {
-    if (!requestedStageAge || applicationView === "ACTIVE") return;
+    if ((!requestedStageAge && !requestedFollowUp) || applicationView === "ACTIVE") return;
     const next = new URLSearchParams(searchParams);
     next.delete("stage_age");
+    next.delete("follow_up");
     setSearchParams(next, { replace: true });
-  }, [applicationView, requestedStageAge, searchParams, setSearchParams]);
+  }, [applicationView, requestedFollowUp, requestedStageAge, searchParams, setSearchParams]);
 
   const applicationsQuery = useApplications(status, 20, {
     q: q || undefined,
     source,
     workMode,
     stageAge,
+    followUp,
     sort,
     view: applicationView,
   });
@@ -182,7 +193,10 @@ export function ApplicationListPage() {
     updateSearchParams((next) => {
       next.set("view", value);
       next.delete("status");
-      if (value !== "ACTIVE") next.delete("stage_age");
+      if (value !== "ACTIVE") {
+        next.delete("stage_age");
+        next.delete("follow_up");
+      }
     });
   }
 
@@ -199,6 +213,7 @@ export function ApplicationListPage() {
       source: source ?? "",
       workMode: workMode ?? "",
       stageAge: stageAge ?? "",
+      followUp: followUp ?? "",
       sort,
     });
     setFilterOpen(true);
@@ -233,6 +248,16 @@ export function ApplicationListPage() {
       } else {
         next.delete("stage_age");
       }
+      const parsedFollowUp = optionFromSearchParam(
+        filterDraft.followUp || null,
+        FOLLOW_UP_FILTERS,
+      );
+      if (parsedFollowUp && (!parsedStatus || viewForStatus(parsedStatus) === "ACTIVE")) {
+        next.set("follow_up", parsedFollowUp);
+        next.set("view", "ACTIVE");
+      } else {
+        next.delete("follow_up");
+      }
       if (filterDraft.sort !== "updated_desc") {
         next.set("sort", filterDraft.sort);
       } else {
@@ -249,12 +274,13 @@ export function ApplicationListPage() {
       next.delete("source");
       next.delete("work_mode");
       next.delete("stage_age");
+      next.delete("follow_up");
       next.delete("sort");
     });
   }
 
   function removeFilter(
-  name: "q" | "status" | "source" | "work_mode" | "stage_age" | "sort",
+  name: "q" | "status" | "source" | "work_mode" | "stage_age" | "follow_up" | "sort",
 ) {
     updateSearchParams((next) => next.delete(name));
   }
@@ -269,13 +295,14 @@ export function ApplicationListPage() {
   }
 
   const hasFilters = Boolean(
-    status || q || source || workMode || stageAge || sort !== "updated_desc",
+    status || q || source || workMode || stageAge || followUp || sort !== "updated_desc",
   );
   const filterCount = [
     status,
     source,
     workMode,
     stageAge,
+    followUp,
     sort !== "updated_desc" ? sort : null,
   ].filter(Boolean).length;
 
@@ -417,6 +444,12 @@ export function ApplicationListPage() {
               <FilterChip
                 label={`Stage age: ${formatStageAge(stageAge)}`}
                 onRemove={() => removeFilter("stage_age")}
+              />
+            ) : null}
+            {followUp ? (
+              <FilterChip
+                label="Follow-up: Needs attention"
+                onRemove={() => removeFilter("follow_up")}
               />
             ) : null}
             {sort !== "updated_desc" ? (
@@ -685,6 +718,15 @@ function FilterDrawer({
           {STAGE_AGE_BUCKETS.map((option) => (
             <option key={option} value={option}>{formatStageAge(option)}</option>
           ))}
+        </ListFilter>
+        <ListFilter
+          id="follow-up-filter"
+          label="Follow-up planning"
+          value={draft.followUp}
+          onChange={(followUp) => onDraftChange({ ...draft, followUp })}
+        >
+          <option value="">Any follow-up state</option>
+          <option value="NEEDS_ATTENTION">Needs attention</option>
         </ListFilter>
         <ListFilter
           id="sort-filter"
