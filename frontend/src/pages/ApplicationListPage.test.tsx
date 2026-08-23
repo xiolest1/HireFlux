@@ -105,6 +105,70 @@ describe("ApplicationListPage", () => {
     });
   });
 
+  it("preserves an exact stage-age drill-down and exposes a removable filter", async () => {
+    let requestedStageAge: string | null = null;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
+        requestedStageAge = new URL(request.url).searchParams.get("stage_age");
+        return HttpResponse.json({ items: [makeApplication()], next_cursor: null });
+      }),
+    );
+
+    const { user, router } = renderApp(
+      "/applications?view=ACTIVE&stage_age=15-30",
+    );
+    expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
+    expect(requestedStageAge).toBe("15-30");
+    expect(
+      screen.getByRole("button", { name: "Remove Stage age: 15–30 days filter" }),
+    ).toBeVisible();
+
+    await user.click(
+      screen.getByRole("button", { name: "Remove Stage age: 15–30 days filter" }),
+    );
+    await waitFor(() => expect(router.state.location.search).not.toContain("stage_age"));
+  });
+
+  it("adds a stage-age filter from the application filter drawer", async () => {
+    let requestedStageAge: string | null = null;
+    let requestedView: string | null = null;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
+        const search = new URL(request.url).searchParams;
+        requestedStageAge = search.get("stage_age");
+        requestedView = search.get("view");
+        return HttpResponse.json({ items: [], next_cursor: null });
+      }),
+    );
+
+    const { user } = renderApp("/applications?view=ACTIVE");
+    expect(await screen.findByText("No applications yet")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Filters" }));
+    await user.selectOptions(screen.getByLabelText("Time in current stage"), "31+");
+    await user.click(screen.getByRole("button", { name: "Apply filters" }));
+
+    await waitFor(() => {
+      expect(requestedStageAge).toBe("31+");
+      expect(requestedView).toBe("ACTIVE");
+    });
+  });
+
+  it("removes stage-age from a non-active shared URL before requesting data", async () => {
+    let requestedStageAge: string | null = null;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
+        requestedStageAge = new URL(request.url).searchParams.get("stage_age");
+        return HttpResponse.json({ items: [], next_cursor: null });
+      }),
+    );
+
+    const { router } = renderApp("/applications?view=ALL&stage_age=15-30");
+
+    expect(await screen.findByText("No applications yet")).toBeVisible();
+    await waitFor(() => expect(router.state.location.search).toBe("?view=ALL"));
+    expect(requestedStageAge).toBeNull();
+  });
+
   it("asks the server for the whole selected view without filtering the page locally", async () => {
     let requestedView: string | null = null;
     const archived = makeApplication({

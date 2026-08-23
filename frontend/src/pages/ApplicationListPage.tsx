@@ -20,6 +20,7 @@ import {
   APPLICATION_STATUSES,
   APPLICATION_SORTS,
   APPLICATION_VIEWS,
+  STAGE_AGE_BUCKETS,
   WORK_MODES,
   type Application,
   type ApplicationStatus,
@@ -37,6 +38,7 @@ import { ApplicationCard } from "../features/applications/ApplicationCard";
 import { ApplicationListSkeleton } from "../features/applications/ApplicationSkeletons";
 import {
   formatDateOnly,
+  formatStageAge,
   formatSource,
   formatStatus,
   formatTimestamp,
@@ -51,6 +53,7 @@ interface FilterDraft {
   status: string;
   source: string;
   workMode: string;
+  stageAge: string;
   sort: string;
 }
 
@@ -58,6 +61,7 @@ const defaultFilterDraft: FilterDraft = {
   status: "",
   source: "",
   workMode: "",
+  stageAge: "",
   sort: "updated_desc",
 };
 
@@ -120,6 +124,11 @@ export function ApplicationListPage() {
     searchParams.get("work_mode"),
     WORK_MODES,
   );
+  const requestedStageAge = optionFromSearchParam(
+    searchParams.get("stage_age"),
+    STAGE_AGE_BUCKETS,
+  );
+  const stageAge = applicationView === "ACTIVE" ? requestedStageAge : undefined;
   const sort =
     optionFromSearchParam(searchParams.get("sort"), APPLICATION_SORTS) ??
     "updated_desc";
@@ -129,14 +138,23 @@ export function ApplicationListPage() {
     status: status ?? "",
     source: source ?? "",
     workMode: workMode ?? "",
+    stageAge: stageAge ?? "",
     sort,
   });
 
   useEffect(() => setSearchDraft(q), [q]);
+  useEffect(() => {
+    if (!requestedStageAge || applicationView === "ACTIVE") return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("stage_age");
+    setSearchParams(next, { replace: true });
+  }, [applicationView, requestedStageAge, searchParams, setSearchParams]);
+
   const applicationsQuery = useApplications(status, 20, {
     q: q || undefined,
     source,
     workMode,
+    stageAge,
     sort,
     view: applicationView,
   });
@@ -164,6 +182,7 @@ export function ApplicationListPage() {
     updateSearchParams((next) => {
       next.set("view", value);
       next.delete("status");
+      if (value !== "ACTIVE") next.delete("stage_age");
     });
   }
 
@@ -179,6 +198,7 @@ export function ApplicationListPage() {
       status: status ?? "",
       source: source ?? "",
       workMode: workMode ?? "",
+      stageAge: stageAge ?? "",
       sort,
     });
     setFilterOpen(true);
@@ -199,6 +219,20 @@ export function ApplicationListPage() {
       else next.delete("source");
       if (filterDraft.workMode) next.set("work_mode", filterDraft.workMode);
       else next.delete("work_mode");
+      const parsedStageAge = optionFromSearchParam(
+        filterDraft.stageAge || null,
+        STAGE_AGE_BUCKETS,
+      );
+      const parsedStatus = statusFromSearchParam(filterDraft.status || null);
+      const stageAgeAllowed =
+        Boolean(parsedStageAge) &&
+        (!parsedStatus || viewForStatus(parsedStatus) === "ACTIVE");
+      if (stageAgeAllowed && parsedStageAge) {
+        next.set("stage_age", parsedStageAge);
+        next.set("view", "ACTIVE");
+      } else {
+        next.delete("stage_age");
+      }
       if (filterDraft.sort !== "updated_desc") {
         next.set("sort", filterDraft.sort);
       } else {
@@ -214,11 +248,14 @@ export function ApplicationListPage() {
       next.delete("status");
       next.delete("source");
       next.delete("work_mode");
+      next.delete("stage_age");
       next.delete("sort");
     });
   }
 
-  function removeFilter(name: "q" | "status" | "source" | "work_mode" | "sort") {
+  function removeFilter(
+  name: "q" | "status" | "source" | "work_mode" | "stage_age" | "sort",
+) {
     updateSearchParams((next) => next.delete(name));
   }
 
@@ -232,12 +269,13 @@ export function ApplicationListPage() {
   }
 
   const hasFilters = Boolean(
-    status || q || source || workMode || sort !== "updated_desc",
+    status || q || source || workMode || stageAge || sort !== "updated_desc",
   );
   const filterCount = [
     status,
     source,
     workMode,
+    stageAge,
     sort !== "updated_desc" ? sort : null,
   ].filter(Boolean).length;
 
@@ -373,6 +411,12 @@ export function ApplicationListPage() {
               <FilterChip
                 label={formatWorkMode(workMode)}
                 onRemove={() => removeFilter("work_mode")}
+              />
+            ) : null}
+            {stageAge ? (
+              <FilterChip
+                label={`Stage age: ${formatStageAge(stageAge)}`}
+                onRemove={() => removeFilter("stage_age")}
               />
             ) : null}
             {sort !== "updated_desc" ? (
@@ -629,6 +673,17 @@ function FilterDrawer({
           <option value="">All modes</option>
           {WORK_MODES.map((option) => (
             <option key={option} value={option}>{formatWorkMode(option)}</option>
+          ))}
+        </ListFilter>
+        <ListFilter
+          id="stage-age-filter"
+          label="Time in current stage"
+          value={draft.stageAge}
+          onChange={(stageAge) => onDraftChange({ ...draft, stageAge })}
+        >
+          <option value="">Any stage age</option>
+          {STAGE_AGE_BUCKETS.map((option) => (
+            <option key={option} value={option}>{formatStageAge(option)}</option>
           ))}
         </ListFilter>
         <ListFilter

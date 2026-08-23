@@ -3,6 +3,7 @@ import type {
   ApplicationStatus,
   InterviewStatus,
   InterviewType,
+  StageAgeBucket,
   WorkMode,
 } from "../../api/schemas";
 
@@ -50,6 +51,10 @@ export function formatSource(source: ApplicationSource): string {
 
 export function formatWorkMode(workMode: WorkMode): string {
   return workMode === "ONSITE" ? "On-site" : workMode.charAt(0) + workMode.slice(1).toLowerCase();
+}
+
+export function formatStageAge(bucket: StageAgeBucket): string {
+  return `${bucket.replace("-", "–")} days`;
 }
 
 export function formatInterviewType(type: InterviewType): string {

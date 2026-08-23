@@ -156,7 +156,11 @@ class InsightsService:
         )
         follow_up_coverage = _follow_up_coverage(current_population, local_today)
         source_performance = _source_performance(submitted)
-        stage_aging = _stage_aging(current_population, now)
+        stage_aging = _stage_aging(
+            current_population,
+            now,
+            time_zone=workspace_time_zone,
+        )
         return {
             "range": reporting_range,
             "filters": {
@@ -725,12 +729,19 @@ def _funnel(applications: tuple[Application, ...]) -> list[dict[str, object]]:
     ]
 
 
-def _stage_aging(applications: tuple[Application, ...], now: datetime) -> list[dict[str, object]]:
+def _stage_aging(
+    applications: tuple[Application, ...],
+    now: datetime,
+    *,
+    time_zone: ZoneInfo,
+) -> list[dict[str, object]]:
     buckets = {"0-7": 0, "8-14": 0, "15-30": 0, "31+": 0}
+    today = now.astimezone(time_zone).date()
     for item in applications:
         if item.status not in ACTIVE_PURSUIT_STATUSES or item.stage_entered_at is None:
             continue
-        days = max(0, (now.date() - item.stage_entered_at.date()).days)
+        entered_date = item.stage_entered_at.astimezone(time_zone).date()
+        days = max(0, (today - entered_date).days)
         key = "0-7" if days <= 7 else "8-14" if days <= 14 else "15-30" if days <= 30 else "31+"
         buckets[key] += 1
     return [{"bucket": key, "count": count} for key, count in buckets.items()]

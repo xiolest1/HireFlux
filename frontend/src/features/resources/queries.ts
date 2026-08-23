@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import {
   createInterview,
   createNote,
@@ -16,7 +17,12 @@ import {
   type InterviewFields,
   type UpdateSettingsRequest,
 } from "../../api/resources";
-import type { InterviewStatus, InterviewWorkspace } from "../../api/schemas";
+import type { InterviewStatus, InterviewWorkspace, Settings } from "../../api/schemas";
+import {
+  detectBrowserTimeZone,
+  hasManualTimeZonePreference,
+  markManualTimeZonePreference,
+} from "../../auth/timeZonePreference";
 import { applicationKeys } from "../applications/queries";
 
 export const resourceKeys = {
@@ -38,8 +44,52 @@ export function useUpdateSettings() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: UpdateSettingsRequest) => updateSettings(request),
-    onSuccess: (settings) => client.setQueryData(resourceKeys.settings, settings),
+    onSuccess: (settings, request) => {
+      if (request.time_zone !== undefined) markManualTimeZonePreference();
+      client.setQueryData(resourceKeys.settings, settings);
+    },
   });
+}
+
+export function useAutoDetectTimeZone(
+  settings: Settings | undefined,
+  enabled: boolean,
+): void {
+  const client = useQueryClient();
+  const attemptedZone = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (
+      !enabled ||
+      !settings ||
+      hasManualTimeZonePreference()
+    ) {
+      return;
+    }
+    const browserTimeZone = detectBrowserTimeZone();
+    if (
+      !browserTimeZone ||
+      browserTimeZone === "UTC" ||
+      attemptedZone.current === browserTimeZone
+    ) {
+      return;
+    }
+    attemptedZone.current = browserTimeZone;
+    let active = true;
+    void updateSettings({
+      expected_version: settings.version,
+      time_zone: browserTimeZone,
+    })
+      .then((nextSettings) => {
+        if (active) client.setQueryData(resourceKeys.settings, nextSettings);
+      })
+      .catch(() => {
+        // UTC remains a safe fallback when the automatic preference cannot be saved.
+      });
+    return () => {
+      active = false;
+    };
+  }, [client, enabled, settings]);
 }
 
 export function useExportWorkspace() {

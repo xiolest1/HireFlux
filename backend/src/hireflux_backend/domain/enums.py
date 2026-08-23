@@ -40,6 +40,13 @@ class ApplicationSort(StrEnum):
     UPDATED_ASC = "updated_asc"
 
 
+class StageAgeBucket(StrEnum):
+    ZERO_TO_SEVEN = "0-7"
+    EIGHT_TO_FOURTEEN = "8-14"
+    FIFTEEN_TO_THIRTY = "15-30"
+    THIRTY_ONE_PLUS = "31+"
+
+
 class ActivityType(StrEnum):
     APPLICATION_CREATED = "APPLICATION_CREATED"
     STATUS_CHANGED = "STATUS_CHANGED"

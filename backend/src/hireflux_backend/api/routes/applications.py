@@ -27,6 +27,7 @@ from hireflux_backend.domain.enums import (
     ApplicationSort,
     ApplicationSource,
     ApplicationStatus,
+    StageAgeBucket,
     WorkMode,
 )
 from hireflux_backend.domain.resources import DefaultApplicationView
@@ -70,6 +71,7 @@ def list_applications(
     q: Annotated[str | None, Query(min_length=1, max_length=120)] = None,
     source: ApplicationSource | None = None,
     work_mode: WorkMode | None = None,
+    stage_age: StageAgeBucket | None = None,
     sort: ApplicationSort = ApplicationSort.UPDATED_DESC,
     view: DefaultApplicationView | None = None,
 ) -> ApplicationListResponse:
@@ -81,6 +83,7 @@ def list_applications(
         q=q,
         source=source,
         work_mode=work_mode,
+        stage_age=stage_age,
         sort=sort,
         view=view,
     )

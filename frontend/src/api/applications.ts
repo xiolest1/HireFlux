@@ -8,6 +8,7 @@ import {
   type ApplicationSource,
   type ApplicationSort,
   type ApplicationView,
+  type StageAgeBucket,
   type WorkMode,
   type Activity,
   userSchema,
@@ -49,6 +50,7 @@ export interface ApplicationListFilters {
   workMode?: WorkMode;
   sort?: ApplicationSort;
   view?: ApplicationView;
+  stageAge?: StageAgeBucket;
 }
 
 export function getMe(signal?: AbortSignal): Promise<User> {
@@ -74,6 +76,7 @@ export function listApplications(
   if (filters.workMode) search.set("work_mode", filters.workMode);
   if (filters.sort) search.set("sort", filters.sort);
   if (filters.view) search.set("view", filters.view);
+  if (filters.stageAge) search.set("stage_age", filters.stageAge);
   return apiRequest(
     `/api/v1/applications?${search.toString()}`,
     applicationListResponseSchema,

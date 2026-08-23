@@ -1,7 +1,7 @@
 from datetime import UTC, date, datetime
 from typing import cast
 
-from hireflux_backend.application.insights import InsightsService
+from hireflux_backend.application.insights import InsightFilters, InsightsService
 from hireflux_backend.domain.enums import ApplicationStatus, UserRole
 from hireflux_backend.domain.models import Application, CurrentIdentity
 from hireflux_backend.domain.resources import (
@@ -12,7 +12,12 @@ from hireflux_backend.domain.resources import (
 )
 
 
-def _application(application_id: str, follow_up_date: date | None) -> Application:
+def _application(
+    application_id: str,
+    follow_up_date: date | None,
+    *,
+    stage_entered_at: datetime | None = None,
+) -> Application:
     timestamp = datetime(2026, 8, 12, 2, 30, tzinfo=UTC)
     return Application(
         application_id=application_id,
@@ -32,7 +37,7 @@ def _application(application_id: str, follow_up_date: date | None) -> Applicatio
         updated_at=timestamp,
         version=1,
         submitted_at=timestamp,
-        stage_entered_at=timestamp,
+        stage_entered_at=stage_entered_at or timestamp,
     )
 
 
@@ -112,3 +117,34 @@ def test_dashboard_uses_saved_zone_and_schedule_query_for_follow_up_dates() -> N
         }
     ]
     assert all(action["application_id"] != "future" for action in follow_ups)
+
+
+def test_analytics_stage_aging_uses_saved_workspace_zone() -> None:
+    now = datetime(2026, 8, 12, 1, tzinfo=UTC)
+    repository = RepositorySpy()
+    repository.all_applications = (
+        _application(
+            "boundary",
+            None,
+            stage_entered_at=datetime(2026, 8, 4, 23, tzinfo=UTC),
+        ),
+    )
+    identity = CurrentIdentity(
+        user_id="owner",
+        name="User",
+        email="user@example.com",
+        role=UserRole.STANDARD_USER,
+    )
+
+    payload = InsightsService(
+        repository,
+        resource_service=ResourceServiceStub(),  # type: ignore[arg-type]
+        clock=lambda: now,
+    ).analytics(identity, reporting_range="all", filters=InsightFilters())
+
+    assert payload["stage_aging"] == [
+        {"bucket": "0-7", "count": 1},
+        {"bucket": "8-14", "count": 0},
+        {"bucket": "15-30", "count": 0},
+        {"bucket": "31+", "count": 0},
+    ]

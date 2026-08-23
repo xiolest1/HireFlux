@@ -25,6 +25,21 @@ class ApplicationPage:
 
 
 @dataclass(frozen=True, slots=True)
+class StageAgeBounds:
+    entered_on_or_after: date | None
+    entered_before: date | None
+
+    @property
+    def cursor_scope(self) -> str:
+        return "#".join(
+            (
+                self.entered_on_or_after.isoformat() if self.entered_on_or_after else "",
+                self.entered_before.isoformat() if self.entered_before else "",
+            )
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class ActivityPage:
     items: tuple[Activity, ...]
     next_cursor: str | None
@@ -49,6 +64,7 @@ class ApplicationRepository(Protocol):
         q: str | None = None,
         source: ApplicationSource | None = None,
         work_mode: WorkMode | None = None,
+        stage_age: StageAgeBounds | None = None,
         sort: ApplicationSort = ApplicationSort.UPDATED_DESC,
         view: DefaultApplicationView | None = None,
     ) -> ApplicationPage: ...

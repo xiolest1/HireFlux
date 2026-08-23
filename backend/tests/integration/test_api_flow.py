@@ -449,6 +449,45 @@ def test_application_list_views_are_server_owned_complete_and_cursor_bound(
         item["status"] for item in active_page_one["items"] + active_page_two.json()["items"]
     } == {"APPLIED", "SCREENING", "INTERVIEW", "OFFER"}
 
+    recent_stage = client.get(
+        "/api/v1/applications",
+        params={"view": "ACTIVE", "stage_age": "0-7", "limit": 100},
+    )
+    assert recent_stage.status_code == 200
+    assert {item["company_name"] for item in recent_stage.json()["items"]} == {
+        "Applied",
+        "Screening",
+        "Interview",
+        "Offer",
+    }
+    old_stage = client.get(
+        "/api/v1/applications",
+        params={"view": "ACTIVE", "stage_age": "31+", "limit": 100},
+    )
+    assert old_stage.status_code == 200
+    assert old_stage.json()["items"] == []
+    invalid_stage_age = client.get(
+        "/api/v1/applications",
+        params={"view": "ALL", "stage_age": "15-30"},
+    )
+    assert invalid_stage_age.status_code == 422
+    invalid_bucket = client.get(
+        "/api/v1/applications",
+        params={"view": "ACTIVE", "stage_age": "1-2"},
+    )
+    assert invalid_bucket.status_code == 422
+    bucket_cursor_scope = client.get(
+        "/api/v1/applications",
+        params={
+            "view": "ACTIVE",
+            "stage_age": "0-7",
+            "limit": 1,
+            "cursor": active_page_one["next_cursor"],
+        },
+    )
+    assert bucket_cursor_scope.status_code == 400
+    assert bucket_cursor_scope.json()["error"]["code"] == "INVALID_CURSOR"
+
     all_items = client.get("/api/v1/applications", params={"view": "ALL", "limit": 100})
     assert all_items.status_code == 200
     assert {item["application_id"] for item in all_items.json()["items"]} == {

@@ -8,7 +8,7 @@ from hireflux_backend.application.errors import (
     InvalidCursorError,
     PersistenceError,
 )
-from hireflux_backend.application.ports import ActivityPage, ApplicationPage
+from hireflux_backend.application.ports import ActivityPage, ApplicationPage, StageAgeBounds
 from hireflux_backend.domain.enums import (
     ApplicationSort,
     ApplicationSource,
@@ -211,6 +211,7 @@ class DynamoApplicationRepository:
         q: str | None = None,
         source: ApplicationSource | None = None,
         work_mode: WorkMode | None = None,
+        stage_age: StageAgeBounds | None = None,
         sort: ApplicationSort = ApplicationSort.UPDATED_DESC,
         view: DefaultApplicationView | None = None,
     ) -> ApplicationPage:
@@ -222,6 +223,7 @@ class DynamoApplicationRepository:
                 normalized_query or "",
                 source.value if source else "",
                 work_mode.value if work_mode else "",
+                stage_age.cursor_scope if stage_age else "",
                 sort.value,
             )
         )
@@ -235,6 +237,7 @@ class DynamoApplicationRepository:
                 normalized_query=normalized_query,
                 source=source,
                 work_mode=work_mode,
+                stage_age=stage_age,
                 sort=sort,
                 scope=scope,
             )
@@ -268,6 +271,7 @@ class DynamoApplicationRepository:
         if work_mode:
             filters.append("work_mode = :work_mode")
             values[":work_mode"] = work_mode.value
+        _append_stage_age_filter(filters, values, stage_age)
         arguments["ExpressionAttributeValues"] = serialize_item(values)
         if filters:
             arguments["FilterExpression"] = " AND ".join(filters)
@@ -322,6 +326,7 @@ class DynamoApplicationRepository:
         normalized_query: str | None,
         source: ApplicationSource | None,
         work_mode: WorkMode | None,
+        stage_age: StageAgeBounds | None,
         sort: ApplicationSort,
         scope: str,
     ) -> ApplicationPage:
@@ -352,6 +357,7 @@ class DynamoApplicationRepository:
                 if work_mode:
                     filters.append("work_mode = :work_mode")
                     values[":work_mode"] = work_mode.value
+                _append_stage_age_filter(filters, values, stage_age)
 
                 arguments: dict[str, Any] = {
                     "TableName": self._table_name,
@@ -692,6 +698,19 @@ def _application_statuses_for_view(
     if view is DefaultApplicationView.ALL:
         return tuple(ApplicationStatus)
     raise ValueError("An application view is required.")
+
+
+def _append_stage_age_filter(
+    filters: list[str], values: dict[str, object], bounds: StageAgeBounds | None
+) -> None:
+    if bounds is None:
+        return
+    if bounds.entered_on_or_after is not None:
+        filters.append("stage_entered_at >= :stage_entered_on_or_after")
+        values[":stage_entered_on_or_after"] = bounds.entered_on_or_after.isoformat()
+    if bounds.entered_before is not None:
+        filters.append("stage_entered_at < :stage_entered_before")
+        values[":stage_entered_before"] = bounds.entered_before.isoformat()
 
 
 def _error_code(error: ClientError) -> str:

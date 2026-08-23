@@ -10,6 +10,10 @@ import { createQueryClient } from "../app/queryClient";
 import { appRoutes } from "../app/router";
 import { DemoSessionProvider } from "../auth/DemoSessionProvider";
 import { clearDemoSession, saveDemoSession } from "../auth/sessionStore";
+import {
+  clearManualTimeZonePreference,
+  markManualTimeZonePreference,
+} from "../auth/timeZonePreference";
 
 const testSession = {
   access_token: "test.demo.session.token.that.is.long.enough",
@@ -19,8 +23,10 @@ const testSession = {
 
 export function renderApp(
   initialEntry: InitialEntry = "/applications",
-  options: { withSession?: boolean } = {},
+  options: { withSession?: boolean; autoDetectTimeZone?: boolean } = {},
 ) {
+  if (options.autoDetectTimeZone) clearManualTimeZonePreference();
+  else markManualTimeZonePreference();
   if (options.withSession === false) {
     clearDemoSession();
   } else {

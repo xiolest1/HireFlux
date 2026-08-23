@@ -21,6 +21,7 @@ import {
   saveDemoSession,
   type DemoSessionEventReason,
 } from "./sessionStore";
+import { clearManualTimeZonePreference } from "./timeZonePreference";
 
 function initialState(): { session: DemoSession | null; status: SessionStatus } {
   const loaded = loadDemoSession();
@@ -39,9 +40,11 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const start = useCallback(async () => {
     setIsCreating(true);
     setError(null);
+    clearManualTimeZonePreference();
     try {
       const session = await createDemoSession();
       queryClient.clear();
+      clearManualTimeZonePreference();
       saveDemoSession(session);
       setState({ session, status: "active" });
       return session;
@@ -84,6 +87,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
 
   const exit = useCallback(() => {
     queryClient.clear();
+    clearManualTimeZonePreference();
     clearDemoSession("cleared");
   }, [queryClient]);
 
@@ -91,6 +95,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     function handleSessionEvent(event: Event) {
       const customEvent = event as CustomEvent<{ reason?: DemoSessionEventReason }>;
       queryClient.clear();
+      clearManualTimeZonePreference();
       setState({
         session: null,
         status: customEvent.detail?.reason === "expired" ? "expired" : "missing",

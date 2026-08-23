@@ -5,7 +5,12 @@ from pydantic import BaseModel, model_validator
 
 from hireflux_backend.api.resource_schemas import InterviewResponse
 from hireflux_backend.api.schemas import ApplicationResponse
-from hireflux_backend.domain.enums import ApplicationSource, ApplicationStatus, WorkMode
+from hireflux_backend.domain.enums import (
+    ApplicationSource,
+    ApplicationStatus,
+    StageAgeBucket,
+    WorkMode,
+)
 
 DashboardRange = Literal["30d", "90d", "all"]
 
@@ -87,7 +92,7 @@ class FunnelPointResponse(BaseModel):
 
 
 class AgingBucketResponse(BaseModel):
-    bucket: str
+    bucket: StageAgeBucket
     count: int
 
 

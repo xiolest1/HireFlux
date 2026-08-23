@@ -2,6 +2,10 @@ import { Bell, Check, Clock3, Download, KeyRound, Mail, Palette, ShieldCheck, Us
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { ColorTheme, DashboardRange, Settings } from "../api/schemas";
 import { useDemoSession } from "../auth/demoSessionContext";
+import {
+  detectBrowserTimeZone,
+  hasManualTimeZonePreference,
+} from "../auth/timeZonePreference";
 import { Button } from "../components/ui/Button";
 import { ErrorPanel, SuccessBanner } from "../components/ui/Feedback";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -54,6 +58,15 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [profileNameOverride, setProfileNameOverride] = useState<string | null>(null);
   const [profilePreviewSaved, setProfilePreviewSaved] = useState(false);
+  const browserTimeZone = detectBrowserTimeZone();
+  const manualTimeZone = hasManualTimeZonePreference();
+  const availableTimeZones = Array.from(
+    new Set([
+      ...(browserTimeZone ? [browserTimeZone] : []),
+      ...(settingsQuery.data ? [settingsQuery.data.time_zone] : []),
+      ...TIME_ZONES,
+    ]),
+  );
 
   useEffect(() => {
     setProfileNameOverride(null);
@@ -152,13 +165,13 @@ export function SettingsPage() {
       </div>
 
       <section className="rounded-3xl border border-slate-200 bg-white shadow-panel" aria-labelledby="preferences-title">
-        <div className="border-b border-slate-200 p-5 sm:p-6"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><Palette aria-hidden="true" className="size-5" /></span><div><h2 id="preferences-title" className="text-xl font-bold text-slate-950">Preferences</h2><p className="mt-1 text-sm leading-6 text-slate-600">These settings persist only for this isolated 24-hour workspace.</p></div></div></div>
+        <div className="border-b border-slate-200 p-5 sm:p-6"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><Palette aria-hidden="true" className="size-5" /></span><div><h2 id="preferences-title" className="text-xl font-bold text-slate-950">Preferences</h2><p className="mt-1 text-sm leading-6 text-slate-600">These settings persist only for this isolated 24-hour workspace. New workspaces start with this browser&apos;s detected time zone; selecting a different zone creates a manual override.</p></div></div></div>
         {settingsQuery.isPending || (!draft && !settingsQuery.isError) ? <SettingsSkeleton /> : null}
         {settingsQuery.isError ? <div className="p-5 sm:p-6"><ErrorPanel compact error={settingsQuery.error} onRetry={() => void settingsQuery.refetch()} /></div> : null}
         {draft && settingsQuery.data ? (
           <form onSubmit={submit}>
             <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
-              <SettingSelect label="Time zone" value={draft.time_zone} onChange={(value) => change({ ...draft, time_zone: value })}>{TIME_ZONES.map((zone) => <option key={zone} value={zone}>{zone.replaceAll("_", " ")}</option>)}</SettingSelect>
+              <SettingSelect label="Time zone" value={draft.time_zone} onChange={(value) => change({ ...draft, time_zone: value })}>{availableTimeZones.map((zone) => <option key={zone} value={zone}>{zone.replaceAll("_", " ")}{!manualTimeZone && zone === browserTimeZone ? " (automatic)" : ""}</option>)}</SettingSelect>
               <div><label htmlFor="follow-up-days" className="text-sm font-semibold text-slate-800">Default follow-up interval</label><div className="relative mt-2"><input id="follow-up-days" type="number" min={1} max={30} value={draft.default_follow_up_days} onChange={(event) => change({ ...draft, default_follow_up_days: Number(event.target.value) })} className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 pr-14 text-slate-900" /><span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">days</span></div></div>
               <SettingSelect label="Default application view" value={draft.default_application_view} onChange={(value) => change({ ...draft, default_application_view: value as SettingsDraft["default_application_view"] })}><option value="ACTIVE">Active pursuits</option><option value="ALL">All applications</option><option value="ARCHIVED">Archived</option></SettingSelect>
               <SettingSelect label="Default dashboard range" value={draft.default_dashboard_range} onChange={(value) => change({ ...draft, default_dashboard_range: value as DashboardRange })}><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="all">All time</option></SettingSelect>

@@ -9,6 +9,7 @@ import {
   applicationStatusSchema,
   dashboardRangeSchema,
   interviewSchema,
+  stageAgeBucketSchema,
   workModeSchema,
   type ApplicationSource,
   type ApplicationStatus,
@@ -104,7 +105,7 @@ export const analyticsSchema = z.object({
     }),
   ),
   stage_aging: z.array(
-    z.object({ bucket: z.string().min(1), count: z.number().int().nonnegative() }),
+    z.object({ bucket: stageAgeBucketSchema, count: z.number().int().nonnegative() }),
   ),
   source_performance: z.array(
     z.object({

@@ -116,7 +116,7 @@ describe("workspace milestone features", () => {
       }),
     );
 
-    renderApp("/analytics?range=30d&source=REFERRAL");
+    const { user } = renderApp("/analytics?range=30d&source=REFERRAL");
     expect(await screen.findByRole("heading", { name: "Outcome snapshot" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Search health" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Build a stronger sample" })).toBeVisible();
@@ -137,6 +137,20 @@ describe("workspace milestone features", () => {
     expect(screen.getByText("This dataset is descriptive, not predictive.")).toBeVisible();
     expect(query.get("range")).toBe("30d");
     expect(query.get("source")).toBe("REFERRAL");
+
+    await user.click(screen.getByRole("tab", { name: "Pipeline" }));
+    expect(
+      await screen.findByRole("heading", {
+        name: "Applications by time in their current stage",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/active applications in Applied, Screening, Interview, or Offer/),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "View applications aged 0–7 days (1 application)" }),
+    ).toHaveAttribute("href", "/applications?view=ACTIVE&stage_age=0-7");
+    expect(screen.getAllByText("No applications in this range")).toHaveLength(3);
   });
 
   it("stages analytics filters and keeps URL-backed sections", async () => {
@@ -205,6 +219,32 @@ describe("workspace milestone features", () => {
     expect(await screen.findByText("Preferences saved for this demo workspace.")).toBeVisible();
     expect(body).toMatchObject({ expected_version: 1, default_dashboard_range: "90d", theme: "LIGHT" });
     expect(document.documentElement).not.toHaveClass("dark");
+  });
+
+  it("automatically persists the browser time zone for a new workspace", async () => {
+    let body: Record<string, unknown> | null = null;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/settings`, () =>
+        HttpResponse.json({ ...testSettings, time_zone: "America/Chicago" }),
+      ),
+      http.patch(`${API_ORIGIN}/api/v1/settings`, async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ ...testSettings, ...body, version: 2 });
+      }),
+    );
+
+    const browserTimeZone = "America/Los_Angeles";
+    const resolvedOptions = vi
+      .spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions")
+      .mockReturnValue({ timeZone: browserTimeZone } as Intl.ResolvedDateTimeFormatOptions);
+
+    renderApp("/settings", { autoDetectTimeZone: true });
+    expect(await screen.findByRole("heading", { name: "Preferences" })).toBeVisible();
+    await waitFor(() => {
+      expect(body).toMatchObject({ expected_version: 1, time_zone: browserTimeZone });
+    });
+    expect(screen.getByLabelText("Time zone")).toHaveValue(browserTimeZone);
+    resolvedOptions.mockRestore();
   });
 
   it("renders the unified settings and profile page without legacy sections", async () => {

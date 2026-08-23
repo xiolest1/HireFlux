@@ -1,6 +1,6 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -9,6 +9,7 @@ from hireflux_backend.application.ports import (
     ActivityPage,
     ApplicationPage,
     ApplicationRepository,
+    StageAgeBounds,
     UserRepository,
 )
 from hireflux_backend.domain.enums import (
@@ -16,10 +17,11 @@ from hireflux_backend.domain.enums import (
     ApplicationSort,
     ApplicationSource,
     ApplicationStatus,
+    StageAgeBucket,
     WorkMode,
 )
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity, UserProfile
-from hireflux_backend.domain.resources import DefaultApplicationView
+from hireflux_backend.domain.resources import ACTIVE_APPLICATION_STATUSES, DefaultApplicationView
 from hireflux_backend.domain.status_policy import (
     ACTIVE_STATUSES_REQUIRING_APPLIED_DATE,
     StatusPolicyError,
@@ -185,9 +187,26 @@ class ApplicationService:
         q: str | None = None,
         source: ApplicationSource | None = None,
         work_mode: WorkMode | None = None,
+        stage_age: StageAgeBucket | None = None,
         sort: ApplicationSort = ApplicationSort.UPDATED_DESC,
         view: DefaultApplicationView | None = None,
     ) -> ApplicationPage:
+        if stage_age is not None and view is not DefaultApplicationView.ACTIVE:
+            raise ValidationError("stage_age requires the ACTIVE application view.")
+        if (
+            stage_age is not None
+            and status is not None
+            and status not in ACTIVE_APPLICATION_STATUSES
+        ):
+            raise ValidationError("stage_age can only be combined with an active status.")
+        stage_age_bounds = None
+        if stage_age is not None:
+            now = self._clock()
+            _require_aware(now)
+            stage_age_bounds = _stage_age_bounds(
+                stage_age,
+                today=_workspace_today(identity, now, self._workspace_time_zone),
+            )
         return self._repository.list(
             identity.user_id,
             status=status,
@@ -196,6 +215,7 @@ class ApplicationService:
             q=q,
             source=source,
             work_mode=work_mode,
+            stage_age=stage_age_bounds,
             sort=sort,
             view=view,
         )
@@ -533,6 +553,22 @@ def _workspace_today(
     time_zone_provider: Callable[[CurrentIdentity], str],
 ) -> date:
     return now.astimezone(ZoneInfo(time_zone_provider(identity))).date()
+
+
+def _stage_age_bounds(bucket: StageAgeBucket | None, *, today: date) -> StageAgeBounds | None:
+    if bucket is None:
+        return None
+    ranges = {
+        StageAgeBucket.ZERO_TO_SEVEN: (today - timedelta(days=7), today + timedelta(days=1)),
+        StageAgeBucket.EIGHT_TO_FOURTEEN: (today - timedelta(days=14), today - timedelta(days=7)),
+        StageAgeBucket.FIFTEEN_TO_THIRTY: (today - timedelta(days=30), today - timedelta(days=14)),
+        StageAgeBucket.THIRTY_ONE_PLUS: (None, today - timedelta(days=30)),
+    }
+    entered_on_or_after, entered_before = ranges[bucket]
+    return StageAgeBounds(
+        entered_on_or_after=entered_on_or_after,
+        entered_before=entered_before,
+    )
 
 
 def _milestones_for_transition(

@@ -25,7 +25,11 @@ import {
 } from "react-router-dom";
 import { useDemoSession } from "../auth/demoSessionContext";
 import { useMe } from "../features/applications/queries";
-import { useSettings, useUpdateSettings } from "../features/resources/queries";
+import {
+  useAutoDetectTimeZone,
+  useSettings,
+  useUpdateSettings,
+} from "../features/resources/queries";
 import { Button } from "./ui/Button";
 import { Dialog } from "./ui/Dialog";
 import { Drawer } from "./ui/Drawer";
@@ -147,6 +151,7 @@ export function AppLayout() {
   const meQuery = useMe({ enabled: identityReady });
   const settingsQuery = useSettings({ enabled: identityReady });
   const updateSettingsMutation = useUpdateSettings();
+  useAutoDetectTimeZone(settingsQuery.data, identityReady);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [tabletNavOpen, setTabletNavOpen] = useState(false);

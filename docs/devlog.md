@@ -2,6 +2,10 @@
 
 This log records the engineering work, decisions, problems, and validation completed for HireFlux. It is written so the project can be discussed clearly in portfolio reviews and technical interviews.
 
+## 2026-08-23 - Analytics timezone and filter hardening
+
+Stage-aging analytics and its application-list drill-down now use the saved workspace IANA time zone for calendar boundaries. New browser workspaces automatically detect and persist the browser's time zone, while a manual Settings choice prevents later automatic replacement. Invalid `stage_age` combinations in shared application URLs are normalized in the frontend instead of reaching an API error state. The reconciliation fixture now includes the current interview workspace fields, keeping the full backend suite aligned with the domain model.
+
 ## 2026-08-10 - Milestone 1 local vertical slice
 
 ### Objective

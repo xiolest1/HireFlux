@@ -4,9 +4,11 @@ import { Link, useSearchParams } from "react-router-dom";
 import {
   APPLICATION_SOURCES,
   APPLICATION_STATUSES,
+  STAGE_AGE_BUCKETS,
   WORK_MODES,
   type ApplicationSource,
   type ApplicationStatus,
+  type StageAgeBucket,
   type WorkMode,
 } from "../api/schemas";
 import type { Analytics } from "../api/workspace";
@@ -15,10 +17,17 @@ import { Drawer } from "../components/ui/Drawer";
 import { ErrorPanel } from "../components/ui/Feedback";
 import { PanelSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { Tabs } from "../components/ui/Tabs";
-import { formatDateOnly, formatSource, formatStatus, formatWorkMode } from "../features/applications/format";
+import { formatDateOnly, formatSource, formatStageAge, formatStatus, formatWorkMode } from "../features/applications/format";
 import { updateRecruiterGuide, useAnalytics } from "../features/workspace/queries";
 
 type AnalyticsSection = "overview" | "pipeline" | "sources";
+
+const stageAgeGuidance: Record<StageAgeBucket, { description: string; tone: string }> = {
+  "0-7": { description: "Recently entered this stage.", tone: "border-line" },
+  "8-14": { description: "No recent stage change yet.", tone: "border-line" },
+  "15-30": { description: "Consider reviewing the next step.", tone: "border-amber-200" },
+  "31+": { description: "Prioritize a review or follow-up.", tone: "border-amber-300" },
+};
 
 function allowed<T extends string>(value: string | null, options: readonly T[]): T | undefined {
   return options.find((option) => option === value);
@@ -26,6 +35,10 @@ function allowed<T extends string>(value: string | null, options: readonly T[]):
 
 function percent(value: number) {
   return new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 0 }).format(value);
+}
+
+function stageAgeHref(bucket: StageAgeBucket) {
+  return `/applications?view=ACTIVE&stage_age=${encodeURIComponent(bucket)}`;
 }
 
 function percentagePointDelta(value: number) {
@@ -257,9 +270,10 @@ function FollowUpCoverage({ analytics }: { analytics: Analytics }) {
 
 function Pipeline({ analytics }: { analytics: Analytics }) {
   const maxStatus = Math.max(1, ...analytics.status_breakdown.map((item) => item.count));
+  const stageAges = new Map(analytics.stage_aging.map((item) => [item.bucket, item.count]));
   return <>
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="status-distribution-title"><h2 id="status-distribution-title" className="text-xl font-bold text-slate-950">Current status distribution</h2><p className="mt-1 text-sm text-slate-600">Where opportunities sit right now.</p><ul className="mt-5 grid gap-4 sm:grid-cols-2">{analytics.status_breakdown.map((item) => <li key={item.status}><div className="flex justify-between gap-3 text-sm"><span className="font-semibold text-slate-700">{formatStatus(item.status)}</span><span className="text-slate-600">{item.count}</span></div><div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand-500" style={{ width: `${(item.count / maxStatus) * 100}%` }} /></div></li>)}</ul></section>
-    <div className="grid gap-6 lg:grid-cols-2"><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="funnel-title"><h2 id="funnel-title" className="text-lg font-bold text-slate-950">Historical funnel</h2><p className="mt-1 text-sm text-slate-600">Applications that reached each milestone at least once.</p><ol className="mt-5 space-y-3">{analytics.funnel.map((stage) => <li key={stage.stage} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"><div><p className="font-semibold text-slate-800">{stage.stage.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase())}</p><p className="text-xs text-slate-500">{percent(stage.rate)} of submitted</p></div><span className="text-xl font-black text-slate-950">{stage.count}</span></li>)}</ol></section><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="aging-title"><h2 id="aging-title" className="text-lg font-bold text-slate-950">Time in current stage</h2><p className="mt-1 text-sm text-slate-600">Aging buckets surface opportunities that may need attention.</p><dl className="mt-5 grid grid-cols-2 gap-3">{analytics.stage_aging.map((item) => <div key={item.bucket} className="rounded-xl border border-slate-200 p-4"><dt className="text-sm text-slate-600">{item.bucket}</dt><dd className="mt-1 text-2xl font-black text-slate-950">{item.count}</dd></div>)}</dl></section></div>
+    <div className="grid gap-6 lg:grid-cols-2"><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="funnel-title"><h2 id="funnel-title" className="text-lg font-bold text-slate-950">Historical funnel</h2><p className="mt-1 text-sm text-slate-600">Applications that reached each milestone at least once.</p><ol className="mt-5 space-y-3">{analytics.funnel.map((stage) => <li key={stage.stage} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"><div><p className="font-semibold text-slate-800">{stage.stage.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase())}</p><p className="text-xs text-slate-500">{percent(stage.rate)} of submitted</p></div><span className="text-xl font-black text-slate-950">{stage.count}</span></li>)}</ol></section><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="aging-title"><h2 id="aging-title" className="text-lg font-bold text-slate-950">Applications by time in their current stage</h2><p className="mt-2 text-sm leading-6 text-slate-600">These are active applications in Applied, Screening, Interview, or Offer. The timer resets whenever an application moves to a new stage.</p><p className="mt-3 rounded-xl bg-surface-muted p-3 text-xs leading-5 text-ink-muted">Use these ranges to decide what to review next. They are descriptive signals, not predictions about an application&apos;s outcome.</p><ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">{STAGE_AGE_BUCKETS.map((bucket) => { const count = stageAges.get(bucket) ?? 0; const guidance = stageAgeGuidance[bucket]; const countLabel = count === 0 ? "No applications in this range" : count === 1 ? "1 application" : `${count} applications`; const content = <><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold text-ink">{formatStageAge(bucket)}</p><p className="mt-1 text-xs leading-5 text-ink-muted">{guidance.description}</p></div><span className="text-sm font-bold text-ink">{countLabel}</span></div>{count > 0 ? <span className="mt-3 inline-flex min-h-10 items-center font-bold text-accent">View applications<ArrowRight aria-hidden="true" className="ml-1.5 size-4" /></span> : null}</>; return <li key={bucket} className={`rounded-xl border bg-surface-raised p-4 ${guidance.tone}`}>{count > 0 ? <Link to={stageAgeHref(bucket)} aria-label={`View applications aged ${formatStageAge(bucket)} (${countLabel})`} className="block rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">{content}</Link> : <div>{content}</div>}</li>; })}</ul></section></div>
   </>;
 }
 

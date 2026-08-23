@@ -4,13 +4,15 @@ import pytest
 
 from hireflux_backend.application.errors import ValidationError
 from hireflux_backend.application.insights import InsightFilters, InsightsService
+from hireflux_backend.application.ports import ApplicationPage, StageAgeBounds
 from hireflux_backend.application.services import (
     ApplicationService,
     CreateApplicationCommand,
     TransitionApplicationCommand,
 )
-from hireflux_backend.domain.enums import ApplicationStatus, UserRole
+from hireflux_backend.domain.enums import ApplicationStatus, StageAgeBucket, UserRole
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity
+from hireflux_backend.domain.resources import DefaultApplicationView
 
 
 class ApplicationRepositoryStub:
@@ -230,6 +232,103 @@ def test_legacy_out_of_order_response_is_omitted_from_average() -> None:
     ).analytics(identity(), reporting_range="all", filters=InsightFilters())
 
     assert analytics["average_days_to_first_response"] is None
+
+
+@pytest.mark.parametrize(
+    ("bucket", "entered_on_or_after", "entered_before"),
+    [
+        (StageAgeBucket.ZERO_TO_SEVEN, date(2026, 8, 16), date(2026, 8, 24)),
+        (StageAgeBucket.EIGHT_TO_FOURTEEN, date(2026, 8, 9), date(2026, 8, 16)),
+        (StageAgeBucket.FIFTEEN_TO_THIRTY, date(2026, 7, 24), date(2026, 8, 9)),
+        (StageAgeBucket.THIRTY_ONE_PLUS, None, date(2026, 7, 24)),
+    ],
+)
+def test_application_list_stage_age_bounds_are_server_owned(
+    bucket: StageAgeBucket,
+    entered_on_or_after: date | None,
+    entered_before: date | None,
+) -> None:
+    class ListRepositoryStub(ApplicationRepositoryStub):
+        def __init__(self) -> None:
+            super().__init__()
+            self.bounds: StageAgeBounds | None = None
+
+        def list(self, owner_user_id: str, **kwargs: object) -> ApplicationPage:
+            self.bounds = kwargs["stage_age"]  # type: ignore[assignment]
+            return ApplicationPage(items=(), next_cursor=None)
+
+    repository = ListRepositoryStub()
+    service = ApplicationService(
+        repository,
+        clock=lambda: datetime(2026, 8, 23, 12, tzinfo=UTC),
+    )
+    page = service.list(
+        identity(),
+        status=None,
+        limit=20,
+        cursor=None,
+        stage_age=bucket,
+        view=DefaultApplicationView.ACTIVE,
+    )
+
+    assert page.items == ()
+    assert repository.bounds == StageAgeBounds(entered_on_or_after, entered_before)
+
+
+def test_application_list_stage_age_bounds_use_workspace_calendar() -> None:
+    class ListRepositoryStub(ApplicationRepositoryStub):
+        def __init__(self) -> None:
+            super().__init__()
+            self.bounds: StageAgeBounds | None = None
+
+        def list(self, owner_user_id: str, **kwargs: object) -> ApplicationPage:
+            self.bounds = kwargs["stage_age"]  # type: ignore[assignment]
+            return ApplicationPage(items=(), next_cursor=None)
+
+    repository = ListRepositoryStub()
+    service = ApplicationService(
+        repository,
+        clock=lambda: datetime(2026, 8, 23, 1, tzinfo=UTC),
+        workspace_time_zone=lambda _identity: "America/Los_Angeles",
+    )
+
+    service.list(
+        identity(),
+        status=None,
+        limit=20,
+        cursor=None,
+        stage_age=StageAgeBucket.ZERO_TO_SEVEN,
+        view=DefaultApplicationView.ACTIVE,
+    )
+
+    assert repository.bounds == StageAgeBounds(date(2026, 8, 15), date(2026, 8, 23))
+
+
+def test_application_list_stage_age_rejects_non_active_views_and_statuses() -> None:
+    repository = ApplicationRepositoryStub()
+    service = ApplicationService(
+        repository,
+        clock=lambda: datetime(2026, 8, 23, 12, tzinfo=UTC),
+    )
+
+    with pytest.raises(ValidationError, match="requires the ACTIVE"):
+        service.list(
+            identity(),
+            status=None,
+            limit=20,
+            cursor=None,
+            stage_age=StageAgeBucket.FIFTEEN_TO_THIRTY,
+            view=DefaultApplicationView.ALL,
+        )
+    with pytest.raises(ValidationError, match="active status"):
+        service.list(
+            identity(),
+            status=ApplicationStatus.ACCEPTED,
+            limit=20,
+            cursor=None,
+            stage_age=StageAgeBucket.FIFTEEN_TO_THIRTY,
+            view=DefaultApplicationView.ACTIVE,
+        )
 
 
 def test_analytics_compares_adjacent_windows_and_tracks_follow_up_coverage() -> None:

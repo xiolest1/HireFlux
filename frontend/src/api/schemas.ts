@@ -38,6 +38,7 @@ export const DASHBOARD_RANGES = ["30d", "90d", "all"] as const;
 export const COLOR_THEMES = ["SYSTEM", "LIGHT", "DARK"] as const;
 export const APPLICATION_SORTS = ["updated_desc", "updated_asc"] as const;
 export const APPLICATION_VIEWS = ["ACTIVE", "ALL", "ARCHIVED"] as const;
+export const STAGE_AGE_BUCKETS = ["0-7", "8-14", "15-30", "31+"] as const;
 
 export const applicationStatusSchema = z.enum(APPLICATION_STATUSES);
 export const workModeSchema = z.enum(WORK_MODES);
@@ -48,6 +49,7 @@ export const dashboardRangeSchema = z.enum(DASHBOARD_RANGES);
 export const colorThemeSchema = z.enum(COLOR_THEMES);
 export const applicationSortSchema = z.enum(APPLICATION_SORTS);
 export const applicationViewSchema = z.enum(APPLICATION_VIEWS);
+export const stageAgeBucketSchema = z.enum(STAGE_AGE_BUCKETS);
 
 const dateOnlySchema = z
   .string()
@@ -225,6 +227,7 @@ export type DashboardRange = z.infer<typeof dashboardRangeSchema>;
 export type ColorTheme = z.infer<typeof colorThemeSchema>;
 export type ApplicationSort = z.infer<typeof applicationSortSchema>;
 export type ApplicationView = z.infer<typeof applicationViewSchema>;
+export type StageAgeBucket = z.infer<typeof stageAgeBucketSchema>;
 export type User = z.infer<typeof userSchema>;
 export type Application = z.infer<typeof applicationSchema>;
 export type ApplicationListResponse = z.infer<
