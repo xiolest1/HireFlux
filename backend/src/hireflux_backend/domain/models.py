@@ -18,6 +18,7 @@ class CurrentIdentity:
     email: str
     role: UserRole
     expires_at: int | None = None
+    is_demo: bool = False
 
 
 @dataclass(frozen=True, slots=True)

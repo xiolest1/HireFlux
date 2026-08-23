@@ -26,6 +26,10 @@ class AuthenticationUnavailableError(HireFluxError):
     pass
 
 
+class ForbiddenError(HireFluxError):
+    pass
+
+
 class DemoSessionRequiredError(HireFluxError):
     pass
 

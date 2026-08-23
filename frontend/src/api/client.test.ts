@@ -2,7 +2,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { getDemoSession, saveDemoSession } from "../auth/sessionStore";
-import { apiRequest } from "./client";
+import { apiDownload, apiRequest } from "./client";
 import { API_ORIGIN, server } from "../test/server";
 
 describe("apiRequest", () => {
@@ -71,5 +71,31 @@ describe("apiRequest", () => {
       apiRequest("/api/v1/expired", z.object({ ok: z.boolean() })),
     ).rejects.toMatchObject({ code: "DEMO_SESSION_EXPIRED", status: 401 });
     expect(getDemoSession()).toBeNull();
+  });
+
+  it("downloads a CSV and reads the server-provided filename", async () => {
+    saveDemoSession({
+      access_token: "csv.demo.session.token.value.123456",
+      token_type: "Bearer",
+      expires_at: "2099-08-12T12:00:00Z",
+    });
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/me/applications/export`, ({ request }) => {
+        expect(request.headers.get("authorization")).toBe(
+          "Bearer csv.demo.session.token.value.123456",
+        );
+        return new HttpResponse("Company,Job Title\r\nAcme,Engineer\r\n", {
+          headers: {
+            "Content-Type": "text/csv",
+            "Content-Disposition": 'attachment; filename="hireflux-applications-2026-08-23.csv"',
+          },
+        });
+      }),
+    );
+
+    const file = await apiDownload("/api/v1/me/applications/export");
+
+    expect(file.filename).toBe("hireflux-applications-2026-08-23.csv");
+    await expect(file.blob.text()).resolves.toContain("Acme,Engineer");
   });
 });

@@ -111,6 +111,29 @@ def test_demo_sessions_are_seeded_temporary_and_owner_isolated(
         assert deserialize_item(workspace_item)["state"] == DemoWorkspaceState.READY.value
 
 
+def test_demo_session_can_export_csv_but_not_full_account_data(
+    dynamodb_client: Any,
+) -> None:
+    app = create_app(
+        build_test_settings(
+            auth_mode="demo",
+            demo_session_signing_key="demo-test-signing-key-that-is-at-least-32-bytes",
+        ),
+        dynamodb_client=dynamodb_client,
+    )
+    with TestClient(app) as client:
+        token = client.post("/api/v1/demo-sessions").json()["access_token"]
+        headers = authorization(token)
+        full_export = client.get("/api/v1/me/export", headers=headers)
+        applications_export = client.get("/api/v1/me/applications/export", headers=headers)
+
+    assert full_export.status_code == 403
+    assert full_export.json()["error"]["code"] == "FORBIDDEN"
+    assert applications_export.status_code == 200
+    assert applications_export.headers["content-type"].startswith("text/csv")
+    assert applications_export.text.splitlines()[0].startswith("Company,Job Title,Status")
+
+
 def test_demo_session_rejects_a_tampered_bearer_token(dynamodb_client: Any) -> None:
     app = create_app(
         build_test_settings(

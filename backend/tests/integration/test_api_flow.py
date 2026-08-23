@@ -1,3 +1,5 @@
+import csv
+import io
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -89,6 +91,35 @@ def test_workspace_export_is_owner_scoped_and_contains_resources(client: TestCli
     assert payload["counts"]["activities"] == len(payload["activities"])
 
 
+def test_application_csv_export_is_escaped_and_owner_scoped(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/applications",
+        json=draft_payload('Comma, "quoted" employer')
+        | {
+            "source_detail": "Referral\nfrom a friend",
+            "description": "Line one\nLine two",
+        },
+    )
+    assert response.status_code == 201
+
+    export = client.get("/api/v1/me/applications/export")
+
+    assert export.status_code == 200
+    assert export.headers["content-type"].startswith("text/csv")
+    assert export.headers["cache-control"] == "no-store"
+    assert export.headers["pragma"] == "no-cache"
+    assert export.headers["content-disposition"].startswith(
+        'attachment; filename="hireflux-applications-'
+    )
+    rows = list(csv.DictReader(io.StringIO(export.text)))
+    assert len(rows) == 1
+    assert rows[0]["Company"] == 'Comma, "quoted" employer'
+    assert rows[0]["Source Detail"] == "Referral\nfrom a friend"
+    assert rows[0]["Description"] == "Line one\nLine two"
+    assert "owner_user_id" not in export.text
+    assert "version" not in export.text
+
+
 def test_workspace_export_aggregates_only_the_authenticated_workspace(
     dynamodb_client: Any,
 ) -> None:
@@ -131,6 +162,7 @@ def test_workspace_export_aggregates_only_the_authenticated_workspace(
 
         _use_identity(app, identity_a)
         response = client.get("/api/v1/me/export")
+        csv_response = client.get("/api/v1/me/applications/export")
 
     assert response.status_code == 200
     payload = response.json()
@@ -150,6 +182,9 @@ def test_workspace_export_aggregates_only_the_authenticated_workspace(
         item["interview_id"] for item in payload["interviews"]
     }
     assert "Owner B" not in str(payload)
+    assert csv_response.status_code == 200
+    assert "Export Owner A" in csv_response.text
+    assert "Export Owner B" not in csv_response.text
 
 
 def test_workspace_export_rejects_workspaces_above_the_sync_record_limit(

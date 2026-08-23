@@ -11,6 +11,7 @@ from hireflux_backend.application.errors import (
     ConflictError,
     DemoSessionExpiredError,
     DemoSessionRequiredError,
+    ForbiddenError,
     InvalidCursorError,
     NotFoundError,
     PersistenceError,
@@ -29,6 +30,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(InvalidCursorError, invalid_cursor_handler)
     app.add_exception_handler(PersistenceError, persistence_handler)
     app.add_exception_handler(AuthenticationUnavailableError, authentication_handler)
+    app.add_exception_handler(ForbiddenError, forbidden_handler)
     app.add_exception_handler(DemoSessionRequiredError, demo_session_required_handler)
     app.add_exception_handler(DemoSessionExpiredError, demo_session_expired_handler)
     app.add_exception_handler(WorkspaceExportTooLargeError, workspace_export_too_large_handler)
@@ -93,6 +95,11 @@ async def authentication_handler(request: Request, error: Exception) -> JSONResp
         "AUTHENTICATION_UNAVAILABLE",
         "Authentication is not configured for this environment.",
     )
+
+
+async def forbidden_handler(request: Request, error: Exception) -> JSONResponse:
+    assert isinstance(error, ForbiddenError)
+    return _response(request, 403, "FORBIDDEN", str(error))
 
 
 async def demo_session_required_handler(request: Request, error: Exception) -> JSONResponse:

@@ -229,6 +229,7 @@ class DemoSessionService:
             email=f"demo-{workspace_id.split('-')[0]}@example.invalid",
             role=UserRole.STANDARD_USER,
             expires_at=int(expires_at.timestamp()),
+            is_demo=True,
         )
         created: list[Application] = []
         try:

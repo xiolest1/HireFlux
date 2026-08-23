@@ -14,6 +14,7 @@ import {
   updateNote,
   updateSettings,
   exportWorkspace,
+  exportApplicationsCsv,
   type InterviewFields,
   type UpdateSettingsRequest,
 } from "../../api/resources";
@@ -94,6 +95,10 @@ export function useAutoDetectTimeZone(
 
 export function useExportWorkspace() {
   return useMutation({ mutationFn: exportWorkspace });
+}
+
+export function useExportApplicationsCsv() {
+  return useMutation({ mutationFn: exportApplicationsCsv });
 }
 
 export function useNotes(applicationId: string) {

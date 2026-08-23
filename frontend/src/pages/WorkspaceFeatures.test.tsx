@@ -7,7 +7,6 @@ import {
   makeInterview,
   testDashboard,
   testSettings,
-  testUser,
 } from "../test/fixtures";
 import { API_ORIGIN, server } from "../test/server";
 
@@ -350,28 +349,25 @@ describe("workspace milestone features", () => {
     expect(screen.getByLabelText("Email address")).toBeDisabled();
   });
 
-  it("downloads an owner-scoped workspace export from the account preview", async () => {
+  it("downloads sample applications as CSV and hides account portability in the demo", async () => {
     server.use(
-      http.get(`${API_ORIGIN}/api/v1/me/export`, () =>
-        HttpResponse.json({
-          export_version: 1,
-          exported_at: "2026-08-22T13:00:00Z",
-          profile: testUser,
-          settings: testSettings,
-          applications: [],
-          activities: [],
-          notes: [],
-          interviews: [],
-          counts: { applications: 0, activities: 0, notes: 0, interviews: 0 },
+      http.get(`${API_ORIGIN}/api/v1/me/applications/export`, () =>
+        new HttpResponse("Company,Job Title,Status\r\nExport Labs,Engineer,DRAFT\r\n", {
+          headers: {
+            "Content-Type": "text/csv",
+            "Content-Disposition": 'attachment; filename="hireflux-applications-2026-08-23.csv"',
+          },
         }),
       ),
     );
     const createObjectUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
     const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     const { user } = renderApp("/settings");
-    expect(await screen.findByRole("heading", { name: "Your data, under your control" })).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Download JSON" }));
-    expect(await screen.findByText("Export downloaded. This file remains on your device only.")).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Data & privacy" })).toBeVisible();
+    expect(screen.getByText("Export sample applications")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Export JSON" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Export CSV" }));
+    expect(await screen.findByText("Applications exported. The CSV file remains on your device only.")).toBeVisible();
     expect(createObjectUrl).toHaveBeenCalledOnce();
     expect(revokeObjectUrl).toHaveBeenCalledWith("blob:test");
     createObjectUrl.mockRestore();

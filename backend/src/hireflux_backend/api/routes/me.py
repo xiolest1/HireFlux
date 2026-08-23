@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Response
 
 from hireflux_backend.api.dependencies import (
@@ -25,3 +27,20 @@ def export_workspace(
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
     return WorkspaceExportResponse.from_domain(service.export(identity))
+
+
+@router.get("/me/applications/export", response_class=Response)
+def export_applications_csv(
+    identity: IdentityDependency,
+    service: WorkspaceExportServiceDependency,
+) -> Response:
+    today = datetime.now(UTC).date().isoformat()
+    return Response(
+        content=service.export_applications_csv(identity),
+        media_type="text/csv",
+        headers={
+            "Cache-Control": "no-store",
+            "Pragma": "no-cache",
+            "Content-Disposition": f'attachment; filename="hireflux-applications-{today}.csv"',
+        },
+    )

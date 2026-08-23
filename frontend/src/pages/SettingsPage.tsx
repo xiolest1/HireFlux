@@ -12,7 +12,12 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { setColorThemePreference } from "../components/ui/themePreference";
 import { formatTimestamp } from "../features/applications/format";
 import { useMe } from "../features/applications/queries";
-import { useExportWorkspace, useSettings, useUpdateSettings } from "../features/resources/queries";
+import {
+  useExportApplicationsCsv,
+  useExportWorkspace,
+  useSettings,
+  useUpdateSettings,
+} from "../features/resources/queries";
 
 type SettingsDraft = Omit<Settings, "created_at" | "updated_at" | "version">;
 const TIME_ZONES = ["UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/London", "Europe/Paris", "Asia/Kolkata", "Asia/Tokyo", "Australia/Sydney"];
@@ -187,7 +192,7 @@ export function SettingsPage() {
         ) : null}
       </section>
 
-      <AccountControlsPreview />
+      <AccountControlsPreview isDemo={Boolean(session)} />
     </div>
   );
 }
@@ -209,8 +214,9 @@ function SettingsSkeleton() {
   );
 }
 
-function AccountControlsPreview() {
+function AccountControlsPreview({ isDemo }: { isDemo: boolean }) {
   const exportMutation = useExportWorkspace();
+  const applicationsCsvMutation = useExportApplicationsCsv();
   const [previewRole, setPreviewRole] = useState<PreviewRole>("CANDIDATE");
   const capabilities = [
     { icon: KeyRound, title: "Secure sign-in", description: "Password recovery and connected identity providers would be managed by the production identity service." },
@@ -229,13 +235,23 @@ function AccountControlsPreview() {
     URL.revokeObjectURL(url);
   }
 
+  async function downloadApplicationsCsv() {
+    const file = await applicationsCsvMutation.mutateAsync();
+    const url = URL.createObjectURL(file.blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = file.filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
   return <section className="space-y-6" aria-labelledby="account-preview-title">
     <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel">
       <div className="border-b border-slate-200 bg-gradient-to-r from-brand-50 via-slate-50 to-violet-50 p-5 sm:p-6"><span className="inline-flex rounded-full border border-brand-100 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-700">Production concept</span><h2 id="account-preview-title" className="mt-4 text-2xl font-bold text-slate-950">What a registered account could unlock</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Recruiters can see the account lifecycle a real product would support, while every demo-only boundary stays visible.</p></div>
       <div className="grid gap-px bg-slate-200 md:grid-cols-3">{capabilities.map(({ icon: Icon, title, description }) => <article key={title} className="bg-white p-5 sm:p-6"><span className="flex size-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700"><Icon aria-hidden="true" className="size-5" /></span><h3 className="mt-4 font-bold text-slate-950">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{description}</p></article>)}</div>
     </div>
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="account-data-title"><div className="flex items-start gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Download aria-hidden="true" className="size-5" /></span><div><h3 id="account-data-title" className="text-xl font-bold text-slate-950">Your data, under your control</h3><p className="mt-1 text-sm leading-6 text-slate-600">Download the current workspace as portable JSON. It is generated from your owner-scoped API data and never includes another workspace.</p></div></div><div className="mt-5 flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-slate-900">Workspace export</p><p className="text-sm text-slate-600">Applications, notes, interviews, activity, profile, and preferences.</p></div><Button onClick={() => void downloadExport()} disabled={exportMutation.isPending}>{exportMutation.isPending ? "Preparing…" : "Download JSON"}</Button></div>{exportMutation.error ? <div className="mt-4"><ErrorPanel compact title="Export could not be prepared" error={exportMutation.error} /></div> : null}{exportMutation.isSuccess ? <div className="mt-4"><SuccessBanner>Export downloaded. This file remains on your device only.</SuccessBanner></div> : null}</section>
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="account-data-title"><div className="flex items-start gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Download aria-hidden="true" className="size-5" /></span><div><h3 id="account-data-title" className="text-xl font-bold text-slate-950">Data & privacy</h3><p className="mt-1 text-sm leading-6 text-slate-600">{isDemo ? "Download a spreadsheet-friendly copy of the fictional applications in this temporary demo workspace." : "Choose a human-friendly application export or a complete machine-readable copy for backup and portability."}</p></div></div><div className="mt-5 space-y-3"><div className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-slate-900">{isDemo ? "Export sample applications" : "Export applications"}</p><p className="text-sm text-slate-600">CSV format · One row per application · Ready for spreadsheet tools.</p></div><Button onClick={() => void downloadApplicationsCsv()} disabled={applicationsCsvMutation.isPending}>{applicationsCsvMutation.isPending ? "Preparing…" : "Export CSV"}</Button></div>{!isDemo ? <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-slate-900">Export my HireFlux data</p><p className="text-sm text-slate-600">JSON format · Intended for account backup and data portability.</p></div><Button onClick={() => void downloadExport()} disabled={exportMutation.isPending}>{exportMutation.isPending ? "Preparing…" : "Export JSON"}</Button></div> : <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">This temporary workspace contains fictional data and expires after 24 hours. Full account-data export is unavailable for demos.</p>}</div>{applicationsCsvMutation.error ? <div className="mt-4"><ErrorPanel compact title="Application export could not be prepared" error={applicationsCsvMutation.error} /></div> : null}{applicationsCsvMutation.isSuccess ? <div className="mt-4"><SuccessBanner>Applications exported. The CSV file remains on your device only.</SuccessBanner></div> : null}{!isDemo && exportMutation.error ? <div className="mt-4"><ErrorPanel compact title="Account export could not be prepared" error={exportMutation.error} /></div> : null}{!isDemo && exportMutation.isSuccess ? <div className="mt-4"><SuccessBanner>Account data exported. The JSON file remains on your device only.</SuccessBanner></div> : null}</section>
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="account-readiness-title"><h3 id="account-readiness-title" className="text-xl font-bold text-slate-950">Production-readiness preview</h3><p className="mt-1 text-sm leading-6 text-slate-600">A recruiter-facing checklist of what would become real with persistent accounts.</p><ul className="mt-5 space-y-3">{["Verified identity and recovery", "MFA and active-session controls", "Notification preferences", "Export and retention policy"].map((item) => <li key={item} className="flex items-start gap-3 text-sm text-slate-700"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-emerald-600" />{item}</li>)}</ul></section>
     </div>
     <div className="grid gap-6 lg:grid-cols-2">

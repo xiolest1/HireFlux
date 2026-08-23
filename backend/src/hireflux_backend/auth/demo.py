@@ -109,6 +109,7 @@ def identity_from_claims(claims: DemoSessionClaims) -> CurrentIdentity:
         email=f"demo-{short_id}@example.invalid",
         role=UserRole.STANDARD_USER,
         expires_at=int(claims.expires_at.timestamp()),
+        is_demo=True,
     )
 
 

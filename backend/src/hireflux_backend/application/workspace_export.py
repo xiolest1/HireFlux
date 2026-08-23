@@ -1,9 +1,11 @@
+import csv
+import io
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TypeVar
 
-from hireflux_backend.application.errors import WorkspaceExportTooLargeError
+from hireflux_backend.application.errors import ForbiddenError, WorkspaceExportTooLargeError
 from hireflux_backend.application.resource_ports import ResourcePage
 from hireflux_backend.application.resource_services import WorkspaceResourceService
 from hireflux_backend.application.services import ApplicationService, UserService
@@ -44,6 +46,10 @@ class WorkspaceExportService:
         self._max_records = max_records
 
     def export(self, identity: CurrentIdentity) -> WorkspaceExport:
+        if identity.is_demo:
+            raise ForbiddenError(
+                "Full account data export is unavailable for temporary demo workspaces."
+            )
         applications = self._applications.list_all(identity)
         record_count = len(applications)
         self._ensure_record_limit(record_count)
@@ -75,6 +81,49 @@ class WorkspaceExportService:
             notes=tuple(notes),
             interviews=tuple(interviews),
         )
+
+    def export_applications_csv(self, identity: CurrentIdentity) -> str:
+        """Build one owner-scoped, human-readable row per application."""
+        output = io.StringIO(newline="")
+        writer = csv.writer(output, lineterminator="\r\n")
+        writer.writerow(
+            (
+                "Company",
+                "Job Title",
+                "Status",
+                "Applied Date",
+                "Source",
+                "Source Detail",
+                "Location",
+                "Work Mode",
+                "Follow-up Date",
+                "Job URL",
+                "Salary",
+                "Description",
+                "Created At",
+                "Updated At",
+            )
+        )
+        for application in self._applications.list_all(identity):
+            writer.writerow(
+                (
+                    application.company_name,
+                    application.job_title,
+                    application.status.value,
+                    application.applied_date.isoformat() if application.applied_date else "",
+                    application.source.value if application.source else "",
+                    application.source_detail or "",
+                    application.location or "",
+                    application.work_mode.value if application.work_mode else "",
+                    application.follow_up_date.isoformat() if application.follow_up_date else "",
+                    application.job_url or "",
+                    application.salary_text or "",
+                    application.description or "",
+                    _format_export_timestamp(application.created_at),
+                    _format_export_timestamp(application.updated_at),
+                )
+            )
+        return output.getvalue()
 
     def _ensure_record_limit(self, record_count: int) -> None:
         if record_count <= self._max_records:
@@ -128,3 +177,7 @@ class WorkspaceExportService:
             if page.next_cursor is None:
                 return items
             cursor = page.next_cursor
+
+
+def _format_export_timestamp(value: datetime) -> str:
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")

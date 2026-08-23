@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { apiRequest } from "./client";
+import { apiDownload, apiRequest } from "./client";
 import {
   interviewListResponseSchema,
   interviewSchema,
@@ -48,6 +48,10 @@ export function updateSettings(request: UpdateSettingsRequest): Promise<Settings
 
 export function exportWorkspace() {
   return apiRequest("/api/v1/me/export", workspaceExportSchema);
+}
+
+export function exportApplicationsCsv() {
+  return apiDownload("/api/v1/me/applications/export");
 }
 
 export function listNotes(

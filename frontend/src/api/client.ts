@@ -52,6 +52,11 @@ export class ApiError extends Error {
   }
 }
 
+export interface DownloadedFile {
+  blob: Blob;
+  filename: string;
+}
+
 type ApiRequestOptions = Omit<RequestInit, "body"> & {
   json?: unknown;
 };
@@ -167,4 +172,53 @@ export async function apiRequest<T>(
       "HireFlux could not reach the API. Check that the backend is running.",
     );
   }
+}
+
+export async function apiDownload(path: string): Promise<DownloadedFile> {
+  const headers = new Headers({ Accept: "text/csv" });
+  const session = getDemoSession();
+  if (session) {
+    headers.set("Authorization", `${session.token_type} ${session.access_token}`);
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl()}${path}`, { headers });
+    const payload = await readJson(response);
+    if (!response.ok) {
+      const apiError = errorFromResponse(response, payload);
+      if (
+        response.status === 401 &&
+        ["DEMO_SESSION_EXPIRED", "DEMO_SESSION_REQUIRED"].includes(apiError.code)
+      ) {
+        clearDemoSession(
+          apiError.code === "DEMO_SESSION_EXPIRED" ? "expired" : "cleared",
+        );
+      }
+      throw apiError;
+    }
+
+    return {
+      blob: await response.blob(),
+      filename: parseDownloadFilename(response.headers.get("Content-Disposition")),
+    };
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(
+      "NETWORK_ERROR",
+      "HireFlux could not reach the API. Check that the backend is running.",
+    );
+  }
+}
+
+function parseDownloadFilename(disposition: string | null): string {
+  const utf8Match = disposition?.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return "hireflux-applications.csv";
+    }
+  }
+  const filenameMatch = disposition?.match(/filename="?([^";]+)"?/i);
+  return filenameMatch?.[1] ?? "hireflux-applications.csv";
 }
