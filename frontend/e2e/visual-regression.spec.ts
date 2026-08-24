@@ -81,6 +81,64 @@ for (const route of routes) {
   });
 }
 
+test("analytics overview progressively discloses supporting detail", async ({ page }, testInfo) => {
+  await page.goto("/analytics");
+  await expect(page.getByRole("heading", { name: "Your search at a glance" })).toBeVisible();
+
+  const outcomes = page.getByRole("button", { name: /Outcomes and conversion/ });
+  const activity = page.getByRole("button", { name: /Activity and change/ });
+  const followUp = page.getByRole("button", { name: /Follow-up readiness/ });
+  const workPreferences = page.getByRole("button", { name: /Work preferences/ });
+  for (const disclosure of [outcomes, activity, followUp, workPreferences]) {
+    await expect(disclosure).toHaveAttribute("aria-expanded", "false");
+  }
+
+  await outcomes.click();
+  await activity.click();
+  await expect(outcomes).toHaveAttribute("aria-expanded", "true");
+  await expect(activity).toHaveAttribute("aria-expanded", "true");
+  await expect(followUp).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByText("Average first response")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Compared with the previous period" })).toBeVisible();
+  await expectNoHorizontalPageOverflow(page);
+
+  if (testInfo.project.name === "desktop-1280") {
+    await followUp.click();
+    await workPreferences.click();
+    await expect(page).toHaveScreenshot("analytics-overview-expanded.png", { fullPage: true });
+  }
+});
+
+test("analytics overview stays clear in the light theme", async ({ page }, testInfo) => {
+  await page.addInitScript(() => window.localStorage.setItem("hireflux-color-theme", "light"));
+  await page.route("http://localhost:8000/api/v1/settings", async (route) => {
+    await fulfillJson(route, {
+      time_zone: "UTC",
+      default_follow_up_days: 7,
+      default_application_view: "ACTIVE",
+      default_dashboard_range: "30d",
+      theme: "LIGHT",
+      created_at: "2026-08-10T13:00:00Z",
+      updated_at: "2026-08-10T13:00:00Z",
+      version: 1,
+    });
+  });
+
+  await page.goto("/analytics");
+  await expect(page.getByRole("heading", { name: "Your search at a glance" })).toBeVisible();
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
+  await expectNoHorizontalPageOverflow(page);
+
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+
+  if (testInfo.project.name === "desktop-1280") {
+    await expect(page).toHaveScreenshot("analytics-overview-light.png", { fullPage: true });
+  }
+});
+
 test("keeps navigation present and consistent at breakpoint edges", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1280", "Run the breakpoint contract once.");
   await page.addInitScript(() =>
@@ -160,7 +218,7 @@ test("tabs, staged filters, and drawer focus work with the keyboard", async ({ p
   await drawer.getByLabel("Source").selectOption("REFERRAL");
   await drawer.getByRole("button", { name: "Apply filters" }).click();
   await expect(page).toHaveURL(/source=REFERRAL/);
-  await expect(page.getByRole("button", { name: "Remove Referral filter" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remove Source: Referral filter" })).toBeVisible();
 
   let notesRequests = 0;
   page.on("request", (request) => {

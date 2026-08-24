@@ -250,21 +250,23 @@ describe("workspace milestone features", () => {
     );
 
     const { user } = renderApp("/analytics?range=30d&source=REFERRAL");
-    expect(await screen.findByRole("heading", { name: "Outcome snapshot" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Search health" })).toBeVisible();
-    expect(screen.getByText("1 action needs you · 1 thing worth knowing")).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Your search at a glance" })).toBeVisible();
     expect(screen.getByText("Action needed")).toBeVisible();
-    expect(
-      screen.getByRole("heading", { name: "Search Health is still building your picture" }),
-    ).toBeVisible();
-    expect(screen.getByRole("link", { name: "Suggested action: Add application" })).toHaveAttribute(
-      "href",
-      "/applications/new",
-    );
+    expect(screen.getByRole("heading", { name: "1 follow-up is overdue" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Search Health is still building your picture" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Suggested action: Review follow-ups" })).toHaveAttribute(
       "href",
       "/applications?view=ACTIVE&follow_up=NEEDS_ATTENTION",
     );
+    expect(screen.getByText("7", { selector: "dd" })).toBeVisible();
+    expect(screen.getByText("62%", { selector: "dd" })).toBeVisible();
+    expect(screen.getByText("31%", { selector: "dd" })).toBeVisible();
+    expect(screen.getByText("2 submissions in this period — 1 more than the previous period.")).toBeVisible();
+    const allInsights = screen.getByRole("button", { name: "View all insights (2)" });
+    expect(allInsights).toHaveAttribute("aria-expanded", "false");
+    await user.click(allInsights);
+    expect(screen.getByRole("heading", { name: "Search Health is still building your picture" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Suggested action: Add application" })).toHaveAttribute("href", "/applications/new");
     const whyButton = screen.getByRole("button", {
       name: "Why you're seeing this: 1 follow-up is overdue",
     });
@@ -274,16 +276,29 @@ describe("workspace milestone features", () => {
     await user.keyboard("{Enter}");
     expect(whyButton).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(/1 follow-up overdue and 1 without a next step/)).toBeVisible();
+    const outcomes = screen.getByRole("button", { name: /Outcomes and conversion/ });
+    const activity = screen.getByRole("button", { name: /Activity and change/ });
+    const followUp = screen.getByRole("button", { name: /Follow-up readiness/ });
+    const workPreferences = screen.getByRole("button", { name: /Work preferences/ });
+    for (const disclosure of [outcomes, activity, followUp, workPreferences]) {
+      expect(disclosure).toHaveAttribute("aria-expanded", "false");
+    }
+    expect(screen.queryByRole("heading", { name: "Compared with the previous period" })).not.toBeInTheDocument();
+    await user.click(outcomes);
+    await user.click(activity);
+    expect(outcomes).toHaveAttribute("aria-expanded", "true");
+    expect(activity).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Average first response")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Compared with the previous period" })).toBeVisible();
     expect(screen.getAllByText("+50 pp")).toHaveLength(2);
-    expect(screen.getByRole("heading", { name: "Follow-up coverage" })).toBeVisible();
+    await user.click(followUp);
     expect(screen.getByRole("link", { name: "Review active applications" })).toHaveAttribute(
       "href",
       "/applications?view=ACTIVE",
     );
     expect(screen.getByText("Small sample")).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Work mode breakdown" })).toBeVisible();
-    expect(screen.getByText("Hybrid", { selector: "span" })).toBeVisible();
+    await user.click(workPreferences);
+    expect(screen.getByText("Hybrid")).toBeVisible();
     expect(screen.getByText("This dataset is descriptive, not predictive.")).toBeVisible();
     expect(query.get("range")).toBe("30d");
     expect(query.get("source")).toBe("REFERRAL");
@@ -333,7 +348,7 @@ describe("workspace milestone features", () => {
       ),
     );
     const { user, router } = renderApp("/analytics?range=90d");
-    expect(await screen.findByRole("heading", { name: "Outcome snapshot" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Your search at a glance" })).toBeVisible();
 
     await user.click(screen.getByRole("tab", { name: "Sources" }));
     expect(await screen.findByRole("heading", { name: "Source strategy" })).toBeVisible();

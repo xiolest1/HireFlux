@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll } from "vitest";
 import { server } from "./server";
 
@@ -12,6 +12,9 @@ class ResizeObserverStub {
 if (!globalThis.ResizeObserver) {
   globalThis.ResizeObserver = ResizeObserverStub as typeof ResizeObserver;
 }
+
+// Full-suite parallelism can delay lazy route imports on slower Windows runners.
+configure({ asyncUtilTimeout: 3_000 });
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 beforeAll(() => document.documentElement.setAttribute("lang", "en"));

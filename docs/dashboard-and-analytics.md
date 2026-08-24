@@ -23,6 +23,14 @@ On desktop, a card may be dragged only to a currently allowed status. At every s
 
 Pipeline does not use Analytics date-range or reporting filters, because a candidate needs to see the present workflow rather than a time-windowed subset. Overview and Sources retain those reporting controls unchanged.
 
+## Analytics Overview
+
+The Overview is an action-first summary rather than a wall of equally weighted statistics. Its primary surface uses the first Search Health insight returned by the server, followed by active pursuits, response rate, interview rate, and a compact adjacent-period submission comparison. The insight order remains server-owned; React does not rerank signals or invent a replacement recommendation.
+
+Only the primary insight is visible initially. Additional Search Health insights expand inline, and each retains its supported action and evidence disclosure. Outcomes and conversion, activity and change, follow-up readiness, and work preferences are separate independent disclosures that start closed. This keeps the first view approachable while preserving every existing Overview metric for candidates who want deeper context. Disclosure state is temporary browser UI state and is not stored as a workspace preference.
+
+The date range, filters, URL behavior, denominators, small-sample treatment, and descriptive-not-predictive disclaimer remain unchanged. Pipeline and Sources remain separate workflow and source-strategy surfaces.
+
 ## Metric definitions
 
 - **Submitted population:** applications with a server-owned `submitted_at` milestone and canonical `applied_date` inside the selected date range. Drafts are excluded. Later current outcomes do not remove an application from this denominator.
