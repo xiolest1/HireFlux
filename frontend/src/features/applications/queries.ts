@@ -115,6 +115,10 @@ export function useUpdateApplication() {
       void queryClient.invalidateQueries({
         queryKey: applicationKeys.activity(application.application_id),
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["applications", application.application_id, "interviews"],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["interviews"] });
       invalidateWorkspaceInsights(queryClient);
     },
   });

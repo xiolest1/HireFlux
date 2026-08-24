@@ -31,13 +31,17 @@ Amplify must serve `/index.html` with status `200` for routes that do not look l
 
 ## Hosted security headers
 
-The repository root `customHttp.yml` is the deployable Amplify Hosting policy
+The repository root `customHttp.yml` is the fail-closed Amplify Hosting policy
 for the `frontend/` monorepo app. It applies a strict CSP, HTTPS enforcement,
 clickjacking protection, MIME sniffing protection, referrer and permissions
-policies, and cross-origin isolation headers to hosted responses. The CSP
-allows only same-origin scripts and the planned us-east-1 API Gateway origin;
-if staging or production uses a custom API domain or another region, update
-the `connect-src` origin before deploying that environment.
+policies, and cross-origin isolation headers to hosted responses. Its committed
+`connect-src` permits only `'self'`, so an unrendered deployment cannot send a
+demo bearer token to any external API. Before packaging each hosted environment,
+set that branch's exact `VITE_API_BASE_URL` and run
+`npm --prefix frontend run render:hosting-headers`. The command renders
+`customHttp.template.yml` into `customHttp.yml`, rejects HTTP, paths, and
+wildcards, and fails when the origin is missing. The rendered deployment policy
+then permits only `'self'` and that environment's exact HTTPS API origin.
 
 The pre-React theme bootstrap lives in `frontend/public/theme-bootstrap.js`,
 so the policy does not need `unsafe-inline` in `script-src`. The existing
@@ -49,6 +53,15 @@ the production build preview and hosted policy keep inline scripts blocked.
 The bearer token remains a temporary demo credential in `sessionStorage`, so
 the CSP reduces script-injection risk but does not replace server-side token
 validation or a future HttpOnly production session design.
+
+## API documentation exposure
+
+`API_DOCS_ENABLED` uses the backend's centralized environment configuration.
+When unset, Swagger UI, ReDoc, and `/openapi.json` are enabled in local/test and
+disabled in staging/production. A deployed environment may opt in explicitly,
+but public exposure is never a framework-default accident. CI generates the
+same OpenAPI contract with `backend/scripts/generate_openapi.py` and uploads it
+as a build artifact even when deployed documentation routes are disabled.
 
 Before a release, verify direct navigation and refresh for every client route, a protected route without a demo session, the not-found screen, and one deliberately missing static asset.
 

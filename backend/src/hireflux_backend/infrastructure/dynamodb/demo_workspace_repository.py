@@ -5,7 +5,11 @@ from typing import Any
 
 from botocore.exceptions import ClientError
 
-from hireflux_backend.application.errors import ConflictError, PersistenceError
+from hireflux_backend.application.errors import (
+    ConflictError,
+    DemoProvisioningInProgressError,
+    PersistenceError,
+)
 from hireflux_backend.application.ports import DemoWorkspaceReservation
 from hireflux_backend.domain.enums import ApplicationStatus, DemoWorkspaceState
 from hireflux_backend.domain.models import DemoWorkspace
@@ -130,7 +134,7 @@ class DynamoDemoWorkspaceRepository:
         if workspace is None:
             raise PersistenceError("The demo workspace lifecycle record is missing.")
         if workspace.state is DemoWorkspaceState.PROVISIONING:
-            raise ConflictError(
+            raise DemoProvisioningInProgressError(
                 "Demo workspace provisioning is still in progress. Retry with the same "
                 "Idempotency-Key."
             )

@@ -271,6 +271,70 @@ def test_global_interviews_continue_past_the_default_page(client: TestClient) ->
     } == created_ids
 
 
+def test_application_rename_updates_all_interview_projections(client: TestClient) -> None:
+    application = _create_application(client)
+    path = f"/api/v1/applications/{application['application_id']}"
+    now = datetime.now(UTC).replace(microsecond=0)
+    interview_versions: dict[str, int] = {}
+    for index in range(2):
+        created = client.post(
+            f"{path}/interviews",
+            json={
+                "interview_type": "TECHNICAL_SCREEN",
+                "scheduled_at": (now + timedelta(days=index + 2)).isoformat(),
+            },
+        )
+        assert created.status_code == 201
+        interview_versions[created.json()["interview_id"]] = created.json()["version"]
+
+    renamed = client.patch(
+        path,
+        json={
+            "expected_version": application["version"],
+            "company_name": "Amazon Web Services",
+            "job_title": "Cloud Engineer",
+        },
+    )
+    assert renamed.status_code == 200
+    assert renamed.json()["company_name"] == "Amazon Web Services"
+    assert renamed.json()["job_title"] == "Cloud Engineer"
+    detail = client.get(path)
+    assert detail.status_code == 200
+    assert detail.json()["company_name"] == "Amazon Web Services"
+    assert detail.json()["job_title"] == "Cloud Engineer"
+
+    nested = client.get(f"{path}/interviews")
+    assert nested.status_code == 200
+    assert len(nested.json()["items"]) == 2
+    assert {(item["company_name"], item["job_title"]) for item in nested.json()["items"]} == {
+        ("Amazon Web Services", "Cloud Engineer")
+    }
+    refreshed_versions = {item["interview_id"]: item["version"] for item in nested.json()["items"]}
+    assert refreshed_versions == {
+        interview_id: version + 1 for interview_id, version in interview_versions.items()
+    }
+
+    stale_interview_id, stale_version = next(iter(interview_versions.items()))
+    stale_edit = client.patch(
+        f"{path}/interviews/{stale_interview_id}",
+        json={"expected_version": stale_version, "details": "Stale client edit"},
+    )
+    assert stale_edit.status_code == 409
+
+    workspace = client.get("/api/v1/interviews")
+    assert workspace.status_code == 200
+    projected = [
+        item
+        for item in workspace.json()["items"]
+        if item["application_id"] == application["application_id"]
+    ]
+    assert len(projected) == 2
+    assert {(item["company_name"], item["job_title"]) for item in projected} == {
+        ("Amazon Web Services", "Cloud Engineer")
+    }
+    assert {item["interview_id"]: item["version"] for item in projected} == refreshed_versions
+
+
 def test_foreign_or_missing_interview_and_note_are_not_found(client: TestClient) -> None:
     application = _create_application(client)
     foreign_application_id = uuid4()

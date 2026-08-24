@@ -25,6 +25,7 @@ class WorkspaceExport:
 
 
 ResourceT = TypeVar("ResourceT")
+_SPREADSHEET_FORMULA_PREFIXES = ("=", "+", "-", "@")
 
 
 class WorkspaceExportService:
@@ -107,18 +108,18 @@ class WorkspaceExportService:
         for application in self._applications.list_all(identity):
             writer.writerow(
                 (
-                    application.company_name,
-                    application.job_title,
+                    neutralize_spreadsheet_formula(application.company_name),
+                    neutralize_spreadsheet_formula(application.job_title),
                     application.status.value,
                     application.applied_date.isoformat() if application.applied_date else "",
                     application.source.value if application.source else "",
-                    application.source_detail or "",
-                    application.location or "",
+                    neutralize_spreadsheet_formula(application.source_detail),
+                    neutralize_spreadsheet_formula(application.location),
                     application.work_mode.value if application.work_mode else "",
                     application.follow_up_date.isoformat() if application.follow_up_date else "",
-                    application.job_url or "",
-                    application.salary_text or "",
-                    application.description or "",
+                    neutralize_spreadsheet_formula(application.job_url),
+                    neutralize_spreadsheet_formula(application.salary_text),
+                    neutralize_spreadsheet_formula(application.description),
                     _format_export_timestamp(application.created_at),
                     _format_export_timestamp(application.updated_at),
                 )
@@ -181,3 +182,12 @@ class WorkspaceExportService:
 
 def _format_export_timestamp(value: datetime) -> str:
     return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+def neutralize_spreadsheet_formula(value: str | None) -> str:
+    """Preserve text while preventing spreadsheet formula interpretation."""
+    if value is None:
+        return ""
+    if value.lstrip().startswith(_SPREADSHEET_FORMULA_PREFIXES):
+        return f"'{value}"
+    return value

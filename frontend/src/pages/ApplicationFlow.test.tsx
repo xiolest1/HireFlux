@@ -127,6 +127,14 @@ describe("application critical flow", () => {
     );
     queryClient.setQueryData(dashboardKey, { seeded: true });
     queryClient.setQueryData(analyticsKey, { seeded: true });
+    const nestedInterviewsKey = [
+      "applications",
+      application.application_id,
+      "interviews",
+    ] as const;
+    const globalInterviewsKey = ["interviews", "upcoming"] as const;
+    queryClient.setQueryData(nestedInterviewsKey, { seeded: true });
+    queryClient.setQueryData(globalInterviewsKey, { seeded: true });
     const companyInput = await screen.findByLabelText(/Company name/);
     await user.clear(companyInput);
     await user.type(companyInput, "Updated Company");
@@ -142,6 +150,8 @@ describe("application critical flow", () => {
     expect(patchBody).not.toHaveProperty("owner_user_id");
     expect(queryClient.getQueryState(dashboardKey)?.isInvalidated).toBe(true);
     expect(queryClient.getQueryState(analyticsKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(nestedInterviewsKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(globalInterviewsKey)?.isInvalidated).toBe(true);
   });
 
   it("warns before abandoning an edited form", async () => {

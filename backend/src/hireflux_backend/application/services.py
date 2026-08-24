@@ -307,6 +307,9 @@ class ApplicationService:
             updated_at=now,
             version=current.version + 1,
         )
+        labels_changed = (
+            current.company_name != updated.company_name or current.job_title != updated.job_title
+        )
         if "follow_up_date" in effective_changes:
             activity = self._follow_up_activity(
                 identity,
@@ -323,9 +326,14 @@ class ApplicationService:
                 updated,
                 expected_version=command.expected_version,
                 activity=activity,
+                sync_interview_labels=labels_changed,
             )
         else:
-            self._repository.replace_details(updated, expected_version=command.expected_version)
+            self._repository.replace_details(
+                updated,
+                expected_version=command.expected_version,
+                sync_interview_labels=labels_changed,
+            )
         return updated
 
     def transition(

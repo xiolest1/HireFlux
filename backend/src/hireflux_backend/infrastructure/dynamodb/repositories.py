@@ -42,6 +42,7 @@ from hireflux_backend.infrastructure.dynamodb.mapping import (
     serialize_item,
     user_partition,
 )
+from hireflux_backend.infrastructure.dynamodb.resource_mapping import resource_quota_key
 from hireflux_backend.infrastructure.dynamodb.resource_quota import resource_quota_update
 from hireflux_backend.infrastructure.dynamodb.table_schema import GSI1_NAME, GSI2_NAME, GSI3_NAME
 
@@ -530,7 +531,19 @@ class DynamoApplicationRepository:
             for item in (deserialize_item(raw_item) for raw_item in response.get("Items", []))
         }
 
-    def replace_details(self, application: Application, *, expected_version: int) -> None:
+    def replace_details(
+        self,
+        application: Application,
+        *,
+        expected_version: int,
+        sync_interview_labels: bool = False,
+    ) -> None:
+        if sync_interview_labels:
+            self._replace_details_and_interview_labels(
+                application,
+                expected_version=expected_version,
+            )
+            return
         try:
             self._client.put_item(
                 TableName=self._table_name,
@@ -552,7 +565,15 @@ class DynamoApplicationRepository:
         *,
         expected_version: int,
         activity: Activity,
+        sync_interview_labels: bool = False,
     ) -> None:
+        if sync_interview_labels:
+            self._replace_details_and_interview_labels(
+                application,
+                expected_version=expected_version,
+                activity=activity,
+            )
+            return
         try:
             self._client.transact_write_items(
                 TransactItems=[
@@ -593,6 +614,140 @@ class DynamoApplicationRepository:
                     "The application was changed by another request. Refresh and try again."
                 ) from error
             raise PersistenceError("Unable to update the application.") from error
+
+    def _replace_details_and_interview_labels(
+        self,
+        application: Application,
+        *,
+        expected_version: int,
+        activity: Activity | None = None,
+    ) -> None:
+        interview_keys = self._interview_projection_keys(
+            application.owner_user_id,
+            application.application_id,
+        )
+        transaction: list[dict[str, Any]] = [
+            {
+                "Put": {
+                    "TableName": self._table_name,
+                    "Item": serialize_item(application_to_item(application)),
+                    "ConditionExpression": "attribute_exists(PK) AND #version = :expected_version",
+                    "ExpressionAttributeNames": {"#version": "version"},
+                    "ExpressionAttributeValues": serialize_item(
+                        {":expected_version": expected_version}
+                    ),
+                }
+            }
+        ]
+        if activity is None:
+            transaction.append(
+                {
+                    "ConditionCheck": {
+                        "TableName": self._table_name,
+                        "Key": serialize_item(
+                            resource_quota_key(
+                                application.owner_user_id,
+                                application.application_id,
+                            )
+                        ),
+                        "ConditionExpression": (
+                            "(attribute_not_exists(interview_count) AND :expected_count = :zero) "
+                            "OR interview_count = :expected_count"
+                        ),
+                        "ExpressionAttributeValues": serialize_item(
+                            {":expected_count": len(interview_keys), ":zero": 0}
+                        ),
+                    }
+                }
+            )
+        else:
+            transaction.extend(
+                [
+                    {
+                        "Put": {
+                            "TableName": self._table_name,
+                            "Item": serialize_item(activity_to_item(activity)),
+                            "ConditionExpression": (
+                                "attribute_not_exists(PK) AND attribute_not_exists(SK)"
+                            ),
+                        }
+                    },
+                    resource_quota_update(
+                        self._table_name,
+                        owner_user_id=application.owner_user_id,
+                        application_id=application.application_id,
+                        expires_at=application.expires_at,
+                        max_activity=self._max_activity,
+                        expected_interview_count=len(interview_keys),
+                    ),
+                ]
+            )
+        for projection in interview_keys:
+            transaction.append(
+                {
+                    "Update": {
+                        "TableName": self._table_name,
+                        "Key": serialize_item({"PK": projection["PK"], "SK": projection["SK"]}),
+                        "UpdateExpression": (
+                            "SET company_name = :company, job_title = :title, "
+                            "updated_at = :updated_at, #version = #version + :one"
+                        ),
+                        "ConditionExpression": (
+                            "attribute_exists(PK) AND owner_user_id = :owner "
+                            "AND application_id = :application_id "
+                            "AND #version = :expected_interview_version"
+                        ),
+                        "ExpressionAttributeNames": {"#version": "version"},
+                        "ExpressionAttributeValues": serialize_item(
+                            {
+                                ":company": application.company_name,
+                                ":title": application.job_title,
+                                ":updated_at": format_timestamp(application.updated_at),
+                                ":one": 1,
+                                ":owner": application.owner_user_id,
+                                ":application_id": application.application_id,
+                                ":expected_interview_version": projection["version"],
+                            }
+                        ),
+                    }
+                }
+            )
+        try:
+            self._client.transact_write_items(TransactItems=transaction)
+        except ClientError as error:
+            if _error_code(error) == "TransactionCanceledException":
+                raise ConflictError(
+                    "The application or its interviews changed. Refresh and try again."
+                ) from error
+            raise PersistenceError("Unable to update the application.") from error
+
+    def _interview_projection_keys(
+        self, owner_user_id: str, application_id: str
+    ) -> tuple[dict[str, str | int], ...]:
+        try:
+            response = self._client.query(
+                TableName=self._table_name,
+                KeyConditionExpression="PK = :partition AND begins_with(SK, :prefix)",
+                ExpressionAttributeValues=serialize_item(
+                    {
+                        ":partition": application_partition(owner_user_id, application_id),
+                        ":prefix": "INTERVIEW#",
+                    }
+                ),
+                ProjectionExpression="PK, SK, #version",
+                ExpressionAttributeNames={"#version": "version"},
+                ConsistentRead=True,
+            )
+        except ClientError as error:
+            raise PersistenceError("Unable to read application interview projections.") from error
+        return tuple(
+            {
+                "PK": str(item["PK"]),
+                "SK": str(item["SK"]),
+                "version": int(item["version"]),
+            }
+            for item in (deserialize_item(raw) for raw in response.get("Items", []))
+        )
 
     def replace_with_activity(
         self,

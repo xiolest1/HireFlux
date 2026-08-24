@@ -1,9 +1,10 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getDemoSession } from "../auth/sessionStore";
+import { hasManualTimeZonePreference } from "../auth/timeZonePreference";
 import { renderApp } from "../test/renderApp";
-import { testDashboard } from "../test/fixtures";
+import { testDashboard, testSettings } from "../test/fixtures";
 import { API_ORIGIN, server } from "../test/server";
 
 const issuedSession = {
@@ -24,6 +25,10 @@ describe("demo workspace flow", () => {
     expect(
       screen.getByText("Start a demo workspace to explore the page."),
     ).toBeVisible();
+    expect(
+      screen.getByText(/Explore fictional applications, interviews, notes, and analytics/),
+    ).toBeVisible();
+    expect(screen.queryByText(/Sixteen fictional opportunities/i)).toBeNull();
   });
 
   it("launches an isolated demo and authenticates subsequent API requests", async () => {
@@ -56,10 +61,12 @@ describe("demo workspace flow", () => {
   });
 
   it("confirms reset and replaces the current workspace", async () => {
+    const idempotencyKeys: string[] = [];
     server.use(
-      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, () =>
-        HttpResponse.json(issuedSession, { status: 201 }),
-      ),
+      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, ({ request }) => {
+        idempotencyKeys.push(request.headers.get("Idempotency-Key") ?? "");
+        return HttpResponse.json(issuedSession, { status: 201 });
+      }),
     );
     const { user } = renderApp("/dashboard");
     expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
@@ -74,12 +81,26 @@ describe("demo workspace flow", () => {
     expect(getDemoSession()?.access_token).toBe(issuedSession.access_token);
     expect(window.sessionStorage.getItem("hireflux-search-tour")).toBeNull();
     expect(window.sessionStorage.getItem("hireflux-recruiter-guide")).toBeNull();
+    expect(hasManualTimeZonePreference()).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "Reset demo" }));
+    await user.click(screen.getByRole("button", { name: "Reset workspace" }));
+    await screen.findByText("Demo workspace reset.");
+
+    expect(idempotencyKeys).toHaveLength(2);
+    expect(idempotencyKeys[0]).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(idempotencyKeys[1]).not.toBe(idempotencyKeys[0]);
   });
 
-  it("keeps the reset dialog and restores the prior workspace only after reset fails", async () => {
+  it("preserves reset state and replaces a server-confirmed failed operation key", async () => {
+    const idempotencyKeys: string[] = [];
+    let attempts = 0;
     server.use(
-      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, () =>
-        HttpResponse.json(
+      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, ({ request }) => {
+        idempotencyKeys.push(request.headers.get("Idempotency-Key") ?? "");
+        attempts += 1;
+        if (attempts > 1) return HttpResponse.json(issuedSession, { status: 201 });
+        return HttpResponse.json(
           {
             error: {
               code: "RESET_FAILED",
@@ -88,8 +109,8 @@ describe("demo workspace flow", () => {
             },
           },
           { status: 503 },
-        ),
-      ),
+        );
+      }),
     );
     const { user } = renderApp("/dashboard");
     expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
@@ -105,6 +126,133 @@ describe("demo workspace flow", () => {
     expect(screen.getByRole("alertdialog", { name: "Reset this demo?" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Welcome back" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
+    expect(hasManualTimeZonePreference()).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("Demo workspace reset.")).toBeVisible();
+    expect(idempotencyKeys).toHaveLength(2);
+    expect(idempotencyKeys[1]).not.toBe(idempotencyKeys[0]);
+    expect(hasManualTimeZonePreference()).toBe(false);
+  });
+
+  it("detects and saves the browser time zone for the replacement workspace", async () => {
+    let timeZoneUpdate: Record<string, unknown> | null = null;
+    server.use(
+      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, () =>
+        HttpResponse.json(issuedSession, { status: 201 }),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/settings`, () =>
+        HttpResponse.json({ ...testSettings, time_zone: "UTC" }),
+      ),
+      http.patch(`${API_ORIGIN}/api/v1/settings`, async ({ request }) => {
+        timeZoneUpdate = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ ...testSettings, ...timeZoneUpdate, version: 2 });
+      }),
+    );
+    const resolvedOptions = vi
+      .spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions")
+      .mockReturnValue({
+        timeZone: "America/Los_Angeles",
+      } as Intl.ResolvedDateTimeFormatOptions);
+
+    const { user } = renderApp("/dashboard");
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(timeZoneUpdate).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Reset demo" }));
+    await user.click(screen.getByRole("button", { name: "Reset workspace" }));
+    expect(await screen.findByText("Demo workspace reset.")).toBeVisible();
+    await waitFor(() =>
+      expect(timeZoneUpdate).toMatchObject({
+        expected_version: 1,
+        time_zone: "America/Los_Angeles",
+      }),
+    );
+    resolvedOptions.mockRestore();
+  });
+
+  it("reuses one demo-start key after a lost response", async () => {
+    const idempotencyKeys: string[] = [];
+    let attempts = 0;
+    server.use(
+      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, ({ request }) => {
+        idempotencyKeys.push(request.headers.get("Idempotency-Key") ?? "");
+        attempts += 1;
+        if (attempts === 1) return HttpResponse.error();
+        return HttpResponse.json(issuedSession, { status: 201 });
+      }),
+    );
+
+    const { user } = renderApp("/", { withSession: false });
+    await user.click(screen.getByRole("button", { name: "Explore the Demo" }));
+    expect(await screen.findByText(/HireFlux could not reach the API/)).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Explore the Demo" }));
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(idempotencyKeys).toHaveLength(2);
+    expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
+  });
+
+  it("reuses one demo-start key while the reserved workspace is provisioning", async () => {
+    const idempotencyKeys: string[] = [];
+    let attempts = 0;
+    server.use(
+      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, ({ request }) => {
+        idempotencyKeys.push(request.headers.get("Idempotency-Key") ?? "");
+        attempts += 1;
+        if (attempts > 1) return HttpResponse.json(issuedSession, { status: 201 });
+        return HttpResponse.json(
+          {
+            error: {
+              code: "DEMO_PROVISIONING_IN_PROGRESS",
+              message: "Demo workspace provisioning is still in progress.",
+              request_id: "provisioning-test",
+            },
+          },
+          { status: 409 },
+        );
+      }),
+    );
+
+    const { user } = renderApp("/", { withSession: false });
+    await user.click(screen.getByRole("button", { name: "Explore the Demo" }));
+    expect(await screen.findByText(/still in progress/)).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Explore the Demo" }));
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(idempotencyKeys).toHaveLength(2);
+    expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
+  });
+
+  it("abandons a failed reset key when the user closes the operation", async () => {
+    const idempotencyKeys: string[] = [];
+    server.use(
+      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, ({ request }) => {
+        idempotencyKeys.push(request.headers.get("Idempotency-Key") ?? "");
+        return HttpResponse.json(
+          {
+            error: {
+              code: "RESET_FAILED",
+              message: "The demo service is unavailable.",
+              request_id: "reset-abandon-test",
+            },
+          },
+          { status: 503 },
+        );
+      }),
+    );
+
+    const { user } = renderApp("/dashboard");
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Reset demo" }));
+    await user.click(screen.getByRole("button", { name: "Reset workspace" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Unable to reset demo");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await user.click(screen.getByRole("button", { name: "Reset demo" }));
+    await user.click(screen.getByRole("button", { name: "Reset workspace" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Unable to reset demo");
+    expect(idempotencyKeys).toHaveLength(2);
+    expect(idempotencyKeys[1]).not.toBe(idempotencyKeys[0]);
   });
 
   it("hides and clears the prior workspace while reset is creating a replacement", async () => {

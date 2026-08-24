@@ -45,7 +45,8 @@ Creating, editing, and deleting a note appends activity without copying the note
 - `interview_type`: `RECRUITER_CALL`, `TECHNICAL_SCREEN`, `BEHAVIORAL`, `CODING_ASSESSMENT`, `HIRING_MANAGER`, `ONSITE`, `FINAL`, or `OTHER`.
 - Required timezone-aware `scheduled_at`; `duration_minutes`; optional `location`, `meeting_url`, and `details`.
 - `status`: `SCHEDULED`, `COMPLETED`, or `CANCELED`.
-- Denormalized `company_name` and `job_title`, refreshed from the owned parent when the interview changes.
+- Denormalized `company_name` and `job_title`, synchronized transactionally when the owned
+  parent labels change and refreshed from the parent when the interview itself changes.
 - `created_at`, `updated_at`, and integer `version`.
 
 Only scheduled interviews are editable. They may transition to completed or canceled; both are terminal. Rescheduling and status changes append activity.

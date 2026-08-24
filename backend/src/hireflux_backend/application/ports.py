@@ -82,7 +82,13 @@ class ApplicationRepository(Protocol):
         self, owner_user_id: str, *, due_on_or_before: date, limit: int
     ) -> tuple[Application, ...]: ...
 
-    def replace_details(self, application: Application, *, expected_version: int) -> None: ...
+    def replace_details(
+        self,
+        application: Application,
+        *,
+        expected_version: int,
+        sync_interview_labels: bool = False,
+    ) -> None: ...
 
     def replace_details_with_activity(
         self,
@@ -90,6 +96,7 @@ class ApplicationRepository(Protocol):
         *,
         expected_version: int,
         activity: Activity,
+        sync_interview_labels: bool = False,
     ) -> None: ...
 
     def replace_with_activity(

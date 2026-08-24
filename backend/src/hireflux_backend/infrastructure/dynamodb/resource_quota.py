@@ -14,6 +14,7 @@ def resource_quota_update(
     note_limit: int | None = None,
     interview_limit: int | None = None,
     note_delta: int = 0,
+    expected_interview_count: int | None = None,
 ) -> dict[str, Any]:
     values: dict[str, object] = {
         ":entity_type": "RESOURCE_QUOTA",
@@ -40,6 +41,12 @@ def resource_quota_update(
         assignments.append("interview_count = if_not_exists(interview_count, :zero) + :one")
         conditions.append(
             "attribute_not_exists(interview_count) OR interview_count < :interview_limit"
+        )
+    if expected_interview_count is not None:
+        values[":expected_interview_count"] = expected_interview_count
+        conditions.append(
+            "(attribute_not_exists(interview_count) AND :expected_interview_count = :zero) "
+            "OR interview_count = :expected_interview_count"
         )
     if expires_at is not None:
         values[":expires_at"] = expires_at

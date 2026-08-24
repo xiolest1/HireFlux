@@ -14,7 +14,7 @@ The public landing page opens an isolated demo workspace with fictional data. No
 
 Each demo workspace is:
 
-- pre-populated with 30 fictional applications across drafts, active stages, and outcomes;
+- pre-populated with fictional applications across drafts, active stages, and outcomes;
 - isolated from every other visitor's workspace;
 - available for 24 hours so the workflow can be explored safely;
 - resettable at any time without affecting anyone else;

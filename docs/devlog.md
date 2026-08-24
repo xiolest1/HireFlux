@@ -2,6 +2,14 @@
 
 This log records the engineering work, decisions, problems, and validation completed for HireFlux. It is written so the project can be discussed clearly in portfolio reviews and technical interviews.
 
+## 2026-08-24 - P2/P3 release-hardening pass
+
+Verified and remediated the six P2 and three P3 findings from the latest full-stack security audit. CSV exports now neutralize spreadsheet formula prefixes in user-controlled text while retaining standards-compliant CSV quoting. Hosted CSP generation accepts one exact HTTPS API origin, rejects wildcards, and keeps the committed policy fail closed. Application label edits transactionally synchronize every denormalized interview projection with optimistic interview-version checks, and the frontend invalidates nested and global interview caches.
+
+Demo start/reset keys now belong to a logical operation: ambiguous network loss and an in-progress reservation retain the key, while success, explicit abandonment, and server-confirmed terminal failure dispose of it. Successful resets clear the prior workspace's manual-time-zone marker and let browser detection configure the replacement; failed resets restore both the prior session and its timezone semantics. The reviewed Applications redesign and Pipeline light-mode rendering now have deliberate Windows baselines, and the complete 76-case Playwright matrix is green with 64 passes and 12 intentional viewport skips.
+
+FastAPI documentation exposure is now environment-controlled, with local/test enabled by default and staging/production disabled unless explicitly opted in; CI still emits an OpenAPI artifact. The new quality workflow uses Python 3.13, `uv.lock`, hash-verified `pip-audit`, Ruff, Mypy, pytest, npm audit, and CycloneDX SBOM artifacts. Local validation also completed on supported Python 3.14.7. Landing copy no longer hardcodes demo seed cardinality. Public demo abuse and AWS cost controls remain the separately tracked P1 and were intentionally not changed here.
+
 ## 2026-08-23 - Demo analytics dataset expanded to 30 applications
 
 The deterministic demo workspace now seeds 30 fictional applications instead of 16. Four initial active records and ten additional active examples add richer Applied, Screening, Interview, and Offer coverage, while repeated sources provide enough sample depth for source-performance and Search Health comparisons. Existing notes, interviews, status coverage, follow-up scenarios, and workspace isolation remain intact.

@@ -89,3 +89,17 @@ def test_demo_auth_rejects_short_signing_key() -> None:
 def test_demo_auth_requires_capacity_for_seed() -> None:
     with pytest.raises(ValidationError, match="30-application seed"):
         settings(auth_mode="demo", max_applications_per_workspace=15)
+
+
+def test_api_docs_default_to_local_only_and_allow_explicit_override() -> None:
+    assert settings().expose_api_docs is True
+    assert settings(environment="staging", auth_mode="cognito").expose_api_docs is False
+    assert settings(environment="production", auth_mode="cognito").expose_api_docs is False
+    assert (
+        settings(
+            environment="production",
+            auth_mode="cognito",
+            api_docs_enabled=True,
+        ).expose_api_docs
+        is True
+    )

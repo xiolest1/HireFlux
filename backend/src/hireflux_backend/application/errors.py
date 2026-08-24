@@ -10,6 +10,10 @@ class ConflictError(HireFluxError):
     pass
 
 
+class DemoProvisioningInProgressError(ConflictError):
+    pass
+
+
 class ValidationError(HireFluxError):
     pass
 

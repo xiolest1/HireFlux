@@ -10,6 +10,7 @@ export interface DemoSessionContextValue {
   error: unknown;
   start: () => Promise<DemoSession>;
   reset: () => Promise<DemoSession>;
+  abandonReset: () => void;
   exit: () => void;
 }
 

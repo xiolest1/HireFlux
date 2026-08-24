@@ -4,6 +4,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import pytest
 from conftest import test_settings as build_test_settings
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -117,6 +118,64 @@ def test_application_csv_export_is_escaped_and_owner_scoped(client: TestClient) 
     assert rows[0]["Source Detail"] == "Referral\nfrom a friend"
     assert rows[0]["Description"] == "Line one\nLine two"
     assert "owner_user_id" not in export.text
+
+
+def test_api_documentation_exposure_follows_environment_configuration(
+    client: TestClient, dynamodb_client: Any
+) -> None:
+    assert client.get("/docs").status_code == 200
+    assert client.get("/openapi.json").status_code == 200
+
+    deployed = create_app(
+        build_test_settings(
+            environment="production",
+            auth_mode="cognito",
+            cursor_signing_key="production-cursor-signing-key-at-least-32-bytes",
+        ),
+        dynamodb_client=dynamodb_client,
+    )
+    with TestClient(deployed) as deployed_client:
+        assert deployed_client.get("/docs").status_code == 404
+        assert deployed_client.get("/redoc").status_code == 404
+        assert deployed_client.get("/openapi.json").status_code == 404
+    assert "/api/v1/applications" in deployed.openapi()["paths"]
+
+
+@pytest.mark.parametrize(
+    ("company_name", "expected"),
+    [
+        ("=SUM(1,1)", "'=SUM(1,1)"),
+        ("+1 Support Engineer", "'+1 Support Engineer"),
+        ("- Remote", "'- Remote"),
+        ("@mention", "'@mention"),
+        ("   =SUM(1,1)", "'=SUM(1,1)"),
+        ("Amazon", "Amazon"),
+        ("AT&T", "AT&T"),
+        ("C++ Developer", "C++ Developer"),
+        ('Comma, "quoted" employer', 'Comma, "quoted" employer'),
+        ("Unicode café 東京", "Unicode café 東京"),
+    ],
+)
+def test_application_csv_export_neutralizes_formula_leading_text(
+    client: TestClient, company_name: str, expected: str
+) -> None:
+    response = client.post(
+        "/api/v1/applications",
+        json=draft_payload(company_name)
+        | {
+            "location": None,
+            "source_detail": "Line one\nLine two",
+        },
+    )
+    assert response.status_code == 201
+
+    export = client.get("/api/v1/me/applications/export")
+    assert export.status_code == 200
+    rows = list(csv.DictReader(io.StringIO(export.text)))
+    row = next(item for item in rows if item["Company"] == expected)
+    assert row["Company"] == expected
+    assert row["Location"] == ""
+    assert row["Source Detail"] == "Line one\nLine two"
     assert "version" not in export.text
 
 

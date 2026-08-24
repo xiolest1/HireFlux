@@ -10,7 +10,7 @@ React/Vite browser client -> FastAPI REST API -> DynamoDB Local
 ```
 
 The public landing page requires no account. Starting the demo creates a unique
-24-hour workspace, seeds 16 fictional applications, and returns a signed bearer
+24-hour workspace, seeds a realistic fictional application dataset, and returns a signed bearer
 token. Protected pages provide Home/dashboard, applications, interviews,
 analytics, and settings. No AWS resource is required or currently provisioned
 for this local milestone.

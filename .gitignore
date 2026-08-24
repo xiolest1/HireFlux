@@ -31,6 +31,7 @@ tmp/
 
 # Generated software inventory artifacts
 sbom/*.cdx.json
+artifacts/hireflux-openapi.json
 
 # Editors and operating systems
 .DS_Store

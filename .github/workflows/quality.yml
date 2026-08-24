@@ -1,0 +1,92 @@
+name: Quality and supply chain
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.5"
+          enable-cache: true
+      - name: Install the locked backend graph
+        run: uv sync --project backend --python 3.13 --extra dev --locked
+      - name: Validate lock and installed dependencies
+        run: |
+          uv lock --project backend --python 3.13 --check
+          uv pip check --python backend/.venv/bin/python
+      - name: Ruff
+        run: |
+          uv run --project backend ruff check backend
+          uv run --project backend ruff format --check backend
+      - name: Mypy
+        run: uv run --project backend mypy backend/src
+      - name: Pytest
+        run: uv run --project backend pytest backend
+      - name: Export the locked runtime graph for auditing
+        run: |
+          mkdir -p sbom
+          uv export --project backend --locked --no-dev --no-emit-project --format requirements.txt --output-file backend/.audit-requirements.txt
+      - name: Audit locked Python dependencies
+        run: >-
+          uvx --from pip-audit==2.10.1 pip-audit --require-hashes --disable-pip
+          --progress-spinner=off --format=json
+          --output=sbom/hireflux-backend-vulnerability-audit.json
+          --requirement backend/.audit-requirements.txt
+      - name: Generate backend CycloneDX SBOM
+        run: |
+          uv run --project backend python backend/scripts/generate_sbom.py
+          uv run --project backend python backend/scripts/generate_openapi.py
+      - name: Upload backend security artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-supply-chain
+          path: |
+            sbom/hireflux-backend.cdx.json
+            sbom/hireflux-backend-vulnerability-audit.json
+            artifacts/hireflux-openapi.json
+          if-no-files-found: error
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install the locked frontend graph
+        run: npm --prefix frontend ci
+      - name: Lint, typecheck, and test
+        run: |
+          npm --prefix frontend run lint
+          npm --prefix frontend run typecheck
+          npm --prefix frontend run test
+          npm --prefix frontend run test:hosting-headers
+      - name: Build
+        run: npm --prefix frontend run build
+      - name: Audit frontend dependencies
+        run: npm --prefix frontend audit --audit-level=high
+      - name: Generate frontend CycloneDX SBOM
+        run: |
+          mkdir -p sbom
+          npm --prefix frontend sbom --package-lock-only --sbom-format cyclonedx --sbom-type application > sbom/hireflux-frontend.cdx.json
+      - name: Upload frontend SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-supply-chain
+          path: sbom/hireflux-frontend.cdx.json
+          if-no-files-found: error

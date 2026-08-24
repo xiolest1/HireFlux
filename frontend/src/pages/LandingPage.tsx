@@ -94,7 +94,7 @@ export function LandingPage() {
           <div className="mx-auto grid max-w-7xl gap-px bg-line dark:bg-slate-800 sm:grid-cols-3">
             {[
               [ShieldCheck, "Isolated by design", "Every visitor receives a separate temporary workspace."],
-              [Layers3, "Ready to explore", "Sixteen fictional opportunities cover realistic stages and outcomes."],
+              [Layers3, "Ready to explore", "Explore fictional applications, interviews, notes, and analytics across realistic stages and outcomes."],
               [Check, "Safe to experiment", "Edit, archive, restore, or reset without affecting anyone else."],
             ].map(([Icon, title, description]) => <article key={String(title)} className="bg-surface px-6 py-9 dark:bg-slate-900 lg:px-8"><Icon aria-hidden="true" className="size-5 text-brand-700" /><h2 className="mt-4 font-bold text-ink dark:text-white">{String(title)}</h2><p className="mt-2 text-sm leading-6 text-ink-muted dark:text-slate-300">{String(description)}</p></article>)}
           </div>

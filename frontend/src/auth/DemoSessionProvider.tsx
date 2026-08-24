@@ -4,9 +4,11 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import { createDemoSession } from "../api/demoSessions";
+import { createDemoOperationKey, createDemoSession } from "../api/demoSessions";
+import { ApiError } from "../api/client";
 import type { DemoSession } from "../api/schemas";
 import {
   DemoSessionContext,
@@ -31,24 +33,37 @@ function initialState(): { session: DemoSession | null; status: SessionStatus } 
   };
 }
 
+function shouldRetainOperationKey(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    ["NETWORK_ERROR", "DEMO_PROVISIONING_IN_PROGRESS"].includes(error.code)
+  );
+}
+
 export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [state, setState] = useState(initialState);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const startKeyRef = useRef<string | null>(null);
+  const resetKeyRef = useRef<string | null>(null);
 
   const start = useCallback(async () => {
     setIsCreating(true);
     setError(null);
     clearManualTimeZonePreference();
+    const idempotencyKey = startKeyRef.current ?? createDemoOperationKey();
+    startKeyRef.current = idempotencyKey;
     try {
-      const session = await createDemoSession();
+      const session = await createDemoSession(idempotencyKey);
       queryClient.clear();
       clearManualTimeZonePreference();
       saveDemoSession(session);
       setState({ session, status: "active" });
+      startKeyRef.current = null;
       return session;
     } catch (creationError) {
+      if (!shouldRetainOperationKey(creationError)) startKeyRef.current = null;
       setError(creationError);
       throw creationError;
     } finally {
@@ -64,13 +79,18 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
     removeStoredDemoSession();
     setState({ session: null, status: "replacing" });
+    const idempotencyKey = resetKeyRef.current ?? createDemoOperationKey();
+    resetKeyRef.current = idempotencyKey;
     try {
-      const session = await createDemoSession();
+      const session = await createDemoSession(idempotencyKey);
       queryClient.clear();
+      clearManualTimeZonePreference();
       saveDemoSession(session);
       setState({ session, status: "active" });
+      resetKeyRef.current = null;
       return session;
     } catch (creationError) {
+      if (!shouldRetainOperationKey(creationError)) resetKeyRef.current = null;
       if (previousSession) {
         saveDemoSession(previousSession);
         setState({ session: previousSession, status: "active" });
@@ -85,9 +105,17 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [queryClient, state.session]);
 
+  const abandonReset = useCallback(() => {
+    if (isCreating) return;
+    resetKeyRef.current = null;
+    setError(null);
+  }, [isCreating]);
+
   const exit = useCallback(() => {
     queryClient.clear();
     clearManualTimeZonePreference();
+    startKeyRef.current = null;
+    resetKeyRef.current = null;
     clearDemoSession("cleared");
   }, [queryClient]);
 
@@ -126,9 +154,10 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
       error,
       start,
       reset,
+      abandonReset,
       exit,
     }),
-    [error, exit, isCreating, reset, start, state],
+    [abandonReset, error, exit, isCreating, reset, start, state],
   );
 
   return (

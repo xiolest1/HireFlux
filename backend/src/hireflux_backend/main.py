@@ -55,6 +55,9 @@ def create_app(
         title="HireFlux API",
         version="0.1.0",
         description="Local workspace and demo API for the HireFlux application tracker.",
+        docs_url="/docs" if configured.expose_api_docs else None,
+        redoc_url="/redoc" if configured.expose_api_docs else None,
+        openapi_url="/openapi.json" if configured.expose_api_docs else None,
     )
     app.state.settings = configured
     user_service = UserService(DynamoUserRepository(client, configured.dynamodb_table_name))

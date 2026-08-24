@@ -14,8 +14,8 @@ Install or update the lock only when an intentional dependency change is being
 reviewed:
 
 ```bat
-uv lock --project backend --python 3.14
-uv lock --check --project backend --python 3.14
+uv lock --project backend --python 3.13
+uv lock --check --project backend --python 3.13
 ```
 
 The normal setup and validation path must use the committed graph:
@@ -46,17 +46,25 @@ should upload them as build artifacts and attach the exact SBOMs to the build
 that produced them. The source of truth remains the lockfile committed with
 the source revision.
 
+The backend CI job also generates `artifacts/hireflux-openapi.json` from the
+FastAPI application contract. This preserves an inspectable API specification
+without requiring public staging or production documentation routes.
+
 ## Release checks
 
 Before a staging or production build:
 
-1. Run `uv lock --check --project backend --python 3.14`.
+1. Run `uv lock --check --project backend --python 3.13`.
 2. Install with `uv sync --project backend --extra dev --locked`.
-3. Run `npm --prefix frontend ci`.
-4. Generate both CycloneDX SBOM artifacts.
-5. Run the repository's dependency vulnerability scanners and retain their
-   reports alongside the SBOMs.
+3. Export the locked runtime graph with
+   `uv export --project backend --locked --no-dev --no-emit-project --format requirements.txt --output-file backend/.audit-requirements.txt`.
+4. Audit that hash-pinned graph with
+   `uvx --from pip-audit==2.10.1 pip-audit --require-hashes --disable-pip --requirement backend/.audit-requirements.txt`.
+5. Run `npm --prefix frontend ci` and `npm --prefix frontend audit --audit-level=high`.
+6. Generate both CycloneDX SBOM artifacts.
 
-No cloud CI/CD or AWS resources are implemented yet. These commands are the
-local, repeatable baseline that a future GitHub Actions/OIDC staging workflow
-should enforce.
+`.github/workflows/quality.yml` enforces these checks on Python 3.13 and Node 22,
+including Ruff, formatting, Mypy, pytest, frontend checks, vulnerability audits,
+and uploaded SBOM artifacts. It performs validation only; AWS deployment and the
+separately tracked public-demo throttling, concurrency, and cost controls remain
+outside this workflow.

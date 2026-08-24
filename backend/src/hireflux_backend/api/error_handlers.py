@@ -9,6 +9,7 @@ from starlette.exceptions import HTTPException
 from hireflux_backend.application.errors import (
     AuthenticationUnavailableError,
     ConflictError,
+    DemoProvisioningInProgressError,
     DemoSessionExpiredError,
     DemoSessionRequiredError,
     ForbiddenError,
@@ -25,6 +26,9 @@ logger = logging.getLogger(__name__)
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RequestValidationError, request_validation_handler)
     app.add_exception_handler(NotFoundError, not_found_handler)
+    app.add_exception_handler(
+        DemoProvisioningInProgressError, demo_provisioning_in_progress_handler
+    )
     app.add_exception_handler(ConflictError, conflict_handler)
     app.add_exception_handler(ValidationError, domain_validation_handler)
     app.add_exception_handler(InvalidCursorError, invalid_cursor_handler)
@@ -65,6 +69,11 @@ async def not_found_handler(request: Request, error: Exception) -> JSONResponse:
 async def conflict_handler(request: Request, error: Exception) -> JSONResponse:
     assert isinstance(error, ConflictError)
     return _response(request, 409, "CONFLICT", str(error))
+
+
+async def demo_provisioning_in_progress_handler(request: Request, error: Exception) -> JSONResponse:
+    assert isinstance(error, DemoProvisioningInProgressError)
+    return _response(request, 409, "DEMO_PROVISIONING_IN_PROGRESS", str(error))
 
 
 async def domain_validation_handler(request: Request, error: Exception) -> JSONResponse:

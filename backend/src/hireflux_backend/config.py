@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     max_interviews_per_application: int = Field(default=25, ge=1, le=100)
     max_activity_per_application: int = Field(default=500, ge=10, le=5_000)
     max_sync_export_records: int = Field(default=5_000, ge=1, le=25_000)
+    api_docs_enabled: bool | None = None
 
     local_user_id: UUID = UUID("00000000-0000-4000-8000-000000000001")
     local_user_name: str = "Local Demo User"
@@ -136,6 +137,12 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> tuple[str, ...]:
         return tuple(self.cors_allowed_origins.split(","))
+
+    @property
+    def expose_api_docs(self) -> bool:
+        if self.api_docs_enabled is not None:
+            return self.api_docs_enabled
+        return self.environment in {Environment.LOCAL, Environment.TEST}
 
 
 @lru_cache

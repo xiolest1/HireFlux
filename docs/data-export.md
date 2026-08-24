@@ -10,7 +10,10 @@ owner or upgrade a demo session.
 the user-facing fields Company, Job Title, Status, Applied Date, Source, Source
 Detail, Location, Work Mode, Follow-up Date, Job URL, Salary, Description,
 Created At, and Updated At. Optional values are blank, and a standard CSV
-writer escapes commas, quotes, line breaks, and Unicode safely. The response
+writer escapes commas, quotes, line breaks, and Unicode safely. User-controlled
+text whose first non-whitespace character is `=`, `+`, `-`, or `@` is prefixed
+with an apostrophe before serialization so spreadsheet software treats it as
+text rather than a formula. The response
 uses an attachment filename such as
 `hireflux-applications-2026-08-23.csv`, plus `Cache-Control: no-store`.
 

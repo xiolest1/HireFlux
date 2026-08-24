@@ -138,7 +138,7 @@ function useExpiryLabel(expiresAt: string | undefined): {
 export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { session, status, reset, exit, isCreating, error } = useDemoSession();
+  const { session, status, reset, abandonReset, exit, isCreating, error } = useDemoSession();
   const identityReady = status === "active";
   const meQuery = useMe({ enabled: identityReady });
   const settingsQuery = useSettings({ enabled: identityReady });
@@ -214,7 +214,10 @@ export function AppLayout() {
   }
 
   function closeResetDialog() {
-    if (!isCreating) setConfirmingReset(false);
+    if (!isCreating) {
+      abandonReset();
+      setConfirmingReset(false);
+    }
   }
 
   function requestReset() {
