@@ -399,34 +399,34 @@ function CandidateAccountPreview({
   }
 
   return (
-    <section className="space-y-6" aria-labelledby="account-preview-title">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-brand-50 via-slate-50 to-violet-50 p-5 sm:p-6">
+    <section className="space-y-5 rounded-3xl border border-line bg-surface/70 p-3 shadow-panel sm:space-y-6 sm:p-4" aria-labelledby="account-preview-title">
+      <div className="overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-sm">
+        <div className="border-b border-line bg-surface p-5 sm:p-6">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex rounded-full border border-brand-100 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-700">
+            <span className="inline-flex rounded-full border border-accent/30 bg-accent-soft px-3 py-1 text-xs font-bold uppercase tracking-wide text-accent-strong">
               Personal account preview
             </span>
             <PreviewStatus tone="simulation">Interactive simulation</PreviewStatus>
           </div>
-          <h2 id="account-preview-title" className="mt-4 text-2xl font-bold text-slate-950">
+          <h2 id="account-preview-title" className="mt-4 text-2xl font-bold text-ink">
             Explore a candidate-owned account control center
           </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">
             Try the controls a persistent HireFlux account could provide. Preview actions stay in this
             browser workspace and never change real authentication or send messages.
           </p>
         </div>
-        <div className="grid gap-px bg-slate-200 md:grid-cols-3">
+        <div className="grid gap-px bg-line md:grid-cols-3">
           {capabilities.map(({ key, icon: Icon, title, description }) => (
-            <article key={key} className="flex flex-col bg-white p-5 sm:p-6">
+            <article key={key} className="flex flex-col bg-surface-raised p-5 sm:p-6">
               <div className="flex items-start justify-between gap-3">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
                 <PreviewStatus tone="simulation">Simulated preview</PreviewStatus>
               </div>
-              <h3 className="mt-4 font-bold text-slate-950">{title}</h3>
-              <p className="mt-2 flex-1 text-sm leading-6 text-slate-600">{description}</p>
+              <h3 className="mt-4 font-bold text-ink">{title}</h3>
+              <p className="mt-2 flex-1 text-sm leading-6 text-ink-muted">{description}</p>
               <Button
                 variant="secondary"
                 className="mt-5 w-full justify-between"
@@ -448,21 +448,21 @@ function CandidateAccountPreview({
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
         <section
-          className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6"
+          className="rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6"
           aria-labelledby="account-data-title"
         >
           <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success">
               <Download aria-hidden="true" className="size-5" />
             </span>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h3 id="account-data-title" className="text-xl font-bold text-slate-950">
+                <h3 id="account-data-title" className="text-xl font-bold text-ink">
                   Data & privacy
                 </h3>
                 <PreviewStatus tone="available">Available in demo</PreviewStatus>
               </div>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
+              <p className="mt-1 text-sm leading-6 text-ink-muted">
                 {isDemo
                   ? "Download a spreadsheet-friendly copy of the fictional applications in this temporary demo workspace."
                   : "Choose a human-friendly application export or a complete machine-readable copy for backup and portability."}
@@ -470,12 +470,12 @@ function CandidateAccountPreview({
             </div>
           </div>
           <div className="mt-5 space-y-3">
-            <div className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold text-slate-900">
+                <p className="font-semibold text-ink">
                   {isDemo ? "Export sample applications" : "Export applications"}
                 </p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-ink-muted">
                   CSV format · One row per application · Ready for spreadsheet tools.
                 </p>
               </div>
@@ -487,10 +487,10 @@ function CandidateAccountPreview({
               </Button>
             </div>
             {!isDemo ? (
-              <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="font-semibold text-slate-900">Export my HireFlux data</p>
-                  <p className="text-sm text-slate-600">
+                  <p className="font-semibold text-ink">Export my HireFlux data</p>
+                  <p className="text-sm text-ink-muted">
                     JSON format · Intended for account backup and data portability.
                   </p>
                 </div>
@@ -499,7 +499,7 @@ function CandidateAccountPreview({
                 </Button>
               </div>
             ) : (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+              <p className="rounded-xl border border-warning/30 bg-warning-soft p-3 text-sm leading-6 text-warning">
                 This temporary workspace contains fictional data and expires after 24 hours. Full
                 account-data export is unavailable for demos.
               </p>
@@ -540,16 +540,16 @@ function CandidateAccountPreview({
         </section>
 
         <section
-          className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6"
+          className="rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6"
           aria-labelledby="account-readiness-title"
         >
           <div className="flex flex-wrap items-center gap-2">
-            <h3 id="account-readiness-title" className="text-xl font-bold text-slate-950">
+            <h3 id="account-readiness-title" className="text-xl font-bold text-ink">
               Personal account foundations
             </h3>
             <PreviewStatus tone="planned">Production service required</PreviewStatus>
           </div>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
+          <p className="mt-1 text-sm leading-6 text-ink-muted">
             The production capabilities that would support a private, persistent job search.
           </p>
           <ul className="mt-5 space-y-3">
@@ -559,8 +559,8 @@ function CandidateAccountPreview({
               "Notification preferences",
               "Export and retention policy",
             ].map((item) => (
-              <li key={item} className="flex items-start gap-3 text-sm text-slate-700">
-                <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+              <li key={item} className="flex items-start gap-3 text-sm text-ink-muted">
+                <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-success" />
                 {item}
               </li>
             ))}
@@ -569,15 +569,15 @@ function CandidateAccountPreview({
       </div>
 
       <section
-        className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6"
+        className="rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6"
         aria-labelledby="account-continuity-title"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 id="account-continuity-title" className="text-xl font-bold text-slate-950">
+            <h3 id="account-continuity-title" className="text-xl font-bold text-ink">
               What would carry over?
             </h3>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-muted">
               A future account-conversion service could preserve the work a candidate has already
               organized. This demo does not create an account or perform that migration.
             </p>
@@ -595,26 +595,26 @@ function CandidateAccountPreview({
           ].map((item) => (
             <li
               key={item}
-              className="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
+              className="flex min-h-11 items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-ink"
             >
-              <Check aria-hidden="true" className="size-4 shrink-0 text-brand-700" />
+              <Check aria-hidden="true" className="size-4 shrink-0 text-accent" />
               {item}
             </li>
           ))}
         </ul>
-        <ol className="mt-6 grid gap-3 border-t border-slate-200 pt-6 md:grid-cols-4">
+        <ol className="mt-6 grid gap-3 border-t border-line pt-6 md:grid-cols-4">
           {[
             ["1", "Explore the demo", "Current demo"],
             ["2", "Create a personal account", "Future capability"],
             ["3", "Keep your search across devices", "Production service required"],
             ["4", "Control security and privacy", "Production service required"],
           ].map(([number, title, status]) => (
-            <li key={number} className="rounded-2xl bg-slate-50 p-4">
-              <span className="flex size-8 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-800">
+            <li key={number} className="rounded-2xl border border-line bg-surface p-4">
+              <span className="flex size-8 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent-strong">
                 {number}
               </span>
-              <p className="mt-3 text-sm font-bold text-slate-900">{title}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">{status}</p>
+              <p className="mt-3 text-sm font-bold text-ink">{title}</p>
+              <p className="mt-1 text-xs leading-5 text-ink-muted">{status}</p>
             </li>
           ))}
         </ol>
@@ -622,14 +622,14 @@ function CandidateAccountPreview({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section
-          className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6"
+          className="rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6"
           aria-labelledby="candidate-workflow-title"
         >
           <div>
-            <h3 id="candidate-workflow-title" className="text-xl font-bold text-slate-950">
+            <h3 id="candidate-workflow-title" className="text-xl font-bold text-ink">
               Your candidate workflow
             </h3>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
+            <p className="mt-1 text-sm leading-6 text-ink-muted">
               HireFlux keeps your personal search organized from the first saved role through the
               final outcome.
             </p>
@@ -639,18 +639,18 @@ function CandidateAccountPreview({
               <Link
                 key={title}
                 to={to}
-                className="group flex min-h-11 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition-colors hover:border-brand-200 hover:bg-brand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+                className="group flex min-h-11 items-start gap-3 rounded-xl border border-line bg-surface p-3 transition-colors hover:border-accent/50 hover:bg-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-700">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-accent">
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold text-slate-900">{title}</span>
-                  <span className="mt-1 block text-xs leading-5 text-slate-600">{description}</span>
+                  <span className="block text-sm font-bold text-ink">{title}</span>
+                  <span className="mt-1 block text-xs leading-5 text-ink-muted">{description}</span>
                 </span>
                 <ArrowRight
                   aria-hidden="true"
-                  className="mt-3 size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-700"
+                  className="mt-3 size-4 shrink-0 text-ink-muted transition-transform group-hover:translate-x-0.5 group-hover:text-accent"
                 />
               </Link>
             ))}
@@ -658,21 +658,21 @@ function CandidateAccountPreview({
         </section>
 
         <section
-          className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6"
+          className="rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6"
           aria-labelledby="notification-preview-title"
         >
           <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
               <Mail aria-hidden="true" className="size-5" />
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 id="notification-preview-title" className="text-xl font-bold text-slate-950">
+                <h3 id="notification-preview-title" className="text-xl font-bold text-ink">
                   Email notifications
                 </h3>
                 <PreviewStatus tone="simulation">Simulated preview</PreviewStatus>
               </div>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
+              <p className="mt-1 text-sm leading-6 text-ink-muted">
                 Try the preferences a persistent account could save. Changes remain in this browser
                 workspace and no emails or messages are sent.
               </p>
@@ -688,7 +688,7 @@ function CandidateAccountPreview({
             ).map(([key, label, description]) => (
               <label
                 key={key}
-                className="flex min-h-11 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
+                className="flex min-h-11 items-start gap-3 rounded-xl border border-line bg-surface p-3"
               >
                 <input
                   aria-label={label}
@@ -698,19 +698,19 @@ function CandidateAccountPreview({
                   className="mt-1 size-4 accent-brand-600"
                 />
                 <span>
-                  <span className="block text-sm font-semibold text-slate-700">{label}</span>
-                  <span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span>
+                  <span className="block text-sm font-semibold text-ink">{label}</span>
+                  <span className="mt-1 block text-xs leading-5 text-ink-muted">{description}</span>
                 </span>
               </label>
             ))}
           </div>
           {notificationNotice ? (
-            <p className="mt-4 flex items-start gap-2 text-xs font-semibold leading-5 text-emerald-700" role="status">
+            <p className="mt-4 flex items-start gap-2 text-xs font-semibold leading-5 text-success" role="status">
               <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
               Preview preferences saved for this demo workspace. Delivery remains disabled.
             </p>
           ) : (
-            <p className="mt-4 flex items-start gap-2 text-xs font-semibold leading-5 text-sky-700">
+            <p className="mt-4 flex items-start gap-2 text-xs font-semibold leading-5 text-accent">
               <Bell aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
               Simulation only · delivery remains unavailable in this demo.
             </p>
@@ -718,7 +718,7 @@ function CandidateAccountPreview({
         </section>
       </div>
 
-      <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950 sm:p-6">
+      <div className="rounded-2xl border border-warning/30 bg-warning-soft p-5 text-sm leading-6 text-warning sm:p-6">
         <strong>Demo boundary:</strong> passwords, MFA enrollment, email notification delivery,
         permanent account deletion, conversion to a persistent account, and persistent login are
         intentionally unavailable. Application export is active; interactive account controls are
@@ -733,7 +733,7 @@ function CandidateAccountPreview({
         description="Interactive product preview · no real account or security setting is changed."
         size="lg"
         footer={
-          <p className="min-w-0 max-w-full break-words text-xs leading-5 text-slate-500">
+          <p className="min-w-0 max-w-full break-words text-xs leading-5 text-ink-muted">
             Production implementation would require verified identity, server-owned preferences,
             audit events, and separately authorized account services.
           </p>
@@ -760,9 +760,9 @@ function PreviewStatus({
   children: ReactNode;
 }) {
   const toneClass = {
-    available: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    simulation: "border-sky-200 bg-sky-50 text-sky-800",
-    planned: "border-violet-300 bg-violet-50 text-violet-950",
+    available: "border-success/30 bg-success-soft text-success",
+    simulation: "border-accent/30 bg-accent-soft text-accent-strong",
+    planned: "border-violet/30 bg-violet-soft text-violet",
   }[tone];
   return (
     <span
@@ -819,12 +819,12 @@ function AccountPreviewDrawerContent({
           title="MFA and active sessions"
           description="Candidates would be able to strengthen sign-in and review where their account is currently active."
         />
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-2xl border border-line bg-surface p-4">
           <div className="flex items-start gap-3">
-            <Smartphone aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-brand-700" />
+            <Smartphone aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-accent" />
             <div>
-              <p className="font-bold text-slate-900">Authenticator app</p>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
+              <p className="font-bold text-ink">Authenticator app</p>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">
                 A production flow would verify a time-based code before marking MFA as enrolled.
               </p>
             </div>
@@ -834,7 +834,7 @@ function AccountPreviewDrawerContent({
           </Button>
         </div>
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ink-muted">
             Simulated active sessions
           </h3>
           <div className="mt-3 space-y-3">
@@ -863,7 +863,7 @@ function AccountPreviewDrawerContent({
         <PreviewFlowStep number={2}>The server evaluates due work in the saved workspace time zone.</PreviewFlowStep>
         <PreviewFlowStep number={3}>A delivery service sends only allowed messages and records the result.</PreviewFlowStep>
       </ol>
-      <div className="min-w-0 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-800 [overflow-wrap:anywhere]">
+      <div className="min-w-0 rounded-2xl border border-accent/30 bg-accent-soft p-4 text-sm leading-6 text-accent-strong [overflow-wrap:anywhere]">
         <strong>{enabledCount} of 3</strong> preview notification types are enabled in this browser
         workspace. Return to the Email notifications panel to change them. Delivery remains disabled.
       </div>
@@ -875,8 +875,8 @@ function PreviewFlowHeading({ title, description }: { title: string; description
   return (
     <div>
       <PreviewStatus tone="simulation">Simulation only</PreviewStatus>
-      <h3 className="mt-3 text-lg font-bold text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+      <h3 className="mt-3 text-lg font-bold text-ink">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-ink-muted">{description}</p>
     </div>
   );
 }
@@ -889,8 +889,8 @@ function PreviewFlowStep({
   children: ReactNode;
 }) {
   return (
-    <li className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm leading-6 text-slate-700">
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-800">
+    <li className="flex items-start gap-3 rounded-xl border border-line p-3 text-sm leading-6 text-ink-muted">
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent-strong">
         {number}
       </span>
       {children}
@@ -908,11 +908,11 @@ function PreviewSession({
   detail: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-slate-200 p-3">
-      <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-slate-500" />
+    <div className="flex items-start gap-3 rounded-xl border border-line p-3">
+      <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-ink-muted" />
       <div>
-        <p className="text-sm font-bold text-slate-900">{title}</p>
-        <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
+        <p className="text-sm font-bold text-ink">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-ink-muted">{detail}</p>
       </div>
     </div>
   );

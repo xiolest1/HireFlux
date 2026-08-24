@@ -1,151 +1,154 @@
 # HireFlux
 
-HireFlux is a portfolio-grade job application tracker built as a deliberately small serverless system. The current recruiter demo runs entirely on a development machine:
+## A clearer way to manage a job search
+
+HireFlux is a candidate-focused job application tracker for turning a scattered search into a structured, actionable workflow.
+
+Instead of keeping application details across spreadsheets, browser tabs, inboxes, and calendar reminders, HireFlux gives each opportunity a place to live and keeps the next step visible. Candidates can track where an application stands, prepare for interviews, follow up at the right time, and learn from the overall search without losing the history behind each decision.
+
+HireFlux is intentionally a personal job-search workspace. It is not a job board, recruiting marketplace, or applicant-tracking system for employers.
+
+## Explore the experience
+
+The public landing page opens an isolated demo workspace with fictional data. No account or sign-up is required.
+
+Each demo workspace is:
+
+- pre-populated with 30 fictional applications across drafts, active stages, and outcomes;
+- isolated from every other visitor's workspace;
+- available for 24 hours so the workflow can be explored safely;
+- resettable at any time without affecting anyone else;
+- safe to edit because the data is synthetic and temporary.
+
+The demo is designed to show how HireFlux feels in a realistic candidate workflow, not to represent a connected production account.
+
+## What candidates can do
+
+### See the whole search at a glance
+
+The Home dashboard answers the questions that matter most during an active search:
+
+- How many opportunities am I pursuing?
+- What needs my attention today?
+- How successful has my search been?
+- What should I do next?
+
+The Action Center brings together overdue and upcoming follow-ups, interview preparation, and applications that may be losing momentum. Large groups use compact previews so the dashboard stays readable while every action remains available.
+
+### Manage every application in one place
+
+Applications can be created, edited, searched, filtered, and viewed as cards or a compact list. Each record keeps the details that are easy to lose elsewhere:
+
+- company, role, location, work mode, source, salary context, and job link;
+- current stage and server-approved status transitions;
+- follow-up date and next-step context;
+- notes and append-only activity history;
+- archive and restore behavior for completed or closed opportunities.
+
+The application detail view brings the opportunity, history, notes, and interviews together so the candidate can act without reconstructing context from multiple tools.
+
+### Prepare for interviews, not just track them
+
+Scheduled interviews include the time, format, meeting details, preparation prompts, checklists, candidate questions, and post-interview debrief fields. Interview status and preparation progress remain connected to the application they belong to.
+
+### Understand search momentum with honest analytics
+
+Analytics turns the application history into descriptive signals rather than unsupported predictions. It includes:
+
+- submission and outcome trends;
+- response, interview, offer, and acceptance rates with visible denominators;
+- current pipeline and stage distribution;
+- time spent in the current stage with exact application drill-downs;
+- source and work-mode comparisons;
+- follow-up coverage and period-over-period comparisons;
+- Search Health insights that distinguish action needed, worth watching, and useful context.
+
+The analytics language is deliberately cautious: small samples are labeled, aging is a review signal rather than a forecast, and historical milestones remain true even when an application's current status changes.
+
+### Keep control of the workspace
+
+Workspace settings include time zone, follow-up defaults, dashboard range, application-list defaults, theme, and other personal preferences. The demo also shows how candidate-facing account controls could work, including notification preferences, session visibility, recovery guidance, and MFA readiness, without pretending those simulated controls are live authentication services.
+
+Candidates can export their fictional application data as CSV for inspection. Persistent account portability and larger production exports are reserved for the future product path.
+
+## Product principles
+
+HireFlux is built around a few practical principles:
+
+- **Next-step clarity:** every active opportunity should make the next action easy to find.
+- **History matters:** activity and milestone history should explain how an application reached its current state.
+- **Descriptive over predictive:** analytics should help a candidate review their process, not make promises about outcomes.
+- **Candidate ownership:** the workspace is for the person running the search, with controls and language designed around their decisions.
+- **Safe experimentation:** the demo should be realistic enough to explore and isolated enough to change freely.
+- **Accessible by default:** responsive layouts, semantic structure, visible focus, keyboard support, and clear loading, empty, and error states are part of the product experience.
+
+## Project snapshot
+
+HireFlux is a portfolio-grade full-stack application currently designed for a local demo:
 
 ```text
-React + TypeScript -> FastAPI -> DynamoDB Local
+React + TypeScript + Vite -> FastAPI -> DynamoDB Local
 ```
 
-No AWS account, cloud resource, or real AWS credential is needed for the local slice.
+- **Frontend:** React, TypeScript, React Router, TanStack Query, React Hook Form, Zod, Tailwind CSS, Vitest, and Testing Library.
+- **Backend:** FastAPI with explicit route, application-service, repository-protocol, and DynamoDB-adapter boundaries.
+- **Data model:** owner-scoped applications, notes, interviews, activities, settings, analytics counters, and schedule projections.
+- **Security model:** signed temporary demo identities, server-owned authorization and metrics, explicit CORS, optimistic concurrency, and no stored passwords.
+- **Current runtime:** local development with DynamoDB Local. Planned AWS staging is documented separately and is not provisioned by this repository.
 
-## Current milestone
+The canonical architecture and current-versus-target boundary are documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
-The public landing page launches a signed, 24-hour demo workspace with its own owner identity and 16 realistic fictional applications. The protected workspace Home summarizes active pursuits, attention items, outcome rates, upcoming interviews, and recent work. Each visitor can manage applications, follow-ups, notes, interviews, analytics, and temporary preferences without seeing or changing another visitor's workspace. Provisioning is recorded as `PROVISIONING`, `READY`, or short-lived `FAILED`; a replayed `Idempotency-Key` returns the original ready session instead of reseeding. DynamoDB TTL marks every temporary record for cleanup.
+## Run the local demo
 
-Deferred work is tracked in [docs/roadmap.md](docs/roadmap.md). Cognito is reserved for future persistent personal accounts; it is not required for the frictionless recruiter demo.
+The README is intentionally product-first. The following is the shortest local path for trying the current implementation on Windows Command Prompt.
 
-## Architecture at a glance
+<details>
+<summary>Show local setup and startup commands</summary>
 
-- `frontend/` - React, TypeScript, Vite, React Router, TanStack Query, React Hook Form, Zod, Tailwind CSS, Vitest, and Testing Library.
-- `backend/` - FastAPI with route, application-service, repository-interface, and DynamoDB-adapter boundaries.
-- `docs/` - architecture, data access patterns, status policy, roadmap, and decision records.
-- `Diagrams/` - the original UML and data-flow design input. The current docs resolve differences between these diagrams and the implemented architecture.
+### Requirements
 
-The target recruiter-demo architecture is Amplify Hosting, API Gateway HTTP API, one Lambda running FastAPI through Mangum, DynamoDB on-demand, and CloudWatch. Cognito, private S3 attachments, EventBridge Scheduler, and SES remain optional later milestones. Nothing in AWS is provisioned by the current implementation.
-
-## Prerequisites
-
-- Node.js 22 LTS and npm 10 or newer.
-- Python 3.13 or 3.14.
-- uv 0.12.5 or newer for locked Python environments.
-- Docker Desktop with Linux containers enabled.
+- Node.js 22.12 or newer;
+- Python 3.13 or 3.14;
+- uv 0.12.5 or newer;
+- Docker Desktop with Linux containers;
 - Git.
 
-## First-time setup in Windows Command Prompt
-
-Run these commands from the repository root:
+From the repository root:
 
 ```bat
-copy .env.example .env
-
 uv sync --project backend --extra dev --locked
-
 npm --prefix frontend ci
-
 docker compose up -d dynamodb-local
 backend\.venv\Scripts\python.exe backend\scripts\init_local_table.py
 ```
 
-Milestone 2 adds a third DynamoDB index. If the initializer reports schema drift from an older local table, explicitly rebuild only the disposable local table, then rerun the initializer:
-
-```bat
-backend\.venv\Scripts\python.exe backend\scripts\reset_local_table.py --confirm-table HireFluxLocal
-backend\.venv\Scripts\python.exe backend\scripts\init_local_table.py
-```
-
-The reset permanently removes the current local table records before recreating the schema. Both scripts fail closed unless the environment is local, the endpoint is loopback-only, and the credentials are visibly fake. Never point either command at a deployed table.
-
-If an existing local table already has the Milestone 2 schema but needs its derived counters or schedule projections repaired, run the idempotent local reconciliation command:
-
-```bat
-backend\.venv\Scripts\python.exe backend\scripts\reconcile_local_projections.py --confirm-table HireFluxLocal
-```
-
-The values in `.env.example` are fake credential-shaped strings required by the AWS SDK when talking to DynamoDB Local. Never replace them with real credentials for local development, and never commit `.env`.
-
-## Run the app
-
-Keep each long-running command in its own Command Prompt window, from the repository root.
-
-Backend:
+Use separate Command Prompt windows for the API and frontend:
 
 ```bat
 backend\.venv\Scripts\python.exe -m uvicorn hireflux_backend.main:app --app-dir backend\src --reload --port 8000
 ```
 
-Frontend:
-
 ```bat
 npm --prefix frontend run dev
 ```
 
-Open `http://localhost:5173`. API documentation is at `http://localhost:8000/docs`, and health is at `http://localhost:8000/health`.
+Then open [http://localhost:5173](http://localhost:5173). The local API health check is available at [http://localhost:8000/health](http://localhost:8000/health).
 
-Stop the local database without deleting its named volume:
+For table reset/reconciliation, environment configuration, and the complete validation workflow, see [AGENTS.md](AGENTS.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
 
-```bat
-docker compose stop dynamodb-local
-```
+</details>
 
-## Validation commands
+## Documentation
 
-Backend:
+- [Architecture](ARCHITECTURE.md) — how the frontend, API, auth, domain services, DynamoDB, and future AWS boundary fit together.
+- [Dashboard and analytics](docs/dashboard-and-analytics.md) — product metrics, Action Center behavior, Search Health, stage aging, and filter contracts.
+- [Domain model](docs/domain-model.md) — applications, milestones, notes, interviews, activities, and workspace rules.
+- [Status transitions](docs/status-transitions.md) — the server-owned application workflow.
+- [Data export](docs/data-export.md) — current CSV export and future portability boundaries.
+- [Roadmap](docs/roadmap.md) — planned product and infrastructure work.
+- [Development log](docs/devlog.md) — implementation history, decisions, and validation notes.
+- [Supply-chain guide](docs/supply-chain.md) — lockfiles, SBOMs, and dependency review.
 
-```bat
-backend\.venv\Scripts\python.exe -m ruff check backend
-backend\.venv\Scripts\python.exe -m ruff format --check backend
-backend\.venv\Scripts\python.exe -m mypy backend\src
-backend\.venv\Scripts\python.exe -m pytest backend
-```
+## Current status
 
-Frontend:
-
-```bat
-npm --prefix frontend run lint
-npm --prefix frontend run typecheck
-npm --prefix frontend run test
-npm --prefix frontend run build
-```
-
-Backend tests use an isolated Moto table and do not need Docker. Frontend tests use a mocked HTTP boundary and do not need the backend.
-
-Supply-chain checks and SBOM generation:
-
-```bat
-uv lock --check --project backend --python 3.14
-uv sync --project backend --extra dev --locked
-if not exist sbom mkdir sbom
-backend\.venv\Scripts\python.exe backend\scripts\generate_sbom.py --output sbom\hireflux-backend.cdx.json
-npm --prefix frontend ci
-npm --prefix frontend sbom --package-lock-only --sbom-format cyclonedx --sbom-type application > sbom\hireflux-frontend.cdx.json
-```
-
-The generated SBOM files are local/CI artifacts and are ignored by Git. See
-[the supply-chain guide](docs/supply-chain.md) for lock refresh and review
-guidance.
-
-## Configuration
-
-The root `.env.example` documents every local setting. Important invariants:
-
-- `AUTH_MODE=demo` issues HMAC-signed temporary identities; its signing key must be replaced in staging and production.
-- Demo creation accepts an `Idempotency-Key`; failed partial seeds are cleaned up best-effort and retain only a short-lived failure marker for diagnosis.
-- `AUTH_MODE=local` remains available for deterministic backend development only, is accepted only for local/test, and is rejected when Lambda runtime markers exist.
-- `DYNAMODB_ENDPOINT_URL` is explicit locally and omitted in AWS.
-- Local SDK credentials are visibly fake. Deployed code will use its Lambda execution role.
-- CORS uses an explicit origin allowlist; wildcard origins are rejected.
-- Normal application startup never creates a DynamoDB table. Run the initializer explicitly.
-- `VITE_PUBLIC_SITE_URL` is public metadata and must match each deployed frontend origin.
-
-## Further reading
-
-- [Architecture](ARCHITECTURE.md)
-- [Environment and deployment plan](docs/deployment-environments.md)
-- [Development log](docs/devlog.md)
-- [Supply-chain guide](docs/supply-chain.md)
-- [Domain model](docs/domain-model.md)
-- [Dashboard and analytics contract](docs/dashboard-and-analytics.md)
-- [DynamoDB access patterns](docs/dynamodb-access-patterns.md)
-- [Status transitions](docs/status-transitions.md)
-- [Roadmap](docs/roadmap.md)
-- [Architecture decision records](docs/adr/)
+The local candidate demo is the active product slice. AWS staging, persistent accounts, external identity, private attachments, reminders, email delivery, and large asynchronous exports remain future milestones rather than hidden dependencies of the current app.

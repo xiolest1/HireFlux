@@ -45,6 +45,50 @@ def test_seeded_dashboard_answers_core_questions(dynamodb_client: Any) -> None:
         assert len(payload["submission_trend"]) == 8
 
 
+def test_seeded_pipeline_is_owner_scoped_and_uses_ordered_non_archived_lanes(
+    dynamodb_client: Any, monkeypatch: Any
+) -> None:
+    app = create_app(
+        build_test_settings(
+            auth_mode="demo",
+            demo_session_signing_key="demo-test-signing-key-that-is-at-least-32-bytes",
+        ),
+        dynamodb_client=dynamodb_client,
+    )
+    original_scan = dynamodb_client.scan
+
+    def no_scan(**kwargs: Any) -> Any:
+        raise AssertionError(f"Pipeline must not scan: {kwargs}")
+
+    monkeypatch.setattr(dynamodb_client, "scan", no_scan)
+    with TestClient(app) as client:
+        headers = _headers(client)
+        response = client.get("/api/v1/pipeline", headers=headers)
+        assert response.status_code == 200
+        payload = response.json()
+
+    monkeypatch.setattr(dynamodb_client, "scan", original_scan)
+    lanes = payload["lanes"]
+    assert [lane["status"] for lane in lanes] == [
+        "DRAFT",
+        "APPLIED",
+        "SCREENING",
+        "INTERVIEW",
+        "OFFER",
+        "ACCEPTED",
+        "REJECTED",
+        "WITHDRAWN",
+    ]
+    assert all(lane["status"] != "ARCHIVED" for lane in lanes)
+    assert all(lane["count"] >= len(lane["cards"]) for lane in lanes)
+    assert all(
+        card["application"]["owner_user_id"]
+        == payload["lanes"][0]["cards"][0]["application"]["owner_user_id"]
+        for lane in lanes
+        for card in lane["cards"]
+    )
+
+
 def test_analytics_ranges_filters_denominators_and_thresholds(dynamodb_client: Any) -> None:
     app = create_app(
         build_test_settings(

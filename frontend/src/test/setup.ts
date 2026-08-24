@@ -3,6 +3,16 @@ import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll } from "vitest";
 import { server } from "./server";
 
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+if (!globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = ResizeObserverStub as typeof ResizeObserver;
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 beforeAll(() => document.documentElement.setAttribute("lang", "en"));
 afterEach(() => {

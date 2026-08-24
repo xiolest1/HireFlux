@@ -287,18 +287,12 @@ describe("workspace milestone features", () => {
     expect(query.get("source")).toBe("REFERRAL");
 
     await user.click(screen.getByRole("tab", { name: "Pipeline" }));
-    expect(
-      await screen.findByRole("heading", {
-        name: "Applications by time in their current stage",
-      }),
-    ).toBeVisible();
-    expect(
-      screen.getByText(/active applications in Applied, Screening, Interview, or Offer/),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "View applications aged 0–7 days (1 application)" }),
-    ).toHaveAttribute("href", "/applications?view=ACTIVE&stage_age=0-7");
-    expect(screen.getAllByText("No applications in this range")).toHaveLength(3);
+    expect(await screen.findByRole("heading", { name: "Manage your application pipeline" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Filters" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Date range")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Show stage")).toHaveValue("APPLIED");
+    expect(screen.getAllByText("4 days in this stage")[0]).toBeVisible();
+    expect(screen.getAllByRole("button", { name: "Move…" })[0]).toBeVisible();
   });
 
   it("stages analytics filters and keeps URL-backed sections", async () => {

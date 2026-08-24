@@ -40,6 +40,7 @@ export const APPLICATION_SORTS = ["updated_desc", "updated_asc"] as const;
 export const APPLICATION_VIEWS = ["ACTIVE", "ALL", "ARCHIVED"] as const;
 export const STAGE_AGE_BUCKETS = ["0-7", "8-14", "15-30", "31+"] as const;
 export const FOLLOW_UP_FILTERS = ["NEEDS_ATTENTION"] as const;
+export const PIPELINE_FOLLOW_UP_STATES = ["NONE", "UPCOMING", "TODAY", "OVERDUE"] as const;
 
 export const applicationStatusSchema = z.enum(APPLICATION_STATUSES);
 export const workModeSchema = z.enum(WORK_MODES);
@@ -52,6 +53,7 @@ export const applicationSortSchema = z.enum(APPLICATION_SORTS);
 export const applicationViewSchema = z.enum(APPLICATION_VIEWS);
 export const stageAgeBucketSchema = z.enum(STAGE_AGE_BUCKETS);
 export const followUpFilterSchema = z.enum(FOLLOW_UP_FILTERS);
+export const pipelineFollowUpStateSchema = z.enum(PIPELINE_FOLLOW_UP_STATES);
 
 const dateOnlySchema = z
   .string()
@@ -106,6 +108,24 @@ export const applicationSchema = z.object({
 export const applicationListResponseSchema = z.object({
   items: z.array(applicationSchema),
   next_cursor: z.string().min(1).nullable(),
+});
+
+export const pipelineCardSchema = z.object({
+  application: applicationSchema,
+  stage_age_days: z.number().int().nonnegative().nullable(),
+  follow_up_state: pipelineFollowUpStateSchema,
+});
+
+export const pipelineLaneSchema = z.object({
+  status: applicationStatusSchema,
+  count: z.number().int().nonnegative(),
+  has_more: z.boolean(),
+  cards: z.array(pipelineCardSchema),
+});
+
+export const pipelineResponseSchema = z.object({
+  generated_at: timestampSchema,
+  lanes: z.array(pipelineLaneSchema),
 });
 
 export const activitySchema = z.object({
@@ -233,6 +253,9 @@ export type StageAgeBucket = z.infer<typeof stageAgeBucketSchema>;
 export type FollowUpFilter = z.infer<typeof followUpFilterSchema>;
 export type User = z.infer<typeof userSchema>;
 export type Application = z.infer<typeof applicationSchema>;
+export type PipelineCard = z.infer<typeof pipelineCardSchema>;
+export type PipelineLane = z.infer<typeof pipelineLaneSchema>;
+export type Pipeline = z.infer<typeof pipelineResponseSchema>;
 export type ApplicationListResponse = z.infer<
   typeof applicationListResponseSchema
 >;

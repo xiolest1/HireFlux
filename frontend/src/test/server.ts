@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { testDashboard, testSettings, testUser } from "./fixtures";
+import { makePipeline, testDashboard, testSettings, testUser } from "./fixtures";
 
 export const API_ORIGIN = "http://localhost:8000";
 
@@ -13,6 +13,7 @@ export const server = setupServer(
       range: new URL(request.url).searchParams.get("range") ?? "30d",
     }),
   ),
+  http.get(`${API_ORIGIN}/api/v1/pipeline`, () => HttpResponse.json(makePipeline())),
   http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
     HttpResponse.json({ items: [], next_cursor: null }),
   ),

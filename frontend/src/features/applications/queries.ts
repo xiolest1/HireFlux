@@ -36,6 +36,7 @@ export const applicationKeys = {
 function invalidateWorkspaceInsights(queryClient: QueryClient) {
   void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   void queryClient.invalidateQueries({ queryKey: ["analytics"] });
+  void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
 }
 
 export function useMe({ enabled = true }: { enabled?: boolean } = {}) {

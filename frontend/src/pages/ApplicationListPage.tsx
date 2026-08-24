@@ -1,6 +1,8 @@
 import {
   ArrowUpRight,
   Check,
+  ChevronDown,
+  CircleAlert,
   LayoutGrid,
   List,
   MapPin,
@@ -57,6 +59,13 @@ interface FilterDraft {
   stageAge: string;
   followUp: string;
   sort: string;
+}
+
+type FilterName = "q" | "status" | "source" | "work_mode" | "stage_age" | "follow_up";
+
+interface ActiveFilterItem {
+  name: FilterName;
+  label: string;
 }
 
 const defaultFilterDraft: FilterDraft = {
@@ -150,6 +159,7 @@ export function ApplicationListPage() {
     followUp: followUp ?? "",
     sort,
   });
+  const [activeFiltersExpanded, setActiveFiltersExpanded] = useState(false);
 
   useEffect(() => setSearchDraft(q), [q]);
   useEffect(() => {
@@ -207,7 +217,7 @@ export function ApplicationListPage() {
     });
   }
 
-  function openFilters() {
+  function openFilters(overrides: Partial<FilterDraft> = {}) {
     setFilterDraft({
       status: status ?? "",
       source: source ?? "",
@@ -215,6 +225,7 @@ export function ApplicationListPage() {
       stageAge: stageAge ?? "",
       followUp: followUp ?? "",
       sort,
+      ...overrides,
     });
     setFilterOpen(true);
   }
@@ -265,6 +276,15 @@ export function ApplicationListPage() {
       }
     });
     setFilterOpen(false);
+    setActiveFiltersExpanded(false);
+  }
+
+  function setSort(value: string) {
+    const parsedSort = optionFromSearchParam(value, APPLICATION_SORTS) ?? "updated_desc";
+    updateSearchParams((next) => {
+      if (parsedSort === "updated_desc") next.delete("sort");
+      else next.set("sort", parsedSort);
+    });
   }
 
   function clearAllFilters() {
@@ -277,11 +297,10 @@ export function ApplicationListPage() {
       next.delete("follow_up");
       next.delete("sort");
     });
+    setActiveFiltersExpanded(false);
   }
 
-  function removeFilter(
-  name: "q" | "status" | "source" | "work_mode" | "stage_age" | "follow_up" | "sort",
-) {
+  function removeFilter(name: FilterName) {
     updateSearchParams((next) => next.delete(name));
   }
 
@@ -294,17 +313,23 @@ export function ApplicationListPage() {
     });
   }
 
-  const hasFilters = Boolean(
-    status || q || source || workMode || stageAge || followUp || sort !== "updated_desc",
-  );
+  const activeFilterItems: ActiveFilterItem[] = [
+    q ? { name: "q", label: `Search: ${q}` } : null,
+    status ? { name: "status", label: `Status: ${formatStatus(status)}` } : null,
+    source ? { name: "source", label: `Source: ${formatSource(source)}` } : null,
+    workMode ? { name: "work_mode", label: `Work mode: ${formatWorkMode(workMode)}` } : null,
+    stageAge ? { name: "stage_age", label: `Stage age: ${formatStageAge(stageAge)}` } : null,
+    followUp ? { name: "follow_up", label: "Follow-up: Needs attention" } : null,
+  ].filter((item): item is ActiveFilterItem => Boolean(item));
+  const hasFilters = activeFilterItems.length > 0;
   const filterCount = [
     status,
     source,
     workMode,
     stageAge,
     followUp,
-    sort !== "updated_desc" ? sort : null,
   ].filter(Boolean).length;
+  const hiddenFilterCount = Math.max(0, activeFilterItems.length - 3);
 
   return (
     <div>
@@ -399,64 +424,65 @@ export function ApplicationListPage() {
             </button>
           </form>
 
-          <button
-            type="button"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface-raised px-4 text-sm font-semibold text-ink transition-colors hover:border-accent/50 hover:text-accent"
-            onClick={openFilters}
-          >
-            <SlidersHorizontal aria-hidden="true" className="size-4" />
-            Filters
-            {filterCount ? (
-              <span className="inline-flex size-6 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent">
-                {filterCount}
-              </span>
+          <div className="flex flex-wrap gap-2">
+            {applicationView === "ACTIVE" ? (
+              <button
+                type="button"
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  followUp === "NEEDS_ATTENTION"
+                    ? "border-accent bg-accent-soft text-accent"
+                    : "border-line-strong bg-surface-raised text-ink hover:border-accent/50 hover:text-accent"
+                }`}
+                aria-pressed={followUp === "NEEDS_ATTENTION"}
+                onClick={() => openFilters({ followUp: "NEEDS_ATTENTION" })}
+              >
+                <CircleAlert aria-hidden="true" className="size-4" />
+                Needs attention
+              </button>
             ) : null}
-          </button>
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface-raised px-4 text-sm font-semibold text-ink transition-colors hover:border-accent/50 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              aria-label={filterCount ? `Filters, ${filterCount} active` : "Filters"}
+              onClick={() => openFilters()}
+            >
+              <SlidersHorizontal aria-hidden="true" className="size-4" />
+              Filters
+              {filterCount ? (
+                <span className="inline-flex size-6 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent">
+                  {filterCount}
+                </span>
+              ) : null}
+            </button>
+          </div>
         </div>
 
         {hasFilters ? (
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4" role="group" aria-label="Active application filters">
             <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
               Active filters
             </span>
-            {q ? (
-              <FilterChip label={`Search: ${q}`} onRemove={() => removeFilter("q")} />
-            ) : null}
-            {status ? (
-              <FilterChip
-                label={formatStatus(status)}
-                onRemove={() => removeFilter("status")}
-              />
-            ) : null}
-            {source ? (
-              <FilterChip
-                label={formatSource(source)}
-                onRemove={() => removeFilter("source")}
-              />
-            ) : null}
-            {workMode ? (
-              <FilterChip
-                label={formatWorkMode(workMode)}
-                onRemove={() => removeFilter("work_mode")}
-              />
-            ) : null}
-            {stageAge ? (
-              <FilterChip
-                label={`Stage age: ${formatStageAge(stageAge)}`}
-                onRemove={() => removeFilter("stage_age")}
-              />
-            ) : null}
-            {followUp ? (
-              <FilterChip
-                label="Follow-up: Needs attention"
-                onRemove={() => removeFilter("follow_up")}
-              />
-            ) : null}
-            {sort !== "updated_desc" ? (
-              <FilterChip
-                label="Least recently updated"
-                onRemove={() => removeFilter("sort")}
-              />
+            {activeFilterItems.slice(0, 3).map((item) => (
+              <FilterChip key={item.name} label={item.label} onRemove={() => removeFilter(item.name)} />
+            ))}
+            {hiddenFilterCount ? (
+              <>
+                <div id="additional-application-filters" hidden={!activeFiltersExpanded} className="contents">
+                  {activeFilterItems.slice(3).map((item) => (
+                    <FilterChip key={item.name} label={item.label} onRemove={() => removeFilter(item.name)} />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2.5 text-sm font-semibold text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  aria-expanded={activeFiltersExpanded}
+                  aria-controls="additional-application-filters"
+                  onClick={() => setActiveFiltersExpanded((expanded) => !expanded)}
+                >
+                  {activeFiltersExpanded ? "Show fewer filters" : `+${hiddenFilterCount} more filters`}
+                  <ChevronDown aria-hidden="true" className={`size-4 transition-transform ${activeFiltersExpanded ? "rotate-180" : ""}`} />
+                </button>
+              </>
             ) : null}
             <button
               type="button"
@@ -515,25 +541,33 @@ export function ApplicationListPage() {
                   <span className="ml-2 text-accent">Refreshing…</span>
                 ) : null}
               </p>
-              <div
-                className="hidden items-center rounded-xl border border-line bg-surface-muted p-1 md:flex"
-                role="group"
-                aria-label="Application layout"
-              >
-                <LayoutButton
-                  selected={layout === "cards"}
-                  label="Card view"
-                  onClick={() => setLayout("cards")}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="hidden items-center gap-2 lg:flex">
+                  <span aria-hidden="true" className="text-xs font-bold uppercase tracking-wide text-ink-muted">
+                    Sort by
+                  </span>
+                  <SortSelect id="desktop-application-sort" value={sort} onChange={setSort} />
+                </div>
+                <div
+                  className="hidden items-center rounded-xl border border-line bg-surface-muted p-1 md:flex"
+                  role="group"
+                  aria-label="Application layout"
                 >
-                  <LayoutGrid aria-hidden="true" className="size-4" />
-                </LayoutButton>
-                <LayoutButton
-                  selected={layout === "list"}
-                  label="List view"
-                  onClick={() => setLayout("list")}
-                >
-                  <List aria-hidden="true" className="size-4" />
-                </LayoutButton>
+                  <LayoutButton
+                    selected={layout === "cards"}
+                    label="Card view"
+                    onClick={() => setLayout("cards")}
+                  >
+                    <LayoutGrid aria-hidden="true" className="size-4" />
+                  </LayoutButton>
+                  <LayoutButton
+                    selected={layout === "list"}
+                    label="List view"
+                    onClick={() => setLayout("list")}
+                  >
+                    <List aria-hidden="true" className="size-4" />
+                  </LayoutButton>
+                </div>
               </div>
             </div>
 
@@ -581,6 +615,7 @@ export function ApplicationListPage() {
       <FilterDrawer
         open={filterOpen}
         draft={filterDraft}
+        applicationView={applicationView}
         onDraftChange={setFilterDraft}
         onClose={() => setFilterOpen(false)}
         onApply={applyFilters}
@@ -636,6 +671,7 @@ function LayoutButton({
 function FilterDrawer({
   open,
   draft,
+  applicationView,
   onDraftChange,
   onClose,
   onApply,
@@ -643,17 +679,33 @@ function FilterDrawer({
 }: {
   open: boolean;
   draft: FilterDraft;
+  applicationView: ApplicationView;
   onDraftChange: (draft: FilterDraft) => void;
   onClose: () => void;
   onApply: () => void;
   onClear: () => void;
 }) {
+  const draftStatus = statusFromSearchParam(draft.status || null);
+  const effectiveView = draftStatus ? viewForStatus(draftStatus) : applicationView;
+  const activeFiltersEnabled = effectiveView === "ACTIVE";
+
+  function changeStatus(statusValue: string) {
+    const nextDraft = { ...draft, status: statusValue };
+    const nextStatus = statusFromSearchParam(statusValue || null);
+    const nextView = nextStatus ? viewForStatus(nextStatus) : applicationView;
+    if (nextView !== "ACTIVE") {
+      nextDraft.stageAge = "";
+      nextDraft.followUp = "";
+    }
+    onDraftChange(nextDraft);
+  }
+
   return (
     <Drawer
       open={open}
       onClose={onClose}
       title="Application filters"
-      description="Changes are staged until you apply them."
+      description="Choose how to narrow this view. Changes are staged until you apply them."
       footer={
         <div className="flex gap-3">
           <button
@@ -675,70 +727,135 @@ function FilterDrawer({
       }
     >
       <div className="space-y-5">
-        <ListFilter
-          id="status-filter"
-          label="Filter by status"
-          value={draft.status}
-          onChange={(status) => onDraftChange({ ...draft, status })}
-        >
-          <option value="">All statuses</option>
-          {APPLICATION_STATUSES.map((option) => (
-            <option key={option} value={option}>{formatStatus(option)}</option>
-          ))}
-        </ListFilter>
-        <ListFilter
-          id="source-filter"
-          label="Source"
-          value={draft.source}
-          onChange={(source) => onDraftChange({ ...draft, source })}
-        >
-          <option value="">All sources</option>
-          {APPLICATION_SOURCES.map((option) => (
-            <option key={option} value={option}>{formatSource(option)}</option>
-          ))}
-        </ListFilter>
-        <ListFilter
-          id="work-mode-filter"
-          label="Work mode"
-          value={draft.workMode}
-          onChange={(workMode) => onDraftChange({ ...draft, workMode })}
-        >
-          <option value="">All modes</option>
-          {WORK_MODES.map((option) => (
-            <option key={option} value={option}>{formatWorkMode(option)}</option>
-          ))}
-        </ListFilter>
-        <ListFilter
-          id="stage-age-filter"
-          label="Time in current stage"
-          value={draft.stageAge}
-          onChange={(stageAge) => onDraftChange({ ...draft, stageAge })}
-        >
-          <option value="">Any stage age</option>
-          {STAGE_AGE_BUCKETS.map((option) => (
-            <option key={option} value={option}>{formatStageAge(option)}</option>
-          ))}
-        </ListFilter>
-        <ListFilter
-          id="follow-up-filter"
-          label="Follow-up planning"
-          value={draft.followUp}
-          onChange={(followUp) => onDraftChange({ ...draft, followUp })}
-        >
-          <option value="">Any follow-up state</option>
-          <option value="NEEDS_ATTENTION">Needs attention</option>
-        </ListFilter>
-        <ListFilter
-          id="sort-filter"
-          label="Sort"
-          value={draft.sort}
-          onChange={(sort) => onDraftChange({ ...draft, sort })}
-        >
-          <option value="updated_desc">Recently updated</option>
-          <option value="updated_asc">Least recently updated</option>
-        </ListFilter>
+        <FilterSection title="Pipeline" description="Choose where an opportunity is in your search.">
+          <ListFilter
+            id="status-filter"
+            label="Status"
+            value={draft.status}
+            onChange={changeStatus}
+          >
+            <option value="">All statuses</option>
+            {APPLICATION_STATUSES.map((option) => (
+              <option key={option} value={option}>{formatStatus(option)}</option>
+            ))}
+          </ListFilter>
+        </FilterSection>
+        <FilterSection title="Context" description="Narrow by where the role came from or how it is structured.">
+          <div className="space-y-4">
+            <ListFilter
+              id="source-filter"
+              label="Source"
+              value={draft.source}
+              onChange={(source) => onDraftChange({ ...draft, source })}
+            >
+              <option value="">All sources</option>
+              {APPLICATION_SOURCES.map((option) => (
+                <option key={option} value={option}>{formatSource(option)}</option>
+              ))}
+            </ListFilter>
+            <ListFilter
+              id="work-mode-filter"
+              label="Work mode"
+              value={draft.workMode}
+              onChange={(workMode) => onDraftChange({ ...draft, workMode })}
+            >
+              <option value="">All modes</option>
+              {WORK_MODES.map((option) => (
+                <option key={option} value={option}>{formatWorkMode(option)}</option>
+              ))}
+            </ListFilter>
+          </div>
+        </FilterSection>
+        <FilterSection title="Attention" description="Review stage age and follow-up planning for active pursuits.">
+          <div className="space-y-4">
+            <ListFilter
+              id="stage-age-filter"
+              label="Time in current stage"
+              value={draft.stageAge}
+              disabled={!activeFiltersEnabled}
+              onChange={(stageAge) => onDraftChange({ ...draft, stageAge })}
+            >
+              <option value="">Any stage age</option>
+              {STAGE_AGE_BUCKETS.map((option) => (
+                <option key={option} value={option}>{formatStageAge(option)}</option>
+              ))}
+            </ListFilter>
+            <ListFilter
+              id="follow-up-filter"
+              label="Follow-up planning"
+              value={draft.followUp}
+              disabled={!activeFiltersEnabled}
+              onChange={(followUp) => onDraftChange({ ...draft, followUp })}
+            >
+              <option value="">Any follow-up state</option>
+              <option value="NEEDS_ATTENTION">Needs attention</option>
+            </ListFilter>
+            {!activeFiltersEnabled ? (
+              <p className="rounded-xl border border-line bg-surface-muted p-3 text-xs leading-5 text-ink-muted">
+                These filters are available only for the Active view. Choose an active status above to enable them.
+              </p>
+            ) : null}
+          </div>
+        </FilterSection>
+        <div className="lg:hidden">
+          <FilterSection title="Order results" description="Choose which applications appear first.">
+            <ListFilter
+              id="drawer-sort-filter"
+              label="Sort by"
+              value={draft.sort}
+              onChange={(sort) => onDraftChange({ ...draft, sort })}
+            >
+              <option value="updated_desc">Recently updated</option>
+              <option value="updated_asc">Least recently updated</option>
+            </ListFilter>
+          </FilterSection>
+        </div>
       </div>
     </Drawer>
+  );
+}
+
+function FilterSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  const headingId = `application-filter-${title.toLowerCase().replaceAll(" ", "-")}`;
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="text-sm font-bold text-ink">
+        {title}
+      </h3>
+      <p className="mt-1 text-xs leading-5 text-ink-muted">{description}</p>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+function SortSelect({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <select
+      id={id}
+      aria-label="Sort applications"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="min-h-10 rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink"
+    >
+      <option value="updated_desc">Recently updated</option>
+      <option value="updated_asc">Least recently updated</option>
+    </select>
   );
 }
 
@@ -806,12 +923,14 @@ function ListFilter({
   id,
   label,
   value,
+  disabled = false,
   onChange,
   children,
 }: {
   id: string;
   label: string;
   value: string;
+  disabled?: boolean;
   onChange: (value: string) => void;
   children: ReactNode;
 }) {
@@ -823,8 +942,9 @@ function ListFilter({
       <select
         id={id}
         value={value}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink"
+        className="mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-60"
       >
         {children}
       </select>

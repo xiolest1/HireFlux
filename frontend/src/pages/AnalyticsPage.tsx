@@ -17,6 +17,7 @@ import { Drawer } from "../components/ui/Drawer";
 import { ErrorPanel } from "../components/ui/Feedback";
 import { PanelSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { Tabs } from "../components/ui/Tabs";
+import { PipelineBoard } from "../features/pipeline/PipelineBoard";
 import { formatDateOnly, formatSource, formatStageAge, formatStatus, formatWorkMode } from "../features/applications/format";
 import { updateSearchTour, useAnalytics } from "../features/workspace/queries";
 
@@ -124,7 +125,11 @@ export function AnalyticsPage() {
   const workMode = allowed(searchParams.get("work_mode"), WORK_MODES);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [draft, setDraft] = useState<AdvancedDraft>({ status, source, workMode });
-  const analyticsQuery = useAnalytics({ range, status, source, workMode });
+  const isPipeline = section === "pipeline";
+  const analyticsQuery = useAnalytics(
+    { range, status, source, workMode },
+    { enabled: !isPipeline },
+  );
 
   useEffect(() => {
     updateSearchTour("analytics");
@@ -183,30 +188,32 @@ export function AnalyticsPage() {
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Analytics</h1>
           <p className="mt-2 max-w-3xl text-base leading-7 text-slate-600">Understand activity and outcomes without turning a small sample into a prediction.</p>
         </div>
-        <div>
+        {!isPipeline ? <div>
           <label htmlFor="analytics-range" className="text-xs font-bold uppercase tracking-wide text-slate-600">Date range</label>
           <select id="analytics-range" value={range} onChange={(event) => updateParam("range", event.target.value)} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 sm:w-auto">
             <option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="all">All time</option>
           </select>
-        </div>
+        </div> : null}
       </header>
 
-      <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className={`flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center ${isPipeline ? "" : "sm:justify-between"}`}>
         <Tabs items={analyticsTabs} value={section} ariaLabel="Analytics sections" stretch className="sm:w-auto" />
-        <button type="button" className={buttonClassName("secondary", "gap-2")} onClick={openFilters}><Filter aria-hidden="true" className="size-4" />Filters{activeFilters.length ? ` (${activeFilters.length})` : ""}</button>
+        {!isPipeline ? <button type="button" className={buttonClassName("secondary", "gap-2")} onClick={openFilters}><Filter aria-hidden="true" className="size-4" />Filters{activeFilters.length ? ` (${activeFilters.length})` : ""}</button> : null}
       </div>
 
-      {activeFilters.length ? (
+      {!isPipeline && activeFilters.length ? (
         <div className="flex flex-wrap items-center gap-2" aria-label="Active analytics filters">
           <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Filtered by</span>
           {activeFilters.map((item) => <button key={item.name} type="button" onClick={() => updateParam(item.name)} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:border-slate-300" aria-label={`Remove ${item.label}`}><span>{item.label}</span><X aria-hidden="true" className="size-3.5" /></button>)}
         </div>
       ) : null}
 
-      {analyticsQuery.isFetching && analyticsQuery.data ? <p className="text-xs font-semibold text-slate-500" role="status">Refreshing analytics…</p> : null}
-      {analyticsQuery.isPending ? <AnalyticsSkeleton /> : null}
-      {analyticsQuery.isError && !analyticsQuery.data ? <ErrorPanel title="Analytics could not be loaded" error={analyticsQuery.error} onRetry={() => void analyticsQuery.refetch()} /> : null}
-      {analyticsQuery.data ? <AnalyticsResults analytics={analyticsQuery.data} section={section} /> : null}
+      {isPipeline ? <PipelineBoard /> : <>
+        {analyticsQuery.isFetching && analyticsQuery.data ? <p className="text-xs font-semibold text-slate-500" role="status">Refreshing analytics…</p> : null}
+        {analyticsQuery.isPending ? <AnalyticsSkeleton /> : null}
+        {analyticsQuery.isError && !analyticsQuery.data ? <ErrorPanel title="Analytics could not be loaded" error={analyticsQuery.error} onRetry={() => void analyticsQuery.refetch()} /> : null}
+        {analyticsQuery.data ? <AnalyticsResults analytics={analyticsQuery.data} section={section} /> : null}
+      </>}
 
       <Drawer
         open={filtersOpen}

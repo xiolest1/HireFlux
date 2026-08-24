@@ -12,6 +12,7 @@ from hireflux_backend.api.routes import (
     health,
     insights,
     me,
+    pipeline,
     workspace_resources,
 )
 from hireflux_backend.api.routes import (
@@ -19,6 +20,7 @@ from hireflux_backend.api.routes import (
 )
 from hireflux_backend.application.demo_sessions import DemoSessionService
 from hireflux_backend.application.insights import InsightsService
+from hireflux_backend.application.pipeline import PipelineService
 from hireflux_backend.application.resource_services import WorkspaceResourceService
 from hireflux_backend.application.services import ApplicationService, UserService
 from hireflux_backend.application.workspace_export import WorkspaceExportService
@@ -89,6 +91,12 @@ def create_app(
     app.state.insights_service = InsightsService(
         application_repository, resource_service=workspace_resource_service
     )
+    app.state.pipeline_service = PipelineService(
+        application_repository,
+        workspace_time_zone=lambda identity: (
+            workspace_resource_service.get_settings(identity).time_zone
+        ),
+    )
     app.state.workspace_resource_service = workspace_resource_service
     app.state.workspace_export_service = WorkspaceExportService(
         user_service,
@@ -131,6 +139,7 @@ def create_app(
     app.include_router(me.router)
     app.include_router(applications.router)
     app.include_router(insights.router)
+    app.include_router(pipeline.router)
     app.include_router(settings_routes.router)
     app.include_router(workspace_resources.applications_router)
     app.include_router(workspace_resources.interviews_router)

@@ -23,11 +23,126 @@ describe("ApplicationListPage", () => {
         { timeout: 3_000 },
       ),
     ).toBeVisible();
-    expect(requestedFollowUp).toBe("NEEDS_ATTENTION");
+    await waitFor(() => expect(requestedFollowUp).toBe("NEEDS_ATTENTION"));
 
     await user.click(screen.getByRole("button", { name: /^Filters/ }));
     expect(screen.getByLabelText("Follow-up planning")).toHaveValue("NEEDS_ATTENTION");
   });
+
+  it("stages Needs attention from the Active toolbar until filters are applied", async () => {
+    let requestCount = 0;
+    let requestedFollowUp: string | null = null;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
+        requestCount += 1;
+        requestedFollowUp = new URL(request.url).searchParams.get("follow_up");
+        return HttpResponse.json({ items: [makeApplication()], next_cursor: null });
+      }),
+    );
+
+    const { user, router } = renderApp("/applications?view=ACTIVE");
+    expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
+    const requestsBeforeOpen = requestCount;
+    const shortcut = screen.getByRole("button", { name: "Needs attention" });
+    expect(shortcut).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(shortcut);
+    expect(await screen.findByRole("dialog", { name: "Application filters" })).toBeVisible();
+    expect(screen.getByLabelText("Follow-up planning")).toHaveValue("NEEDS_ATTENTION");
+    expect(requestCount).toBe(requestsBeforeOpen);
+    expect(requestedFollowUp).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Apply filters" }));
+    await waitFor(() => {
+      expect(router.state.location.search).toContain("follow_up=NEEDS_ATTENTION");
+      expect(requestedFollowUp).toBe("NEEDS_ATTENTION");
+    });
+    expect(shortcut).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Remove Follow-up: Needs attention filter" })).toBeVisible();
+  });
+
+  it("keeps active filter chips compact and exposes the overflow accessibly", async () => {
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, () =>
+        HttpResponse.json({ items: [makeApplication()], next_cursor: null }),
+      ),
+    );
+
+    const { user, router } = renderApp(
+      "/applications?view=ACTIVE&q=engineer&status=APPLIED&source=REFERRAL&work_mode=REMOTE&stage_age=15-30&follow_up=NEEDS_ATTENTION",
+    );
+    expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Filters, 5 active" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Remove Search: engineer filter" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Remove Status: Applied filter" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Remove Source: Referral filter" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Remove Work mode: Remote filter" })).not.toBeInTheDocument();
+
+    const moreFilters = screen.getByRole("button", { name: "+3 more filters" });
+    expect(moreFilters).toHaveAttribute("aria-expanded", "false");
+    expect(moreFilters).toHaveAttribute("aria-controls", "additional-application-filters");
+    await user.click(moreFilters);
+    expect(screen.getByRole("button", { name: "Show fewer filters" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Remove Work mode: Remote filter" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Remove Stage age: 15–30 days filter" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Remove Follow-up: Needs attention filter" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+    await waitFor(() => expect(router.state.location.search).toBe("?view=ACTIVE"));
+  });
+
+  it("updates sort independently and organizes the staged drawer sections", async () => {
+    let requestedSort: string | null = null;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
+        requestedSort = new URL(request.url).searchParams.get("sort");
+        return HttpResponse.json({ items: [makeApplication()], next_cursor: null });
+      }),
+    );
+
+    const { user, router } = renderApp("/applications?view=ACTIVE");
+    expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
+    await user.selectOptions(screen.getByLabelText("Sort applications"), "updated_asc");
+    await waitFor(() => {
+      expect(requestedSort).toBe("updated_asc");
+      expect(router.state.location.search).toContain("sort=updated_asc");
+    });
+
+    await user.click(screen.getByRole("button", { name: "Filters" }));
+    expect(screen.getByRole("heading", { name: "Pipeline" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Context" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Attention" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Order results" })).toBeVisible();
+    expect(screen.getByLabelText("Sort by")).toHaveValue("updated_asc");
+  });
+
+  it("clears Active-only staged filters when a non-active status is selected", async () => {
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, () =>
+        HttpResponse.json({ items: [makeApplication()], next_cursor: null }),
+      ),
+    );
+    const { user } = renderApp("/applications?view=ACTIVE");
+    expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Filters" }));
+    const stageAge = screen.getByLabelText("Time in current stage");
+    const followUp = screen.getByLabelText("Follow-up planning");
+    await user.selectOptions(stageAge, "15-30");
+    await user.selectOptions(followUp, "NEEDS_ATTENTION");
+    await user.selectOptions(screen.getByLabelText("Status"), "REJECTED");
+
+    expect(stageAge).toHaveValue("");
+    expect(followUp).toHaveValue("");
+    expect(stageAge).toBeDisabled();
+    expect(followUp).toBeDisabled();
+    expect(screen.getByText(/available only for the Active view/i)).toBeVisible();
+
+    await user.selectOptions(screen.getByLabelText("Status"), "APPLIED");
+    expect(stageAge).toBeEnabled();
+    expect(followUp).toBeEnabled();
+  });
+
   it("uses an accessible card-shaped skeleton for the initial load", async () => {
     server.use(
       http.get(`${API_ORIGIN}/api/v1/applications`, async () => {
@@ -109,7 +224,7 @@ describe("ApplicationListPage", () => {
     expect(await screen.findByText("No applications yet")).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Filters" }));
-    await user.selectOptions(screen.getByLabelText("Filter by status"), "ARCHIVED");
+    await user.selectOptions(screen.getByLabelText("Status"), "ARCHIVED");
     expect(requestedStatus).toBeNull();
     await user.click(screen.getByRole("button", { name: "Apply filters" }));
 
@@ -118,7 +233,7 @@ describe("ApplicationListPage", () => {
     expect(requestedView).toBe("ARCHIVED");
 
     await user.click(screen.getByRole("button", { name: /Filters/ }));
-    await user.selectOptions(screen.getByLabelText("Filter by status"), "REJECTED");
+    await user.selectOptions(screen.getByLabelText("Status"), "REJECTED");
     await user.click(screen.getByRole("button", { name: "Apply filters" }));
 
     await waitFor(() => {

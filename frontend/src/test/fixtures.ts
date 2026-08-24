@@ -1,4 +1,4 @@
-import type { Activity, Application, Interview, Settings, User } from "../api/schemas";
+import type { Activity, Application, Interview, Pipeline, Settings, User } from "../api/schemas";
 import type { Dashboard } from "../api/workspace";
 
 export const testUser: User = {
@@ -39,6 +39,24 @@ export function makeApplication(
     first_offer_at: null,
     first_acceptance_at: null,
     allowed_transitions: ["INTERVIEW", "REJECTED", "ARCHIVED"],
+    ...overrides,
+  };
+}
+
+export function makePipeline(overrides: Partial<Pipeline> = {}): Pipeline {
+  const statuses = ["DRAFT", "APPLIED", "SCREENING", "INTERVIEW", "OFFER", "ACCEPTED", "REJECTED", "WITHDRAWN"] as const;
+  return {
+    generated_at: "2026-08-12T13:00:00Z",
+    lanes: statuses.map((status) => ({
+      status,
+      count: status === "APPLIED" ? 1 : 0,
+      has_more: false,
+      cards: status === "APPLIED" ? [{
+        application: makeApplication({ allowed_transitions: ["SCREENING", "INTERVIEW", "OFFER", "REJECTED", "WITHDRAWN", "ARCHIVED"] }),
+        stage_age_days: 4,
+        follow_up_state: "UPCOMING",
+      }] : [],
+    })),
     ...overrides,
   };
 }

@@ -91,11 +91,15 @@ export function useDashboard(range: DashboardRange) {
   });
 }
 
-export function useAnalytics(filters: AnalyticsFilters) {
+export function useAnalytics(
+  filters: AnalyticsFilters,
+  { enabled = true }: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: workspaceKeys.analytics(filters),
     queryFn: ({ signal }) => getAnalytics(filters, signal),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 
@@ -111,6 +115,7 @@ function useFollowUpMutation(
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
       void queryClient.invalidateQueries({ queryKey: applicationKeys.all });
     },
   });
@@ -138,6 +143,7 @@ export function useRescheduleFollowUp() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
       void queryClient.invalidateQueries({ queryKey: applicationKeys.all });
     },
   });

@@ -1034,6 +1034,14 @@ callout contrast and constrained both the preview status text and production
 implementation note to their available width. This keeps the copy readable and
 contained at narrow drawer sizes without changing the simulation behavior.
 
+The Personal account preview container now uses the same theme-aware surfaces,
+ink colors, borders, accents, success states, warning treatment, spacing, and
+card hierarchy as the rest of Settings. The parent grouping and nested panels
+were softened into a cohesive raised-surface system, and the preview drawers
+inherit the same visual language. This was a presentation-only change; all
+existing preview actions, workspace-scoped persistence, and demo boundaries are
+unchanged.
+
 ## Next recommended work
 
 Freeze and commit the validated local Milestone 2 baseline, then build and
