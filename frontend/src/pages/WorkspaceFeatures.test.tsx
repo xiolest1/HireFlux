@@ -61,6 +61,7 @@ describe("workspace milestone features", () => {
     expect(screen.getByRole("heading", { name: "How successful has my search been?" })).toBeVisible();
     expect(screen.getByText("8 of 13 submitted applications")).toBeVisible();
     expect(screen.getByText(/Complete overdue follow-up.*Aug 11, 2026/)).toBeVisible();
+    expect(screen.queryByRole("button", { name: /more overdue/ })).not.toBeInTheDocument();
     expect(
       screen.getByText(/Prepare for upcoming interview.*Aug 13, 2026, 6:00 PM/),
     ).toBeVisible();
@@ -80,6 +81,66 @@ describe("workspace milestone features", () => {
     expect(await screen.findByText("Follow-up completed.")).toBeVisible();
     expect(body).toEqual({ expected_version: 3 });
     expect(queryClient.getQueryState(analyticsKey)?.isInvalidated).toBe(true);
+  });
+
+  it("keeps large action groups compact while revealing every action on demand", async () => {
+    const action = (index: number, kind: "FOLLOW_UP_OVERDUE" | "FOLLOW_UP_TODAY" | "INTERVIEW_SOON") => ({
+      kind,
+      application_id: `11111111-1111-4111-8111-${String(index + 1).padStart(12, "0")}`,
+      company_name: `Company ${index + 1}`,
+      job_title: `${kind} role ${index + 1}`,
+      due_date: kind === "INTERVIEW_SOON" ? null : "2026-08-11",
+      due_at: kind === "INTERVIEW_SOON" ? "2026-08-14T15:00:00Z" : null,
+      priority: kind === "FOLLOW_UP_OVERDUE" ? "HIGH" : "MEDIUM",
+      label: kind === "FOLLOW_UP_OVERDUE" ? "Complete overdue follow-up" : kind === "FOLLOW_UP_TODAY" ? "Follow up today" : "Prepare for upcoming interview",
+    });
+    const actions = [
+      ...Array.from({ length: 9 }, (_, index) => action(index, "FOLLOW_UP_OVERDUE")),
+      ...Array.from({ length: 4 }, (_, index) => action(index + 9, "FOLLOW_UP_TODAY")),
+      ...Array.from({ length: 5 }, (_, index) => action(index + 13, "INTERVIEW_SOON")),
+    ];
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/dashboard`, () => HttpResponse.json({ ...testDashboard, actions })),
+      http.get(`${API_ORIGIN}/api/v1/settings`, () => HttpResponse.json(testSettings)),
+    );
+
+    const { user } = renderApp("/dashboard");
+    expect(await screen.findByRole("heading", { name: "What needs my attention today?" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /Overdue \(9\)/ })).toBeVisible();
+    expect(screen.getByText("Showing 3 of 9")).toBeVisible();
+    expect(screen.getByRole("link", { name: "FOLLOW_UP_OVERDUE role 1" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "FOLLOW_UP_OVERDUE role 3" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "FOLLOW_UP_OVERDUE role 4" })).not.toBeInTheDocument();
+
+    const showMoreOverdue = screen.getByRole("button", { name: "Show 6 more overdue actions" });
+    expect(showMoreOverdue).toHaveAttribute("aria-expanded", "false");
+    expect(showMoreOverdue).toHaveAttribute("aria-controls", "attention-overdue-items");
+    showMoreOverdue.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Show fewer overdue actions" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Showing 9 of 9")).toBeVisible();
+    const ninthLink = screen.getByRole("link", { name: "FOLLOW_UP_OVERDUE role 9" });
+    expect(ninthLink).toBeVisible();
+
+    const ninthCard = ninthLink.closest("li");
+    expect(ninthCard).not.toBeNull();
+    await user.click(within(ninthCard as HTMLElement).getByRole("button", { name: "Reschedule" }));
+    await user.type(screen.getByLabelText("New follow-up date"), "2026-08-20");
+    await user.click(screen.getByRole("button", { name: "Show fewer overdue actions" }));
+    expect(screen.queryByLabelText("New follow-up date")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Show 6 more overdue actions" }));
+    expect(screen.getByLabelText("New follow-up date")).toHaveValue("2026-08-20");
+
+    expect(screen.getByText("Showing 3 of 4")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Show 1 more today action" })).toBeVisible();
+    expect(screen.getByText("Showing 3 of 5")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Show 2 more upcoming actions" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Collapse action center" }));
+    await user.click(screen.getByRole("button", { name: "Expand action center" }));
+    expect(screen.getByRole("link", { name: "FOLLOW_UP_OVERDUE role 9" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Show fewer overdue actions" }));
+    expect(screen.queryByRole("link", { name: "FOLLOW_UP_OVERDUE role 9" })).not.toBeInTheDocument();
   });
 
   it("remembers the Action Center per workspace and preserves a reschedule draft", async () => {

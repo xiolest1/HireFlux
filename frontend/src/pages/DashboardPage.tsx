@@ -41,6 +41,7 @@ function percent(value: number) {
 
 type DashboardAction = Dashboard["actions"][number];
 type AttentionGroup = "Overdue" | "Today" | "Upcoming";
+const ACTION_GROUP_PREVIEW_LIMIT = 3;
 
 const ACTION_CENTER_STORAGE_KEY = "hireflux-action-center.v1";
 
@@ -140,6 +141,9 @@ export function DashboardPage() {
   const [actionCenterCollapsed, setActionCenterCollapsed] = useState(() =>
     readActionCenterPreference(actionCenterWorkspaceMarker),
   );
+  const [expandedActionGroups, setExpandedActionGroups] = useState<Set<AttentionGroup>>(
+    () => new Set(),
+  );
   const settingsQuery = useSettings();
   const { showToast } = useToast();
   const [rescheduling, setRescheduling] = useState<string | null>(null);
@@ -164,6 +168,10 @@ export function DashboardPage() {
 
   useEffect(() => {
     setActionCenterCollapsed(readActionCenterPreference(actionCenterWorkspaceMarker));
+  }, [actionCenterWorkspaceMarker]);
+
+  useEffect(() => {
+    setExpandedActionGroups(new Set());
   }, [actionCenterWorkspaceMarker]);
 
   useEffect(() => {
@@ -211,6 +219,18 @@ export function DashboardPage() {
     setActionCenterCollapsed((collapsed) => {
       const next = !collapsed;
       writeActionCenterPreference(actionCenterWorkspaceMarker, next);
+      return next;
+    });
+  }
+
+  function toggleActionGroup(group: AttentionGroup) {
+    setExpandedActionGroups((expanded) => {
+      const next = new Set(expanded);
+      if (next.has(group)) {
+        next.delete(group);
+      } else {
+        next.add(group);
+      }
       return next;
     });
   }
@@ -341,15 +361,27 @@ export function DashboardPage() {
               {groupedActions.map(({ name, items }) => {
                 const meta = groupMeta[name];
                 const Icon = meta.icon;
+                const groupSlug = name.toLowerCase();
+                const groupExpanded = expandedActionGroups.has(name);
+                const hasOverflow = items.length > ACTION_GROUP_PREVIEW_LIMIT;
+                const visibleItems = groupExpanded
+                  ? items
+                  : items.slice(0, ACTION_GROUP_PREVIEW_LIMIT);
+                const remainingCount = items.length - visibleItems.length;
                 return (
-                  <section key={name} className="min-w-0 p-5 sm:p-6" aria-labelledby={`attention-${name.toLowerCase()}`}>
+                  <section key={name} className="min-w-0 p-5 sm:p-6" aria-labelledby={`attention-${groupSlug}`}>
                     <div className="flex items-center gap-3">
                       <span className={`flex size-9 items-center justify-center rounded-xl border ${meta.tone}`}><Icon aria-hidden="true" className="size-4" /></span>
-                      <div><h3 id={`attention-${name.toLowerCase()}`} className="font-bold text-slate-950">{name} <span className="text-slate-500">({items.length})</span></h3><p className="text-xs text-slate-500">{meta.description}</p></div>
+                      <div>
+                        <h3 id={`attention-${groupSlug}`} className="font-bold text-slate-950">{name} <span className="text-slate-500">({items.length})</span></h3>
+                        <p className="text-xs text-slate-500">{meta.description}</p>
+                        {hasOverflow ? <p className="text-xs font-semibold text-slate-500">Showing {visibleItems.length} of {items.length}</p> : null}
+                      </div>
                     </div>
                     {items.length === 0 ? <p className="mt-5 text-sm text-slate-500">Nothing here right now.</p> : (
-                      <ul className="mt-4 space-y-3">
-                        {items.map((action) => {
+                      <>
+                        <ul id={`attention-${groupSlug}-items`} className="mt-4 space-y-3">
+                        {visibleItems.map((action) => {
                           const isFollowUp = action.kind.startsWith("FOLLOW_UP");
                           return (
                             <li key={`${action.kind}-${action.application_id}-${actionDueKey(action)}`} className="rounded-2xl border border-slate-200 p-4">
@@ -377,7 +409,20 @@ export function DashboardPage() {
                             </li>
                           );
                         })}
-                      </ul>
+                        </ul>
+                        {hasOverflow ? (
+                          <button
+                            type="button"
+                            className="mt-4 min-h-11 rounded-lg px-2 text-sm font-bold text-brand-700 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2"
+                            aria-expanded={groupExpanded}
+                            aria-controls={`attention-${groupSlug}-items`}
+                            aria-label={groupExpanded ? `Show fewer ${groupSlug} actions` : `Show ${remainingCount} more ${groupSlug} ${remainingCount === 1 ? "action" : "actions"}`}
+                            onClick={() => toggleActionGroup(name)}
+                          >
+                            {groupExpanded ? `Show fewer ${groupSlug}` : `Show ${remainingCount} more ${groupSlug}`}
+                          </button>
+                        ) : null}
+                      </>
                     )}
                   </section>
                 );

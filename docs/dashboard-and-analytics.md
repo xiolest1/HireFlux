@@ -7,7 +7,7 @@ The protected `/dashboard` route is the workspace Home. It is the default destin
 The Home page answers four questions in priority order:
 
 1. **How many jobs am I pursuing?** Total tracked includes every current status, including archived. Active pursuits include only `APPLIED`, `SCREENING`, `INTERVIEW`, and `OFFER`.
-2. **What needs my attention today?** The Action Center includes overdue/today follow-ups, interviews in the next 24 hours, and applications sitting in `APPLIED` or `SCREENING` for at least 14 days. “Today” is the calendar date in the workspace's saved time zone. Follow-ups can be completed or rescheduled from Home.
+2. **What needs my attention today?** The Action Center includes overdue/today follow-ups, interviews in the next 24 hours, and applications sitting in `APPLIED` or `SCREENING` for at least 14 days. “Today” is the calendar date in the workspace's saved time zone. Follow-ups can be completed or rescheduled from Home. Each priority group shows a compact three-item preview when it contains more actions, with an inline control to reveal the remaining actions.
 3. **How successful has my search been?** Response, interview, offer, and acceptance rates use server-owned historical milestones and always include their submitted-application denominator.
 4. **What should I do next?** Priority actions, the next scheduled interviews, and recent application movement lead to the relevant owned record.
 
