@@ -997,6 +997,39 @@ or interview participant. Server-side role fields remain authoritative and
 reserved for future separately guarded capabilities; no role switcher, ATS
 workflow, backend authorization change, or data migration was introduced.
 
+## Interactive personal account control center - August 23, 2026
+
+Enhanced the existing Personal account preview without removing its Data &
+privacy, Personal account foundations, candidate workflow, notification, or
+demo-boundary panels. Security, account protection, and notification capability
+cards now identify whether behavior is available, simulated, or requires a
+future production service. Each card opens an accessible product-preview drawer
+that explains identity recovery, MFA enrollment, active sessions, or the
+notification-delivery path. The simulations use the existing drawer focus trap,
+Escape handling, backdrop close, and trigger-focus restoration.
+
+Notification choices are now safe interactive previews rather than disabled
+checkboxes. They persist in `sessionStorage` under a non-secret fingerprint of
+the current demo token, so refreshes preserve the preview but another workspace
+starts from the defaults. No preference is sent to the API and no message is
+delivered. A new account-continuity panel shows which applications, stages,
+notes, interviews, follow-ups, analytics, preferences, and export-ready data a
+future conversion service could preserve, alongside an explicit lifecycle from
+temporary demo to candidate-owned account.
+
+The demo boundary remains explicit: no password, authenticator secret, recovery
+challenge, persistent session, account conversion, email, deletion request, or
+AWS identity resource is created. Application CSV export remains the only live
+account-control action in this section. Added frontend coverage for preview
+drawers, simulated completion, notification preference persistence and workspace
+isolation, lifecycle content, Escape close, and focus restoration. No backend,
+API, DynamoDB, authorization, or data-model change was required.
+
+Follow-up UI polish improved the notification-delivery drawer's informational
+callout contrast and constrained both the preview status text and production
+implementation note to their available width. This keeps the copy readable and
+contained at narrow drawer sizes without changing the simulation behavior.
+
 ## Next recommended work
 
 Freeze and commit the validated local Milestone 2 baseline, then build and

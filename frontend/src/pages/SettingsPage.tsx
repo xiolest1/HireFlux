@@ -1,4 +1,20 @@
-import { ArrowRight, BarChart3, Bell, BriefcaseBusiness, CalendarDays, Check, Clock3, Download, KeyRound, Mail, Palette, ShieldCheck, UserRound } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  Bell,
+  BriefcaseBusiness,
+  CalendarDays,
+  Check,
+  Clock3,
+  Download,
+  KeyRound,
+  Laptop,
+  Mail,
+  Palette,
+  ShieldCheck,
+  Smartphone,
+  UserRound,
+} from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { ColorTheme, DashboardRange, Settings } from "../api/schemas";
@@ -8,6 +24,7 @@ import {
   hasManualTimeZonePreference,
 } from "../auth/timeZonePreference";
 import { Button } from "../components/ui/Button";
+import { Drawer } from "../components/ui/Drawer";
 import { ErrorPanel, SuccessBanner } from "../components/ui/Feedback";
 import { Skeleton } from "../components/ui/Skeleton";
 import { setColorThemePreference } from "../components/ui/themePreference";
@@ -21,7 +38,72 @@ import {
 } from "../features/resources/queries";
 
 type SettingsDraft = Omit<Settings, "created_at" | "updated_at" | "version">;
+type AccountPreviewKey = "identity" | "protection" | "notifications";
+type NotificationPreviewKey = "followUps" | "interviews" | "digest";
+
+interface AccountPreviewPreference {
+  version: 1;
+  workspace_marker: string;
+  notifications: Record<NotificationPreviewKey, boolean>;
+}
+
+const ACCOUNT_PREVIEW_STORAGE_KEY = "hireflux-account-preview.v1";
+const DEFAULT_NOTIFICATION_PREVIEW: Record<NotificationPreviewKey, boolean> = {
+  followUps: true,
+  interviews: true,
+  digest: false,
+};
 const TIME_ZONES = ["UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/London", "Europe/Paris", "Asia/Kolkata", "Asia/Tokyo", "Australia/Sydney"];
+
+function accountPreviewWorkspaceMarker(accessToken: string | undefined): string | null {
+  if (!accessToken) return null;
+  let hash = 2_166_136_261;
+  for (const character of accessToken) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return `demo-${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+
+function readAccountPreviewPreference(
+  marker: string | null,
+): Record<NotificationPreviewKey, boolean> {
+  if (!marker || typeof window === "undefined") return DEFAULT_NOTIFICATION_PREVIEW;
+  try {
+    const stored = window.sessionStorage.getItem(ACCOUNT_PREVIEW_STORAGE_KEY);
+    if (!stored) return DEFAULT_NOTIFICATION_PREVIEW;
+    const parsed = JSON.parse(stored) as Partial<AccountPreviewPreference>;
+    const notifications = parsed.notifications;
+    if (
+      parsed.version !== 1 ||
+      parsed.workspace_marker !== marker ||
+      !notifications ||
+      typeof notifications.followUps !== "boolean" ||
+      typeof notifications.interviews !== "boolean" ||
+      typeof notifications.digest !== "boolean"
+    ) {
+      return DEFAULT_NOTIFICATION_PREVIEW;
+    }
+    return notifications;
+  } catch {
+    return DEFAULT_NOTIFICATION_PREVIEW;
+  }
+}
+
+function writeAccountPreviewPreference(
+  marker: string | null,
+  notifications: Record<NotificationPreviewKey, boolean>,
+): void {
+  if (!marker || typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(
+      ACCOUNT_PREVIEW_STORAGE_KEY,
+      JSON.stringify({ version: 1, workspace_marker: marker, notifications }),
+    );
+  } catch {
+    // The simulation remains usable when browser storage is unavailable.
+  }
+}
 
 function draftFromSettings(settings: Settings): SettingsDraft {
   const { time_zone, default_follow_up_days, default_application_view, default_dashboard_range, theme } = settings;
@@ -193,7 +275,10 @@ export function SettingsPage() {
         ) : null}
       </section>
 
-      <CandidateAccountPreview isDemo={Boolean(session)} />
+      <CandidateAccountPreview
+        isDemo={Boolean(session)}
+        workspaceToken={session?.access_token}
+      />
     </div>
   );
 }
@@ -215,19 +300,83 @@ function SettingsSkeleton() {
   );
 }
 
-function CandidateAccountPreview({ isDemo }: { isDemo: boolean }) {
+function CandidateAccountPreview({
+  isDemo,
+  workspaceToken,
+}: {
+  isDemo: boolean;
+  workspaceToken: string | undefined;
+}) {
   const exportMutation = useExportWorkspace();
   const applicationsCsvMutation = useExportApplicationsCsv();
+  const workspaceMarker = accountPreviewWorkspaceMarker(workspaceToken);
+  const [activePreview, setActivePreview] = useState<AccountPreviewKey | null>(null);
+  const [previewCompleted, setPreviewCompleted] = useState<AccountPreviewKey | null>(null);
+  const [notificationNotice, setNotificationNotice] = useState(false);
+  const [notificationPreview, setNotificationPreview] = useState(() =>
+    readAccountPreviewPreference(workspaceMarker),
+  );
+
+  useEffect(() => {
+    setActivePreview(null);
+    setPreviewCompleted(null);
+    setNotificationNotice(false);
+    setNotificationPreview(readAccountPreviewPreference(workspaceMarker));
+  }, [workspaceMarker]);
+
   const capabilities = [
-    { icon: KeyRound, title: "Secure sign-in", description: "Password recovery and connected identity providers would be managed by the production identity service." },
-    { icon: ShieldCheck, title: "Multi-factor authentication", description: "Persistent accounts could add verification and session controls without changing application ownership rules." },
-    { icon: Bell, title: "Notification delivery", description: "Email and reminder delivery stays blocked in this demo until a real opt-in delivery system exists." },
+    {
+      key: "identity" as const,
+      icon: KeyRound,
+      title: "Secure sign-in",
+      description:
+        "Explore how verified identity, recovery, and connected providers would protect a persistent account.",
+    },
+    {
+      key: "protection" as const,
+      icon: ShieldCheck,
+      title: "Account protection",
+      description:
+        "Preview MFA enrollment and the active-session controls a candidate could manage.",
+    },
+    {
+      key: "notifications" as const,
+      icon: Bell,
+      title: "Notification delivery",
+      description:
+        "See how opt-in reminders would move from saved preferences to a production delivery service.",
+    },
   ];
   const candidateWorkflow = [
-    { icon: BriefcaseBusiness, title: "Applications", description: "Track roles, stages, follow-ups, and the details behind each opportunity.", to: "/applications" },
-    { icon: CalendarDays, title: "Interviews & notes", description: "Prepare for conversations and keep useful context close to each application.", to: "/interviews" },
-    { icon: BarChart3, title: "Analytics", description: "Understand search momentum, time in stage, and outcomes without turning signals into predictions.", to: "/analytics" },
+    {
+      icon: BriefcaseBusiness,
+      title: "Applications",
+      description: "Track roles, stages, follow-ups, and the details behind each opportunity.",
+      to: "/applications",
+    },
+    {
+      icon: CalendarDays,
+      title: "Interviews & notes",
+      description: "Prepare for conversations and keep useful context close to each application.",
+      to: "/interviews",
+    },
+    {
+      icon: BarChart3,
+      title: "Analytics",
+      description:
+        "Understand search momentum, time in stage, and outcomes without turning signals into predictions.",
+      to: "/analytics",
+    },
   ];
+  const activeCapability = capabilities.find(({ key }) => key === activePreview);
+
+  function updateNotificationPreview(key: NotificationPreviewKey, checked: boolean) {
+    const next = { ...notificationPreview, [key]: checked };
+    setNotificationPreview(next);
+    setNotificationNotice(true);
+    writeAccountPreviewPreference(workspaceMarker, next);
+  }
+
   async function downloadExport() {
     const data = await exportMutation.mutateAsync();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -249,21 +398,524 @@ function CandidateAccountPreview({ isDemo }: { isDemo: boolean }) {
     URL.revokeObjectURL(url);
   }
 
-  return <section className="space-y-6" aria-labelledby="account-preview-title">
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel">
-      <div className="border-b border-slate-200 bg-gradient-to-r from-brand-50 via-slate-50 to-violet-50 p-5 sm:p-6"><span className="inline-flex rounded-full border border-brand-100 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-700">Personal account preview</span><h2 id="account-preview-title" className="mt-4 text-2xl font-bold text-slate-950">What a personal HireFlux account could unlock</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">A future persistent account would keep your private job search available across devices while preserving the same owner-scoped data boundaries.</p></div>
-      <div className="grid gap-px bg-slate-200 md:grid-cols-3">{capabilities.map(({ icon: Icon, title, description }) => <article key={title} className="bg-white p-5 sm:p-6"><span className="flex size-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700"><Icon aria-hidden="true" className="size-5" /></span><h3 className="mt-4 font-bold text-slate-950">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{description}</p></article>)}</div>
+  return (
+    <section className="space-y-6" aria-labelledby="account-preview-title">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-brand-50 via-slate-50 to-violet-50 p-5 sm:p-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex rounded-full border border-brand-100 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-700">
+              Personal account preview
+            </span>
+            <PreviewStatus tone="simulation">Interactive simulation</PreviewStatus>
+          </div>
+          <h2 id="account-preview-title" className="mt-4 text-2xl font-bold text-slate-950">
+            Explore a candidate-owned account control center
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+            Try the controls a persistent HireFlux account could provide. Preview actions stay in this
+            browser workspace and never change real authentication or send messages.
+          </p>
+        </div>
+        <div className="grid gap-px bg-slate-200 md:grid-cols-3">
+          {capabilities.map(({ key, icon: Icon, title, description }) => (
+            <article key={key} className="flex flex-col bg-white p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                  <Icon aria-hidden="true" className="size-5" />
+                </span>
+                <PreviewStatus tone="simulation">Simulated preview</PreviewStatus>
+              </div>
+              <h3 className="mt-4 font-bold text-slate-950">{title}</h3>
+              <p className="mt-2 flex-1 text-sm leading-6 text-slate-600">{description}</p>
+              <Button
+                variant="secondary"
+                className="mt-5 w-full justify-between"
+                aria-haspopup="dialog"
+                aria-expanded={activePreview === key}
+                aria-controls="account-preview-drawer"
+                onClick={() => {
+                  setPreviewCompleted(null);
+                  setActivePreview(key);
+                }}
+              >
+                Explore {title.toLowerCase()}
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </Button>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
+        <section
+          className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6"
+          aria-labelledby="account-data-title"
+        >
+          <div className="flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+              <Download aria-hidden="true" className="size-5" />
+            </span>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 id="account-data-title" className="text-xl font-bold text-slate-950">
+                  Data & privacy
+                </h3>
+                <PreviewStatus tone="available">Available in demo</PreviewStatus>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                {isDemo
+                  ? "Download a spreadsheet-friendly copy of the fictional applications in this temporary demo workspace."
+                  : "Choose a human-friendly application export or a complete machine-readable copy for backup and portability."}
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            <div className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold text-slate-900">
+                  {isDemo ? "Export sample applications" : "Export applications"}
+                </p>
+                <p className="text-sm text-slate-600">
+                  CSV format · One row per application · Ready for spreadsheet tools.
+                </p>
+              </div>
+              <Button
+                onClick={() => void downloadApplicationsCsv()}
+                disabled={applicationsCsvMutation.isPending}
+              >
+                {applicationsCsvMutation.isPending ? "Preparing…" : "Export CSV"}
+              </Button>
+            </div>
+            {!isDemo ? (
+              <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-semibold text-slate-900">Export my HireFlux data</p>
+                  <p className="text-sm text-slate-600">
+                    JSON format · Intended for account backup and data portability.
+                  </p>
+                </div>
+                <Button onClick={() => void downloadExport()} disabled={exportMutation.isPending}>
+                  {exportMutation.isPending ? "Preparing…" : "Export JSON"}
+                </Button>
+              </div>
+            ) : (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+                This temporary workspace contains fictional data and expires after 24 hours. Full
+                account-data export is unavailable for demos.
+              </p>
+            )}
+          </div>
+          {applicationsCsvMutation.error ? (
+            <div className="mt-4">
+              <ErrorPanel
+                compact
+                title="Application export could not be prepared"
+                error={applicationsCsvMutation.error}
+              />
+            </div>
+          ) : null}
+          {applicationsCsvMutation.isSuccess ? (
+            <div className="mt-4">
+              <SuccessBanner>
+                Applications exported. The CSV file remains on your device only.
+              </SuccessBanner>
+            </div>
+          ) : null}
+          {!isDemo && exportMutation.error ? (
+            <div className="mt-4">
+              <ErrorPanel
+                compact
+                title="Account export could not be prepared"
+                error={exportMutation.error}
+              />
+            </div>
+          ) : null}
+          {!isDemo && exportMutation.isSuccess ? (
+            <div className="mt-4">
+              <SuccessBanner>
+                Account data exported. The JSON file remains on your device only.
+              </SuccessBanner>
+            </div>
+          ) : null}
+        </section>
+
+        <section
+          className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6"
+          aria-labelledby="account-readiness-title"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 id="account-readiness-title" className="text-xl font-bold text-slate-950">
+              Personal account foundations
+            </h3>
+            <PreviewStatus tone="planned">Production service required</PreviewStatus>
+          </div>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
+            The production capabilities that would support a private, persistent job search.
+          </p>
+          <ul className="mt-5 space-y-3">
+            {[
+              "Verified identity and recovery",
+              "MFA and active-session controls",
+              "Notification preferences",
+              "Export and retention policy",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-3 text-sm text-slate-700">
+                <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      <section
+        className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6"
+        aria-labelledby="account-continuity-title"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 id="account-continuity-title" className="text-xl font-bold text-slate-950">
+              What would carry over?
+            </h3>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+              A future account-conversion service could preserve the work a candidate has already
+              organized. This demo does not create an account or perform that migration.
+            </p>
+          </div>
+          <PreviewStatus tone="planned">Future capability</PreviewStatus>
+        </div>
+        <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            "Applications and stages",
+            "Notes and interviews",
+            "Follow-up dates",
+            "Analytics history",
+            "Workspace preferences",
+            "Export-ready data",
+          ].map((item) => (
+            <li
+              key={item}
+              className="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
+            >
+              <Check aria-hidden="true" className="size-4 shrink-0 text-brand-700" />
+              {item}
+            </li>
+          ))}
+        </ul>
+        <ol className="mt-6 grid gap-3 border-t border-slate-200 pt-6 md:grid-cols-4">
+          {[
+            ["1", "Explore the demo", "Current demo"],
+            ["2", "Create a personal account", "Future capability"],
+            ["3", "Keep your search across devices", "Production service required"],
+            ["4", "Control security and privacy", "Production service required"],
+          ].map(([number, title, status]) => (
+            <li key={number} className="rounded-2xl bg-slate-50 p-4">
+              <span className="flex size-8 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-800">
+                {number}
+              </span>
+              <p className="mt-3 text-sm font-bold text-slate-900">{title}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{status}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section
+          className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6"
+          aria-labelledby="candidate-workflow-title"
+        >
+          <div>
+            <h3 id="candidate-workflow-title" className="text-xl font-bold text-slate-950">
+              Your candidate workflow
+            </h3>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              HireFlux keeps your personal search organized from the first saved role through the
+              final outcome.
+            </p>
+          </div>
+          <div className="mt-5 space-y-3">
+            {candidateWorkflow.map(({ icon: Icon, title, description, to }) => (
+              <Link
+                key={title}
+                to={to}
+                className="group flex min-h-11 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition-colors hover:border-brand-200 hover:bg-brand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+              >
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-700">
+                  <Icon aria-hidden="true" className="size-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold text-slate-900">{title}</span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-600">{description}</span>
+                </span>
+                <ArrowRight
+                  aria-hidden="true"
+                  className="mt-3 size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-700"
+                />
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section
+          className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6"
+          aria-labelledby="notification-preview-title"
+        >
+          <div className="flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
+              <Mail aria-hidden="true" className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 id="notification-preview-title" className="text-xl font-bold text-slate-950">
+                  Email notifications
+                </h3>
+                <PreviewStatus tone="simulation">Simulated preview</PreviewStatus>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Try the preferences a persistent account could save. Changes remain in this browser
+                workspace and no emails or messages are sent.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            {(
+              [
+                ["followUps", "Follow-up reminders", "When a task reaches its due date."],
+                ["interviews", "Interview reminders", "Before a scheduled conversation."],
+                ["digest", "Weekly search digest", "A summary of movement and outcomes."],
+              ] as const
+            ).map(([key, label, description]) => (
+              <label
+                key={key}
+                className="flex min-h-11 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
+              >
+                <input
+                  aria-label={label}
+                  type="checkbox"
+                  checked={notificationPreview[key]}
+                  onChange={(event) => updateNotificationPreview(key, event.target.checked)}
+                  className="mt-1 size-4 accent-brand-600"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-slate-700">{label}</span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          {notificationNotice ? (
+            <p className="mt-4 flex items-start gap-2 text-xs font-semibold leading-5 text-emerald-700" role="status">
+              <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+              Preview preferences saved for this demo workspace. Delivery remains disabled.
+            </p>
+          ) : (
+            <p className="mt-4 flex items-start gap-2 text-xs font-semibold leading-5 text-sky-700">
+              <Bell aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+              Simulation only · delivery remains unavailable in this demo.
+            </p>
+          )}
+        </section>
+      </div>
+
+      <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950 sm:p-6">
+        <strong>Demo boundary:</strong> passwords, MFA enrollment, email notification delivery,
+        permanent account deletion, conversion to a persistent account, and persistent login are
+        intentionally unavailable. Application export is active; interactive account controls are
+        safe simulations only.
+      </div>
+
+      <Drawer
+        id="account-preview-drawer"
+        open={Boolean(activeCapability)}
+        onClose={() => setActivePreview(null)}
+        title={activeCapability?.title ?? "Account preview"}
+        description="Interactive product preview · no real account or security setting is changed."
+        size="lg"
+        footer={
+          <p className="min-w-0 max-w-full break-words text-xs leading-5 text-slate-500">
+            Production implementation would require verified identity, server-owned preferences,
+            audit events, and separately authorized account services.
+          </p>
+        }
+      >
+        {activePreview ? (
+          <AccountPreviewDrawerContent
+            preview={activePreview}
+            completed={previewCompleted === activePreview}
+            notifications={notificationPreview}
+            onComplete={() => setPreviewCompleted(activePreview)}
+          />
+        ) : null}
+      </Drawer>
+    </section>
+  );
+}
+
+function PreviewStatus({
+  tone,
+  children,
+}: {
+  tone: "available" | "simulation" | "planned";
+  children: ReactNode;
+}) {
+  const toneClass = {
+    available: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    simulation: "border-sky-200 bg-sky-50 text-sky-800",
+    planned: "border-violet-300 bg-violet-50 text-violet-950",
+  }[tone];
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-wide ${toneClass}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function AccountPreviewDrawerContent({
+  preview,
+  completed,
+  notifications,
+  onComplete,
+}: {
+  preview: AccountPreviewKey;
+  completed: boolean;
+  notifications: Record<NotificationPreviewKey, boolean>;
+  onComplete: () => void;
+}) {
+  if (preview === "identity") {
+    return (
+      <div className="space-y-5">
+        <PreviewFlowHeading
+          title="Verified identity and recovery"
+          description="A persistent account would verify ownership before allowing recovery or identity changes."
+        />
+        <ol className="space-y-3">
+          {[
+            "Confirm the account email or connected identity provider.",
+            "Issue a short-lived, single-use recovery challenge.",
+            "Notify the account owner and record the security event.",
+          ].map((step, index) => (
+            <PreviewFlowStep key={step} number={index + 1}>{step}</PreviewFlowStep>
+          ))}
+        </ol>
+        <Button onClick={onComplete} disabled={completed}>
+          {completed ? "Recovery preview complete" : "Run recovery preview"}
+        </Button>
+        {completed ? (
+          <SuccessBanner>
+            Preview complete. No recovery challenge was created and the demo identity is unchanged.
+          </SuccessBanner>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (preview === "protection") {
+    return (
+      <div className="space-y-6">
+        <PreviewFlowHeading
+          title="MFA and active sessions"
+          description="Candidates would be able to strengthen sign-in and review where their account is currently active."
+        />
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex items-start gap-3">
+            <Smartphone aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-brand-700" />
+            <div>
+              <p className="font-bold text-slate-900">Authenticator app</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                A production flow would verify a time-based code before marking MFA as enrolled.
+              </p>
+            </div>
+          </div>
+          <Button className="mt-4" onClick={onComplete} disabled={completed}>
+            {completed ? "MFA preview complete" : "Preview MFA setup"}
+          </Button>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">
+            Simulated active sessions
+          </h3>
+          <div className="mt-3 space-y-3">
+            <PreviewSession icon={Laptop} title="Current demo browser" detail="Active now · Temporary workspace" />
+            <PreviewSession icon={Smartphone} title="Personal phone" detail="Example only · No session exists" />
+          </div>
+        </div>
+        {completed ? (
+          <SuccessBanner>
+            Preview complete. No authenticator secret or persistent session was created.
+          </SuccessBanner>
+        ) : null}
+      </div>
+    );
+  }
+
+  const enabledCount = Object.values(notifications).filter(Boolean).length;
+  return (
+    <div className="space-y-5">
+      <PreviewFlowHeading
+        title="Notification delivery path"
+        description="Saved preferences would be enforced before any reminder entered a production delivery service."
+      />
+      <ol className="space-y-3">
+        <PreviewFlowStep number={1}>Candidate opts into specific reminder types.</PreviewFlowStep>
+        <PreviewFlowStep number={2}>The server evaluates due work in the saved workspace time zone.</PreviewFlowStep>
+        <PreviewFlowStep number={3}>A delivery service sends only allowed messages and records the result.</PreviewFlowStep>
+      </ol>
+      <div className="min-w-0 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-800 [overflow-wrap:anywhere]">
+        <strong>{enabledCount} of 3</strong> preview notification types are enabled in this browser
+        workspace. Return to the Email notifications panel to change them. Delivery remains disabled.
+      </div>
     </div>
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="account-data-title"><div className="flex items-start gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Download aria-hidden="true" className="size-5" /></span><div><h3 id="account-data-title" className="text-xl font-bold text-slate-950">Data & privacy</h3><p className="mt-1 text-sm leading-6 text-slate-600">{isDemo ? "Download a spreadsheet-friendly copy of the fictional applications in this temporary demo workspace." : "Choose a human-friendly application export or a complete machine-readable copy for backup and portability."}</p></div></div><div className="mt-5 space-y-3"><div className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-slate-900">{isDemo ? "Export sample applications" : "Export applications"}</p><p className="text-sm text-slate-600">CSV format · One row per application · Ready for spreadsheet tools.</p></div><Button onClick={() => void downloadApplicationsCsv()} disabled={applicationsCsvMutation.isPending}>{applicationsCsvMutation.isPending ? "Preparing…" : "Export CSV"}</Button></div>{!isDemo ? <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-slate-900">Export my HireFlux data</p><p className="text-sm text-slate-600">JSON format · Intended for account backup and data portability.</p></div><Button onClick={() => void downloadExport()} disabled={exportMutation.isPending}>{exportMutation.isPending ? "Preparing…" : "Export JSON"}</Button></div> : <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">This temporary workspace contains fictional data and expires after 24 hours. Full account-data export is unavailable for demos.</p>}</div>{applicationsCsvMutation.error ? <div className="mt-4"><ErrorPanel compact title="Application export could not be prepared" error={applicationsCsvMutation.error} /></div> : null}{applicationsCsvMutation.isSuccess ? <div className="mt-4"><SuccessBanner>Applications exported. The CSV file remains on your device only.</SuccessBanner></div> : null}{!isDemo && exportMutation.error ? <div className="mt-4"><ErrorPanel compact title="Account export could not be prepared" error={exportMutation.error} /></div> : null}{!isDemo && exportMutation.isSuccess ? <div className="mt-4"><SuccessBanner>Account data exported. The JSON file remains on your device only.</SuccessBanner></div> : null}</section>
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="account-readiness-title"><h3 id="account-readiness-title" className="text-xl font-bold text-slate-950">Personal account foundations</h3><p className="mt-1 text-sm leading-6 text-slate-600">The production capabilities that would support a private, persistent job search.</p><ul className="mt-5 space-y-3">{["Verified identity and recovery", "MFA and active-session controls", "Notification preferences", "Export and retention policy"].map((item) => <li key={item} className="flex items-start gap-3 text-sm text-slate-700"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-emerald-600" />{item}</li>)}</ul></section>
+  );
+}
+
+function PreviewFlowHeading({ title, description }: { title: string; description: string }) {
+  return (
+    <div>
+      <PreviewStatus tone="simulation">Simulation only</PreviewStatus>
+      <h3 className="mt-3 text-lg font-bold text-slate-950">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
     </div>
-    <div className="grid gap-6 lg:grid-cols-2">
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="candidate-workflow-title"><div><h3 id="candidate-workflow-title" className="text-xl font-bold text-slate-950">Your candidate workflow</h3><p className="mt-1 text-sm leading-6 text-slate-600">HireFlux keeps your personal search organized from the first saved role through the final outcome.</p></div><div className="mt-5 space-y-3">{candidateWorkflow.map(({ icon: Icon, title, description, to }) => <Link key={title} to={to} className="group flex min-h-11 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition-colors hover:border-brand-200 hover:bg-brand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-700"><Icon aria-hidden="true" className="size-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-slate-900">{title}</span><span className="mt-1 block text-xs leading-5 text-slate-600">{description}</span></span><ArrowRight aria-hidden="true" className="mt-3 size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-700" /></Link>)}</div></section>
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="notification-preview-title"><div className="flex items-start gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700"><Mail aria-hidden="true" className="size-5" /></span><div><h3 id="notification-preview-title" className="text-xl font-bold text-slate-950">Email notifications</h3><p className="mt-1 text-sm leading-6 text-slate-600">Notification preferences are intentionally blocked until HireFlux has a real message-delivery service.</p></div></div><div className="mt-5 space-y-3">{([ ["followUps", "Follow-up reminders", "When a task reaches its due date."], ["interviews", "Interview reminders", "Before a scheduled conversation."], ["digest", "Weekly search digest", "A summary of movement and outcomes."] ] as const).map(([key, label, description]) => <label key={key} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-500"><input aria-label={label} type="checkbox" checked={false} disabled className="mt-1 size-4 accent-brand-600" /><span><span className="block text-sm font-semibold text-slate-700">{label}</span><span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span></span></label>)}</div><p className="mt-4 flex items-center gap-2 text-xs font-semibold text-sky-700"><Bell aria-hidden="true" className="size-4" />Unavailable in this demo · no emails or messages are sent.</p></section>
+  );
+}
+
+function PreviewFlowStep({
+  number,
+  children,
+}: {
+  number: number;
+  children: ReactNode;
+}) {
+  return (
+    <li className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm leading-6 text-slate-700">
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-800">
+        {number}
+      </span>
+      {children}
+    </li>
+  );
+}
+
+function PreviewSession({
+  icon: Icon,
+  title,
+  detail,
+}: {
+  icon: typeof Laptop;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-slate-200 p-3">
+      <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-slate-500" />
+      <div>
+        <p className="text-sm font-bold text-slate-900">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
+      </div>
     </div>
-    <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950 sm:p-6"><strong>Demo boundary:</strong> passwords, MFA enrollment, email notification delivery, permanent account deletion, and persistent login are intentionally unavailable. Application export is active; the remaining personal-account capabilities are clearly labeled previews.</div>
-  </section>;
+  );
 }
 
 function SettingSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode }) {

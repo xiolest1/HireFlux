@@ -340,7 +340,11 @@ describe("workspace milestone features", () => {
     expect(save).toBeDisabled();
     expect(screen.getByRole("heading", { name: "Profile" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Temporary by design" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "What a personal HireFlux account could unlock" })).toBeVisible();
+    expect(
+      screen.getByRole("heading", {
+        name: "Explore a candidate-owned account control center",
+      }),
+    ).toBeVisible();
     expect(screen.queryByRole("navigation", { name: "Settings sections" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Account preview" })).not.toBeInTheDocument();
 
@@ -381,8 +385,8 @@ describe("workspace milestone features", () => {
     revokeObjectUrl.mockRestore();
   });
 
-  it("shows the candidate workflow without ATS role controls and blocks email notifications", async () => {
-    renderApp("/settings");
+  it("keeps the candidate workflow and provides safe interactive account previews", async () => {
+    const { user } = renderApp("/settings");
     const workflowHeading = await screen.findByRole("heading", { name: "Your candidate workflow" });
     expect(workflowHeading).toBeVisible();
     const workflow = workflowHeading.closest("section");
@@ -395,10 +399,66 @@ describe("workspace milestone features", () => {
     expect(screen.queryByText("Recruiter")).not.toBeInTheDocument();
     expect(screen.queryByText("Hiring manager")).not.toBeInTheDocument();
     expect(screen.queryByText("Administrator")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "What would carry over?" })).toBeVisible();
+    expect(screen.getByText("Applications and stages")).toBeVisible();
+    expect(screen.getAllByText("Simulated preview").length).toBeGreaterThan(0);
+
     const digest = screen.getByRole("checkbox", { name: /Weekly search digest/ });
-    expect(digest).toBeDisabled();
-    expect(screen.getByText(/Notification preferences are intentionally blocked/)).toBeVisible();
-    expect(screen.getByText(/Unavailable in this demo/)).toBeVisible();
+    expect(digest).toBeEnabled();
+    expect(digest).not.toBeChecked();
+    await user.click(digest);
+    expect(digest).toBeChecked();
+    expect(
+      await screen.findByText(/Preview preferences saved for this demo workspace/),
+    ).toBeVisible();
+    expect(window.sessionStorage.getItem("hireflux-account-preview.v1")).toContain(
+      '"digest":true',
+    );
+    expect(screen.getByText(/safe simulations only/)).toBeVisible();
+  });
+
+  it("previews account protection accessibly and restores its trigger", async () => {
+    const { user } = renderApp("/settings");
+    const trigger = await screen.findByRole("button", { name: "Explore account protection" });
+    await user.click(trigger);
+
+    const dialog = screen.getByRole("dialog", { name: "Account protection" });
+    expect(dialog).toBeVisible();
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(within(dialog).getByText("Simulated active sessions")).toBeVisible();
+    await user.click(within(dialog).getByRole("button", { name: "Preview MFA setup" }));
+    expect(
+      within(dialog).getByText(/No authenticator secret or persistent session was created/),
+    ).toBeVisible();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Account protection" })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("scopes simulated notification preferences to the current demo workspace", async () => {
+    const first = renderApp("/settings");
+    const digest = await screen.findByRole("checkbox", { name: /Weekly search digest/ });
+    await first.user.click(digest);
+    expect(digest).toBeChecked();
+    first.unmount();
+
+    const sameWorkspace = renderApp("/settings");
+    expect(
+      await screen.findByRole("checkbox", { name: /Weekly search digest/ }),
+    ).toBeChecked();
+    sameWorkspace.unmount();
+
+    renderApp("/settings", {
+      session: {
+        access_token: "different.settings.preview.session.token.123456789",
+        token_type: "Bearer",
+        expires_at: "2099-08-11T12:00:00Z",
+      },
+    });
+    expect(
+      await screen.findByRole("checkbox", { name: /Weekly search digest/ }),
+    ).not.toBeChecked();
   });
 
   it("persists header theme changes into authenticated workspace settings", async () => {
