@@ -338,7 +338,7 @@ describe("workspace milestone features", () => {
     await user.click(screen.getByRole("tab", { name: "Sources" }));
     expect(await screen.findByRole("heading", { name: "Source strategy" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Source strategy at a glance" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "View applications" })).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "View applications" })[0]).toHaveAttribute(
       "href",
       "/applications?view=ALL&source=REFERRAL",
     );
