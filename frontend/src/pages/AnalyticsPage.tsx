@@ -359,11 +359,79 @@ function Pipeline({ analytics }: { analytics: Analytics }) {
   </>;
 }
 
+type SourceRow = Analytics["source_performance"][number];
+type SourceSignal = NonNullable<SourceRow["signal"]>;
+
+const sourceSignalPresentation: Record<SourceSignal, { label: string; className: string }> = {
+  STRONG_PERFORMER: { label: "Stronger signal", className: "bg-emerald-100 text-emerald-800" },
+  HIGH_VOLUME_LOW_RESPONSE: { label: "Worth reviewing", className: "bg-violet-100 text-violet-800" },
+  PROMISING_EARLY: { label: "Early signal", className: "bg-sky-100 text-sky-800" },
+  CONCENTRATED_MIX: { label: "Concentrated mix", className: "bg-amber-100 text-amber-900" },
+  LIMITED_DATA: { label: "Small sample", className: "bg-amber-100 text-amber-900" },
+};
+
+function sourceApplicationsHref(source: ApplicationSource) {
+  return `/applications?view=ALL&source=${encodeURIComponent(source)}`;
+}
+
+function sourceComparisonHref(analytics: Analytics) {
+  const params = new URLSearchParams({ range: analytics.range, section: "sources" });
+  if (analytics.filters.status) params.set("status", analytics.filters.status);
+  if (analytics.filters.work_mode) params.set("work_mode", analytics.filters.work_mode);
+  return `/analytics?${params.toString()}`;
+}
+
+function sourceRecentLabel(row: SourceRow) {
+  const { recent } = row;
+  if (recent.submitted_count === 0) return "No applications in this window";
+  if (recent.response_rate_delta === null) {
+    return `${recent.submitted_count} submitted · comparison needs more data`;
+  }
+  return `${recent.submitted_count} submitted · ${percentagePointDelta(recent.response_rate_delta)} response`;
+}
+
+function SourceSignalBadge({ signal }: { signal: SourceSignal | null }) {
+  if (!signal) return null;
+  const presentation = sourceSignalPresentation[signal];
+  return <span className={`inline-flex rounded-full px-2 py-1 text-[0.68rem] font-bold ${presentation.className}`}>{presentation.label}</span>;
+}
+
 function Sources({ analytics }: { analytics: Analytics }) {
-  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="source-title"><h2 id="source-title" className="text-xl font-bold text-slate-950">Source performance</h2><p className="mt-1 text-sm text-slate-600">Table comparisons require three submissions; Search Health source conclusions require five.</p>
-    <ul className="mt-5 space-y-3 md:hidden">{analytics.source_performance.map((row) => <li key={row.source} className="rounded-2xl border border-slate-200 p-4"><div className="flex items-center justify-between gap-3"><h3 className="font-bold text-slate-950">{formatSource(row.source)}</h3>{!row.sample_sufficient ? <SmallSample /> : null}</div><dl className="mt-4 grid grid-cols-2 gap-3 text-sm"><SourceMetric label="Submitted" value={String(row.submitted_count)} /><SourceMetric label="Response" value={`${percent(row.response_rate)} (${row.response_count})`} /><SourceMetric label="Interview" value={`${percent(row.interview_rate)} (${row.interview_count})`} /><SourceMetric label="Offer" value={`${percent(row.offer_rate)} (${row.offer_count})`} /></dl></li>)}</ul>
-    <div className="mt-5 hidden overflow-x-auto md:block"><table className="w-full min-w-[42rem] border-collapse text-left text-sm"><caption className="sr-only">Application outcome rates grouped by source</caption><thead><tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500"><th scope="col" className="px-3 py-3">Source</th><th scope="col" className="px-3 py-3">Submitted</th><th scope="col" className="px-3 py-3">Response</th><th scope="col" className="px-3 py-3">Interview</th><th scope="col" className="px-3 py-3">Offer</th></tr></thead><tbody>{analytics.source_performance.map((row) => <tr key={row.source} className="border-b border-slate-100 last:border-0"><th scope="row" className="px-3 py-4 font-semibold text-slate-800">{formatSource(row.source)}{!row.sample_sufficient ? <span className="ml-2"><SmallSample /></span> : null}</th><td className="px-3 py-4 text-slate-700">{row.submitted_count}</td><td className="px-3 py-4 text-slate-700">{percent(row.response_rate)} <span className="text-xs text-slate-500">({row.response_count})</span></td><td className="px-3 py-4 text-slate-700">{percent(row.interview_rate)} <span className="text-xs text-slate-500">({row.interview_count})</span></td><td className="px-3 py-4 text-slate-700">{percent(row.offer_rate)} <span className="text-xs text-slate-500">({row.offer_count})</span></td></tr>)}</tbody></table></div>
+  const rows = analytics.source_performance.filter((row) => row.submitted_count > 0);
+  const summary = analytics.source_summary;
+  const sourcePeriod = analytics.source_period;
+  const concentration = summary.concentration;
+  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="source-title">
+    <h2 id="source-title" className="text-xl font-bold text-slate-950">Source strategy</h2>
+    <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Compare where your submitted applications come from, how often each source reaches a response or interview, and how that performance compares with your overall search. Small samples are useful context, not conclusions.</p>
+    <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">Recent performance compares {sourcePeriod.label.toLowerCase()} ({formatDateOnly(sourcePeriod.current_start)}–{formatDateOnly(sourcePeriod.current_end)}) with the preceding equal-length period ({formatDateOnly(sourcePeriod.previous_start)}–{formatDateOnly(sourcePeriod.previous_end)}).</p>
+
+    {analytics.filters.source ? <div className="mt-4 flex flex-col gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between"><p>Source comparisons are narrowed to {formatSource(analytics.filters.source)}. Clear this filter to compare your full source mix.</p><Link to={sourceComparisonHref(analytics)} className="inline-flex min-h-10 shrink-0 items-center font-bold text-brand-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">Compare all sources<ArrowRight aria-hidden="true" className="ml-1.5 size-4" /></Link></div> : null}
+
+    <h3 className="mt-5 text-base font-bold text-slate-950">Source strategy at a glance</h3>
+    <div className="mt-3 grid gap-3 md:grid-cols-3">
+      <SourceSummaryCard title="Where your effort is going">
+        {summary.top_volume ? <><p className="text-lg font-bold text-slate-950">{formatSource(summary.top_volume.source)}</p><p className="mt-1 text-sm text-slate-600">{summary.top_volume.submitted_count} submitted · {percent(summary.top_volume.application_share)} of your search</p>{concentration.flagged ? <p className="mt-3 text-sm leading-6 text-amber-900">This is above the {percent(concentration.threshold)} concentration review threshold. Testing another source may broaden your search.</p> : <p className="mt-3 text-sm leading-6 text-slate-600">Your highest-volume source is below the concentration review threshold.</p>}</> : <p className="text-sm text-slate-600">Add submitted applications with a source to see your source mix.</p>}
+      </SourceSummaryCard>
+      <SourceSummaryCard title="What is working">
+        {summary.strongest_response ? <><p className="text-lg font-bold text-slate-950">{formatSource(summary.strongest_response.source)}</p><p className="mt-1 text-sm text-slate-600">{percent(summary.strongest_response.response_rate)} response · {percentagePointDelta(summary.strongest_response.response_rate_delta_vs_overall)} vs overall</p><p className="mt-3 text-sm leading-6 text-slate-600">Based on {summary.strongest_response.submitted_count} submitted applications.</p></> : <p className="text-sm leading-6 text-slate-600">No source has enough evidence for a stronger-performance conclusion yet.</p>}
+      </SourceSummaryCard>
+      <SourceSummaryCard title="What changed recently">
+        {summary.recent_movement ? <><p className="text-lg font-bold text-slate-950">{formatSource(summary.recent_movement.source)}</p><p className="mt-1 text-sm text-slate-600">{summary.recent_movement.direction === "IMPROVING" ? "Response rate improved" : summary.recent_movement.direction === "DECLINING" ? "Response rate declined" : "Response rate held steady"} {summary.recent_movement.direction === "STABLE" ? "" : `${percentagePointDelta(summary.recent_movement.response_rate_delta)}`}</p><p className="mt-3 text-sm leading-6 text-slate-600">{summary.recent_movement.submitted_count} recent submitted applications.</p></> : <p className="text-sm leading-6 text-slate-600">There is not enough recent source data to compare a meaningful change yet.</p>}
+      </SourceSummaryCard>
+    </div>
+
+    {!summary.sufficient_for_strategy ? <p className="mt-4 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-900">Early source picture · Track at least 5 submitted applications for stronger strategy signals</p> : null}
+
+    {rows.length === 0 ? <p className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">No submitted applications with a source match these filters yet.</p> : <>
+      <ul className="mt-6 space-y-3 lg:hidden">{rows.map((row) => <li key={row.source} className="rounded-2xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-bold text-slate-950">{formatSource(row.source)}</h3><div className="flex items-center gap-2"><SourceSignalBadge signal={row.signal} />{!row.sample_sufficient && !row.signal ? <SmallSample /> : null}</div></div><dl className="mt-4 grid grid-cols-2 gap-3 text-sm"><SourceMetric label="Submitted" value={`${row.submitted_count} · ${percent(row.application_share)}`} /><SourceMetric label="Response" value={`${percent(row.response_rate)} (${row.response_count}) · ${percentagePointDelta(row.response_rate_delta_vs_overall)} vs overall`} /><SourceMetric label="Interview" value={`${percent(row.interview_rate)} (${row.interview_count}) · ${percentagePointDelta(row.interview_rate_delta_vs_overall)} vs overall`} /><SourceMetric label="Recent response" value={sourceRecentLabel(row)} /></dl>{row.guidance ? <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-700">{row.guidance}</p> : null}<Link to={sourceApplicationsHref(row.source)} className="mt-4 inline-flex min-h-11 items-center font-bold text-brand-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">View applications<ArrowRight aria-hidden="true" className="ml-1.5 size-4" /></Link></li>)}</ul>
+      <div className="mt-6 hidden overflow-x-auto lg:block"><table className="w-full min-w-[68rem] border-collapse text-left text-sm"><caption className="sr-only">Application source strategy and outcome comparisons</caption><thead><tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500"><th scope="col" className="px-3 py-3">Source</th><th scope="col" className="px-3 py-3">Submitted</th><th scope="col" className="px-3 py-3">Response</th><th scope="col" className="px-3 py-3">Interview</th><th scope="col" className="px-3 py-3">Recent</th><th scope="col" className="px-3 py-3">What it means</th><th scope="col" className="px-3 py-3"><span className="sr-only">Actions</span></th></tr></thead><tbody>{rows.map((row) => <tr key={row.source} className="border-b border-slate-100 align-top last:border-0"><th scope="row" className="px-3 py-4 font-semibold text-slate-800"><p>{formatSource(row.source)}</p><div className="mt-2 flex flex-wrap gap-1.5"><SourceSignalBadge signal={row.signal} />{!row.sample_sufficient && !row.signal ? <SmallSample /> : null}</div></th><td className="px-3 py-4 text-slate-700">{row.submitted_count}<p className="mt-1 text-xs text-slate-500">{percent(row.application_share)} of search</p></td><td className="px-3 py-4 text-slate-700">{percent(row.response_rate)} <span className="text-xs text-slate-500">({row.response_count})</span><p className="mt-1 text-xs text-slate-500">{percentagePointDelta(row.response_rate_delta_vs_overall)} vs overall</p></td><td className="px-3 py-4 text-slate-700">{percent(row.interview_rate)} <span className="text-xs text-slate-500">({row.interview_count})</span><p className="mt-1 text-xs text-slate-500">{percentagePointDelta(row.interview_rate_delta_vs_overall)} vs overall</p></td><td className="px-3 py-4 text-slate-700">{sourceRecentLabel(row)}<p className="mt-1 text-xs text-slate-500">{row.recent_sample_sufficient ? "Recent sample is comparable" : "Recent sample is limited"}</p></td><td className="max-w-xs px-3 py-4 text-slate-700">{row.guidance ?? "No source-specific conclusion yet. Keep tracking outcomes to build a clearer comparison."}</td><td className="px-3 py-4"><Link to={sourceApplicationsHref(row.source)} className="inline-flex min-h-10 items-center whitespace-nowrap font-bold text-brand-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">View applications<ArrowRight aria-hidden="true" className="ml-1.5 size-4" /></Link></td></tr>)}</tbody></table></div>
+    </>}
   </section>;
+}
+
+function SourceSummaryCard({ title, children }: { title: string; children: ReactNode }) {
+  return <section className="rounded-xl border border-slate-200 bg-slate-50 p-4" aria-label={title}><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{title}</p><div className="mt-2">{children}</div></section>;
 }
 
 function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-sm text-slate-600">{label}</p><p className="mt-1 text-xl font-bold text-slate-950">{value}</p></div>; }

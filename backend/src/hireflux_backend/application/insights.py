@@ -1,4 +1,4 @@
-from collections import Counter, defaultdict
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -9,6 +9,7 @@ from hireflux_backend.application.ports import ApplicationRepository
 from hireflux_backend.application.resource_services import WorkspaceResourceService
 from hireflux_backend.application.search_health import build_search_health, submission_date
 from hireflux_backend.application.services import utc_now
+from hireflux_backend.application.source_strategy import build_source_strategy
 from hireflux_backend.domain.enums import ApplicationSource, ApplicationStatus, WorkMode
 from hireflux_backend.domain.models import Application, CurrentIdentity
 
@@ -155,8 +156,18 @@ class InsightsService:
             today=local_today,
             time_zone=workspace_time_zone,
         )
+        source_period, recent_sources, previous_sources = _source_period(
+            filtered,
+            reporting_range,
+            today=local_today,
+            time_zone=workspace_time_zone,
+        )
         follow_up_coverage = _follow_up_coverage(current_population, local_today)
-        source_performance = _source_performance(submitted)
+        source_performance, source_summary, source_signal = build_source_strategy(
+            submitted,
+            recent_applications=recent_sources,
+            previous_applications=previous_sources,
+        )
         stage_aging = _stage_aging(
             current_population,
             now,
@@ -181,6 +192,8 @@ class InsightsService:
             "funnel": _funnel(submitted),
             "stage_aging": stage_aging,
             "source_performance": source_performance,
+            "source_period": source_period,
+            "source_summary": source_summary,
             "work_mode_breakdown": _work_mode_breakdown(submitted),
             "average_days_to_first_response": (
                 round(sum(response_days) / len(response_days), 1) if response_days else None
@@ -193,6 +206,7 @@ class InsightsService:
                 local_today=local_today,
                 time_zone=workspace_time_zone,
                 period_comparison=period_comparison,
+                source_signal=source_signal,
             ),
             "disclaimer": (
                 "These analytics describe this demo workspace dataset and are not career "
@@ -241,6 +255,38 @@ def _current_population_in_range(
             (submission_date := _submission_date(item, time_zone)) is not None
             and submission_date >= cutoff
         )
+    )
+
+
+def _source_period(
+    applications: tuple[Application, ...],
+    reporting_range: str,
+    *,
+    today: date,
+    time_zone: ZoneInfo,
+) -> tuple[dict[str, object], tuple[Application, ...], tuple[Application, ...]]:
+    days = 30 if reporting_range == "all" else int(reporting_range.removesuffix("d"))
+    current_start = today - timedelta(days=days)
+    current_end = today
+    previous_end = current_start - timedelta(days=1)
+    previous_start = previous_end - timedelta(days=days)
+
+    def in_window(application: Application, start: date, end: date) -> bool:
+        submitted_on = _submission_date(application, time_zone)
+        return submitted_on is not None and start <= submitted_on <= end
+
+    recent = tuple(item for item in applications if in_window(item, current_start, current_end))
+    previous = tuple(item for item in applications if in_window(item, previous_start, previous_end))
+    return (
+        {
+            "label": "Last 30 days" if reporting_range == "all" else "Selected range",
+            "current_start": current_start,
+            "current_end": current_end,
+            "previous_start": previous_start,
+            "previous_end": previous_end,
+        },
+        recent,
+        previous,
     )
 
 
@@ -573,25 +619,6 @@ def _stage_aging(
         key = "0-7" if days <= 7 else "8-14" if days <= 14 else "15-30" if days <= 30 else "31+"
         buckets[key] += 1
     return [{"bucket": key, "count": count} for key, count in buckets.items()]
-
-
-def _source_performance(applications: tuple[Application, ...]) -> list[dict[str, object]]:
-    grouped: defaultdict[ApplicationSource, list[Application]] = defaultdict(list)
-    for item in applications:
-        if item.source is not None:
-            grouped[item.source].append(item)
-    performance: list[dict[str, object]] = []
-    for source in ApplicationSource:
-        items = tuple(grouped[source])
-        metrics = _rates(items)
-        performance.append(
-            {
-                "source": source,
-                **metrics,
-                "sample_sufficient": len(items) >= 3,
-            }
-        )
-    return performance
 
 
 def _work_mode_breakdown(applications: tuple[Application, ...]) -> list[dict[str, object]]:

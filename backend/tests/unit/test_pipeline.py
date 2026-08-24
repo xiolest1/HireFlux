@@ -1,4 +1,5 @@
 from datetime import UTC, date, datetime, timedelta
+from typing import cast
 
 from hireflux_backend.application.pipeline import (
     PIPELINE_CARDS_PER_LANE,
@@ -102,22 +103,25 @@ def test_pipeline_returns_ordered_bounded_lanes_with_server_owned_context() -> N
     repository = PipelineRepositoryStub(applications)
     payload = PipelineService(repository, clock=lambda: NOW).get_pipeline(identity())  # type: ignore[arg-type]
 
-    lanes = payload["lanes"]
+    lanes = cast(list[dict[str, object]], payload["lanes"])
     assert [lane["status"] for lane in lanes] == list(PIPELINE_STATUSES)
     assert repository.requested_statuses == list(PIPELINE_STATUSES)
     assert ApplicationStatus.ARCHIVED not in repository.requested_statuses
 
     applied = next(lane for lane in lanes if lane["status"] is ApplicationStatus.APPLIED)
     assert applied["count"] == PIPELINE_CARDS_PER_LANE + 1
-    assert len(applied["cards"]) == PIPELINE_CARDS_PER_LANE
+    applied_cards = cast(list[dict[str, object]], applied["cards"])
+    assert len(applied_cards) == PIPELINE_CARDS_PER_LANE
     assert applied["has_more"] is True
-    assert applied["cards"][0]["stage_age_days"] == 1
-    assert applied["cards"][0]["follow_up_state"] == "TODAY"
+    assert applied_cards[0]["stage_age_days"] == 1
+    assert applied_cards[0]["follow_up_state"] == "TODAY"
 
     interview = next(lane for lane in lanes if lane["status"] is ApplicationStatus.INTERVIEW)
-    assert interview["cards"][0]["stage_age_days"] == 3
-    assert interview["cards"][0]["follow_up_state"] == "OVERDUE"
+    interview_cards = cast(list[dict[str, object]], interview["cards"])
+    assert interview_cards[0]["stage_age_days"] == 3
+    assert interview_cards[0]["follow_up_state"] == "OVERDUE"
 
     accepted = next(lane for lane in lanes if lane["status"] is ApplicationStatus.ACCEPTED)
-    assert accepted["cards"][0]["stage_age_days"] is None
-    assert accepted["cards"][0]["follow_up_state"] == "NONE"
+    accepted_cards = cast(list[dict[str, object]], accepted["cards"])
+    assert accepted_cards[0]["stage_age_days"] is None
+    assert accepted_cards[0]["follow_up_state"] == "NONE"

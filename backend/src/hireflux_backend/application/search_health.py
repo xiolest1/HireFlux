@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from typing import Literal, cast
 from zoneinfo import ZoneInfo
 
+from hireflux_backend.application.source_strategy import SourceSignal
 from hireflux_backend.domain.enums import ApplicationSource, ApplicationStatus
 from hireflux_backend.domain.models import Application
 
@@ -84,6 +85,7 @@ def build_search_health(
     local_today: date,
     time_zone: ZoneInfo,
     period_comparison: dict[str, object],
+    source_signal: SourceSignal | None = None,
 ) -> list[dict[str, object]]:
     submitted = tuple(item for item in applications if submission_date(item, time_zone))
     candidates = [
@@ -92,7 +94,7 @@ def build_search_health(
         *_combined(period_comparison),
         *_momentum(submitted, local_today, time_zone),
         *_responses(submitted, local_today, time_zone),
-        *_sources(submitted),
+        *_sources(submitted, source_signal=source_signal),
     ]
     if len(submitted) < MIN_RATE_SAMPLE:
         candidates.append(
@@ -491,7 +493,37 @@ def _responses(
     return []
 
 
-def _sources(applications: tuple[Application, ...]) -> list[Candidate]:
+def _sources(
+    applications: tuple[Application, ...], *, source_signal: SourceSignal | None = None
+) -> list[Candidate]:
+    if source_signal is not None:
+        code = {
+            "STRONG_PERFORMER": "STRONG_SOURCE",
+            "HIGH_VOLUME_LOW_RESPONSE": "HIGH_VOLUME_LOW_RESPONSE",
+            "PROMISING_EARLY": "PROMISING_SOURCE",
+            "CONCENTRATED_MIX": "SOURCE_CONCENTRATION",
+            "LIMITED_DATA": "PROMISING_SOURCE",
+        }[source_signal.code]
+        return [
+            Candidate(
+                code,
+                "source",
+                "achievement" if source_signal.tone == "POSITIVE" else "observation",
+                source_signal.tone,
+                source_signal.title,
+                source_signal.description,
+                source_signal.evidence_summary,
+                source_signal.evidence,
+                source_signal.evidence_strength,
+                source_signal.priority,
+                _view_action(
+                    f"View {source_signal.source.value.replace('_', ' ').lower()} applications",
+                    view="ALL",
+                    source=source_signal.source.value,
+                ),
+                source_signal.evidence_label,
+            )
+        ]
     overall = _response_rate(applications)
     grouped: defaultdict[ApplicationSource, list[Application]] = defaultdict(list)
     for item in applications:

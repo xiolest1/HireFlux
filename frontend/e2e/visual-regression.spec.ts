@@ -48,6 +48,7 @@ const routes = [
   },
   { name: "interviews", path: "/interviews", heading: "Interviews" },
   { name: "analytics", path: "/analytics", heading: "Analytics" },
+  { name: "pipeline", path: "/analytics?section=pipeline", heading: "Analytics" },
   { name: "settings", path: "/settings", heading: "Settings & profile" },
 ] as const;
 

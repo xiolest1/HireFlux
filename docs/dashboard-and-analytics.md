@@ -13,6 +13,16 @@ The Home page answers four questions in priority order:
 
 The dashboard also shows an eight-week submission trend and a compact current-status breakdown. Dense comparisons belong on `/analytics`, not on the Home page.
 
+## Pipeline workflow board
+
+The Pipeline tab at `/analytics?section=pipeline` is the active-management view rather than a second reporting page. It shows bounded, server-owned cards in this order: `DRAFT`, `APPLIED`, `SCREENING`, `INTERVIEW`, `OFFER`, `ACCEPTED`, `REJECTED`, and `WITHDRAWN`. `ARCHIVED` is intentionally excluded and remains available through the Archived Applications view.
+
+Each lane includes its total count and up to eight recently updated cards; when more exist, `View all` opens the existing status-filtered application list. The server calculates follow-up context from the workspace calendar and calendar days in the current stage for active records. It does not expose a new client-side workflow policy or require a DynamoDB scan.
+
+On desktop, a card may be dragged only to a currently allowed status. At every size, the `Move…` action provides the equivalent keyboard and touch path. A move opens a confirmation panel and uses the existing versioned status-transition endpoint; no move is optimistic, and the server remains the authority on permissions, dates, status legality, activities, milestones, and conflicts. A `DRAFT` → `APPLIED` move requires an applied date. The intentional `REJECTED` → `OFFER` correction remains available, while `REJECTED` → `INTERVIEW`, backward moves, and archive actions remain unavailable from the board.
+
+Pipeline does not use Analytics date-range or reporting filters, because a candidate needs to see the present workflow rather than a time-windowed subset. Overview and Sources retain those reporting controls unchanged.
+
 ## Metric definitions
 
 - **Submitted population:** applications with a server-owned `submitted_at` milestone and canonical `applied_date` inside the selected date range. Drafts are excluded. Later current outcomes do not remove an application from this denominator.
@@ -24,7 +34,10 @@ The dashboard also shows an eight-week submission trend and a compact current-st
 - **Stage aging:** calendar days since the server-owned current `stage_entered_at` milestone for active applications in `APPLIED`, `SCREENING`, `INTERVIEW`, or `OFFER`. The clock resets whenever an application moves to a new stage. Inclusive buckets are `0-7`, `8-14`, and `15-30` days, followed by `31+` days. These buckets are descriptive review signals, not predictions.
 - **Average first response:** mean elapsed days from `submitted_at` to `first_response_at` for submitted applications that received a response.
 - **No response:** submitted applications without `first_response_at`.
-- **Source performance:** table rows are labeled as a small sample until the source contains at least three submitted applications. Search Health uses the stricter five-application threshold documented below before drawing a source conclusion.
+- **Source strategy:** each individual, canonical source shows its submitted count and share of the submitted population, response and interview conversions with counts, and differences from the overall submitted-population rates. Differences are percentage points, not relative percentages. A source with fewer than three submitted applications is labeled as a limited sample.
+- **Recent source comparison:** for `30d` and `90d`, Source strategy compares the selected inclusive window with the immediately preceding equal-length window. For `all`, it compares the latest 30 calendar days with the preceding 30 days. A source needs at least three recent and three preceding submitted applications before its recent response-rate movement is treated as comparable.
+- **Source guidance:** a strong performer needs at least five submitted applications, at least a 40% response rate, and a response rate at least 15 percentage points above the overall rate. A high-volume/low-response source needs at least five applications, at least 30% of submitted volume, and a response rate at least 15 percentage points below overall. Two to four applications with a positive response result can be shown as a promising early signal, explicitly without treating it as proof. A source at 50% or more of submitted volume receives a concentration review signal. These are descriptive strategy prompts, not predictions or universal job-search benchmarks.
+- **Source links:** every populated source row links to the existing application list filtered to that individual source. No job-board, networking, or other subjective rollups are inferred.
 - **Adjacent-period comparison:** `30d` and `90d` compare the selected inclusive window with the equally sized window immediately before it. Rate deltas are percentage-point differences. `all` has no comparison because it has no finite adjacent window.
 - **Follow-up coverage:** active pursuits with a non-null `follow_up_date` divided by active pursuits in the current analytics population. Missing, overdue, and due-today counts use the workspace calendar.
 - **Search-health insights:** a deterministic, server-owned rules engine organizes candidates around momentum, responsiveness, pipeline movement, follow-up hygiene, and source effectiveness. It composes at most four cards by actionability, urgency, evidence quality, magnitude, and tone, then suppresses simpler cards when a combined signal already explains the same data. Every card includes a compact evidence summary, optional sample qualifier, expandable detail, and only supported application-list or creation actions. These rules are descriptive guidance, not scoring, candidate evaluation, or hiring prediction.

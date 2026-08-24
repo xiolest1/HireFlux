@@ -44,6 +44,19 @@ const secondApplication = {
   allowed_transitions: ["OFFER", "REJECTED", "WITHDRAWN", "ARCHIVED"],
 };
 
+const draftApplication = {
+  ...application,
+  application_id: "33333333-3333-4333-8333-333333333333",
+  company_name: "Beacon Studio",
+  job_title: "Product Engineer",
+  status: "DRAFT",
+  applied_date: null,
+  follow_up_date: null,
+  submitted_at: null,
+  stage_entered_at: null,
+  allowed_transitions: ["APPLIED", "ARCHIVED"],
+};
+
 const interview = {
   interview_id: "44444444-4444-4444-8444-444444444444",
   application_id: applicationId,
@@ -282,6 +295,13 @@ export async function installDeterministicApi(page: Page) {
             offer_count: 1,
             offer_rate: 1 / 3,
             sample_sufficient: true,
+            application_share: 3 / 5,
+            response_rate_delta_vs_overall: 1 / 15,
+            interview_rate_delta_vs_overall: -1 / 15,
+            recent: { submitted_count: 2, response_count: 2, response_rate: 1, interview_count: 1, interview_rate: 0.5, offer_count: 1, offer_rate: 0.5, previous_submitted_count: 1, previous_response_rate: 0, previous_interview_rate: 0, response_rate_delta: 1, interview_rate_delta: 0.5 },
+            recent_sample_sufficient: false,
+            signal: null,
+            guidance: null,
           },
           {
             source: "LINKEDIN",
@@ -293,8 +313,17 @@ export async function installDeterministicApi(page: Page) {
             offer_count: 0,
             offer_rate: 0,
             sample_sufficient: false,
+            application_share: 2 / 5,
+            response_rate_delta_vs_overall: -1 / 10,
+            interview_rate_delta_vs_overall: 1 / 10,
+            recent: { submitted_count: 1, response_count: 1, response_rate: 1, interview_count: 1, interview_rate: 1, offer_count: 0, offer_rate: 0, previous_submitted_count: 1, previous_response_rate: 0, previous_interview_rate: 0, response_rate_delta: 1, interview_rate_delta: 1 },
+            recent_sample_sufficient: false,
+            signal: "LIMITED_DATA",
+            guidance: "Track at least three submitted applications before comparing this source with confidence.",
           },
         ],
+        source_period: { label: "Selected range", current_start: "2026-07-23", current_end: "2026-08-22", previous_start: "2026-06-22", previous_end: "2026-07-22" },
+        source_summary: { submitted_count: 5, sufficient_for_strategy: true, top_volume: { source: "REFERRAL", submitted_count: 3, application_share: 3 / 5, response_rate: 2 / 3, response_rate_delta_vs_overall: 1 / 15 }, strongest_response: null, recent_movement: null, concentration: { flagged: true, source: "REFERRAL", application_share: 3 / 5, threshold: 0.5, submitted_count: 5 } },
         work_mode_breakdown: [
           { work_mode: "REMOTE", count: 6 },
           { work_mode: "HYBRID", count: 5 },
@@ -315,6 +344,22 @@ export async function installDeterministicApi(page: Page) {
         follow_up_coverage: { active_count: 1, scheduled_count: 0, coverage_rate: 0, overdue_count: 0, due_today_count: 0, missing_count: 1 },
         insights: [{ code: "BUILD_SAMPLE", category: "response", semantic_type: "observation", tone: "INFO", title: "Search Health is still building your picture", description: "Track more applications before judging rates.", evidence_summary: "2 submitted · trends begin at 5", evidence: "This view contains 2 submitted applications.", evidence_strength: "LIMITED", evidence_label: "Early signal", priority: 20, action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } }],
         disclaimer: "These analytics describe this fictional demo workspace and are not career predictions.",
+      });
+      return;
+    }
+    if (path === "/api/v1/pipeline") {
+      const pipelineStatuses = ["DRAFT", "APPLIED", "SCREENING", "INTERVIEW", "OFFER", "ACCEPTED", "REJECTED", "WITHDRAWN"];
+      const cardsByStatus = {
+        DRAFT: [{ application: draftApplication, stage_age_days: null, follow_up_state: "NONE" }],
+        APPLIED: [{ application, stage_age_days: 5, follow_up_state: "OVERDUE" }],
+        INTERVIEW: [{ application: secondApplication, stage_age_days: 2, follow_up_state: "UPCOMING" }],
+      } as const;
+      await json(route, {
+        generated_at: "2026-08-13T14:00:00Z",
+        lanes: pipelineStatuses.map((status) => {
+          const cards = cardsByStatus[status as keyof typeof cardsByStatus] ?? [];
+          return { status, count: cards.length, has_more: false, cards };
+        }),
       });
       return;
     }

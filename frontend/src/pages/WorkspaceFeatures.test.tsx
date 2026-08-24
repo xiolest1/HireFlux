@@ -223,7 +223,9 @@ describe("workspace milestone features", () => {
           submission_trend: testDashboard.submission_trend,
           funnel: [{ stage: "SUBMITTED", count: 2, rate: 1 }],
           stage_aging: [{ bucket: "0-7", count: 1 }],
-          source_performance: [{ source: "REFERRAL", submitted_count: 2, response_count: 1, response_rate: 0.5, interview_count: 1, interview_rate: 0.5, offer_count: 0, offer_rate: 0, acceptance_count: 0, acceptance_rate: 0, sample_sufficient: false }],
+          source_performance: [{ source: "REFERRAL", submitted_count: 2, response_count: 1, response_rate: 0.5, interview_count: 1, interview_rate: 0.5, offer_count: 0, offer_rate: 0, acceptance_count: 0, acceptance_rate: 0, sample_sufficient: false, application_share: 1, response_rate_delta_vs_overall: 0, interview_rate_delta_vs_overall: 0, recent: { submitted_count: 2, response_count: 1, response_rate: 0.5, interview_count: 1, interview_rate: 0.5, offer_count: 0, offer_rate: 0, previous_submitted_count: 1, previous_response_rate: 0, previous_interview_rate: 0, response_rate_delta: 0.5, interview_rate_delta: 0.5 }, recent_sample_sufficient: false, signal: "LIMITED_DATA", guidance: "Track at least three submitted applications before comparing this source with confidence." }],
+          source_period: { label: "Selected range", current_start: "2026-07-23", current_end: "2026-08-22", previous_start: "2026-06-22", previous_end: "2026-07-22" },
+          source_summary: { submitted_count: 2, sufficient_for_strategy: false, top_volume: { source: "REFERRAL", submitted_count: 2, application_share: 1, response_rate: 0.5, response_rate_delta_vs_overall: 0 }, strongest_response: null, recent_movement: null, concentration: { flagged: true, source: "REFERRAL", application_share: 1, threshold: 0.5, submitted_count: 2 } },
           work_mode_breakdown: [{ work_mode: "HYBRID", count: 2 }],
           average_days_to_first_response: 3.5,
           no_response_count: 1,
@@ -308,7 +310,9 @@ describe("workspace milestone features", () => {
           submission_trend: testDashboard.submission_trend,
           funnel: [{ stage: "SUBMITTED", count: 2, rate: 1 }],
           stage_aging: [{ bucket: "0-7", count: 1 }],
-          source_performance: [{ source: "REFERRAL", submitted_count: 2, response_count: 1, response_rate: 0.5, interview_count: 1, interview_rate: 0.5, offer_count: 0, offer_rate: 0, sample_sufficient: false }],
+          source_performance: [{ source: "REFERRAL", submitted_count: 2, response_count: 1, response_rate: 0.5, interview_count: 1, interview_rate: 0.5, offer_count: 0, offer_rate: 0, sample_sufficient: false, application_share: 1, response_rate_delta_vs_overall: 0, interview_rate_delta_vs_overall: 0, recent: { submitted_count: 2, response_count: 1, response_rate: 0.5, interview_count: 1, interview_rate: 0.5, offer_count: 0, offer_rate: 0, previous_submitted_count: 1, previous_response_rate: 0, previous_interview_rate: 0, response_rate_delta: 0.5, interview_rate_delta: 0.5 }, recent_sample_sufficient: false, signal: "LIMITED_DATA", guidance: "Track at least three submitted applications before comparing this source with confidence." }],
+          source_period: { label: "Selected range", current_start: "2026-07-23", current_end: "2026-08-22", previous_start: "2026-06-22", previous_end: "2026-07-22" },
+          source_summary: { submitted_count: 2, sufficient_for_strategy: false, top_volume: { source: "REFERRAL", submitted_count: 2, application_share: 1, response_rate: 0.5, response_rate_delta_vs_overall: 0 }, strongest_response: null, recent_movement: null, concentration: { flagged: true, source: "REFERRAL", application_share: 1, threshold: 0.5, submitted_count: 2 } },
           work_mode_breakdown: [{ work_mode: "HYBRID", count: 2 }],
           average_days_to_first_response: 3.5,
           no_response_count: 1,
@@ -332,7 +336,12 @@ describe("workspace milestone features", () => {
     expect(await screen.findByRole("heading", { name: "Outcome snapshot" })).toBeVisible();
 
     await user.click(screen.getByRole("tab", { name: "Sources" }));
-    expect(await screen.findByRole("heading", { name: "Source performance" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Source strategy" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Source strategy at a glance" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "View applications" })).toHaveAttribute(
+      "href",
+      "/applications?view=ALL&source=REFERRAL",
+    );
     expect(router.state.location.search).toContain("section=sources");
 
     await user.click(screen.getByRole("button", { name: "Filters" }));

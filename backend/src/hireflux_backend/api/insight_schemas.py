@@ -106,6 +106,78 @@ class SourcePerformanceResponse(BaseModel):
     offer_count: int
     offer_rate: float
     sample_sufficient: bool
+    application_share: float
+    response_rate_delta_vs_overall: float
+    interview_rate_delta_vs_overall: float
+    recent: "SourceRecentPerformanceResponse"
+    recent_sample_sufficient: bool
+    signal: (
+        Literal[
+            "STRONG_PERFORMER",
+            "HIGH_VOLUME_LOW_RESPONSE",
+            "PROMISING_EARLY",
+            "CONCENTRATED_MIX",
+            "LIMITED_DATA",
+        ]
+        | None
+    )
+    guidance: str | None
+
+
+class SourceRecentPerformanceResponse(BaseModel):
+    submitted_count: int
+    response_count: int
+    response_rate: float
+    interview_count: int
+    interview_rate: float
+    offer_count: int
+    offer_rate: float
+    previous_submitted_count: int
+    previous_response_rate: float
+    previous_interview_rate: float
+    response_rate_delta: float | None
+    interview_rate_delta: float | None
+
+
+class SourcePeriodResponse(BaseModel):
+    label: Literal["Selected range", "Last 30 days"]
+    current_start: date
+    current_end: date
+    previous_start: date
+    previous_end: date
+
+
+class SourceSummaryItemResponse(BaseModel):
+    source: ApplicationSource
+    submitted_count: int
+    application_share: float
+    response_rate: float
+    response_rate_delta_vs_overall: float
+
+
+class SourceRecentMovementResponse(BaseModel):
+    source: ApplicationSource
+    submitted_count: int
+    response_rate: float
+    response_rate_delta: float
+    direction: Literal["IMPROVING", "DECLINING", "STABLE"]
+
+
+class SourceConcentrationResponse(BaseModel):
+    flagged: bool
+    source: ApplicationSource | None
+    application_share: float
+    threshold: float
+    submitted_count: int
+
+
+class SourceSummaryResponse(BaseModel):
+    submitted_count: int
+    sufficient_for_strategy: bool
+    top_volume: SourceSummaryItemResponse | None
+    strongest_response: SourceSummaryItemResponse | None
+    recent_movement: SourceRecentMovementResponse | None
+    concentration: SourceConcentrationResponse
 
 
 class WorkModeCountResponse(BaseModel):
@@ -165,6 +237,9 @@ class AnalyticsInsightResponse(BaseModel):
         "RESPONSE_IMPROVING",
         "RESPONSE_DECLINING",
         "STRONG_SOURCE",
+        "HIGH_VOLUME_LOW_RESPONSE",
+        "SOURCE_CONCENTRATION",
+        "PROMISING_SOURCE",
         "HEALTHY_PIPELINE",
     ]
     category: Literal["momentum", "response", "pipeline", "follow_up", "source"]
@@ -191,6 +266,8 @@ class AnalyticsResponse(BaseModel):
     funnel: list[FunnelPointResponse]
     stage_aging: list[AgingBucketResponse]
     source_performance: list[SourcePerformanceResponse]
+    source_period: SourcePeriodResponse
+    source_summary: SourceSummaryResponse
     work_mode_breakdown: list[WorkModeCountResponse]
     average_days_to_first_response: float | None
     no_response_count: int
