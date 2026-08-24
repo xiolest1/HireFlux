@@ -23,7 +23,7 @@ Acceptance criteria: public candidate-focused landing page; one-click signed 24-
 
 Dependencies: stable Milestone 1 keys and service boundaries.
 
-Acceptance criteria: production-style protected workspace Home at `/dashboard`; expanded nine-status workflow; deterministic 16-application candidate dataset; owner-scoped notes and interviews; actionable follow-ups; dashboard and filterable analytics with server-owned historical milestones and explicit denominators; dashboard status/funnel counters; GSI3 scheduling; status/search/source/work-mode filters and sorting; persisted temporary-workspace settings; richer activity history; idempotent local reconciliation; and transactional projection maintenance. No scans in request paths.
+Acceptance criteria: production-style protected workspace Home at `/dashboard`; expanded nine-status workflow; deterministic 30-application candidate dataset; owner-scoped notes and interviews; actionable follow-ups; dashboard and filterable analytics with server-owned historical milestones and explicit denominators; dashboard status/funnel counters; GSI3 scheduling; status/search/source/work-mode filters and sorting; persisted temporary-workspace settings; richer activity history; idempotent local reconciliation; and transactional projection maintenance. No scans in request paths.
 
 AWS infrastructure, persistent accounts, attachments, email delivery, and real notification delivery remain outside this local milestone.
 

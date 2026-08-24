@@ -53,7 +53,7 @@ Interviews and historical milestones are different from date-only fields: they a
 
 ## Demo behavior
 
-Each new 24-hour workspace receives 16 synthetic applications covering all statuses, multiple sources and work modes, overdue/today/upcoming follow-ups, scheduled/completed/canceled interviews, notes, and enough historical activity to exercise the metrics. The dataset contains no real candidate, employer, or contact information.
+Each new 24-hour workspace receives 30 synthetic applications covering all statuses, multiple sources and work modes, overdue/today/upcoming follow-ups, scheduled/completed/canceled interviews, notes, and enough historical activity to exercise the metrics. The dataset contains no real candidate, employer, or contact information.
 
 Settings persist only for that isolated workspace: time zone, follow-up interval, default application view, dashboard range, and theme. The Personal account preview also offers clearly labeled, workspace-scoped simulations for notification preferences, identity recovery, MFA, and active-session controls. These interactions never change authentication or send messages; the demo has no password, MFA enrollment, external login, uploads, email delivery, account conversion, or permanent account deletion. The account-continuity view describes what a future migration could preserve without claiming that a migration service exists.
 

@@ -87,5 +87,5 @@ def test_demo_auth_rejects_short_signing_key() -> None:
 
 
 def test_demo_auth_requires_capacity_for_seed() -> None:
-    with pytest.raises(ValidationError, match="16-application seed"):
+    with pytest.raises(ValidationError, match="30-application seed"):
         settings(auth_mode="demo", max_applications_per_workspace=15)

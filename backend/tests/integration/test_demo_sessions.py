@@ -54,10 +54,12 @@ def test_demo_sessions_are_seeded_temporary_and_owner_isolated(
         assert migrated_profile.status_code == 200
         assert migrated_profile.json()["name"] == "Demo Workspace"
 
-        first_list = client.get("/api/v1/applications", headers=first_headers)
+        first_list = client.get(
+            "/api/v1/applications", params={"limit": 100}, headers=first_headers
+        )
         assert first_list.status_code == 200
         first_items = first_list.json()["items"]
-        assert len(first_items) == 15
+        assert len(first_items) == 29
         assert {item["status"] for item in first_items} == {
             "DRAFT",
             "APPLIED",
@@ -69,7 +71,7 @@ def test_demo_sessions_are_seeded_temporary_and_owner_isolated(
             "WITHDRAWN",
         }
 
-        interview = next(item for item in first_items if item["status"] == "INTERVIEW")
+        interview = next(item for item in first_items if item["company_name"] == "Orbit Systems")
         activity = client.get(
             f"/api/v1/applications/{interview['application_id']}/activity",
             headers=first_headers,
@@ -259,7 +261,7 @@ def test_demo_workspace_requires_capacity_for_its_seed() -> None:
     import pytest
     from pydantic import ValidationError
 
-    with pytest.raises(ValidationError, match="16-application seed"):
+    with pytest.raises(ValidationError, match="30-application seed"):
         build_test_settings(
             auth_mode="demo",
             demo_session_signing_key="demo-test-signing-key-that-is-at-least-32-bytes",

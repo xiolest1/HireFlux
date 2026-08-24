@@ -2,6 +2,10 @@
 
 This log records the engineering work, decisions, problems, and validation completed for HireFlux. It is written so the project can be discussed clearly in portfolio reviews and technical interviews.
 
+## 2026-08-23 - Demo analytics dataset expanded to 30 applications
+
+The deterministic demo workspace now seeds 30 fictional applications instead of 16. Four initial active records and ten additional active examples add richer Applied, Screening, Interview, and Offer coverage, while repeated sources provide enough sample depth for source-performance and Search Health comparisons. Existing notes, interviews, status coverage, follow-up scenarios, and workspace isolation remain intact.
+
 ## 2026-08-23 - Analytics timezone and filter hardening
 
 Stage-aging analytics and its application-list drill-down now use the saved workspace IANA time zone for calendar boundaries. New browser workspaces automatically detect and persist the browser's time zone, while a manual Settings choice prevents later automatic replacement. Invalid `stage_age` combinations in shared application URLs are normalized in the frontend instead of reaching an API error state. The reconciliation fixture now includes the current interview workspace fields, keeping the full backend suite aligned with the domain model.

@@ -26,8 +26,8 @@ def test_seeded_dashboard_answers_core_questions(dynamodb_client: Any) -> None:
         assert dashboard.status_code == 200
         payload = dashboard.json()
         assert payload["summary"] == {
-            "total_tracked": 16,
-            "active_pursuits": 8,
+            "total_tracked": 30,
+            "active_pursuits": 22,
             "drafts": 2,
             "accepted": 1,
             "rejected": 3,
@@ -58,10 +58,10 @@ def test_analytics_ranges_filters_denominators_and_thresholds(dynamodb_client: A
         all_time = client.get("/api/v1/analytics", params={"range": "all"}, headers=headers)
         assert all_time.status_code == 200
         payload = all_time.json()
-        assert payload["summary"]["total_tracked"] == 16
-        assert sum(item["count"] for item in payload["status_breakdown"]) == 16
+        assert payload["summary"]["total_tracked"] == 30
+        assert sum(item["count"] for item in payload["status_breakdown"]) == 30
         rates = payload["rates"]
-        assert rates["submitted_count"] == 14
+        assert rates["submitted_count"] == 28
         assert rates["response_rate"] == round(
             rates["response_count"] / rates["submitted_count"], 4
         )
@@ -70,7 +70,7 @@ def test_analytics_ranges_filters_denominators_and_thresholds(dynamodb_client: A
         )
         assert payload["funnel"][0] == {
             "stage": "SUBMITTED",
-            "count": 14,
+            "count": 28,
             "rate": 1.0,
         }
         linkedin = next(
@@ -80,7 +80,7 @@ def test_analytics_ranges_filters_denominators_and_thresholds(dynamodb_client: A
         referral = next(
             item for item in payload["source_performance"] if item["source"] == "REFERRAL"
         )
-        assert referral["sample_sufficient"] is False
+        assert referral["sample_sufficient"] is True
         assert payload["period_comparison"] == {
             "available": False,
             "current_start": None,
@@ -113,7 +113,7 @@ def test_analytics_ranges_filters_denominators_and_thresholds(dynamodb_client: A
         assert thirty_days.status_code == 200
         thirty_payload = thirty_days.json()
         assert thirty_payload["summary"]["drafts"] == 2
-        assert thirty_payload["summary"]["total_tracked"] < 16
+        assert thirty_payload["summary"]["total_tracked"] < 30
         assert (
             sum(item["count"] for item in thirty_payload["status_breakdown"])
             == thirty_payload["summary"]["total_tracked"]
