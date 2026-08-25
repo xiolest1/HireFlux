@@ -34,6 +34,24 @@ export const INTERVIEW_TYPES = [
   "OTHER",
 ] as const;
 export const INTERVIEW_STATUSES = ["SCHEDULED", "COMPLETED", "CANCELED"] as const;
+export const ROLE_FAMILIES = [
+  "GENERAL",
+  "SOFTWARE_IT",
+  "CUSTOMER_SERVICE",
+  "SALES",
+  "MARKETING_COMMUNICATIONS",
+  "FINANCE_ACCOUNTING",
+  "HUMAN_RESOURCES",
+  "ADMINISTRATIVE",
+  "PROJECT_PROGRAM_MANAGEMENT",
+  "OPERATIONS_LOGISTICS",
+  "MANUFACTURING_SKILLED_TRADES",
+  "HOSPITALITY_FOOD_SERVICE",
+  "HEALTHCARE",
+  "EDUCATION",
+  "MANAGEMENT_LEADERSHIP",
+  "EXECUTIVE",
+] as const;
 export const DASHBOARD_RANGES = ["30d", "90d", "all"] as const;
 export const COLOR_THEMES = ["SYSTEM", "LIGHT", "DARK"] as const;
 export const APPLICATION_SORTS = ["updated_desc", "updated_asc"] as const;
@@ -47,6 +65,7 @@ export const workModeSchema = z.enum(WORK_MODES);
 export const applicationSourceSchema = z.enum(APPLICATION_SOURCES);
 export const interviewTypeSchema = z.enum(INTERVIEW_TYPES);
 export const interviewStatusSchema = z.enum(INTERVIEW_STATUSES);
+export const roleFamilySchema = z.enum(ROLE_FAMILIES);
 export const dashboardRangeSchema = z.enum(DASHBOARD_RANGES);
 export const colorThemeSchema = z.enum(COLOR_THEMES);
 export const applicationSortSchema = z.enum(APPLICATION_SORTS);
@@ -92,6 +111,7 @@ export const applicationSchema = z.object({
   source_detail: z.string().nullable(),
   salary_text: z.string().nullable(),
   description: z.string().nullable(),
+  role_family: roleFamilySchema.nullable(),
   created_at: timestampSchema,
   updated_at: timestampSchema,
   version: z.number().int().positive(),
@@ -166,12 +186,36 @@ const interviewChecklistItemSchema = z.object({
   item_id: z.string().min(1),
   label: z.string().min(1),
   description: z.string().min(1),
+  phase: z.enum(["UNDERSTAND", "PREPARE", "CONFIRM"]),
+  source: z.enum(["UNIVERSAL", "INTERVIEW_TYPE", "ROLE_FAMILY", "CANDIDATE"]),
+  source_label: z.string().min(1),
+  removable: z.boolean(),
+});
+
+const curatedTextSchema = z.object({
+  text: z.string().min(1),
+  source: z.enum(["UNIVERSAL", "INTERVIEW_TYPE", "ROLE_FAMILY"]),
+  source_label: z.string().min(1),
 });
 
 const interviewGuidanceSchema = z.object({
+  role_context: z.object({
+    role_family: roleFamilySchema,
+    role_family_label: z.string().min(1),
+    source: z.enum(["USER_SELECTED", "TITLE_INFERRED", "UNIVERSAL_FALLBACK"]),
+    explanation: z.string().min(1),
+  }),
   checklist_items: z.array(interviewChecklistItemSchema),
-  focus_prompts: z.array(z.string().min(1)),
-  suggested_questions: z.array(z.string().min(1)),
+  focus_prompts: z.array(curatedTextSchema).max(4),
+  suggested_questions: z.array(curatedTextSchema).max(6),
+  tips: z.array(
+    z.object({
+      title: z.string().min(1),
+      body: z.string().min(1),
+      source: z.enum(["UNIVERSAL", "INTERVIEW_TYPE", "ROLE_FAMILY"]),
+      source_label: z.string().min(1),
+    }),
+  ).max(3),
   readiness: z.object({
     completed_steps: z.number().int().nonnegative(),
     total_steps: z.number().int().positive(),
@@ -195,6 +239,7 @@ export const interviewSchema = z.object({
   preparation_notes: z.string().nullable(),
   completed_checklist_items: z.array(z.string().min(1)),
   candidate_questions: z.array(z.string().min(1)),
+  custom_preparation_items: z.array(interviewChecklistItemSchema).max(2),
   debrief_went_well: z.string().nullable(),
   debrief_improve: z.string().nullable(),
   debrief_signals: z.string().nullable(),
@@ -281,6 +326,7 @@ export const workspaceExportSchema = z.object({
 export type ApplicationStatus = z.infer<typeof applicationStatusSchema>;
 export type WorkMode = z.infer<typeof workModeSchema>;
 export type ApplicationSource = z.infer<typeof applicationSourceSchema>;
+export type RoleFamily = z.infer<typeof roleFamilySchema>;
 export type InterviewType = z.infer<typeof interviewTypeSchema>;
 export type InterviewStatus = z.infer<typeof interviewStatusSchema>;
 export type DashboardRange = z.infer<typeof dashboardRangeSchema>;

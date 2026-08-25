@@ -1,6 +1,8 @@
 from typing import Any
 
+from hireflux_backend.domain.enums import RoleFamily
 from hireflux_backend.domain.resources import (
+    CustomPreparationItem,
     DashboardRange,
     DefaultApplicationView,
     Interview,
@@ -139,6 +141,13 @@ def interview_to_item(interview: Interview) -> dict[str, Any]:
         "preparation_notes": interview.preparation_notes,
         "completed_checklist_items": list(interview.completed_checklist_items),
         "candidate_questions": list(interview.candidate_questions),
+        "application_role_family": (
+            interview.application_role_family.value if interview.application_role_family else None
+        ),
+        "custom_preparation_items": [
+            {"item_id": item.item_id, "label": item.label}
+            for item in interview.custom_preparation_items
+        ],
         "debrief_went_well": interview.debrief_went_well,
         "debrief_improve": interview.debrief_improve,
         "debrief_signals": interview.debrief_signals,
@@ -178,6 +187,15 @@ def interview_from_item(item: dict[str, Any]) -> Interview:
             str(value) for value in item.get("completed_checklist_items", [])
         ),
         candidate_questions=tuple(str(value) for value in item.get("candidate_questions", [])),
+        application_role_family=(
+            RoleFamily(str(item["application_role_family"]))
+            if item.get("application_role_family")
+            else None
+        ),
+        custom_preparation_items=tuple(
+            CustomPreparationItem(item_id=str(value["item_id"]), label=str(value["label"]))
+            for value in item.get("custom_preparation_items", [])
+        ),
         debrief_went_well=_optional_string(item, "debrief_went_well"),
         debrief_improve=_optional_string(item, "debrief_improve"),
         debrief_signals=_optional_string(item, "debrief_signals"),

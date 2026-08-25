@@ -1,5 +1,5 @@
 import type { Application } from "../../api/schemas";
-import { formatDateOnly, formatSource } from "./format";
+import { formatDateOnly, formatRoleFamily, formatSource } from "./format";
 
 function DetailItem({ label, value }: { label: string; value: string }) {
   return (
@@ -24,6 +24,9 @@ export function ApplicationDetails({ application }: { application: Application }
       ? ["Source", `${formatSource(application.source)}${application.source_detail ? ` · ${application.source_detail}` : ""}`]
       : null,
     application.salary_text ? ["Salary", application.salary_text] : null,
+    application.role_family
+      ? ["Preparation focus", formatRoleFamily(application.role_family)]
+      : ["Preparation focus", "Automatic from job title"],
   ].filter((item): item is string[] => item !== null);
   return (
     <section id="details" className="min-w-0 scroll-mt-24" aria-labelledby="details-heading">

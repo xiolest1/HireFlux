@@ -6,6 +6,7 @@ import type {
 import {
   applicationStatusSchema,
   applicationSourceSchema,
+  roleFamilySchema,
   workModeSchema,
   type Application,
 } from "../../api/schemas";
@@ -94,6 +95,10 @@ const applicationFormSchemaBase = z.object({
   source_detail: optionalText("Source detail", 120),
   salary_text: optionalText("Salary", 120),
   description: optionalText("Description", 5000),
+  role_family: z
+    .union([roleFamilySchema, z.literal("")])
+    .default("")
+    .transform((value) => value || null),
 });
 
 export type ApplicationFormInput = z.input<
@@ -173,6 +178,7 @@ export function applicationFormDefaults(
     source_detail: application?.source_detail ?? "",
     salary_text: application?.salary_text ?? "",
     description: application?.description ?? "",
+    role_family: application?.role_family ?? "",
   };
 }
 
@@ -191,6 +197,7 @@ export function toApplicationFields(
     source_detail: values.source_detail,
     salary_text: values.salary_text,
     description: values.description,
+    role_family: values.role_family,
   };
 }
 

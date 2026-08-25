@@ -3,7 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useBlocker } from "react-router-dom";
 import { ChevronDown, Sparkles } from "lucide-react";
-import { APPLICATION_SOURCES, type Application } from "../../api/schemas";
+import {
+  APPLICATION_SOURCES,
+  ROLE_FAMILIES,
+  type Application,
+} from "../../api/schemas";
 import { Button } from "../../components/ui/Button";
 import { buttonClassName } from "../../components/ui/buttonStyles";
 import { ErrorPanel } from "../../components/ui/Feedback";
@@ -16,7 +20,7 @@ import {
   type ApplicationFormInput,
   type ApplicationFormValues,
 } from "./formSchema";
-import { formatSource } from "./format";
+import { formatRoleFamily, formatSource } from "./format";
 
 const fieldClassName =
   "mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface-raised px-3 py-2 text-ink shadow-sm transition-colors placeholder:text-ink-muted hover:border-accent/60 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-surface-muted";
@@ -63,7 +67,8 @@ export function ApplicationForm({
           application?.source ||
           application?.source_detail ||
           application?.salary_text ||
-          application?.description,
+          application?.description ||
+          application?.role_family,
       ),
   );
   const {
@@ -84,7 +89,8 @@ export function ApplicationForm({
       errors.source ||
       errors.source_detail ||
       errors.salary_text ||
-      errors.description,
+      errors.description ||
+      errors.role_family,
   );
   const errorSummaryItems = [
     ["company_name", "Company name", errors.company_name?.message],
@@ -99,6 +105,7 @@ export function ApplicationForm({
     ["source_detail", "Source detail", errors.source_detail?.message],
     ["salary_text", "Salary", errors.salary_text?.message],
     ["description", "Description", errors.description?.message],
+    ["role_family", "Preparation focus", errors.role_family?.message],
   ].filter((item): item is [string, string, string] => typeof item[2] === "string");
   const blocker = useBlocker(
     () => isDirty && !isSubmitting && !allowNavigationRef.current,
@@ -389,6 +396,29 @@ export function ApplicationForm({
               <option value="HYBRID">Hybrid</option>
               <option value="ONSITE">On-site</option>
             </select>
+          </div>
+
+          <div>
+            <label htmlFor="role_family" className="text-sm font-semibold text-ink">
+              Interview preparation focus
+            </label>
+            <select
+              id="role_family"
+              aria-describedby="role_family-hint"
+              className={fieldClassName}
+              {...register("role_family")}
+            >
+              <option value="">Automatic from job title</option>
+              {ROLE_FAMILIES.map((roleFamily) => (
+                <option key={roleFamily} value={roleFamily}>
+                  {formatRoleFamily(roleFamily)}
+                </option>
+              ))}
+            </select>
+            <p id="role_family-hint" className="mt-1.5 text-xs leading-5 text-ink-muted">
+              HireFlux uses this only to curate deterministic interview guidance. Choose General
+              when you prefer role-neutral preparation.
+            </p>
           </div>
 
           <div>

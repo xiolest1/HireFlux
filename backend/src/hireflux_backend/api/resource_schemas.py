@@ -4,8 +4,13 @@ from typing import Annotated, Literal
 from pydantic import AwareDatetime, BaseModel, Field, HttpUrl
 
 from hireflux_backend.api.schemas import RequestModel
-from hireflux_backend.domain.enums import ApplicationStatus
-from hireflux_backend.domain.interview_guidance import InterviewGuidance, guidance_for
+from hireflux_backend.domain.enums import ApplicationStatus, RoleFamily
+from hireflux_backend.domain.interview_guidance import (
+    InterviewGuidance,
+    PreparationPhase,
+    PreparationSource,
+    guidance_for,
+)
 from hireflux_backend.domain.resources import (
     DashboardRange,
     DefaultApplicationView,
@@ -17,6 +22,7 @@ from hireflux_backend.domain.resources import (
     WorkspaceSettings,
     allowed_interview_statuses,
 )
+from hireflux_backend.domain.role_context import RoleFamilySource
 
 
 class SettingsUpdateRequest(RequestModel):
@@ -126,7 +132,7 @@ ChecklistItemId = Annotated[str, Field(min_length=1, max_length=80)]
 
 class InterviewWorkspaceUpdateRequest(RequestModel):
     expected_version: int = Field(ge=1)
-    completed_checklist_items: list[ChecklistItemId] = Field(max_length=5)
+    completed_checklist_items: list[ChecklistItemId] = Field(max_length=8)
     preparation_notes: str | None = Field(min_length=1, max_length=5_000)
     candidate_questions: list[InterviewQuestion] = Field(max_length=8)
     debrief_went_well: str | None = Field(min_length=1, max_length=2_000)
@@ -140,6 +146,30 @@ class InterviewChecklistItemResponse(BaseModel):
     item_id: str
     label: str
     description: str
+    phase: PreparationPhase
+    source: PreparationSource
+    source_label: str
+    removable: bool
+
+
+class CuratedTextResponse(BaseModel):
+    text: str
+    source: PreparationSource
+    source_label: str
+
+
+class PreparationTipResponse(BaseModel):
+    title: str
+    body: str
+    source: PreparationSource
+    source_label: str
+
+
+class PreparationRoleContextResponse(BaseModel):
+    role_family: RoleFamily
+    role_family_label: str
+    source: RoleFamilySource
+    explanation: str
 
 
 class InterviewReadinessResponse(BaseModel):
@@ -150,24 +180,55 @@ class InterviewReadinessResponse(BaseModel):
 
 
 class InterviewGuidanceResponse(BaseModel):
+    role_context: PreparationRoleContextResponse
     checklist_items: list[InterviewChecklistItemResponse]
-    focus_prompts: list[str]
-    suggested_questions: list[str]
+    focus_prompts: list[CuratedTextResponse]
+    suggested_questions: list[CuratedTextResponse]
+    tips: list[PreparationTipResponse]
     readiness: InterviewReadinessResponse
 
     @classmethod
     def from_domain(cls, guidance: InterviewGuidance) -> "InterviewGuidanceResponse":
         return cls(
+            role_context=PreparationRoleContextResponse(
+                role_family=guidance.role_context.role_family,
+                role_family_label=guidance.role_context.role_family_label,
+                source=guidance.role_context.source,
+                explanation=guidance.role_context.explanation,
+            ),
             checklist_items=[
                 InterviewChecklistItemResponse(
                     item_id=item.item_id,
                     label=item.label,
                     description=item.description,
+                    phase=item.phase,
+                    source=item.source,
+                    source_label=item.source_label,
+                    removable=item.removable,
                 )
                 for item in guidance.checklist_items
             ],
-            focus_prompts=list(guidance.focus_prompts),
-            suggested_questions=list(guidance.suggested_questions),
+            focus_prompts=[
+                CuratedTextResponse(
+                    text=item.text, source=item.source, source_label=item.source_label
+                )
+                for item in guidance.focus_prompts
+            ],
+            suggested_questions=[
+                CuratedTextResponse(
+                    text=item.text, source=item.source, source_label=item.source_label
+                )
+                for item in guidance.suggested_questions
+            ],
+            tips=[
+                PreparationTipResponse(
+                    title=item.title,
+                    body=item.body,
+                    source=item.source,
+                    source_label=item.source_label,
+                )
+                for item in guidance.tips
+            ],
             readiness=InterviewReadinessResponse(
                 completed_steps=guidance.completed_steps,
                 total_steps=guidance.total_steps,
@@ -192,6 +253,7 @@ class InterviewResponse(BaseModel):
     preparation_notes: str | None
     completed_checklist_items: list[str]
     candidate_questions: list[str]
+    custom_preparation_items: list[InterviewChecklistItemResponse]
     debrief_went_well: str | None
     debrief_improve: str | None
     debrief_signals: str | None
@@ -205,6 +267,7 @@ class InterviewResponse(BaseModel):
 
     @classmethod
     def from_domain(cls, interview: Interview) -> "InterviewResponse":
+        guidance = InterviewGuidanceResponse.from_domain(guidance_for(interview))
         return cls(
             interview_id=interview.interview_id,
             application_id=interview.application_id,
@@ -220,17 +283,27 @@ class InterviewResponse(BaseModel):
             preparation_notes=interview.preparation_notes,
             completed_checklist_items=list(interview.completed_checklist_items),
             candidate_questions=list(interview.candidate_questions),
+            custom_preparation_items=[
+                item
+                for item in guidance.checklist_items
+                if item.source is PreparationSource.CANDIDATE
+            ],
             debrief_went_well=interview.debrief_went_well,
             debrief_improve=interview.debrief_improve,
             debrief_signals=interview.debrief_signals,
             debrief_next_step=interview.debrief_next_step,
             debrief_completed_at=interview.debrief_completed_at,
-            guidance=InterviewGuidanceResponse.from_domain(guidance_for(interview)),
+            guidance=guidance,
             created_at=interview.created_at,
             updated_at=interview.updated_at,
             version=interview.version,
             allowed_statuses=list(allowed_interview_statuses(interview)),
         )
+
+
+class PreparationItemCreateRequest(RequestModel):
+    expected_version: int = Field(ge=1)
+    label: str = Field(min_length=1, max_length=120)
 
 
 class InterviewListResponse(BaseModel):

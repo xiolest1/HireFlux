@@ -23,7 +23,7 @@ Cognito owns passwords, verification, resets, MFA options, sessions, and tokens.
 - `application_id`, `owner_user_id`.
 - Required `company_name`, `job_title`, and non-null `status`.
 - `applied_date`, nullable only for a draft or an archived former draft. It is a user-entered calendar date, is never later than the workspace's current calendar date, and is never converted into a timestamp.
-- Optional `follow_up_date`, `job_url`, `location`, `work_mode`, normalized `source`, `source_detail`, `salary_text`, and `description`.
+- Optional `follow_up_date`, `job_url`, `location`, `work_mode`, normalized `source`, `source_detail`, `salary_text`, `description`, and candidate-selected `role_family`. A null role family allows conservative title inference only for interview preparation; `GENERAL` explicitly requests universal guidance.
 - `created_at`, `updated_at`, and integer `version` for optimistic concurrency.
 - Internal optional `archived_from_status` to make archive reversible without bypassing the transition policy.
 - Archived edits continue to satisfy the requirements of `archived_from_status`; an archived later-stage application cannot clear its required `applied_date`. A legacy archived record missing that field must supply it as part of the restore request.
@@ -45,9 +45,10 @@ Creating, editing, and deleting a note appends activity without copying the note
 - `interview_type`: `RECRUITER_CALL`, `TECHNICAL_SCREEN`, `BEHAVIORAL`, `CODING_ASSESSMENT`, `HIRING_MANAGER`, `ONSITE`, `FINAL`, or `OTHER`.
 - Required timezone-aware `scheduled_at`; `duration_minutes`; optional `location`, `meeting_url`, and `details`.
 - `status`: `SCHEDULED`, `COMPLETED`, or `CANCELED`.
-- Denormalized `company_name` and `job_title`, synchronized transactionally when the owned
+- Denormalized `company_name`, `job_title`, and optional application role family, synchronized transactionally when the owned
   parent labels change and refreshed from the parent when the interview itself changes.
 - `created_at`, `updated_at`, and integer `version`.
+- Private preparation notes, candidate questions, completed checklist IDs, and up to two server-ID custom preparation items. Readiness is visible checklist completion only. See [interview-preparation.md](interview-preparation.md).
 
 Only scheduled interviews are editable. They may transition to completed or canceled; both are terminal. Rescheduling and status changes append activity.
 

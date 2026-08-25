@@ -130,6 +130,55 @@ test("interview journey selection, preparation, and deep-link refresh stay conne
   await expect(
     drawer.getByRole("button", { name: "Close panel" }),
   ).toBeFocused();
+
+  const firstChecklistItem = drawer.getByRole("checkbox", {
+    name: /company and role/,
+  });
+  await firstChecklistItem.check();
+  await expect(firstChecklistItem).toBeChecked();
+
+  const addQuestion = drawer.getByRole("button", { name: "Add question" });
+  await addQuestion.click();
+  await drawer.getByRole("textbox", { name: "Candidate question 1" }).fill(
+    "What does success look like?",
+  );
+  await drawer.getByRole("textbox", { name: "Candidate question 2" }).fill(
+    "How does the team collaborate?",
+  );
+  await drawer.getByRole("textbox", { name: "Candidate question 3" }).fill(
+    "What are the immediate priorities?",
+  );
+  await drawer
+    .getByRole("button", { name: "Remove candidate question 2" })
+    .click();
+  await expect(
+    drawer.getByRole("textbox", { name: "Candidate question 1" }),
+  ).toBeFocused();
+  await expect(
+    drawer.getByRole("textbox", { name: /Candidate question/ }),
+  ).toHaveCount(2);
+
+  await drawer
+    .getByRole("textbox", { name: "Custom preparation item" })
+    .fill("Review the portfolio example");
+  await drawer.getByRole("button", { name: "Add item" }).click();
+  await expect(
+    drawer.getByRole("checkbox", { name: /Review the portfolio example/ }),
+  ).toBeVisible();
+  await drawer
+    .getByRole("button", {
+      name: "Remove custom preparation item: Review the portfolio example",
+    })
+    .click();
+  await expect(
+    drawer.getByRole("checkbox", { name: /Review the portfolio example/ }),
+  ).toHaveCount(0);
+
+  const moreTips = drawer.getByRole("button", { name: /more tips/ });
+  await moreTips.click();
+  await expect(
+    drawer.getByRole("button", { name: "Show fewer tips" }),
+  ).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Escape");
   await expect(drawer).toBeHidden();
   await expect(prepare).toBeFocused();

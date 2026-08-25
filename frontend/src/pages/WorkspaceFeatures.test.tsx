@@ -1436,6 +1436,103 @@ describe("workspace milestone features", () => {
     expect(
       screen.getByRole("dialog", { name: "Interview preparation" }),
     ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Preparation focus" })).toBeVisible();
+    expect(screen.getByText(/Suggested from the job title/)).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Understand" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Prepare" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Confirm" })).toBeVisible();
+    expect(screen.getByRole("button", { name: /more tips/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("lets candidates choose role context and add a custom preparation item", async () => {
+    const selectedRound = makeWorkspaceInterview();
+    const application = makeApplication({ status: "INTERVIEW" });
+    let roleBody: Record<string, unknown> | null = null;
+    let itemBody: Record<string, unknown> | null = null;
+    const customItem = {
+      item_id: "77777777-7777-4777-8777-777777777777",
+      label: "Bring schedule notes",
+      description: "Added by you for this interview.",
+      phase: "PREPARE" as const,
+      source: "CANDIDATE" as const,
+      source_label: "Added by you",
+      removable: true,
+    };
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
+        HttpResponse.json(application),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/interviews`, () =>
+        HttpResponse.json({ items: [selectedRound], next_cursor: null }),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+        HttpResponse.json({ items: [selectedRound], next_cursor: null }),
+      ),
+      http.patch(`${API_ORIGIN}/api/v1/applications/:applicationId`, async ({ request }) => {
+        roleBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          ...application,
+          role_family: "HOSPITALITY_FOOD_SERVICE",
+          version: 2,
+        });
+      }),
+      http.post(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/interviews/:interviewId/preparation-items`,
+        async ({ request }) => {
+          itemBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(
+            makeInterview({
+              version: 2,
+              custom_preparation_items: [customItem],
+              guidance: {
+                ...selectedRound.guidance,
+                checklist_items: [...selectedRound.guidance.checklist_items, customItem],
+                readiness: {
+                  ...selectedRound.guidance.readiness,
+                  total_steps: selectedRound.guidance.readiness.total_steps + 1,
+                  missing_actions: [
+                    ...selectedRound.guidance.readiness.missing_actions,
+                    customItem.label,
+                  ],
+                },
+              },
+            }),
+            { status: 201 },
+          );
+        },
+      ),
+    );
+
+    const { user } = renderApp("/interviews");
+    await user.click(
+      (await screen.findAllByRole("button", { name: "Continue preparation" }))[0],
+    );
+    await user.selectOptions(
+      screen.getByLabelText("Role family"),
+      "HOSPITALITY_FOOD_SERVICE",
+    );
+    await user.click(screen.getByRole("button", { name: "Apply focus" }));
+    await waitFor(() =>
+      expect(roleBody).toEqual({
+        expected_version: 1,
+        role_family: "HOSPITALITY_FOOD_SERVICE",
+      }),
+    );
+
+    await user.type(screen.getByLabelText("Custom preparation item"), "Bring schedule notes");
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    await waitFor(() =>
+      expect(itemBody).toEqual({ expected_version: 1, label: "Bring schedule notes" }),
+    );
+    expect(await screen.findByText("Bring schedule notes")).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Remove custom preparation item: Bring schedule notes",
+      }),
+    ).toBeVisible();
   });
 
   it("invalidates every dependent interview view after preparation changes", async () => {

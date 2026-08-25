@@ -17,7 +17,13 @@ from hireflux_backend.application.services import (
     TransitionApplicationCommand,
     UserService,
 )
-from hireflux_backend.domain.enums import ApplicationSource, ApplicationStatus, UserRole, WorkMode
+from hireflux_backend.domain.enums import (
+    ApplicationSource,
+    ApplicationStatus,
+    RoleFamily,
+    UserRole,
+    WorkMode,
+)
 from hireflux_backend.domain.models import Application, CurrentIdentity, DemoWorkspace
 from hireflux_backend.domain.resources import InterviewStatus, InterviewType
 
@@ -45,6 +51,7 @@ class SeedApplication:
     source: ApplicationSource
     work_mode: WorkMode
     follow_up_offset: int | None = None
+    role_family: RoleFamily | None = None
 
 
 _SEED = (
@@ -75,7 +82,7 @@ _SEED = (
     ),
     SeedApplication(
         "Summit Cloud",
-        "Backend Engineer",
+        "Customer Service Representative",
         ApplicationStatus.APPLIED,
         18,
         ApplicationSource.INDEED,
@@ -84,7 +91,7 @@ _SEED = (
     ),
     SeedApplication(
         "Harbor Finance",
-        "Platform Engineer",
+        "Staff Accountant",
         ApplicationStatus.APPLIED,
         9,
         ApplicationSource.RECRUITER,
@@ -119,7 +126,7 @@ _SEED = (
     ),
     SeedApplication(
         "Juniper Systems",
-        "Platform Engineer",
+        "Sales Representative",
         ApplicationStatus.OFFER,
         32,
         ApplicationSource.CAREER_FAIR,
@@ -143,7 +150,7 @@ _SEED = (
     ),
     SeedApplication(
         "Pioneer Retail",
-        "Software Engineer",
+        "Restaurant Server",
         ApplicationStatus.REJECTED,
         45,
         ApplicationSource.LINKEDIN,
@@ -175,11 +182,13 @@ _SEED = (
     ),
     SeedApplication(
         "Vertex Energy",
-        "DevOps Engineer",
+        "Operations Manager",
         ApplicationStatus.INTERVIEW,
         38,
         ApplicationSource.LINKEDIN,
         WorkMode.REMOTE,
+        None,
+        RoleFamily.OPERATIONS_LOGISTICS,
     ),
     SeedApplication(
         "Helio Health",
@@ -192,7 +201,7 @@ _SEED = (
     ),
     SeedApplication(
         "Pinecone Security",
-        "Security Engineer",
+        "Manufacturing Technician",
         ApplicationStatus.SCREENING,
         15,
         ApplicationSource.RECRUITER,
@@ -218,7 +227,7 @@ _SEED = (
     ),
     SeedApplication(
         "Redwood Commerce",
-        "Product Designer",
+        "Marketing Manager",
         ApplicationStatus.APPLIED,
         2,
         ApplicationSource.LINKEDIN,
@@ -236,7 +245,7 @@ _SEED = (
     ),
     SeedApplication(
         "Northwind Robotics",
-        "Backend Engineer",
+        "Warehouse Coordinator",
         ApplicationStatus.APPLIED,
         25,
         ApplicationSource.INDEED,
@@ -245,7 +254,7 @@ _SEED = (
     ),
     SeedApplication(
         "Solstice Finance",
-        "Platform Engineer",
+        "High School Teacher",
         ApplicationStatus.SCREENING,
         10,
         ApplicationSource.RECRUITER,
@@ -297,7 +306,7 @@ _SEED = (
     ),
     SeedApplication(
         "Harborlight Robotics",
-        "Product Analyst",
+        "Chief Executive Officer",
         ApplicationStatus.APPLIED,
         5,
         ApplicationSource.OTHER,
@@ -412,6 +421,7 @@ class DemoSessionService:
                     source=seed.source,
                     source_detail="Deterministic demo scenario",
                     trusted_created_at=created_at,
+                    role_family=seed.role_family,
                 ),
             )
             created.append(application)

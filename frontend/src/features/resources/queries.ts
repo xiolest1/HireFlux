@@ -3,7 +3,9 @@ import { useEffect, useRef } from "react";
 import {
   createInterview,
   createNote,
+  createPreparationItem,
   deleteNote,
+  deletePreparationItem,
   getSettings,
   getNotePreview,
   listApplicationInterviews,
@@ -298,6 +300,38 @@ export function useUpdateInterviewWorkspace(applicationId: string) {
         workspace,
         debriefComplete,
       ),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCreatePreparationItem(applicationId: string) {
+  const invalidate = useInterviewInvalidation(applicationId);
+  return useMutation({
+    mutationFn: ({
+      interviewId,
+      version,
+      label,
+    }: {
+      interviewId: string;
+      version: number;
+      label: string;
+    }) => createPreparationItem(applicationId, interviewId, version, label),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeletePreparationItem(applicationId: string) {
+  const invalidate = useInterviewInvalidation(applicationId);
+  return useMutation({
+    mutationFn: ({
+      interviewId,
+      itemId,
+      version,
+    }: {
+      interviewId: string;
+      itemId: string;
+      version: number;
+    }) => deletePreparationItem(applicationId, interviewId, itemId, version),
     onSuccess: invalidate,
   });
 }

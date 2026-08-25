@@ -7,6 +7,7 @@ from hireflux_backend.domain.enums import (
     ActivityType,
     ApplicationSource,
     ApplicationStatus,
+    RoleFamily,
     UserRole,
     WorkMode,
 )
@@ -88,6 +89,7 @@ def application_to_item(application: Application) -> dict[str, Any]:
         "source_detail": application.source_detail,
         "salary_text": application.salary_text,
         "description": application.description,
+        "role_family": application.role_family.value if application.role_family else None,
         "created_at": format_timestamp(application.created_at),
         "updated_at": updated_at,
         "version": application.version,
@@ -171,6 +173,7 @@ def application_from_item(item: dict[str, Any]) -> Application:
         source_detail=_optional_string(item, "source_detail"),
         salary_text=_optional_string(item, "salary_text"),
         description=_optional_string(item, "description"),
+        role_family=RoleFamily(str(item["role_family"])) if item.get("role_family") else None,
         created_at=parse_timestamp(str(item["created_at"])),
         updated_at=parse_timestamp(str(item["updated_at"])),
         version=int(item["version"]),

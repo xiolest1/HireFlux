@@ -18,6 +18,7 @@ from hireflux_backend.domain.enums import (
     ApplicationSource,
     ApplicationStatus,
     FollowUpFilter,
+    RoleFamily,
     StageAgeBucket,
     WorkMode,
 )
@@ -54,6 +55,7 @@ class CreateApplicationCommand:
     source_detail: str | None = None
     salary_text: str | None = None
     description: str | None = None
+    role_family: RoleFamily | None = None
     trusted_created_at: datetime | None = None
 
 
@@ -108,6 +110,7 @@ class ApplicationService:
             "source_detail",
             "salary_text",
             "description",
+            "role_family",
         }
     )
 
@@ -152,6 +155,7 @@ class ApplicationService:
             source_detail=command.source_detail,
             salary_text=command.salary_text,
             description=command.description,
+            role_family=command.role_family,
             created_at=now,
             updated_at=now,
             version=1,
@@ -281,6 +285,9 @@ class ApplicationService:
             description=_optional_string_change(
                 effective_changes, "description", current.description
             ),
+            role_family=_optional_role_family_change(
+                effective_changes, "role_family", current.role_family
+            ),
         )
         required_status = (
             current.archived_from_status
@@ -308,7 +315,9 @@ class ApplicationService:
             version=current.version + 1,
         )
         labels_changed = (
-            current.company_name != updated.company_name or current.job_title != updated.job_title
+            current.company_name != updated.company_name
+            or current.job_title != updated.job_title
+            or current.role_family != updated.role_family
         )
         if "follow_up_date" in effective_changes:
             activity = self._follow_up_activity(
@@ -566,6 +575,17 @@ def _optional_source_change(
     value = changes[key]
     if value is not None and not isinstance(value, ApplicationSource):
         raise ValidationError(f"{key} must be a valid application source or null.")
+    return value
+
+
+def _optional_role_family_change(
+    changes: Mapping[str, object], key: str, current: RoleFamily | None
+) -> RoleFamily | None:
+    if key not in changes:
+        return current
+    value = changes[key]
+    if value is not None and not isinstance(value, RoleFamily):
+        raise ValidationError(f"{key} must be a valid role family or null.")
     return value
 
 

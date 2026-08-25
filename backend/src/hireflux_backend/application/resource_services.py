@@ -17,6 +17,7 @@ from hireflux_backend.domain.interview_guidance import checklist_ids_for, guidan
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity
 from hireflux_backend.domain.resources import (
     INTERVIEW_STATUS_TRANSITIONS,
+    CustomPreparationItem,
     DashboardRange,
     DefaultApplicationView,
     Interview,
@@ -86,6 +87,12 @@ class UpdateInterviewWorkspaceCommand:
     debrief_signals: str | None
     debrief_next_step: str | None
     debrief_complete: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class CreatePreparationItemCommand:
+    expected_version: int
+    label: str
 
 
 InterviewWorkspaceView = Literal["UPCOMING", "ALL"]
@@ -368,6 +375,8 @@ class WorkspaceResourceService:
             preparation_notes=None,
             completed_checklist_items=(),
             candidate_questions=(),
+            application_role_family=application.role_family,
+            custom_preparation_items=(),
             debrief_went_well=None,
             debrief_improve=None,
             debrief_signals=None,
@@ -469,6 +478,7 @@ class WorkspaceResourceService:
         labels_changed = (
             current.company_name != application.company_name
             or current.job_title != application.job_title
+            or current.application_role_family != application.role_family
         )
         if not effective and not labels_changed:
             return current
@@ -478,6 +488,7 @@ class WorkspaceResourceService:
             current,
             company_name=application.company_name,
             job_title=application.job_title,
+            application_role_family=application.role_family,
             interview_type=self._typed_change(
                 effective, "interview_type", current.interview_type, InterviewType
             ),
@@ -522,7 +533,7 @@ class WorkspaceResourceService:
             raise ConflictError("Canceled interviews cannot be prepared or debriefed.")
 
         completed_items = tuple(dict.fromkeys(command.completed_checklist_items))
-        allowed_items = checklist_ids_for(current.interview_type)
+        allowed_items = checklist_ids_for(current)
         if not set(completed_items).issubset(allowed_items):
             raise ValidationError(
                 "One or more checklist items are invalid for this interview type."
@@ -622,6 +633,92 @@ class WorkspaceResourceService:
         )
         return updated
 
+    def create_preparation_item(
+        self,
+        identity: CurrentIdentity,
+        application_id: str,
+        interview_id: str,
+        command: CreatePreparationItemCommand,
+    ) -> Interview:
+        self._require_application(identity, application_id)
+        current = self._resources.get_interview(identity.user_id, application_id, interview_id)
+        if current is None:
+            raise NotFoundError("Interview not found.")
+        self._require_version(current.version, command.expected_version, "interview")
+        if current.status is InterviewStatus.CANCELED:
+            raise ConflictError("Canceled interviews cannot be prepared.")
+        if len(current.custom_preparation_items) >= 2:
+            raise ValidationError("An interview can contain at most two custom preparation items.")
+        label = _required_bounded_text(command.label, field_name="label", max_length=120)
+        if any(
+            item.label.casefold() == label.casefold() for item in current.custom_preparation_items
+        ):
+            raise ValidationError("That custom preparation item already exists.")
+        updated = replace(
+            current,
+            custom_preparation_items=(
+                *current.custom_preparation_items,
+                CustomPreparationItem(item_id=self._id_factory(), label=label),
+            ),
+            updated_at=self._aware_utc_now(),
+            version=current.version + 1,
+        )
+        self._resources.replace_interview(
+            updated,
+            expected_version=command.expected_version,
+            activity=self._activity(
+                identity,
+                application_id,
+                ActivityType.INTERVIEW_WORKSPACE_UPDATED,
+                "Custom interview preparation item added.",
+                {"interview_id": interview_id},
+            ),
+        )
+        return updated
+
+    def delete_preparation_item(
+        self,
+        identity: CurrentIdentity,
+        application_id: str,
+        interview_id: str,
+        item_id: str,
+        *,
+        expected_version: int,
+    ) -> Interview:
+        self._require_application(identity, application_id)
+        current = self._resources.get_interview(identity.user_id, application_id, interview_id)
+        if current is None:
+            raise NotFoundError("Interview not found.")
+        self._require_version(current.version, expected_version, "interview")
+        if current.status is InterviewStatus.CANCELED:
+            raise ConflictError("Canceled interviews cannot be prepared.")
+        remaining = tuple(
+            item for item in current.custom_preparation_items if item.item_id != item_id
+        )
+        if len(remaining) == len(current.custom_preparation_items):
+            raise NotFoundError("Preparation item not found.")
+        updated = replace(
+            current,
+            custom_preparation_items=remaining,
+            completed_checklist_items=tuple(
+                value for value in current.completed_checklist_items if value != item_id
+            ),
+            updated_at=self._aware_utc_now(),
+            version=current.version + 1,
+        )
+        self._resources.replace_interview(
+            updated,
+            expected_version=expected_version,
+            activity=self._activity(
+                identity,
+                application_id,
+                ActivityType.INTERVIEW_WORKSPACE_UPDATED,
+                "Custom interview preparation item removed.",
+                {"interview_id": interview_id},
+            ),
+        )
+        return updated
+
     def transition_interview(
         self,
         identity: CurrentIdentity,
@@ -644,6 +741,7 @@ class WorkspaceResourceService:
             current,
             company_name=application.company_name,
             job_title=application.job_title,
+            application_role_family=application.role_family,
             status=command.status,
             updated_at=self._aware_utc_now(),
             version=current.version + 1,
@@ -786,6 +884,15 @@ def _require_content(value: str) -> str:
     if len(content) > 5_000:
         raise ValidationError("content cannot exceed 5000 characters.")
     return content
+
+
+def _required_bounded_text(value: str, *, field_name: str, max_length: int) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValidationError(f"{field_name} cannot be empty.")
+    if len(normalized) > max_length:
+        raise ValidationError(f"{field_name} must contain at most {max_length} characters.")
+    return normalized
 
 
 def _validate_duration(value: int) -> None:

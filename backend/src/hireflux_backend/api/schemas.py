@@ -6,6 +6,7 @@ from hireflux_backend.domain.enums import (
     ActivityType,
     ApplicationSource,
     ApplicationStatus,
+    RoleFamily,
     UserRole,
     WorkMode,
 )
@@ -30,6 +31,7 @@ class ApplicationCreateRequest(RequestModel):
     source_detail: str | None = Field(default=None, min_length=1, max_length=120)
     salary_text: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = Field(default=None, min_length=1, max_length=5_000)
+    role_family: RoleFamily | None = None
 
 
 class ApplicationUpdateRequest(RequestModel):
@@ -45,6 +47,7 @@ class ApplicationUpdateRequest(RequestModel):
     source_detail: str | None = Field(default=None, min_length=1, max_length=120)
     salary_text: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = Field(default=None, min_length=1, max_length=5_000)
+    role_family: RoleFamily | None = None
 
     @model_validator(mode="after")
     def required_text_cannot_be_cleared(self) -> "ApplicationUpdateRequest":
@@ -104,6 +107,7 @@ class ApplicationResponse(BaseModel):
     source_detail: str | None
     salary_text: str | None
     description: str | None
+    role_family: RoleFamily | None
     created_at: datetime
     updated_at: datetime
     version: int
@@ -133,6 +137,7 @@ class ApplicationResponse(BaseModel):
             source_detail=application.source_detail,
             salary_text=application.salary_text,
             description=application.description,
+            role_family=application.role_family,
             created_at=application.created_at,
             updated_at=application.updated_at,
             version=application.version,

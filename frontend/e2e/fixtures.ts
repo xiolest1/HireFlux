@@ -18,6 +18,7 @@ export const application = {
   salary_text: "$135k–$155k",
   description:
     "Build accessible tools and a shared product platform for a growing engineering organization.",
+  role_family: null,
   created_at: "2026-08-08T13:00:00Z",
   updated_at: "2026-08-12T16:30:00Z",
   version: 3,
@@ -80,53 +81,94 @@ const interview = {
   preparation_notes: null,
   completed_checklist_items: [],
   candidate_questions: [],
+  custom_preparation_items: [],
   debrief_went_well: null,
   debrief_improve: null,
   debrief_signals: null,
   debrief_next_step: null,
   debrief_completed_at: null,
   guidance: {
+    role_context: {
+      role_family: "SOFTWARE_IT",
+      role_family_label: "Software / IT",
+      source: "TITLE_INFERRED",
+      explanation: "Suggested from the job title; you can change the Software / IT focus.",
+    },
     checklist_items: [
       {
         item_id: "research_company",
         label: "Research the company and role",
         description: "Review the company, product, role, and recent context.",
+        phase: "UNDERSTAND",
+        source: "UNIVERSAL",
+        source_label: "Useful for every interview",
+        removable: false,
       },
       {
         item_id: "prepare_examples",
         label: "Prepare evidence stories",
         description:
           "Write concise examples with situation, action, and result.",
+        phase: "PREPARE",
+        source: "UNIVERSAL",
+        source_label: "Useful for every interview",
+        removable: false,
       },
       {
         item_id: "prepare_questions",
         label: "Prepare candidate questions",
         description: "Bring at least two questions you want answered.",
+        phase: "PREPARE",
+        source: "UNIVERSAL",
+        source_label: "Useful for every interview",
+        removable: false,
       },
       {
         item_id: "confirm_logistics",
         label: "Confirm logistics",
         description:
           "Check the time, location, meeting link, and participants.",
+        phase: "CONFIRM",
+        source: "UNIVERSAL",
+        source_label: "Useful for every interview",
+        removable: false,
       },
       {
-        item_id: "review_technical_foundations",
-        label: "Review technical foundations",
-        description: "Refresh the core skills and tradeoffs likely to come up.",
+        item_id: "review_interview_format",
+        label: "Review the skills being assessed",
+        description: "Identify the relevant skills and reasoning you may need to explain.",
+        phase: "PREPARE",
+        source: "INTERVIEW_TYPE",
+        source_label: "Suggested for technical or skills screens",
+        removable: false,
+      },
+      {
+        item_id: "review_role_topics",
+        label: "Review technical evidence",
+        description: "Choose a project or technical decision and explain its tradeoffs.",
+        phase: "PREPARE",
+        source: "ROLE_FAMILY",
+        source_label: "Suggested for Software / IT roles",
+        removable: false,
       },
     ],
-    focus_prompts: ["Clarify the technical bar and expected tradeoffs."],
-    suggested_questions: ["What does success look like in the first 90 days?"],
+    focus_prompts: [{ text: "Clarify the relevant skills and expected reasoning.", source: "INTERVIEW_TYPE", source_label: "Suggested for technical or skills screens" }],
+    suggested_questions: [{ text: "What does success look like in the first 90 days?", source: "UNIVERSAL", source_label: "Useful for every interview" }],
+    tips: [
+      { title: "Build evidence, not a script", body: "Prepare context, your action, and the result.", source: "UNIVERSAL", source_label: "Useful for every interview" },
+      { title: "Confirm the format", body: "Ask what will be assessed and which tools you may use.", source: "INTERVIEW_TYPE", source_label: "Suggested for technical or skills screens" },
+    ],
     readiness: {
       completed_steps: 0,
-      total_steps: 5,
+      total_steps: 6,
       ready_for_interview: false,
       missing_actions: [
         "Research the company and role",
         "Prepare evidence stories",
         "Prepare candidate questions",
         "Confirm logistics",
-        "Review technical foundations",
+        "Review the skills being assessed",
+        "Review technical evidence",
       ],
     },
   },
@@ -514,6 +556,44 @@ export async function installDeterministicApi(page: Page) {
         ],
         next_cursor: null,
       });
+      return;
+    }
+    if (
+      path.endsWith("/preparation-items") &&
+      request.method() === "POST"
+    ) {
+      const customItem = {
+        item_id: "77777777-7777-4777-8777-777777777777",
+        label: (request.postDataJSON() as { label: string }).label,
+        description: "Added by you for this interview.",
+        phase: "PREPARE",
+        source: "CANDIDATE",
+        source_label: "Added by you",
+        removable: true,
+      };
+      await json(route, {
+        ...interview,
+        version: 2,
+        custom_preparation_items: [customItem],
+        guidance: {
+          ...interview.guidance,
+          checklist_items: [
+            ...interview.guidance.checklist_items,
+            customItem,
+          ],
+          readiness: {
+            ...interview.guidance.readiness,
+            total_steps: interview.guidance.readiness.total_steps + 1,
+          },
+        },
+      });
+      return;
+    }
+    if (
+      path.includes("/preparation-items/") &&
+      request.method() === "DELETE"
+    ) {
+      await json(route, { ...interview, version: 3 });
       return;
     }
     if (path === `/api/v1/applications/${applicationId}`) {

@@ -683,6 +683,22 @@ class DynamoApplicationRepository:
                 ]
             )
         for projection in interview_keys:
+            role_update = (
+                ", application_role_family = :role_family"
+                if application.role_family is not None
+                else " REMOVE application_role_family"
+            )
+            projection_values: dict[str, object] = {
+                ":company": application.company_name,
+                ":title": application.job_title,
+                ":updated_at": format_timestamp(application.updated_at),
+                ":one": 1,
+                ":owner": application.owner_user_id,
+                ":application_id": application.application_id,
+                ":expected_interview_version": projection["version"],
+            }
+            if application.role_family is not None:
+                projection_values[":role_family"] = application.role_family.value
             transaction.append(
                 {
                     "Update": {
@@ -690,7 +706,7 @@ class DynamoApplicationRepository:
                         "Key": serialize_item({"PK": projection["PK"], "SK": projection["SK"]}),
                         "UpdateExpression": (
                             "SET company_name = :company, job_title = :title, "
-                            "updated_at = :updated_at, #version = #version + :one"
+                            "updated_at = :updated_at, #version = #version + :one" + role_update
                         ),
                         "ConditionExpression": (
                             "attribute_exists(PK) AND owner_user_id = :owner "
@@ -698,17 +714,7 @@ class DynamoApplicationRepository:
                             "AND #version = :expected_interview_version"
                         ),
                         "ExpressionAttributeNames": {"#version": "version"},
-                        "ExpressionAttributeValues": serialize_item(
-                            {
-                                ":company": application.company_name,
-                                ":title": application.job_title,
-                                ":updated_at": format_timestamp(application.updated_at),
-                                ":one": 1,
-                                ":owner": application.owner_user_id,
-                                ":application_id": application.application_id,
-                                ":expected_interview_version": projection["version"],
-                            }
-                        ),
+                        "ExpressionAttributeValues": serialize_item(projection_values),
                     }
                 }
             )

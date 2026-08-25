@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
-from hireflux_backend.domain.enums import ApplicationStatus
+from hireflux_backend.domain.enums import ApplicationStatus, RoleFamily
 
 
 class ThemePreference(StrEnum):
@@ -46,6 +46,12 @@ class InterviewStatus(StrEnum):
     SCHEDULED = "SCHEDULED"
     COMPLETED = "COMPLETED"
     CANCELED = "CANCELED"
+
+
+@dataclass(frozen=True, slots=True)
+class CustomPreparationItem:
+    item_id: str
+    label: str
 
 
 INTERVIEW_STATUS_TRANSITIONS: dict[InterviewStatus, tuple[InterviewStatus, ...]] = {
@@ -110,6 +116,8 @@ class Interview:
     updated_at: datetime
     version: int
     expires_at: int | None = None
+    application_role_family: RoleFamily | None = None
+    custom_preparation_items: tuple[CustomPreparationItem, ...] = ()
 
 
 def allowed_interview_statuses(interview: Interview) -> tuple[InterviewStatus, ...]:

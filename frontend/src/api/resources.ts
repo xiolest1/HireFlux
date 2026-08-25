@@ -205,3 +205,32 @@ export function updateInterviewWorkspace(
     },
   );
 }
+
+export function createPreparationItem(
+  applicationId: string,
+  interviewId: string,
+  expectedVersion: number,
+  label: string,
+): Promise<Interview> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/interviews/${encodeURIComponent(interviewId)}/preparation-items`,
+    interviewSchema,
+    {
+      method: "POST",
+      json: { expected_version: expectedVersion, label },
+    },
+  );
+}
+
+export function deletePreparationItem(
+  applicationId: string,
+  interviewId: string,
+  itemId: string,
+  expectedVersion: number,
+): Promise<Interview> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/interviews/${encodeURIComponent(interviewId)}/preparation-items/${encodeURIComponent(itemId)}?expected_version=${expectedVersion}`,
+    interviewSchema,
+    { method: "DELETE" },
+  );
+}

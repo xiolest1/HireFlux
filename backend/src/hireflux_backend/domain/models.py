@@ -6,6 +6,7 @@ from hireflux_backend.domain.enums import (
     ApplicationSource,
     ApplicationStatus,
     DemoWorkspaceState,
+    RoleFamily,
     UserRole,
     WorkMode,
 )
@@ -60,6 +61,7 @@ class Application:
     first_offer_at: datetime | None = None
     first_acceptance_at: datetime | None = None
     expires_at: int | None = None
+    role_family: RoleFamily | None = None
 
 
 @dataclass(frozen=True, slots=True)

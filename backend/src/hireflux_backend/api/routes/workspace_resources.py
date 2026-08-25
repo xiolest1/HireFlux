@@ -20,12 +20,14 @@ from hireflux_backend.api.resource_schemas import (
     NotePreviewResponse,
     NoteResponse,
     NoteUpdateRequest,
+    PreparationItemCreateRequest,
     WorkspaceInterviewListResponse,
     WorkspaceInterviewResponse,
 )
 from hireflux_backend.application.resource_services import (
     CreateInterviewCommand,
     CreateNoteCommand,
+    CreatePreparationItemCommand,
     InterviewWorkspaceView,
     TransitionInterviewCommand,
     UpdateInterviewCommand,
@@ -239,6 +241,52 @@ def update_interview_workspace(
             debrief_next_step=request.debrief_next_step,
             debrief_complete=request.debrief_complete,
         ),
+    )
+    return InterviewResponse.from_domain(interview)
+
+
+@applications_router.post(
+    "/interviews/{interview_id}/preparation-items",
+    response_model=InterviewResponse,
+    status_code=http_status.HTTP_201_CREATED,
+)
+def create_preparation_item(
+    application_id: UUID,
+    interview_id: UUID,
+    request: PreparationItemCreateRequest,
+    identity: IdentityDependency,
+    service: WorkspaceResourceServiceDependency,
+) -> InterviewResponse:
+    interview = service.create_preparation_item(
+        identity,
+        str(application_id),
+        str(interview_id),
+        CreatePreparationItemCommand(
+            expected_version=request.expected_version,
+            label=request.label,
+        ),
+    )
+    return InterviewResponse.from_domain(interview)
+
+
+@applications_router.delete(
+    "/interviews/{interview_id}/preparation-items/{item_id}",
+    response_model=InterviewResponse,
+)
+def delete_preparation_item(
+    application_id: UUID,
+    interview_id: UUID,
+    item_id: UUID,
+    identity: IdentityDependency,
+    service: WorkspaceResourceServiceDependency,
+    expected_version: Annotated[int, Query(ge=1)],
+) -> InterviewResponse:
+    interview = service.delete_preparation_item(
+        identity,
+        str(application_id),
+        str(interview_id),
+        str(item_id),
+        expected_version=expected_version,
     )
     return InterviewResponse.from_domain(interview)
 

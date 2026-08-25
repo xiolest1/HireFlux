@@ -16,7 +16,7 @@ def _create_application(client: TestClient) -> dict[str, Any]:
         "/api/v1/applications",
         json={
             "company_name": "Browser QA Labs",
-            "job_title": "Cloud Readiness Engineer",
+            "job_title": "Cloud Engineer",
         },
     )
     assert response.status_code == 201
@@ -122,6 +122,102 @@ def test_notes_are_owned_versioned_and_append_activity(client: TestClient) -> No
 
     missing_application = client.get(f"/api/v1/applications/{uuid4()}/notes")
     assert missing_application.status_code == 404
+
+
+def test_role_family_projects_to_interview_guidance(client: TestClient) -> None:
+    application = _create_application(client)
+    path = f"/api/v1/applications/{application['application_id']}"
+    created = client.post(
+        f"{path}/interviews",
+        json={
+            "interview_type": "BEHAVIORAL",
+            "scheduled_at": "2030-01-01T12:00:00Z",
+            "duration_minutes": 45,
+        },
+    ).json()
+    assert created["guidance"]["role_context"]["source"] == "TITLE_INFERRED"
+    assert created["guidance"]["role_context"]["role_family"] == "SOFTWARE_IT"
+
+    updated_application = client.patch(
+        path,
+        json={
+            "expected_version": application["version"],
+            "role_family": "HOSPITALITY_FOOD_SERVICE",
+        },
+    )
+    assert updated_application.status_code == 200
+    assert updated_application.json()["role_family"] == "HOSPITALITY_FOOD_SERVICE"
+
+    projected = client.get(f"{path}/interviews").json()["items"][0]
+    assert projected["version"] == created["version"] + 1
+    assert projected["guidance"]["role_context"] == {
+        "role_family": "HOSPITALITY_FOOD_SERVICE",
+        "role_family_label": "Hospitality / Food Service",
+        "source": "USER_SELECTED",
+        "explanation": "Chosen by you for this application: Hospitality / Food Service.",
+    }
+    rendered = str(projected["guidance"]).casefold()
+    assert "guest" in rendered
+    assert "architecture" not in rendered
+
+
+def test_custom_preparation_items_are_owned_versioned_and_bounded(client: TestClient) -> None:
+    application = _create_application(client)
+    path = f"/api/v1/applications/{application['application_id']}"
+    interview = client.post(
+        f"{path}/interviews",
+        json={
+            "interview_type": "RECRUITER_CALL",
+            "scheduled_at": "2030-01-01T12:00:00Z",
+            "duration_minutes": 30,
+        },
+    ).json()
+    item_path = f"{path}/interviews/{interview['interview_id']}/preparation-items"
+
+    first = client.post(
+        item_path,
+        json={"expected_version": interview["version"], "label": "  Bring schedule notes  "},
+    )
+    assert first.status_code == 201
+    first_body = first.json()
+    custom = first_body["custom_preparation_items"][0]
+    assert custom["label"] == "Bring schedule notes"
+    assert custom["source"] == "CANDIDATE"
+    assert custom["removable"] is True
+
+    stale = client.post(
+        item_path,
+        json={"expected_version": interview["version"], "label": "Stale"},
+    )
+    assert stale.status_code == 409
+    second = client.post(
+        item_path,
+        json={"expected_version": first_body["version"], "label": "Review uniform"},
+    ).json()
+    assert len(second["custom_preparation_items"]) == 2
+    assert (
+        client.post(
+            item_path,
+            json={"expected_version": second["version"], "label": "Too many"},
+        ).status_code
+        == 422
+    )
+
+    deleted = client.delete(
+        f"{item_path}/{custom['item_id']}",
+        params={"expected_version": second["version"]},
+    )
+    assert deleted.status_code == 200
+    assert [item["label"] for item in deleted.json()["custom_preparation_items"]] == [
+        "Review uniform"
+    ]
+    assert (
+        client.delete(
+            f"{item_path}/{custom['item_id']}",
+            params={"expected_version": deleted.json()["version"]},
+        ).status_code
+        == 404
+    )
 
 
 def test_note_preview_is_recent_bounded_and_reports_total(client: TestClient) -> None:

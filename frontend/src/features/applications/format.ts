@@ -3,6 +3,7 @@ import type {
   ApplicationStatus,
   InterviewStatus,
   InterviewType,
+  RoleFamily,
   StageAgeBucket,
   WorkMode,
 } from "../../api/schemas";
@@ -41,6 +42,25 @@ const interviewTypeLabels: Record<InterviewType, string> = {
   OTHER: "Other interview",
 };
 
+const roleFamilyLabels: Record<RoleFamily, string> = {
+  GENERAL: "General",
+  SOFTWARE_IT: "Software / IT",
+  CUSTOMER_SERVICE: "Customer Service",
+  SALES: "Sales",
+  MARKETING_COMMUNICATIONS: "Marketing / Communications",
+  FINANCE_ACCOUNTING: "Finance / Accounting",
+  HUMAN_RESOURCES: "Human Resources",
+  ADMINISTRATIVE: "Administrative",
+  PROJECT_PROGRAM_MANAGEMENT: "Project / Program Management",
+  OPERATIONS_LOGISTICS: "Operations / Logistics",
+  MANUFACTURING_SKILLED_TRADES: "Manufacturing / Skilled Trades",
+  HOSPITALITY_FOOD_SERVICE: "Hospitality / Food Service",
+  HEALTHCARE: "Healthcare",
+  EDUCATION: "Education",
+  MANAGEMENT_LEADERSHIP: "Management / Leadership",
+  EXECUTIVE: "Executive",
+};
+
 export function formatStatus(status: ApplicationStatus): string {
   return statusLabels[status];
 }
@@ -59,6 +79,10 @@ export function formatStageAge(bucket: StageAgeBucket): string {
 
 export function formatInterviewType(type: InterviewType): string {
   return interviewTypeLabels[type];
+}
+
+export function formatRoleFamily(roleFamily: RoleFamily): string {
+  return roleFamilyLabels[roleFamily];
 }
 
 export function formatInterviewStatus(status: InterviewStatus): string {

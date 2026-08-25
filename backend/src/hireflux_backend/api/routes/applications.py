@@ -57,6 +57,7 @@ def create_application(
             source_detail=request.source_detail,
             salary_text=request.salary_text,
             description=request.description,
+            role_family=request.role_family,
         ),
     )
     return ApplicationResponse.from_domain(application)

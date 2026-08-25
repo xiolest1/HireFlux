@@ -2,6 +2,14 @@
 
 This log records the engineering work, decisions, problems, and validation completed for HireFlux. It is written so the project can be discussed clearly in portfolio reviews and technical interviews.
 
+## 2026-08-25 - Role-neutral layered Interview Preparation
+
+Replaced the interview-type-only preparation catalog that made every technical screen read like a software-engineering interview. The backend now combines a universal foundation, role-neutral interview-type guidance, and a conservative application role family. Explicit candidate choices win; unambiguous titles may supply a clearly labeled suggestion; uncertain titles fall back to universal guidance. Technical architecture, debugging, and tradeoff content now enters only through the Software / IT profile.
+
+The drawer presents transparent readiness, the next visible step, role-focus control, phase-grouped tasks, contextual prompts and tips, optional evidence-story structure, and balanced questions for evaluating the employer. Candidates can add two server-ID interview tasks and reorder up to eight saved questions. More tips and suggestions remain behind accessible disclosures, completed interviews remain debrief-first, and private preparation text is not copied into Analytics or activity summaries.
+
+Application role context projects to interview records through the existing transactional synchronization path. Legacy items safely default to automatic/universal behavior; custom tasks remain embedded in the interview, versioned, owner-isolated, and TTL-covered. No table migration, scan, index, AI dependency, or external integration was introduced. The deterministic demo now includes technical, service, hospitality, sales, marketing, operations, manufacturing, education, and executive examples while preserving its application count and analytical distributions.
+
 ## 2026-08-25 - Interview journey workspace redesign
 
 Rebuilt Interviews around the candidate's interview lifecycle instead of cards and summary counters. The page now uses a URL-backed chronological schedule and one selected workspace: desktop receives a schedule/detail composition, while tablet and phone keep the selected interview first and preserve a deliberate focus/scroll transition when another round is chosen. Each interview appears once in chronology, completed and canceled records move into Past interviews, and the selected workspace connects preparation, access details, application context, and all loaded rounds into a single journey.

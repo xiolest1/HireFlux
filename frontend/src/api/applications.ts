@@ -10,6 +10,7 @@ import {
   type ApplicationView,
   type StageAgeBucket,
   type FollowUpFilter,
+  type RoleFamily,
   type WorkMode,
   type Activity,
   userSchema,
@@ -29,13 +30,14 @@ export interface ApplicationFields {
   source_detail: string | null;
   salary_text: string | null;
   description: string | null;
+  role_family: RoleFamily | null;
 }
 
 export interface CreateApplicationRequest extends ApplicationFields {
   status: Extract<ApplicationStatus, "DRAFT" | "APPLIED">;
 }
 
-export interface UpdateApplicationRequest extends ApplicationFields {
+export interface UpdateApplicationRequest extends Partial<ApplicationFields> {
   expected_version: number;
 }
 
