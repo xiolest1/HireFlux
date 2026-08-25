@@ -17,12 +17,16 @@ from hireflux_backend.api.resource_schemas import (
     InterviewWorkspaceUpdateRequest,
     NoteCreateRequest,
     NoteListResponse,
+    NotePreviewResponse,
     NoteResponse,
     NoteUpdateRequest,
+    WorkspaceInterviewListResponse,
+    WorkspaceInterviewResponse,
 )
 from hireflux_backend.application.resource_services import (
     CreateInterviewCommand,
     CreateNoteCommand,
+    InterviewWorkspaceView,
     TransitionInterviewCommand,
     UpdateInterviewCommand,
     UpdateInterviewWorkspaceCommand,
@@ -33,6 +37,20 @@ applications_router = APIRouter(
     prefix="/api/v1/applications/{application_id}", tags=["application resources"]
 )
 interviews_router = APIRouter(prefix="/api/v1/interviews", tags=["interviews"])
+
+
+@applications_router.get("/notes/preview", response_model=NotePreviewResponse)
+def preview_notes(
+    application_id: UUID,
+    identity: IdentityDependency,
+    service: WorkspaceResourceServiceDependency,
+    limit: Annotated[int, Query(ge=1, le=5)] = 2,
+) -> NotePreviewResponse:
+    preview = service.preview_notes(identity, str(application_id), limit=limit)
+    return NotePreviewResponse(
+        items=[NoteResponse.from_domain(note) for note in preview.items],
+        total_count=preview.total_count,
+    )
 
 
 @applications_router.get("/notes", response_model=NoteListResponse)
@@ -225,15 +243,26 @@ def update_interview_workspace(
     return InterviewResponse.from_domain(interview)
 
 
-@interviews_router.get("", response_model=InterviewListResponse)
+@interviews_router.get("", response_model=WorkspaceInterviewListResponse)
 def list_workspace_interviews(
     identity: IdentityDependency,
     service: WorkspaceResourceServiceDependency,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     cursor: str | None = None,
-) -> InterviewListResponse:
-    page = service.list_owner_interviews(identity, limit=limit, cursor=cursor)
-    return InterviewListResponse(
-        items=[InterviewResponse.from_domain(interview) for interview in page.items],
+    view: Annotated[InterviewWorkspaceView, Query()] = "UPCOMING",
+) -> WorkspaceInterviewListResponse:
+    page = service.list_owner_interviews(identity, view=view, limit=limit, cursor=cursor)
+    return WorkspaceInterviewListResponse(
+        items=[
+            WorkspaceInterviewResponse.from_domain_with_context(
+                item.interview,
+                application_status=item.context.application_status,
+                follow_up_date=item.context.follow_up_date,
+                follow_up_state=item.context.follow_up_state,
+                workflow_state=item.context.workflow_state,
+                next_action=item.context.next_action,
+            )
+            for item in page.items
+        ],
         next_cursor=page.next_cursor,
     )

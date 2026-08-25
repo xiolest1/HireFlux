@@ -8,10 +8,12 @@ import {
 } from "@tanstack/react-query";
 import {
   createApplication,
+  completeFollowUp,
   getApplication,
   getMe,
   listApplicationActivity,
   listApplications,
+  rescheduleFollowUp,
   transitionApplication,
   updateApplication,
   type CreateApplicationRequest,
@@ -29,14 +31,23 @@ export const applicationKeys = {
   details: () => [...applicationKeys.all, "detail"] as const,
   detail: (applicationId: string) =>
     [...applicationKeys.details(), applicationId] as const,
-  activity: (applicationId: string) =>
-    [...applicationKeys.detail(applicationId), "activity"] as const,
+  activity: (applicationId: string, order: "asc" | "desc" = "asc", limit = 25) =>
+    [...applicationKeys.detail(applicationId), "activity", { order, limit }] as const,
 };
 
 function invalidateWorkspaceInsights(queryClient: QueryClient) {
   void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   void queryClient.invalidateQueries({ queryKey: ["analytics"] });
   void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
+}
+
+function updateOpportunityCaches(queryClient: QueryClient, applicationId: string) {
+  void queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+  void queryClient.invalidateQueries({
+    queryKey: [...applicationKeys.detail(applicationId), "activity"],
+  });
+  void queryClient.invalidateQueries({ queryKey: ["interviews"] });
+  invalidateWorkspaceInsights(queryClient);
 }
 
 export function useMe({ enabled = true }: { enabled?: boolean } = {}) {
@@ -70,10 +81,14 @@ export function useApplication(applicationId: string) {
   });
 }
 
-export function useApplicationActivity(applicationId: string) {
+export function useApplicationActivity(
+  applicationId: string,
+  { order = "asc", limit = 25 }: { order?: "asc" | "desc"; limit?: number } = {},
+) {
   return useInfiniteQuery({
-    queryKey: applicationKeys.activity(applicationId),
-    queryFn: ({ signal, pageParam }) => listApplicationActivity(applicationId, pageParam, signal),
+    queryKey: applicationKeys.activity(applicationId, order, limit),
+    queryFn: ({ signal, pageParam }) =>
+      listApplicationActivity(applicationId, pageParam, signal, limit, order),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
     enabled: Boolean(applicationId),
@@ -113,7 +128,7 @@ export function useUpdateApplication() {
       );
       void queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
       void queryClient.invalidateQueries({
-        queryKey: applicationKeys.activity(application.application_id),
+        queryKey: [...applicationKeys.detail(application.application_id), "activity"],
       });
       void queryClient.invalidateQueries({
         queryKey: ["applications", application.application_id, "interviews"],
@@ -141,9 +156,39 @@ export function useTransitionApplication() {
       );
       void queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
       void queryClient.invalidateQueries({
-        queryKey: applicationKeys.activity(application.application_id),
+        queryKey: [...applicationKeys.detail(application.application_id), "activity"],
       });
+      void queryClient.invalidateQueries({ queryKey: ["interviews"] });
       invalidateWorkspaceInsights(queryClient);
+    },
+  });
+}
+
+export function useCompleteApplicationFollowUp() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ applicationId, expectedVersion }: {
+      applicationId: string;
+      expectedVersion: number;
+    }) => completeFollowUp(applicationId, expectedVersion),
+    onSuccess: (application) => {
+      queryClient.setQueryData(applicationKeys.detail(application.application_id), application);
+      updateOpportunityCaches(queryClient, application.application_id);
+    },
+  });
+}
+
+export function useRescheduleApplicationFollowUp() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ applicationId, expectedVersion, followUpDate }: {
+      applicationId: string;
+      expectedVersion: number;
+      followUpDate: string;
+    }) => rescheduleFollowUp(applicationId, expectedVersion, followUpDate),
+    onSuccess: (application) => {
+      queryClient.setQueryData(applicationKeys.detail(application.application_id), application);
+      updateOpportunityCaches(queryClient, application.application_id);
     },
   });
 }

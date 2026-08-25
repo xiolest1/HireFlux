@@ -3,7 +3,9 @@ import { apiDownload, apiRequest } from "./client";
 import {
   interviewListResponseSchema,
   interviewSchema,
+  workspaceInterviewListResponseSchema,
   noteListResponseSchema,
+  notePreviewResponseSchema,
   noteSchema,
   settingsSchema,
   workspaceExportSchema,
@@ -68,6 +70,18 @@ export function listNotes(
   );
 }
 
+export function getNotePreview(
+  applicationId: string,
+  limit = 2,
+  signal?: AbortSignal,
+) {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/notes/preview?limit=${limit}`,
+    notePreviewResponseSchema,
+    { signal },
+  );
+}
+
 export function createNote(applicationId: string, content: string): Promise<Note> {
   return apiRequest(
     `/api/v1/applications/${encodeURIComponent(applicationId)}/notes`,
@@ -121,6 +135,20 @@ export function listUpcomingInterviews(cursor: string | null, signal?: AbortSign
   return apiRequest(`/api/v1/interviews?${search.toString()}`, interviewListResponseSchema, {
     signal,
   });
+}
+
+export function listWorkspaceInterviews(
+  view: "UPCOMING" | "ALL",
+  cursor: string | null,
+  signal?: AbortSignal,
+) {
+  const search = new URLSearchParams({ limit: "20", view });
+  if (cursor) search.set("cursor", cursor);
+  return apiRequest(
+    `/api/v1/interviews?${search.toString()}`,
+    workspaceInterviewListResponseSchema,
+    { signal },
+  );
 }
 
 export function createInterview(applicationId: string, fields: InterviewFields): Promise<Interview> {

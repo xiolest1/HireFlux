@@ -19,8 +19,11 @@ export function ActivityTimeline({
   applicationId: string;
   timeZone: string;
 }) {
-  const activityQuery = useApplicationActivity(applicationId);
+  const [expanded, setExpanded] = useState(false);
+  const disclosureId = useId();
+  const activityQuery = useApplicationActivity(applicationId, { order: "desc", limit: 8 });
   const activities = activityQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const visibleActivities = expanded ? activities : activities.slice(0, 3);
 
   if (activityQuery.isPending) {
     return <ResourcePanelSkeleton label="Loading activity…" />;
@@ -48,8 +51,8 @@ export function ActivityTimeline({
 
   return (
     <div>
-      <ol className="relative ml-2 border-l border-line pl-6">
-        {activities.map((activity) => (
+      <ol id={disclosureId} className="relative ml-2 border-l border-line pl-6">
+        {visibleActivities.map((activity) => (
         <li key={activity.activity_id} className="relative pb-6 last:pb-0">
           <span
             aria-hidden="true"
@@ -66,6 +69,18 @@ export function ActivityTimeline({
         </li>
         ))}
       </ol>
+      {activities.length > 3 ? (
+        <Button
+          type="button"
+          variant="secondary"
+          className="mt-4"
+          aria-expanded={expanded}
+          aria-controls={disclosureId}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {expanded ? "Show less activity" : `Show ${activities.length - 3} more events`}
+        </Button>
+      ) : null}
       {activityQuery.hasNextPage ? (
         <div className="mt-5 flex justify-center">
           <Button
@@ -74,10 +89,11 @@ export function ActivityTimeline({
             disabled={activityQuery.isFetchingNextPage}
             onClick={() => void activityQuery.fetchNextPage()}
           >
-            {activityQuery.isFetchingNextPage ? "Loading more…" : "Load more activity"}
+            {activityQuery.isFetchingNextPage ? "Loading older…" : "Load older activity"}
           </Button>
         </div>
       ) : null}
     </div>
   );
 }
+import { useId, useState } from "react";

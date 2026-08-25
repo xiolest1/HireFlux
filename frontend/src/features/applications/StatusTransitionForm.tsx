@@ -12,16 +12,24 @@ interface StatusTransitionFormProps {
   application: Application;
   onReload: () => void;
   timeZone?: string;
+  initialStatus?: ApplicationStatus | null;
+  onSuccess?: () => void;
+  embedded?: boolean;
 }
 
 export function StatusTransitionForm({
   application,
   onReload,
   timeZone = "UTC",
+  initialStatus = null,
+  onSuccess,
+  embedded = false,
 }: StatusTransitionFormProps) {
   const transitionMutation = useTransitionApplication();
   const { showToast } = useToast();
-  const [targetStatus, setTargetStatus] = useState<ApplicationStatus | "">("");
+  const [targetStatus, setTargetStatus] = useState<ApplicationStatus | "">(
+    initialStatus && application.allowed_transitions.includes(initialStatus) ? initialStatus : "",
+  );
   const [appliedDate, setAppliedDate] = useState(application.applied_date ?? "");
   const [validationError, setValidationError] = useState<string | null>(null);
   const appliedDateMaximum = currentDateInTimeZone(timeZone);
@@ -75,6 +83,7 @@ export function StatusTransitionForm({
       });
       setTargetStatus("");
       updateSearchTour("status");
+      onSuccess?.();
     } catch {
       return;
     }
@@ -92,7 +101,7 @@ export function StatusTransitionForm({
   }
 
   return (
-    <section className="rounded-2xl border border-line bg-surface p-5 shadow-panel">
+    <section className={embedded ? "" : "rounded-2xl border border-line bg-surface p-5 shadow-panel"}>
       <div className="mb-4 flex items-center justify-between gap-3 border-b border-line pb-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Current stage</p>

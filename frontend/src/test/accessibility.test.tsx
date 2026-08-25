@@ -141,7 +141,7 @@ describe("overlay accessibility", () => {
     await expectNoAxeViolations();
   });
 
-  it("keeps the responsive status sheet free of automated violations", async () => {
+  it("keeps the contextual transition drawer free of automated violations", async () => {
     const application = makeApplication();
     server.use(
       http.get(`${API_ORIGIN}/api/v1/applications/${application.application_id}`, () =>
@@ -150,8 +150,9 @@ describe("overlay accessibility", () => {
     );
     const { user } = renderApp(`/applications/${application.application_id}`);
     await screen.findByRole("heading", { name: application.job_title, level: 1 });
-    await user.click(screen.getByRole("button", { name: "Change application status" }));
-    expect(await screen.findByRole("dialog", { name: "Manage status" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "More opportunity actions" }));
+    await user.click(screen.getByRole("menuitem", { name: "Move to Interview" }));
+    expect(await screen.findByRole("dialog", { name: "Move to Interview" })).toBeVisible();
     await expectNoAxeViolations();
   });
 

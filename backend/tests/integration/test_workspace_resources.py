@@ -124,6 +124,44 @@ def test_notes_are_owned_versioned_and_append_activity(client: TestClient) -> No
     assert missing_application.status_code == 404
 
 
+def test_note_preview_is_recent_bounded_and_reports_total(client: TestClient) -> None:
+    application = _create_application(client)
+    path = f"/api/v1/applications/{application['application_id']}"
+    first = client.post(f"{path}/notes", json={"content": "First"}).json()
+    second = client.post(f"{path}/notes", json={"content": "Second"}).json()
+    updated = client.patch(
+        f"{path}/notes/{first['note_id']}",
+        json={"expected_version": first["version"], "content": "First, updated"},
+    ).json()
+
+    preview = client.get(f"{path}/notes/preview", params={"limit": 1})
+    assert preview.status_code == 200
+    assert preview.json() == {"items": [updated], "total_count": 2}
+    assert second["note_id"] != updated["note_id"]
+    assert client.get(f"{path}/notes/preview", params={"limit": 0}).status_code == 422
+    assert client.get(f"{path}/notes/preview", params={"limit": 6}).status_code == 422
+    assert client.get(f"/api/v1/applications/{uuid4()}/notes/preview").status_code == 404
+
+
+def test_activity_descending_order_and_cursor_scope(client: TestClient) -> None:
+    application = _create_application(client)
+    path = f"/api/v1/applications/{application['application_id']}"
+    client.post(f"{path}/notes", json={"content": "Creates another event"})
+
+    ascending = client.get(f"{path}/activity", params={"limit": 1, "order": "asc"}).json()
+    descending = client.get(f"{path}/activity", params={"limit": 1, "order": "desc"}).json()
+    assert ascending["items"][0]["activity_type"] == "APPLICATION_CREATED"
+    assert descending["items"][0]["activity_type"] == "NOTE_CREATED"
+    assert ascending["next_cursor"]
+    assert descending["next_cursor"]
+    incompatible = client.get(
+        f"{path}/activity",
+        params={"limit": 1, "order": "desc", "cursor": ascending["next_cursor"]},
+    )
+    assert incompatible.status_code == 400
+    assert client.get(f"{path}/activity", params={"order": "sideways"}).status_code == 422
+
+
 def test_interviews_project_to_workspace_and_remain_as_history(
     client: TestClient, dynamodb_client: Any
 ) -> None:
@@ -235,6 +273,139 @@ def test_interviews_project_to_workspace_and_remain_as_history(
     ]
 
 
+def test_workspace_interview_view_includes_history_and_server_context(client: TestClient) -> None:
+    application = _create_application(client)
+    path = f"/api/v1/applications/{application['application_id']}"
+    now = datetime.now(UTC).replace(microsecond=0)
+
+    future = client.post(
+        f"{path}/interviews",
+        json={
+            "interview_type": "TECHNICAL_SCREEN",
+            "scheduled_at": (now + timedelta(days=2)).isoformat(),
+            "meeting_url": "https://meet.example.com/future",
+        },
+    )
+    assert future.status_code == 201
+    imminent = client.post(
+        f"{path}/interviews",
+        json={
+            "interview_type": "RECRUITER_CALL",
+            "scheduled_at": (now + timedelta(hours=2)).isoformat(),
+            "meeting_url": "https://meet.example.com/imminent",
+        },
+    )
+    assert imminent.status_code == 201
+    past = client.post(
+        f"{path}/interviews",
+        json={
+            "interview_type": "BEHAVIORAL",
+            "scheduled_at": (now - timedelta(days=1)).isoformat(),
+        },
+    )
+    assert past.status_code == 201
+    completed = client.post(
+        f"{path}/interviews",
+        json={
+            "interview_type": "FINAL",
+            "scheduled_at": (now + timedelta(days=3)).isoformat(),
+        },
+    )
+    assert completed.status_code == 201
+    completed_path = f"{path}/interviews/{completed.json()['interview_id']}"
+    completed_status = client.post(
+        f"{completed_path}/status",
+        json={"status": "COMPLETED", "expected_version": 1},
+    )
+    assert completed_status.status_code == 200
+    canceled = client.post(
+        f"{path}/interviews",
+        json={
+            "interview_type": "ONSITE",
+            "scheduled_at": (now + timedelta(days=4)).isoformat(),
+        },
+    )
+    assert canceled.status_code == 201
+    canceled_path = f"{path}/interviews/{canceled.json()['interview_id']}"
+    canceled_status = client.post(
+        f"{canceled_path}/status",
+        json={"status": "CANCELED", "expected_version": 1},
+    )
+    assert canceled_status.status_code == 200
+
+    upcoming = client.get("/api/v1/interviews")
+    assert upcoming.status_code == 200
+    assert {item["interview_id"] for item in upcoming.json()["items"]} == {
+        imminent.json()["interview_id"],
+        future.json()["interview_id"],
+    }
+    upcoming_by_id = {item["interview_id"]: item for item in upcoming.json()["items"]}
+    assert upcoming_by_id[future.json()["interview_id"]]["context"] == {
+        "application_status": "DRAFT",
+        "follow_up_date": None,
+        "follow_up_state": "NONE",
+        "workflow_state": "PREPARE",
+        "next_action": "PREPARE",
+    }
+    assert upcoming_by_id[imminent.json()["interview_id"]]["context"] == {
+        "application_status": "DRAFT",
+        "follow_up_date": None,
+        "follow_up_state": "NONE",
+        "workflow_state": "IMMINENT",
+        "next_action": "JOIN_MEETING",
+    }
+
+    all_interviews = client.get("/api/v1/interviews", params={"view": "ALL"})
+    assert all_interviews.status_code == 200
+    all_items = all_interviews.json()["items"]
+    assert [item["scheduled_at"] for item in all_items] == sorted(
+        (item["scheduled_at"] for item in all_items),
+        reverse=True,
+    )
+    assert {item["interview_id"] for item in all_items} == {
+        future.json()["interview_id"],
+        imminent.json()["interview_id"],
+        past.json()["interview_id"],
+        completed.json()["interview_id"],
+        canceled.json()["interview_id"],
+    }
+    by_id = {item["interview_id"]: item for item in all_items}
+    assert by_id[past.json()["interview_id"]]["context"]["workflow_state"] == "MISSED"
+    assert by_id[past.json()["interview_id"]]["context"]["next_action"] == "MARK_COMPLETE"
+    assert by_id[completed.json()["interview_id"]]["context"]["workflow_state"] == "CAPTURE"
+    assert by_id[completed.json()["interview_id"]]["context"]["next_action"] == "CAPTURE_NOTES"
+    assert by_id[canceled.json()["interview_id"]]["context"]["workflow_state"] == "CANCELED"
+    assert by_id[canceled.json()["interview_id"]]["context"]["next_action"] == "OPEN_APPLICATION"
+
+    debrief = client.patch(
+        f"{completed_path}/workspace",
+        json={
+            "expected_version": 2,
+            "completed_checklist_items": [],
+            "preparation_notes": None,
+            "candidate_questions": [],
+            "debrief_went_well": "I explained the tradeoffs clearly.",
+            "debrief_improve": None,
+            "debrief_signals": None,
+            "debrief_next_step": "Send a concise follow-up.",
+            "debrief_complete": True,
+        },
+    )
+    assert debrief.status_code == 200
+    refreshed = client.get("/api/v1/interviews", params={"view": "ALL"})
+    refreshed_by_id = {item["interview_id"]: item for item in refreshed.json()["items"]}
+    assert (
+        refreshed_by_id[completed.json()["interview_id"]]["context"]["workflow_state"]
+        == "FOLLOW_UP"
+    )
+    assert (
+        refreshed_by_id[completed.json()["interview_id"]]["context"]["next_action"]
+        == "REVIEW_FOLLOW_UP"
+    )
+    invalid_view = client.get("/api/v1/interviews", params={"view": "INVALID"})
+    assert invalid_view.status_code == 422
+
+
 def test_global_interviews_continue_past_the_default_page(client: TestClient) -> None:
     application = _create_application(client)
     path = f"/api/v1/applications/{application['application_id']}"
@@ -269,6 +440,12 @@ def test_global_interviews_continue_past_the_default_page(client: TestClient) ->
     assert {
         item["interview_id"] for item in first_payload["items"] + second_payload["items"]
     } == created_ids
+
+    mismatched_view = client.get(
+        "/api/v1/interviews",
+        params={"view": "ALL", "cursor": first_payload["next_cursor"]},
+    )
+    assert mismatched_view.status_code == 400
 
 
 def test_application_rename_updates_all_interview_projections(client: TestClient) -> None:

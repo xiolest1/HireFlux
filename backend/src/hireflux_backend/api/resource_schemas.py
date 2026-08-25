@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, HttpUrl
 
 from hireflux_backend.api.schemas import RequestModel
+from hireflux_backend.domain.enums import ApplicationStatus
 from hireflux_backend.domain.interview_guidance import InterviewGuidance, guidance_for
 from hireflux_backend.domain.resources import (
     DashboardRange,
@@ -88,6 +89,11 @@ class NoteResponse(BaseModel):
 class NoteListResponse(BaseModel):
     items: list[NoteResponse]
     next_cursor: str | None
+
+
+class NotePreviewResponse(BaseModel):
+    items: list[NoteResponse]
+    total_count: int
 
 
 class InterviewCreateRequest(RequestModel):
@@ -229,4 +235,76 @@ class InterviewResponse(BaseModel):
 
 class InterviewListResponse(BaseModel):
     items: list[InterviewResponse]
+    next_cursor: str | None
+
+
+class InterviewWorkspaceContextResponse(BaseModel):
+    application_status: ApplicationStatus
+    follow_up_date: date | None
+    follow_up_state: Literal["NONE", "UPCOMING", "TODAY", "OVERDUE"]
+    workflow_state: Literal[
+        "PREPARE",
+        "UPCOMING",
+        "IMMINENT",
+        "MISSED",
+        "CAPTURE",
+        "FOLLOW_UP",
+        "HISTORY",
+        "CANCELED",
+    ]
+    next_action: Literal[
+        "PREPARE",
+        "JOIN_MEETING",
+        "MARK_COMPLETE",
+        "CAPTURE_NOTES",
+        "REVIEW_FOLLOW_UP",
+        "OPEN_APPLICATION",
+    ]
+
+
+class WorkspaceInterviewResponse(InterviewResponse):
+    context: InterviewWorkspaceContextResponse
+
+    @classmethod
+    def from_domain_with_context(
+        cls,
+        interview: Interview,
+        *,
+        application_status: ApplicationStatus,
+        follow_up_date: date | None,
+        follow_up_state: Literal["NONE", "UPCOMING", "TODAY", "OVERDUE"],
+        workflow_state: Literal[
+            "PREPARE",
+            "UPCOMING",
+            "IMMINENT",
+            "MISSED",
+            "CAPTURE",
+            "FOLLOW_UP",
+            "HISTORY",
+            "CANCELED",
+        ],
+        next_action: Literal[
+            "PREPARE",
+            "JOIN_MEETING",
+            "MARK_COMPLETE",
+            "CAPTURE_NOTES",
+            "REVIEW_FOLLOW_UP",
+            "OPEN_APPLICATION",
+        ],
+    ) -> "WorkspaceInterviewResponse":
+        base = InterviewResponse.from_domain(interview).model_dump()
+        return cls(
+            **base,
+            context=InterviewWorkspaceContextResponse(
+                application_status=application_status,
+                follow_up_date=follow_up_date,
+                follow_up_state=follow_up_state,
+                workflow_state=workflow_state,
+                next_action=next_action,
+            ),
+        )
+
+
+class WorkspaceInterviewListResponse(BaseModel):
+    items: list[WorkspaceInterviewResponse]
     next_cursor: str | None

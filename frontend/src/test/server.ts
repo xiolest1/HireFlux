@@ -23,6 +23,9 @@ export const server = setupServer(
   http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/activity`, () =>
     HttpResponse.json({ items: [], next_cursor: null }),
   ),
+  http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/notes/preview`, () =>
+    HttpResponse.json({ items: [], total_count: 0 }),
+  ),
   http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/notes`, () =>
     HttpResponse.json({ items: [], next_cursor: null }),
   ),

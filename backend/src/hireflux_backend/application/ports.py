@@ -109,7 +109,13 @@ class ApplicationRepository(Protocol):
     ) -> None: ...
 
     def list_activity(
-        self, owner_user_id: str, application_id: str, *, limit: int, cursor: str | None
+        self,
+        owner_user_id: str,
+        application_id: str,
+        *,
+        limit: int,
+        cursor: str | None,
+        order: str = "asc",
     ) -> ActivityPage: ...
 
 

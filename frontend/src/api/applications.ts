@@ -159,8 +159,10 @@ export async function listApplicationActivity(
   applicationId: string,
   cursor: string | null,
   signal?: AbortSignal,
+  limit = 25,
+  order: "asc" | "desc" = "asc",
 ): Promise<{ items: Activity[]; next_cursor: string | null }> {
-  const search = new URLSearchParams({ limit: "25" });
+  const search = new URLSearchParams({ limit: String(limit), order });
   if (cursor) search.set("cursor", cursor);
   return apiRequest(
     `/api/v1/applications/${encodeURIComponent(applicationId)}/activity?${search.toString()}`,

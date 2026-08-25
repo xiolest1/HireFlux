@@ -65,11 +65,12 @@ class InsightsService:
         )
         status_counts = self._repository.get_status_counts(identity.user_id)
         funnel_counts = self._repository.get_funnel_counts(identity.user_id)
-        upcoming = (
+        upcoming_items = (
             self._resource_service.list_owner_interviews(identity, limit=5)
             if self._resource_service is not None
             else ()
         )
+        upcoming = tuple(item.interview for item in upcoming_items)
         due_follow_ups = self._repository.list_follow_ups_due(
             identity.user_id, due_on_or_before=local_today, limit=100
         )

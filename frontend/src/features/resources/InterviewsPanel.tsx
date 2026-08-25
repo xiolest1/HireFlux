@@ -9,6 +9,7 @@ import {
   Video,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import {
   INTERVIEW_TYPES,
   type Interview,
@@ -34,7 +35,6 @@ import {
   useTransitionInterview,
   useUpdateInterview,
 } from "./queries";
-import { InterviewWorkspaceDrawer } from "./InterviewWorkspaceDrawer";
 
 interface InterviewDraft {
   interview_type: InterviewType;
@@ -78,14 +78,19 @@ export function InterviewsPanel({
   applicationId,
   timeZone,
   focusInterviewId,
+  emptyMessage = "When a conversation is booked, keep the time and preparation details together here.",
+  canSchedule = true,
 }: {
   applicationId: string;
   timeZone: string;
   focusInterviewId?: string | null;
+  emptyMessage?: string;
+  canSchedule?: boolean;
 }) {
   const interviewsQuery = useApplicationInterviews(applicationId);
   const interviews = useMemo(
-    () => interviewsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    () => (interviewsQuery.data?.pages.flatMap((page) => page.items) ?? [])
+      .sort((left, right) => left.scheduled_at.localeCompare(right.scheduled_at)),
     [interviewsQuery.data],
   );
   const createMutation = useCreateInterview(applicationId);
@@ -96,13 +101,16 @@ export function InterviewsPanel({
   const [editing, setEditing] = useState<Interview | null>(null);
   const [draft, setDraft] = useState<InterviewDraft>(emptyDraft);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
-  const [workspaceInterview, setWorkspaceInterview] = useState<Interview | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    if (!focusInterviewId || workspaceInterview || interviews.length === 0) return;
+    if (!focusInterviewId || interviews.length === 0) return;
     const focused = interviews.find((interview) => interview.interview_id === focusInterviewId);
-    if (focused && focused.status !== "CANCELED") setWorkspaceInterview(focused);
-  }, [focusInterviewId, interviews, workspaceInterview]);
+    if (!focused) return;
+    window.setTimeout(() => {
+      document.getElementById(`interview-${focused.interview_id}`)?.scrollIntoView({ block: "center" });
+    }, 0);
+  }, [focusInterviewId, interviews]);
 
   useEffect(() => {
     if (!cancelingId) return;
@@ -191,7 +199,7 @@ export function InterviewsPanel({
             Schedule conversations and preserve completed or canceled history.
           </p>
         </div>
-        {!showForm ? (
+        {!showForm && canSchedule ? (
           <Button className="shrink-0 gap-2" onClick={startCreate}>
             <CalendarPlus aria-hidden="true" className="size-4" />
             Schedule interview
@@ -233,16 +241,17 @@ export function InterviewsPanel({
           </span>
           <p className="mt-3 font-semibold text-ink">No interviews recorded</p>
           <p className="mt-1 max-w-sm text-sm leading-6 text-ink-muted">
-            When a conversation is booked, keep the time and preparation details together here.
+            {emptyMessage}
           </p>
         </div>
       ) : null}
       {interviews.length ? (
-        <ol className="mt-5 space-y-3">
-          {interviews.map((interview) => (
+        <ol id="application-interview-rounds" className="mt-5 space-y-3">
+          {(showAll ? interviews : interviews.slice(0, 5)).map((interview) => (
             <li
               key={interview.interview_id}
-              className="rounded-2xl border border-line bg-surface-raised p-4"
+              id={`interview-${interview.interview_id}`}
+              className={`scroll-mt-28 rounded-2xl border bg-surface-raised p-4 ${focusInterviewId === interview.interview_id ? "border-violet ring-2 ring-violet/20" : "border-line"}`}
             >
               <div className="flex flex-col gap-3">
                 <div className="min-w-0">
@@ -293,14 +302,13 @@ export function InterviewsPanel({
 
                 {interview.status !== "CANCELED" ? (
                   <div className="flex shrink-0 flex-wrap gap-1">
-                    <button
-                      type="button"
+                    <Link
+                      to={`/interviews?interview=${interview.interview_id}`}
                       className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-violet-soft px-3 text-sm font-semibold text-violet hover:bg-violet/15"
-                      onClick={() => setWorkspaceInterview(interview)}
                     >
                       <Sparkles aria-hidden="true" className="size-3.5" />
                       {interview.status === "COMPLETED" ? "Debrief" : "Prepare"}
-                    </button>
+                    </Link>
                     {interview.status === "SCHEDULED" ? <>
                     <button
                       type="button"
@@ -313,7 +321,7 @@ export function InterviewsPanel({
                     {interview.allowed_statuses.includes("COMPLETED") ? (
                       <button
                         type="button"
-                        className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-success px-3 text-sm font-semibold text-white"
+                        className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-success/30 bg-success-soft px-3 text-sm font-semibold text-success"
                         disabled={transitionMutation.isPending}
                         onClick={async () => {
                           try {
@@ -396,6 +404,17 @@ export function InterviewsPanel({
           ))}
         </ol>
       ) : null}
+      {interviews.length > 5 ? (
+        <Button
+          variant="secondary"
+          className="mt-4"
+          aria-expanded={showAll}
+          aria-controls="application-interview-rounds"
+          onClick={() => setShowAll((current) => !current)}
+        >
+          {showAll ? "Show fewer rounds" : `Show ${interviews.length - 5} more rounds`}
+        </Button>
+      ) : null}
       {interviewsQuery.hasNextPage ? (
         <div className="mt-5 flex justify-center">
           <Button
@@ -417,13 +436,6 @@ export function InterviewsPanel({
           onDraftChange={setDraft}
           onClose={closeForm}
           onSubmit={submit}
-        />
-      ) : null}
-      {workspaceInterview ? (
-        <InterviewWorkspaceDrawer
-          applicationId={applicationId}
-          interview={workspaceInterview}
-          onClose={() => setWorkspaceInterview(null)}
         />
       ) : null}
     </section>

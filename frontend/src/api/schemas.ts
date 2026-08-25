@@ -212,6 +212,44 @@ export const interviewListResponseSchema = z.object({
   next_cursor: z.string().min(1).nullable(),
 });
 
+export const notePreviewResponseSchema = z.object({
+  items: z.array(noteSchema),
+  total_count: z.number().int().nonnegative(),
+});
+
+const interviewWorkspaceContextSchema = z.object({
+  application_status: applicationStatusSchema,
+  follow_up_date: dateOnlySchema.nullable(),
+  follow_up_state: z.enum(["NONE", "UPCOMING", "TODAY", "OVERDUE"]),
+  workflow_state: z.enum([
+    "PREPARE",
+    "UPCOMING",
+    "IMMINENT",
+    "MISSED",
+    "CAPTURE",
+    "FOLLOW_UP",
+    "HISTORY",
+    "CANCELED",
+  ]),
+  next_action: z.enum([
+    "PREPARE",
+    "JOIN_MEETING",
+    "MARK_COMPLETE",
+    "CAPTURE_NOTES",
+    "REVIEW_FOLLOW_UP",
+    "OPEN_APPLICATION",
+  ]),
+});
+
+export const workspaceInterviewSchema = interviewSchema.extend({
+  context: interviewWorkspaceContextSchema,
+});
+
+export const workspaceInterviewListResponseSchema = z.object({
+  items: z.array(workspaceInterviewSchema),
+  next_cursor: z.string().min(1).nullable(),
+});
+
 export const settingsSchema = z.object({
   time_zone: z.string().min(1),
   default_follow_up_days: z.number().int().min(1).max(30),
@@ -262,7 +300,9 @@ export type ApplicationListResponse = z.infer<
 export type Activity = z.infer<typeof activitySchema>;
 export type DemoSession = z.infer<typeof demoSessionSchema>;
 export type Note = z.infer<typeof noteSchema>;
+export type NotePreview = z.infer<typeof notePreviewResponseSchema>;
 export type Interview = z.infer<typeof interviewSchema>;
+export type WorkspaceInterview = z.infer<typeof workspaceInterviewSchema>;
 export type InterviewWorkspace = Pick<
   Interview,
   | "completed_checklist_items"

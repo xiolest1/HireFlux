@@ -13,20 +13,28 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDemoSession } from "../auth/demoSessionContext";
-import type { DashboardRange } from "../api/schemas";
-import type { Dashboard } from "../api/workspace";
+import {
+  APPLICATION_SOURCES,
+  APPLICATION_STATUSES,
+  type ApplicationSource,
+  type ApplicationStatus,
+  type DashboardRange,
+} from "../api/schemas";
+import type { Analytics, Dashboard } from "../api/workspace";
 import { buttonClassName } from "../components/ui/buttonStyles";
 import { ErrorPanel, SuccessBanner } from "../components/ui/Feedback";
 import { PanelSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { useToast } from "../components/ui/toastContext";
 import { StatusBadge } from "../components/ui/StatusBadge";
-import { formatDateOnly, formatStatus, formatTimestamp } from "../features/applications/format";
+import { formatDateOnly, formatTimestamp } from "../features/applications/format";
+import { percentagePointDelta } from "../features/analytics/format";
 import { useSettings } from "../features/resources/queries";
 import {
   readSearchTour,
   SEARCH_TOUR_EVENT,
   updateSearchTour,
   useCompleteFollowUp,
+  useAnalytics,
   useDashboard,
   useRescheduleFollowUp,
   type SearchTourState,
@@ -64,22 +72,21 @@ function workspaceMarker(accessToken: string | undefined): string | null {
   return `demo-${(hash >>> 0).toString(16).padStart(8, "0")}`;
 }
 
-function readActionCenterPreference(marker: string | null): boolean {
-  if (!marker || typeof window === "undefined") return false;
+function readActionCenterPreference(marker: string | null): boolean | null {
+  if (!marker || typeof window === "undefined") return null;
   try {
     const stored = window.sessionStorage.getItem(ACTION_CENTER_STORAGE_KEY);
-    if (!stored) return false;
+    if (!stored) return null;
     const parsed: unknown = JSON.parse(stored);
-    if (!parsed || typeof parsed !== "object") return false;
+    if (!parsed || typeof parsed !== "object") return null;
     const preference = parsed as Partial<ActionCenterPreference>;
     return (
       preference.version === 1 &&
       preference.workspace_marker === marker &&
-      typeof preference.collapsed === "boolean" &&
-      preference.collapsed
-    );
+      typeof preference.collapsed === "boolean"
+    ) ? preference.collapsed : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -105,6 +112,28 @@ function actionDueLabel(action: DashboardAction, timeZone: string) {
 
 function actionDueKey(action: DashboardAction) {
   return "due_date" in action ? action.due_date : action.due_at;
+}
+
+function analyticsHref(range: DashboardRange) {
+  return `/analytics?range=${range}`;
+}
+
+function insightActionHref(action: NonNullable<Analytics["insights"][number]["action"]>) {
+  if (action.kind === "ADD_APPLICATION") return "/applications/new";
+  const parameters = new URLSearchParams();
+  const view = action.parameters.view;
+  const source = action.parameters.source;
+  const status = action.parameters.status;
+  const followUp = action.parameters.follow_up;
+  if (view === "ALL" || view === "ACTIVE") parameters.set("view", view);
+  if (source && APPLICATION_SOURCES.includes(source as ApplicationSource)) {
+    parameters.set("source", source);
+  }
+  if (status && APPLICATION_STATUSES.includes(status as ApplicationStatus)) {
+    parameters.set("status", status);
+  }
+  if (followUp === "NEEDS_ATTENTION") parameters.set("follow_up", followUp);
+  return `/applications${parameters.size ? `?${parameters.toString()}` : ""}`;
 }
 
 function attentionGroup(action: DashboardAction): AttentionGroup {
@@ -136,6 +165,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { session } = useDemoSession();
   const [range, setRange] = useState<DashboardRange>("30d");
+  const [progressDetailsOpen, setProgressDetailsOpen] = useState(false);
   const rangeInitialized = useRef(false);
   const actionCenterWorkspaceMarker = workspaceMarker(session?.access_token);
   const [actionCenterCollapsed, setActionCenterCollapsed] = useState(() =>
@@ -156,6 +186,10 @@ export function DashboardPage() {
       : null;
   });
   const dashboardQuery = useDashboard(range);
+  const analyticsQuery = useAnalytics(
+    { range },
+    { enabled: progressDetailsOpen },
+  );
   const completeMutation = useCompleteFollowUp();
   const rescheduleMutation = useRescheduleFollowUp();
 
@@ -203,7 +237,6 @@ export function DashboardPage() {
 
   const dashboard = dashboardQuery.data;
   const timeZone = settingsQuery.data?.time_zone ?? "UTC";
-  const maxTrend = Math.max(1, ...dashboard.submission_trend.map((point) => point.count));
   const groupedActions = (["Overdue", "Today", "Upcoming"] as const).map((name) => ({
     name,
     items: dashboard.actions.filter((action) => attentionGroup(action) === name),
@@ -214,13 +247,42 @@ export function DashboardPage() {
     `${groupedActions[1].items.length} today`,
     `${groupedActions[2].items.length} upcoming`,
   ].join(" · ");
+  const actionCenterIsCollapsed = actionCenterCollapsed ?? dashboard.actions.length > ACTION_GROUP_PREVIEW_LIMIT;
+  const overdueCount = groupedActions[0].items.length;
+  const todayCount = groupedActions[1].items.length;
+  const nextInterview = dashboard.upcoming_interviews[0] ?? null;
+  const recentSubmissionCount = dashboard.submission_trend
+    .slice(-2)
+    .reduce((total, point) => total + point.count, 0);
+  const journeyState = dashboard.rates.submitted_count < 5
+    ? {
+        label: "Building your foundation",
+        summary: "Your search is still taking shape. A few well-tracked applications and clear follow-up dates will make the next steps easier to see.",
+      }
+    : dashboard.upcoming_interviews.length >= 2
+      ? {
+          label: "Interviews are shaping this chapter",
+          summary: "Your immediate focus is preparation and keeping post-interview follow-ups visible while the rest of the pipeline keeps moving.",
+        }
+      : overdueCount > 0
+        ? {
+            label: "A short follow-through will move things forward",
+            summary: "Your search has active opportunities, with a few overdue items worth clearing before they become harder to act on.",
+          }
+        : recentSubmissionCount === 0 && dashboard.summary.active_pursuits > 0
+          ? {
+              label: "Your pipeline is in a quieter stretch",
+              summary: "Existing opportunities are still active. This is a useful moment to review next steps without treating quiet activity as a negative outcome.",
+            }
+          : {
+              label: "Your search is actively moving",
+              summary: "You have current opportunities in motion. Keep the next conversation and the next follow-up easier to reach than the surrounding detail.",
+            };
 
   function toggleActionCenter() {
-    setActionCenterCollapsed((collapsed) => {
-      const next = !collapsed;
-      writeActionCenterPreference(actionCenterWorkspaceMarker, next);
-      return next;
-    });
+    const next = !actionCenterIsCollapsed;
+    writeActionCenterPreference(actionCenterWorkspaceMarker, next);
+    setActionCenterCollapsed(next);
   }
 
   function toggleActionGroup(group: AttentionGroup) {
@@ -261,77 +323,64 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">Workspace home</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Welcome back</h1>
-          <p className="mt-2 max-w-2xl text-base leading-7 text-slate-600">
-            Start with what needs attention, then keep the rest of your search moving.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="sr-only" htmlFor="dashboard-range">Summary range</label>
-          <select
-            id="dashboard-range"
-            value={range}
-            onChange={(event) => setRange(event.target.value as DashboardRange)}
-            className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800"
-          >
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-            <option value="all">All time</option>
-          </select>
-          <Link to="/applications/new" className={buttonClassName("primary")}>Add application</Link>
+    <div className="space-y-10">
+      <header className="overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-surface-raised via-surface-raised to-accent-soft shadow-panel">
+        <div className="p-5 sm:p-7 lg:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 max-w-3xl">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Your search right now</p>
+              <h1 className="mt-3 text-3xl font-bold tracking-tight text-ink sm:text-4xl">Welcome back</h1>
+              <p className="mt-2 text-xl font-bold text-ink">{journeyState.label}</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted sm:text-base sm:leading-7">{journeyState.summary}</p>
+            </div>
+            <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
+              <label className="sr-only" htmlFor="dashboard-range">Summary range</label>
+              <select id="dashboard-range" value={range} onChange={(event) => setRange(event.target.value as DashboardRange)} className="min-h-11 rounded-xl border border-line bg-surface-raised px-3 text-sm font-semibold text-ink">
+                <option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="all">All time</option>
+              </select>
+              {overdueCount > 0 ? <a href="#attention-title" className={buttonClassName("primary")}>Review what needs you</a> : nextInterview ? <Link to="/interviews" className={buttonClassName("primary")}>Prepare for interview</Link> : dashboard.rates.submitted_count < 5 ? <Link to="/applications/new" className={buttonClassName("primary")}>Add an application</Link> : <Link to="/analytics?section=pipeline" className={buttonClassName("primary")}>Review pipeline</Link>}
+            </div>
+          </div>
+          <section className="mt-7 border-t border-line pt-6" aria-labelledby="search-overview-title">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted">Where you are now</p><h2 id="search-overview-title" className="sr-only">How many jobs am I pursuing?</h2></div>
+              <p className="text-sm text-ink-muted"><span>Total tracked</span> <strong className="ml-1 text-ink">{dashboard.summary.total_tracked}</strong></p>
+            </div>
+            <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+              <div><dt className="text-sm font-semibold text-ink-muted">Active opportunities</dt><dd className="mt-1 text-3xl font-black text-ink">{dashboard.summary.active_pursuits}</dd><dd className="mt-1 text-xs text-ink-muted">Applied through offer</dd></div>
+              <div><dt className="text-sm font-semibold text-ink-muted">Interviews coming up</dt><dd className="mt-1 text-3xl font-black text-ink">{dashboard.upcoming_interviews.length}</dd><dd className="mt-1 text-xs text-ink-muted">Scheduled conversations</dd></div>
+              <div><dt className="text-sm font-semibold text-ink-muted">Needs attention</dt><dd className="mt-1 text-3xl font-black text-ink">{overdueCount + todayCount}</dd><dd className="mt-1 text-xs text-ink-muted">Overdue or due today</dd></div>
+            </dl>
+          </section>
         </div>
       </header>
 
-      {dashboardQuery.isFetching && !dashboardQuery.isPending ? (
-        <p className="text-xs font-semibold text-slate-500" role="status">Refreshing dashboard…</p>
-      ) : null}
+      {dashboardQuery.isFetching && !dashboardQuery.isPending ? <p className="text-xs font-semibold text-ink-muted" role="status">Refreshing your search story…</p> : null}
       {notice ? <SuccessBanner>{notice}</SuccessBanner> : null}
-      {completeMutation.error || rescheduleMutation.error ? (
-        <ErrorPanel compact title="Follow-up could not be updated" error={completeMutation.error ?? rescheduleMutation.error} />
-      ) : null}
-
+      {completeMutation.error || rescheduleMutation.error ? <ErrorPanel compact title="Follow-up could not be updated" error={completeMutation.error ?? rescheduleMutation.error} /> : null}
       {!tour.dismissed ? <SearchTour tour={tour} onDismiss={dismissTour} /> : null}
 
-      <section aria-labelledby="search-overview-title">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 id="search-overview-title" className="text-xl font-bold text-slate-950">How many jobs am I pursuing?</h2>
-            <p className="mt-1 text-sm text-slate-600">A compact view of your whole workspace.</p>
-          </div>
-          <Link to="/applications" className="text-sm font-semibold text-brand-700 hover:underline">View applications</Link>
+      <section aria-labelledby="recent-title">
+        <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Recent movement</p><h2 id="recent-title" className="mt-1 text-2xl font-bold text-ink">What changed recently</h2><p className="mt-1 text-sm text-ink-muted">The opportunities most recently touched in this workspace.</p></div><Link to="/applications" className="text-sm font-bold text-accent hover:underline">View all applications</Link></div>
+        {dashboard.recent_applications.length === 0 ? <p className="mt-4 rounded-2xl border border-line bg-surface-raised p-5 text-sm text-ink-muted">There is no recent application activity to catch up on yet.</p> : <ol className="mt-5 border-l-2 border-line pl-5 sm:pl-7">{dashboard.recent_applications.slice(0, 4).map((application) => <li key={application.application_id} className="relative pb-6 last:pb-0"><span aria-hidden="true" className="absolute -left-[1.72rem] top-1.5 size-3 rounded-full border-2 border-surface-raised bg-accent sm:-left-[2.22rem]" /><div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><Link to={`/applications/${application.application_id}`} className="font-bold text-ink hover:text-accent hover:underline">{application.job_title}</Link><p className="mt-0.5 text-sm text-ink-muted">{application.company_name} · updated {formatTimestamp(application.updated_at, timeZone)}</p></div><StatusBadge status={application.status} /></div></li>)}</ol>}
+      </section>
+
+      <section aria-labelledby="next-title">
+        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Coming next</p><h2 id="next-title" className="mt-1 text-2xl font-bold text-ink">What should I do next?</h2></div>
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+          <section className="rounded-3xl border border-line bg-surface-raised p-5 shadow-panel sm:p-6" aria-labelledby="interviews-title"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">Next conversation</p><h3 id="interviews-title" className="mt-1 text-xl font-bold text-ink">{nextInterview ? nextInterview.job_title ?? "Upcoming interview" : "No interview is currently scheduled"}</h3></div><CalendarClock aria-hidden="true" className="size-6 text-accent" /></div>{nextInterview ? <><time dateTime={nextInterview.scheduled_at} className="mt-5 block text-lg font-bold text-ink">{formatTimestamp(nextInterview.scheduled_at, timeZone)}</time><p className="mt-1 text-sm text-ink-muted">{nextInterview.company_name ?? "Application interview"}</p><div className="mt-5 flex flex-wrap gap-3"><Link to="/interviews" className={buttonClassName("primary")}>Prepare and review</Link><Link to={`/applications/${nextInterview.application_id}`} className={buttonClassName("secondary")}>Open application</Link></div></> : <><p className="mt-4 text-sm leading-6 text-ink-muted">When a conversation is scheduled, Home will bring the next one forward here.</p><Link to="/analytics?section=pipeline" className="mt-4 inline-flex min-h-11 items-center font-bold text-accent hover:underline">Review active pipeline<ArrowRight aria-hidden="true" className="ml-2 size-4" /></Link></>}</section>
+          <section className="rounded-3xl border border-line bg-surface-muted p-5 sm:p-6" aria-labelledby="continuity-title"><h3 id="continuity-title" className="text-lg font-bold text-ink">Keep the search moving</h3><p className="mt-2 text-sm leading-6 text-ink-muted">{overdueCount > 0 ? `${overdueCount} overdue ${overdueCount === 1 ? "item is" : "items are"} the clearest next step.` : todayCount > 0 ? `${todayCount} ${todayCount === 1 ? "item is" : "items are"} due today.` : "Nothing needs immediate attention. You can continue without creating urgency."}</p><div className="mt-5 flex flex-col gap-2"><Link to="/applications/new" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Add an application<ArrowRight aria-hidden="true" className="size-4" /></Link><Link to="/analytics?section=pipeline" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Review pipeline<ArrowRight aria-hidden="true" className="size-4" /></Link><Link to="/analytics" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Explore patterns<ArrowRight aria-hidden="true" className="size-4" /></Link></div></section>
         </div>
-        <ul className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-panel sm:grid sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            ["Total tracked", dashboard.summary.total_tracked, "All records", "/applications?view=ALL"],
-            ["Active pursuits", dashboard.summary.active_pursuits, "Applied through offer", "/applications?view=ACTIVE"],
-            ["Drafts", dashboard.summary.drafts, "Still being prepared", "/applications?view=ALL&status=DRAFT"],
-            ["Accepted", dashboard.summary.accepted, "Successful outcomes", "/applications?view=ALL&status=ACCEPTED"],
-          ].map(([label, value, hint, href]) => (
-            <li key={label} className="border-b border-slate-200 last:border-0 sm:border-r sm:[&:nth-child(2)]:border-r-0 lg:border-b-0 lg:[&:nth-child(2)]:border-r lg:last:border-r-0">
-              <Link to={String(href)} className="group grid min-h-28 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 p-5 hover:bg-slate-50">
-                <p className="self-end text-sm font-semibold text-slate-600">{label}</p>
-                <p className="self-start text-xs text-slate-500">{hint}</p>
-                <p className="row-span-2 row-start-1 flex items-center gap-2 text-3xl font-black tracking-tight text-slate-950">
-                  {value}<ArrowRight aria-hidden="true" className="size-4 text-slate-400 transition-transform group-hover:translate-x-1" />
-                </p>
-              </Link>
-            </li>
-          ))}
-        </ul>
       </section>
 
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel" aria-labelledby="attention-title">
         <div className="border-b border-line bg-gradient-to-r from-accent-soft via-surface-raised to-violet-soft p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">Action center</p>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">What needs you</p>
               <h2 id="attention-title" className="mt-2 text-2xl font-bold text-slate-950">What needs my attention today?</h2>
               <p className="mt-1 text-sm leading-6 text-slate-600">Prioritized follow-ups, interview preparation, and stalled opportunities.</p>
-              {actionCenterCollapsed && dashboard.actions.length > 0 ? (
+              {actionCenterIsCollapsed && dashboard.actions.length > 0 ? (
                 <p className="mt-3 text-sm font-semibold text-slate-700" aria-live="polite">{actionSummary}</p>
               ) : null}
             </div>
@@ -340,17 +389,17 @@ export function DashboardPage() {
               <button
                 type="button"
                 className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-accent-soft"
-                aria-expanded={!actionCenterCollapsed}
+                aria-expanded={!actionCenterIsCollapsed}
                 aria-controls="action-center-content"
-                aria-label={actionCenterCollapsed ? "Expand action center" : "Collapse action center"}
+                aria-label={actionCenterIsCollapsed ? "Expand action center" : "Collapse action center"}
                 onClick={toggleActionCenter}
               >
-                <ChevronDown aria-hidden="true" className={`size-5 transition-transform ${actionCenterCollapsed ? "" : "rotate-180"}`} />
+                <ChevronDown aria-hidden="true" className={`size-5 transition-transform ${actionCenterIsCollapsed ? "" : "rotate-180"}`} />
               </button>
             </div>
           </div>
         </div>
-        <div id="action-center-content" hidden={actionCenterCollapsed && dashboard.actions.length > 0}>
+        <div id="action-center-content" hidden={actionCenterIsCollapsed && dashboard.actions.length > 0}>
           {dashboard.actions.length === 0 ? (
             <div className="m-5 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950 sm:m-6">
               <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
@@ -432,62 +481,76 @@ export function DashboardPage() {
         </div>
       </section>
 
-      <section aria-labelledby="success-title">
-        <div className="flex items-end justify-between gap-4">
-          <div><h2 id="success-title" className="text-xl font-bold text-slate-950">How successful has my search been?</h2><p className="mt-1 text-sm text-slate-600">Historical milestones with the submitted denominator shown.</p></div>
-          <Link to="/analytics" className="text-sm font-semibold text-brand-700 hover:underline">Explore analytics</Link>
-        </div>
-        <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            ["Response rate", dashboard.rates.response_rate, dashboard.rates.response_count],
-            ["Interview rate", dashboard.rates.interview_rate, dashboard.rates.interview_count],
-            ["Offer rate", dashboard.rates.offer_rate, dashboard.rates.offer_count],
-            ["Acceptance rate", dashboard.rates.acceptance_rate, dashboard.rates.acceptance_count],
-          ].map(([label, rate, count]) => (
-            <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel">
-              <dt className="text-sm font-semibold text-slate-600">{label}</dt>
-              <dd className="mt-2 text-3xl font-black text-slate-950">{percent(Number(rate))}</dd>
-              <dd className="mt-2 text-xs text-slate-500">{count} of {dashboard.rates.submitted_count} submitted applications</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section aria-labelledby="next-title">
-        <h2 id="next-title" className="text-xl font-bold text-slate-950">What should I do next?</h2>
-        <p className="mt-1 text-sm text-slate-600">Prepare for scheduled conversations and review recent movement.</p>
-        <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-          <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="interviews-title">
-            <div className="flex justify-between gap-3"><h3 id="interviews-title" className="font-bold text-slate-950">Next interviews</h3><Link to="/interviews" className="text-sm font-semibold text-brand-700 hover:underline">View schedule</Link></div>
-            {dashboard.upcoming_interviews.length === 0 ? <p className="mt-4 text-sm leading-6 text-slate-600">No interviews are scheduled yet.</p> : (
-              <ol className="mt-4 space-y-3">{dashboard.upcoming_interviews.slice(0, 3).map((interview) => <li key={interview.interview_id} className="rounded-xl border border-slate-200 p-4"><time className="text-xs font-bold uppercase tracking-wide text-brand-700" dateTime={interview.scheduled_at}>{formatTimestamp(interview.scheduled_at, timeZone)}</time><Link to={`/applications/${interview.application_id}`} className="mt-1 block font-bold text-slate-950 hover:underline">{interview.job_title ?? "Interview"}</Link><p className="text-sm text-slate-600">{interview.company_name ?? "Application interview"}</p></li>)}</ol>
-            )}
-          </section>
-          <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-panel" aria-labelledby="recent-title">
-            <div className="flex justify-between gap-3"><h3 id="recent-title" className="font-bold text-slate-950">Recently updated</h3><Link to="/applications" className="text-sm font-semibold text-brand-700 hover:underline">View all</Link></div>
-            <ul className="mt-4 divide-y divide-slate-100">{dashboard.recent_applications.slice(0, 5).map((application) => <li key={application.application_id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"><div className="min-w-0 flex-1"><Link to={`/applications/${application.application_id}`} className="block truncate font-semibold text-slate-950 hover:underline">{application.job_title}</Link><p className="truncate text-sm text-slate-600">{application.company_name}</p></div><StatusBadge status={application.status} /></li>)}</ul>
-            <div className="mt-5 border-t border-slate-100 pt-4"><h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">Current status breakdown</h4><ul className="mt-3 flex flex-wrap gap-2">{dashboard.status_breakdown.filter((item) => item.count > 0).map((item) => <li key={item.status} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">{formatStatus(item.status)} · {item.count}</li>)}</ul></div>
-          </section>
-        </div>
-      </section>
-
-      <figure className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="trend-title">
-        <figcaption id="trend-title" className="text-lg font-bold text-slate-950">Submissions over eight weeks</figcaption>
-        <p className="mt-1 text-sm text-slate-600">Applications first submitted each week.</p>
-        {dashboard.submission_trend.length === 0 ? <p className="mt-6 text-sm text-slate-500">No submissions in this period.</p> : (
-          <div className="mt-6 flex h-52 items-end gap-2" role="img" aria-label="Weekly application submission chart">
-            {dashboard.submission_trend.map((point) => (
-              <div key={point.week_start} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2" title={`Week of ${formatDateOnly(point.week_start)}: ${point.count} submissions`}>
-                <span className="text-xs font-bold text-slate-600">{point.count}</span>
-                <span aria-hidden="true" className="w-full max-w-12 rounded-t bg-gradient-to-t from-brand-600 to-violet-500" style={{ height: `${Math.max(4, (point.count / maxTrend) * 128)}px` }} />
-                <time dateTime={point.week_start} className="max-w-full truncate text-[0.68rem] font-semibold text-slate-500">{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${point.week_start}T00:00:00Z`))}</time>
-              </div>
-            ))}
-          </div>
-        )}
-      </figure>
+      <section aria-labelledby="success-title"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Your progress</p><h2 id="success-title" className="mt-1 text-2xl font-bold text-ink">How successful has my search been?</h2><p className="mt-1 text-sm text-ink-muted">A lightweight view of milestones reached, with deeper patterns kept in Analytics.</p></div><Link to={analyticsHref(range)} className="text-sm font-bold text-accent hover:underline">Explore analytics</Link></div><ol className="mt-6 grid gap-2 sm:grid-cols-4">{[["Submitted", dashboard.rates.submitted_count, `${dashboard.rates.submitted_count} tracked submissions`], ["Responses", dashboard.rates.response_count, `${dashboard.rates.response_count} of ${dashboard.rates.submitted_count} submitted applications`], ["Interviews", dashboard.rates.interview_count, `${percent(dashboard.rates.interview_rate)} reached interview`], ["Offers", dashboard.rates.offer_count, `${percent(dashboard.rates.offer_rate)} reached offer`]].map(([label, count, context], index) => <li key={label} className="relative rounded-2xl border border-line bg-surface-raised p-4"><div className="flex items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-black text-accent">{index + 1}</span><div><p className="text-sm font-bold text-ink">{label}</p><p className="text-2xl font-black text-ink">{count}</p></div></div><p className="mt-3 text-xs text-ink-muted">{context}</p></li>)}</ol><ProgressBrief range={range} open={progressDetailsOpen} onOpenChange={setProgressDetailsOpen} analytics={analyticsQuery.data} isPending={analyticsQuery.isPending} isError={analyticsQuery.isError} error={analyticsQuery.error} onRetry={() => void analyticsQuery.refetch()} /></section>
     </div>
   );
+}
+
+function ProgressBrief({
+  range,
+  open,
+  onOpenChange,
+  analytics,
+  isPending,
+  isError,
+  error,
+  onRetry,
+}: {
+  range: DashboardRange;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  analytics: Analytics | undefined;
+  isPending: boolean;
+  isError: boolean;
+  error: unknown;
+  onRetry: () => void;
+}) {
+  const comparison = analytics?.period_comparison;
+  const insight = analytics?.insights?.[0];
+  const coverage = analytics?.follow_up_coverage;
+  const maxTrend = Math.max(1, ...(analytics?.submission_trend?.map((point) => point.count) ?? []));
+
+  return (
+    <details
+      className="mt-4 rounded-2xl border border-line bg-surface-muted"
+      open={open}
+      onToggle={(event) => onOpenChange(event.currentTarget.open)}
+    >
+      <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-3 px-4 font-bold text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpenChange(!open); } }}>
+        View supporting progress details
+        <ChevronDown aria-hidden="true" className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
+      </summary>
+      <div className="border-t border-line p-4 sm:p-5">
+        {open ? <>
+        {isPending ? <ProgressBriefSkeleton /> : null}
+        {isError ? <ErrorPanel compact title="Progress details could not be loaded" error={error} onRetry={onRetry} /> : null}
+        {analytics ? <div className="space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Progress brief</p><h3 className="mt-1 text-lg font-bold text-ink">What the recent data is showing</h3></div>
+            <Link to={analyticsHref(range)} className="inline-flex min-h-10 items-center font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Open Analytics<ArrowRight aria-hidden="true" className="ml-1.5 size-4" /></Link>
+          </div>
+
+          {comparison?.available && comparison.current && comparison.deltas ? <section aria-labelledby="progress-comparison-title"><h4 id="progress-comparison-title" className="text-sm font-bold text-ink">Compared with the previous period</h4><p className="mt-1 text-xs leading-5 text-ink-muted"><time dateTime={comparison.previous_start ?? undefined}>{comparison.previous_start ? formatDateOnly(comparison.previous_start) : ""}</time>–<time dateTime={comparison.previous_end ?? undefined}>{comparison.previous_end ? formatDateOnly(comparison.previous_end) : ""}</time> is the adjacent comparison window.</p><dl className="mt-3 grid gap-3 sm:grid-cols-3"><ProgressMetric label="Submissions" value={String(comparison.current.submitted_count)} detail={`${comparison.deltas.submitted_count >= 0 ? "+" : ""}${comparison.deltas.submitted_count} from previous period`} /><ProgressMetric label="Response rate" value={percent(comparison.current.response_rate)} detail={`${percentagePointDelta(comparison.deltas.response_rate)} from previous period`} /><ProgressMetric label="Interview rate" value={percent(comparison.current.interview_rate)} detail={`${percentagePointDelta(comparison.deltas.interview_rate)} from previous period`} /></dl></section> : <section className="rounded-xl border border-line bg-surface-raised p-4" aria-labelledby="progress-comparison-title"><h4 id="progress-comparison-title" className="font-bold text-ink">Complete history, not a period comparison</h4><p className="mt-1 text-sm leading-6 text-ink-muted">All time shows your full tracked history. Choose a 30- or 90-day range to compare equal-length periods.</p></section>}
+
+          <figure aria-labelledby="progress-trend-title"><figcaption id="progress-trend-title" className="text-sm font-bold text-ink">Submission activity</figcaption><p className="mt-1 text-xs leading-5 text-ink-muted">Applications first submitted each week in the selected range.</p>{analytics.submission_trend.length === 0 ? <p className="mt-3 text-sm text-ink-muted">No submissions are available in this range yet.</p> : <div className="mt-4 flex h-28 items-end gap-1.5" role="img" aria-label="Weekly submission activity"><>{analytics.submission_trend.map((point) => <div key={point.week_start} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1" title={`Week of ${formatDateOnly(point.week_start)}: ${point.count} submissions`}><span className="text-[0.68rem] font-bold text-ink-muted">{point.count}</span><span aria-hidden="true" className="w-full max-w-10 rounded-t bg-gradient-to-t from-accent to-violet" style={{ height: `${Math.max(4, (point.count / maxTrend) * 64)}px` }} /><time dateTime={point.week_start} className="max-w-full truncate text-[0.62rem] font-semibold text-ink-muted">{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${point.week_start}T00:00:00Z`))}</time></div>)}</></div>}</figure>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <section className="rounded-xl border border-line bg-surface-raised p-4" aria-labelledby="progress-insight-title"><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Search Health</p>{insight ? <><h4 id="progress-insight-title" className="mt-2 font-bold text-ink">{insight.title}</h4><p className="mt-1 text-sm leading-6 text-ink-muted">{insight.description}</p><p className="mt-3 text-xs font-bold leading-5 text-ink">{insight.evidence_summary}</p>{insight.action ? <Link to={insightActionHref(insight.action)} aria-label={`Suggested action: ${insight.action.label}`} className="mt-3 inline-flex min-h-10 items-center font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">{insight.action.label}<ArrowRight aria-hidden="true" className="ml-1.5 size-4" /></Link> : null}</> : <><h4 id="progress-insight-title" className="mt-2 font-bold text-ink">Still building your picture</h4><p className="mt-1 text-sm leading-6 text-ink-muted">Track more applications and outcomes to surface a useful pattern here.</p></>}</section>
+            {coverage && coverage.active_count > 0 ? <section className="rounded-xl border border-line bg-surface-raised p-4" aria-labelledby="progress-coverage-title"><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Next-step coverage</p><h4 id="progress-coverage-title" className="mt-2 font-bold text-ink">{percent(coverage.coverage_rate)} of active opportunities have a next step</h4><p className="mt-1 text-sm leading-6 text-ink-muted">{coverage.scheduled_count} of {coverage.active_count} active applications have a follow-up date scheduled.</p>{coverage.overdue_count + coverage.due_today_count + coverage.missing_count > 0 ? <p className="mt-3 text-xs font-bold leading-5 text-ink">{coverage.overdue_count} overdue · {coverage.due_today_count} due today · {coverage.missing_count} missing a next step</p> : <p className="mt-3 text-xs font-bold leading-5 text-success">Every active opportunity has a next step scheduled.</p>}</section> : <section className="rounded-xl border border-line bg-surface-raised p-4" aria-labelledby="progress-coverage-title"><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Next-step coverage</p><h4 id="progress-coverage-title" className="mt-2 font-bold text-ink">No active opportunities to schedule yet</h4><p className="mt-1 text-sm leading-6 text-ink-muted">When applications become active, HireFlux will show how much of the pipeline has a planned next step.</p></section>}
+          </div>
+        </div> : null}
+        </> : null}
+      </div>
+    </details>
+  );
+}
+
+function ProgressMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return <div className="rounded-xl border border-line bg-surface-raised p-4"><dt className="text-xs font-bold uppercase tracking-wide text-ink-muted">{label}</dt><dd className="mt-2 text-2xl font-black text-ink">{value}</dd><dd className="mt-1 text-xs leading-5 text-ink-muted">{detail}</dd></div>;
+}
+
+function ProgressBriefSkeleton() {
+  return <div className="space-y-5" role="status" aria-label="Loading supporting progress details"><span className="sr-only">Loading supporting progress details…</span><Skeleton className="h-5 w-52" /><div className="grid gap-3 sm:grid-cols-3">{Array.from({ length: 3 }, (_, index) => <Skeleton key={index} rounded="lg" className="h-28 w-full" />)}</div><Skeleton className="h-28 w-full" /></div>;
 }
 
 function DashboardSkeleton() {
@@ -522,23 +585,15 @@ function SearchTour({ tour, onDismiss }: { tour: SearchTourState; onDismiss: () 
     ["analytics", "Explore search insights", "See the story behind the sample workspace.", "/analytics"],
   ];
   const completed = steps.filter(([key]) => tour[key]).length;
+  const nextStep = steps.find(([key]) => !tour[key]);
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-accent-soft via-surface-raised to-violet-soft p-5 shadow-panel sm:p-6" aria-labelledby="search-tour-title">
-      <Sparkles aria-hidden="true" className="absolute -right-6 -top-6 size-32 text-accent opacity-20" />
+    <section className="relative overflow-hidden rounded-2xl border border-line bg-surface-raised p-4 shadow-panel sm:p-5" aria-labelledby="search-tour-title">
+      <Sparkles aria-hidden="true" className="absolute -right-5 -top-5 size-24 text-accent opacity-10" />
       <div className="relative flex items-start justify-between gap-4">
-        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">Search tour · {completed}/3</p><h2 id="search-tour-title" className="mt-2 text-xl font-bold text-slate-950">Three ways to explore HireFlux</h2><p className="mt-1 text-sm text-slate-600">A short hands-on tour of your personal job-search workflow.</p></div>
-        <button type="button" className="flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-white" onClick={onDismiss} aria-label="Dismiss search tour"><X aria-hidden="true" className="size-4" /></button>
+        <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Search tour · {completed}/3</p><h2 id="search-tour-title" className="mt-1 text-lg font-bold text-ink">Three ways to explore HireFlux</h2><p className="mt-1 text-sm text-ink-muted">{nextStep ? `Next: ${nextStep[1]}.` : "The hands-on tour is complete."}</p></div>
+        <button type="button" className="flex size-10 shrink-0 items-center justify-center rounded-xl text-ink-muted hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onClick={onDismiss} aria-label="Dismiss search tour"><X aria-hidden="true" className="size-4" /></button>
       </div>
-      <ol className="relative mt-5 grid gap-3 lg:grid-cols-3">
-        {steps.map(([key, title, description, href]) => (
-          <li key={key} className="rounded-2xl border border-slate-200 bg-white/90 p-4">
-            <div className="flex gap-3">
-              {tour[key] ? <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><Check aria-hidden="true" className="size-4" /></span> : <Circle aria-hidden="true" className="size-7 shrink-0 text-slate-300" />}
-              <div className="min-w-0"><p className="font-bold text-slate-950">{title}</p><p className="mt-1 text-sm leading-5 text-slate-600">{description}</p>{!tour[key] ? <Link to={href} className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">Try it <ArrowRight aria-hidden="true" className="size-3.5" /></Link> : <p className="mt-3 text-sm font-semibold text-emerald-800">Completed</p>}</div>
-            </div>
-          </li>
-        ))}
-      </ol>
+      <details className="relative mt-3 border-t border-line pt-3"><summary className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm font-bold text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">View tour details<ChevronDown aria-hidden="true" className="size-4" /></summary><ol className="mt-3 grid gap-3 lg:grid-cols-3">{steps.map(([key, title, description, href]) => <li key={key} className="rounded-xl border border-line bg-surface-muted p-4"><div className="flex gap-3">{tour[key] ? <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><Check aria-hidden="true" className="size-4" /></span> : <Circle aria-hidden="true" className="size-7 shrink-0 text-ink-subtle" />}<div className="min-w-0"><p className="font-bold text-ink">{title}</p><p className="mt-1 text-sm leading-5 text-ink-muted">{description}</p>{!tour[key] ? <Link to={href} className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:underline">Try it<ArrowRight aria-hidden="true" className="size-3.5" /></Link> : <p className="mt-3 text-sm font-semibold text-emerald-800">Completed</p>}</div></div></li>)}</ol></details>
     </section>
   );
 }

@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Query
@@ -165,12 +165,14 @@ def list_application_activity(
     service: ApplicationServiceDependency,
     limit: Annotated[int, Query(ge=1, le=100)] = 25,
     cursor: str | None = None,
+    order: Literal["asc", "desc"] = "asc",
 ) -> ActivityListResponse:
     page = service.list_activity(
         identity,
         str(application_id),
         limit=limit,
         cursor=cursor,
+        order=order,
     )
     return ActivityListResponse(
         items=[ActivityResponse.from_domain(item) for item in page.items],

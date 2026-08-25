@@ -18,6 +18,12 @@ class ResourcePage[ResourceT]:
         return iter(self.items)
 
 
+@dataclass(frozen=True, slots=True)
+class NotePreview:
+    items: tuple[Note, ...]
+    total_count: int
+
+
 class WorkspaceResourceRepository(Protocol):
     def get_settings(self, owner_user_id: str) -> WorkspaceSettings | None: ...
 
@@ -32,6 +38,10 @@ class WorkspaceResourceRepository(Protocol):
     def list_notes(
         self, owner_user_id: str, application_id: str, *, limit: int, cursor: str | None
     ) -> ResourcePage[Note]: ...
+
+    def preview_notes(
+        self, owner_user_id: str, application_id: str, *, limit: int
+    ) -> NotePreview: ...
 
     def replace_note(self, note: Note, *, expected_version: int, activity: Activity) -> None: ...
 
@@ -59,7 +69,8 @@ class WorkspaceResourceRepository(Protocol):
         self,
         owner_user_id: str,
         *,
-        scheduled_after: datetime,
+        scheduled_after: datetime | None,
+        include_history: bool = False,
         limit: int,
         cursor: str | None = None,
     ) -> ResourcePage[Interview]: ...

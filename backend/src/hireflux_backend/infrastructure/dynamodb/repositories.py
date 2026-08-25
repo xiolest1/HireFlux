@@ -821,7 +821,9 @@ class DynamoApplicationRepository:
         *,
         limit: int,
         cursor: str | None,
+        order: str = "asc",
     ) -> ActivityPage:
+        cursor_scope = application_id if order == "asc" else f"{application_id}#desc"
         arguments: dict[str, Any] = {
             "TableName": self._table_name,
             "KeyConditionExpression": "PK = :partition AND begins_with(SK, :prefix)",
@@ -831,7 +833,7 @@ class DynamoApplicationRepository:
                     ":prefix": "ACTIVITY#",
                 }
             ),
-            "ScanIndexForward": True,
+            "ScanIndexForward": order == "asc",
             "Limit": limit + 1,
         }
         if cursor:
@@ -839,7 +841,7 @@ class DynamoApplicationRepository:
                 cursor,
                 kind="application-activity",
                 owner_user_id=owner_user_id,
-                scope=application_id,
+                scope=cursor_scope,
             )
             arguments["ExclusiveStartKey"] = serialize_item(
                 {
@@ -861,7 +863,7 @@ class DynamoApplicationRepository:
             next_cursor = self._cursor_codec.encode(
                 kind="application-activity",
                 owner_user_id=owner_user_id,
-                scope=application_id,
+                scope=cursor_scope,
                 timestamp=format_timestamp(last.created_at),
                 item_id=last.activity_id,
             )

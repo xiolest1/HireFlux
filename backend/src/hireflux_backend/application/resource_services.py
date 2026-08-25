@@ -1,13 +1,18 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
+from typing import Literal
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from hireflux_backend.application.errors import ConflictError, NotFoundError, ValidationError
 from hireflux_backend.application.ports import ApplicationRepository
-from hireflux_backend.application.resource_ports import ResourcePage, WorkspaceResourceRepository
-from hireflux_backend.domain.enums import ActivityType
+from hireflux_backend.application.resource_ports import (
+    NotePreview,
+    ResourcePage,
+    WorkspaceResourceRepository,
+)
+from hireflux_backend.domain.enums import ActivityType, ApplicationStatus
 from hireflux_backend.domain.interview_guidance import checklist_ids_for, guidance_for
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity
 from hireflux_backend.domain.resources import (
@@ -81,6 +86,45 @@ class UpdateInterviewWorkspaceCommand:
     debrief_signals: str | None
     debrief_next_step: str | None
     debrief_complete: bool = False
+
+
+InterviewWorkspaceView = Literal["UPCOMING", "ALL"]
+InterviewFollowUpState = Literal["NONE", "UPCOMING", "TODAY", "OVERDUE"]
+InterviewWorkflowState = Literal[
+    "PREPARE",
+    "UPCOMING",
+    "IMMINENT",
+    "MISSED",
+    "CAPTURE",
+    "FOLLOW_UP",
+    "HISTORY",
+    "CANCELED",
+]
+InterviewNextAction = Literal[
+    "PREPARE",
+    "JOIN_MEETING",
+    "MARK_COMPLETE",
+    "CAPTURE_NOTES",
+    "REVIEW_FOLLOW_UP",
+    "OPEN_APPLICATION",
+]
+
+_IMMINENT_INTERVIEW_WINDOW = timedelta(hours=4)
+
+
+@dataclass(frozen=True, slots=True)
+class InterviewWorkspaceContext:
+    application_status: ApplicationStatus
+    follow_up_date: date | None
+    follow_up_state: InterviewFollowUpState
+    workflow_state: InterviewWorkflowState
+    next_action: InterviewNextAction
+
+
+@dataclass(frozen=True, slots=True)
+class WorkspaceInterviewItem:
+    interview: Interview
+    context: InterviewWorkspaceContext
 
 
 class WorkspaceResourceService:
@@ -230,6 +274,12 @@ class WorkspaceResourceService:
             cursor=cursor,
         )
 
+    def preview_notes(
+        self, identity: CurrentIdentity, application_id: str, *, limit: int
+    ) -> NotePreview:
+        self._require_application(identity, application_id)
+        return self._resources.preview_notes(identity.user_id, application_id, limit=limit)
+
     def update_note(
         self,
         identity: CurrentIdentity,
@@ -360,14 +410,41 @@ class WorkspaceResourceService:
         )
 
     def list_owner_interviews(
-        self, identity: CurrentIdentity, *, limit: int, cursor: str | None = None
-    ) -> ResourcePage[Interview]:
-        return self._resources.list_owner_interviews(
+        self,
+        identity: CurrentIdentity,
+        *,
+        view: InterviewWorkspaceView = "UPCOMING",
+        limit: int,
+        cursor: str | None = None,
+    ) -> ResourcePage[WorkspaceInterviewItem]:
+        now = self._aware_utc_now()
+        settings = self.get_settings(identity)
+        local_today = now.astimezone(ZoneInfo(settings.time_zone)).date()
+        include_history = view == "ALL"
+        page = self._resources.list_owner_interviews(
             identity.user_id,
-            scheduled_after=self._aware_utc_now(),
+            scheduled_after=None if include_history else now,
+            include_history=include_history,
             limit=limit,
             cursor=cursor,
         )
+        items: list[WorkspaceInterviewItem] = []
+        for interview in page.items:
+            application = self._applications.get(identity.user_id, interview.application_id)
+            if application is None:
+                continue
+            items.append(
+                WorkspaceInterviewItem(
+                    interview=interview,
+                    context=_interview_context(
+                        interview,
+                        application,
+                        local_today=local_today,
+                        now=now,
+                    ),
+                )
+            )
+        return ResourcePage(items=tuple(items), next_cursor=page.next_cursor)
 
     def update_interview(
         self,
@@ -640,6 +717,66 @@ def _aware_utc(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         raise ValidationError("scheduled_at must include a UTC offset.")
     return value.astimezone(UTC)
+
+
+def _follow_up_state(value: date | None, *, local_today: date) -> InterviewFollowUpState:
+    if value is None:
+        return "NONE"
+    if value < local_today:
+        return "OVERDUE"
+    if value == local_today:
+        return "TODAY"
+    return "UPCOMING"
+
+
+def _interview_context(
+    interview: Interview,
+    application: Application,
+    *,
+    local_today: date,
+    now: datetime,
+) -> InterviewWorkspaceContext:
+    follow_up_state = _follow_up_state(application.follow_up_date, local_today=local_today)
+    readiness = guidance_for(interview).ready_for_interview
+    if interview.status is InterviewStatus.CANCELED:
+        workflow_state: InterviewWorkflowState = "CANCELED"
+        next_action: InterviewNextAction = "OPEN_APPLICATION"
+    elif interview.status is InterviewStatus.SCHEDULED and interview.scheduled_at < now:
+        workflow_state = "MISSED"
+        next_action = "MARK_COMPLETE"
+    elif (
+        interview.status is InterviewStatus.SCHEDULED
+        and interview.scheduled_at <= now + _IMMINENT_INTERVIEW_WINDOW
+    ):
+        workflow_state = "IMMINENT"
+        if interview.meeting_url:
+            next_action = "JOIN_MEETING"
+        elif not readiness:
+            next_action = "PREPARE"
+        else:
+            next_action = "OPEN_APPLICATION"
+    elif interview.status is InterviewStatus.SCHEDULED and not readiness:
+        workflow_state = "PREPARE"
+        next_action = "PREPARE"
+    elif interview.status is InterviewStatus.SCHEDULED:
+        workflow_state = "UPCOMING"
+        next_action = "JOIN_MEETING" if interview.meeting_url else "OPEN_APPLICATION"
+    elif interview.status is InterviewStatus.COMPLETED and interview.debrief_completed_at is None:
+        workflow_state = "CAPTURE"
+        next_action = "CAPTURE_NOTES"
+    elif follow_up_state in {"NONE", "TODAY", "OVERDUE"}:
+        workflow_state = "FOLLOW_UP"
+        next_action = "REVIEW_FOLLOW_UP"
+    else:
+        workflow_state = "HISTORY"
+        next_action = "OPEN_APPLICATION"
+    return InterviewWorkspaceContext(
+        application_status=application.status,
+        follow_up_date=application.follow_up_date,
+        follow_up_state=follow_up_state,
+        workflow_state=workflow_state,
+        next_action=next_action,
+    )
 
 
 def _require_content(value: str) -> str:

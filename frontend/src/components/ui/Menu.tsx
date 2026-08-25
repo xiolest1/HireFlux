@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { type KeyboardEvent as ReactKeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 export interface MenuItem {
@@ -22,9 +22,13 @@ export function Menu({ label, trigger, items, align = "end" }: MenuProps) {
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
+    window.setTimeout(() => {
+      menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus();
+    }, 0);
     function closeOnOutsideClick(event: MouseEvent) {
       if (event.target instanceof Node && !rootRef.current?.contains(event.target)) {
         setOpen(false);
@@ -43,6 +47,21 @@ export function Menu({ label, trigger, items, align = "end" }: MenuProps) {
     };
   }, [open]);
 
+  function handleMenuKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const items = Array.from(
+      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])') ?? [],
+    );
+    if (items.length === 0) return;
+    event.preventDefault();
+    const current = items.indexOf(document.activeElement as HTMLElement);
+    let next = 0;
+    if (event.key === "End") next = items.length - 1;
+    else if (event.key === "ArrowUp") next = current <= 0 ? items.length - 1 : current - 1;
+    else if (event.key === "ArrowDown") next = current >= items.length - 1 ? 0 : current + 1;
+    items[next]?.focus();
+  }
+
   return (
     <div ref={rootRef} className="relative inline-flex">
       <button
@@ -59,9 +78,12 @@ export function Menu({ label, trigger, items, align = "end" }: MenuProps) {
       </button>
       {open ? (
         <div
+          ref={menuRef}
           id={menuId}
           role="menu"
+          tabIndex={-1}
           aria-label={label}
+          onKeyDown={handleMenuKeyDown}
           className={`absolute top-full z-30 mt-2 min-w-52 rounded-xl border border-line bg-surface-raised p-1.5 shadow-float ${align === "end" ? "right-0" : "left-0"}`}
         >
           {items.map((item, index) => {

@@ -5,7 +5,9 @@ import {
   createNote,
   deleteNote,
   getSettings,
+  getNotePreview,
   listApplicationInterviews,
+  listWorkspaceInterviews,
   listNotes,
   listUpcomingInterviews,
   transitionInterview,
@@ -29,8 +31,12 @@ import { applicationKeys } from "../applications/queries";
 export const resourceKeys = {
   settings: ["settings"] as const,
   notes: (applicationId: string) => ["applications", applicationId, "notes"] as const,
-  applicationInterviews: (applicationId: string) => ["applications", applicationId, "interviews"] as const,
+  notePreview: (applicationId: string) =>
+    ["applications", applicationId, "notes", "preview"] as const,
+  applicationInterviews: (applicationId: string) =>
+    ["applications", applicationId, "interviews", "rounds"] as const,
   upcomingInterviews: ["interviews", "upcoming"] as const,
+  workspaceInterviews: ["interviews", "workspace"] as const,
 };
 
 export function useSettings({ enabled = true }: { enabled?: boolean } = {}) {
@@ -111,10 +117,20 @@ export function useNotes(applicationId: string) {
   });
 }
 
+export function useNotePreview(applicationId: string, enabled = true) {
+  return useQuery({
+    queryKey: resourceKeys.notePreview(applicationId),
+    queryFn: ({ signal }) => getNotePreview(applicationId, 2, signal),
+    enabled: Boolean(applicationId) && enabled,
+  });
+}
+
 function useResourceInvalidation(applicationId: string) {
   const client = useQueryClient();
   return () => {
-    void client.invalidateQueries({ queryKey: applicationKeys.activity(applicationId) });
+    void client.invalidateQueries({
+      queryKey: [...applicationKeys.detail(applicationId), "activity"],
+    });
     void client.invalidateQueries({ queryKey: ["dashboard"] });
   };
 }
@@ -126,6 +142,7 @@ export function useCreateNote(applicationId: string) {
     mutationFn: (content: string) => createNote(applicationId, content),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: resourceKeys.notes(applicationId) });
+      void client.invalidateQueries({ queryKey: resourceKeys.notePreview(applicationId) });
       invalidateRelated();
     },
   });
@@ -139,6 +156,7 @@ export function useUpdateNote(applicationId: string) {
       updateNote(applicationId, noteId, version, content),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: resourceKeys.notes(applicationId) });
+      void client.invalidateQueries({ queryKey: resourceKeys.notePreview(applicationId) });
       invalidateRelated();
     },
   });
@@ -152,6 +170,7 @@ export function useDeleteNote(applicationId: string) {
       deleteNote(applicationId, noteId, version),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: resourceKeys.notes(applicationId) });
+      void client.invalidateQueries({ queryKey: resourceKeys.notePreview(applicationId) });
       invalidateRelated();
     },
   });
@@ -177,14 +196,39 @@ export function useUpcomingInterviews() {
   });
 }
 
+export function useWorkspaceInterviews() {
+  return useInfiniteQuery({
+    queryKey: resourceKeys.workspaceInterviews,
+    queryFn: ({ signal, pageParam }) => listWorkspaceInterviews("ALL", pageParam, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+  });
+}
+
 function useInterviewInvalidation(applicationId: string) {
   const client = useQueryClient();
   return () => {
     void client.invalidateQueries({ queryKey: resourceKeys.applicationInterviews(applicationId) });
     void client.invalidateQueries({ queryKey: resourceKeys.upcomingInterviews });
-    void client.invalidateQueries({ queryKey: applicationKeys.activity(applicationId) });
+    void client.invalidateQueries({ queryKey: resourceKeys.workspaceInterviews });
+    void client.invalidateQueries({
+      queryKey: [...applicationKeys.detail(applicationId), "activity"],
+    });
     void client.invalidateQueries({ queryKey: ["dashboard"] });
   };
+}
+
+function invalidateInterviewQueries(
+  client: ReturnType<typeof useQueryClient>,
+  applicationId: string,
+) {
+  void client.invalidateQueries({ queryKey: resourceKeys.applicationInterviews(applicationId) });
+  void client.invalidateQueries({ queryKey: resourceKeys.upcomingInterviews });
+  void client.invalidateQueries({ queryKey: resourceKeys.workspaceInterviews });
+  void client.invalidateQueries({
+    queryKey: [...applicationKeys.detail(applicationId), "activity"],
+  });
+  void client.invalidateQueries({ queryKey: ["dashboard"] });
 }
 
 export function useCreateInterview(applicationId: string) {
@@ -210,6 +254,26 @@ export function useTransitionInterview(applicationId: string) {
     mutationFn: ({ interviewId, version, status }: { interviewId: string; version: number; status: Extract<InterviewStatus, "COMPLETED" | "CANCELED"> }) =>
       transitionInterview(applicationId, interviewId, version, status),
     onSuccess: invalidate,
+  });
+}
+
+export function useTransitionWorkspaceInterview() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      applicationId,
+      interviewId,
+      version,
+      status,
+    }: {
+      applicationId: string;
+      interviewId: string;
+      version: number;
+      status: Extract<InterviewStatus, "COMPLETED" | "CANCELED">;
+    }) => transitionInterview(applicationId, interviewId, version, status),
+    onSuccess: (_interview, variables) => {
+      invalidateInterviewQueries(client, variables.applicationId);
+    },
   });
 }
 

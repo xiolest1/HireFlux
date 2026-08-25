@@ -1,4 +1,4 @@
-import type { Activity, Application, Interview, Pipeline, Settings, User } from "../api/schemas";
+import type { Activity, Application, Interview, Pipeline, Settings, User, WorkspaceInterview } from "../api/schemas";
 import type { Dashboard } from "../api/workspace";
 
 export const testUser: User = {
@@ -141,6 +141,23 @@ export function makeInterview(overrides: Partial<Interview> = {}): Interview {
     version: 1,
     allowed_statuses: ["COMPLETED", "CANCELED"],
     ...overrides,
+  };
+}
+
+export function makeWorkspaceInterview(
+  overrides: Partial<WorkspaceInterview> = {},
+): WorkspaceInterview {
+  const { context, ...interviewOverrides } = overrides;
+  return {
+    ...makeInterview(interviewOverrides),
+    context: {
+      application_status: "APPLIED",
+      follow_up_date: null,
+      follow_up_state: "NONE",
+      workflow_state: "PREPARE",
+      next_action: "PREPARE",
+      ...context,
+    },
   };
 }
 

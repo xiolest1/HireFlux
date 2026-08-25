@@ -465,6 +465,7 @@ class ApplicationService:
         *,
         limit: int,
         cursor: str | None,
+        order: str = "asc",
     ) -> ActivityPage:
         self.get(identity, application_id)
         return self._repository.list_activity(
@@ -472,6 +473,7 @@ class ApplicationService:
             application_id,
             limit=limit,
             cursor=cursor,
+            order=order,
         )
 
     def list_all(self, identity: CurrentIdentity) -> tuple[Application, ...]:

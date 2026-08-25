@@ -5,7 +5,7 @@ from typing import Any
 from botocore.exceptions import ClientError
 
 from hireflux_backend.application.errors import ConflictError, InvalidCursorError, PersistenceError
-from hireflux_backend.application.resource_ports import ResourcePage
+from hireflux_backend.application.resource_ports import NotePreview, ResourcePage
 from hireflux_backend.domain.models import Activity
 from hireflux_backend.domain.resources import Interview, Note, WorkspaceSettings
 from hireflux_backend.infrastructure.dynamodb.cursor import CursorCodec
@@ -23,13 +23,14 @@ from hireflux_backend.infrastructure.dynamodb.resource_mapping import (
     note_from_item,
     note_key,
     note_to_item,
+    owner_interviews_key,
     owner_schedule_key,
     settings_from_item,
     settings_key,
     settings_to_item,
 )
 from hireflux_backend.infrastructure.dynamodb.resource_quota import resource_quota_update
-from hireflux_backend.infrastructure.dynamodb.table_schema import GSI3_NAME
+from hireflux_backend.infrastructure.dynamodb.table_schema import GSI1_NAME, GSI3_NAME
 
 
 class DynamoWorkspaceResourceRepository:
@@ -133,6 +134,36 @@ class DynamoWorkspaceResourceRepository:
             next_cursor=next_cursor,
         )
 
+    def preview_notes(self, owner_user_id: str, application_id: str, *, limit: int) -> NotePreview:
+        notes: list[Note] = []
+        exclusive_start_key: dict[str, Any] | None = None
+        while len(notes) < self._max_notes:
+            arguments: dict[str, Any] = {
+                "TableName": self._table_name,
+                "KeyConditionExpression": "PK = :partition AND begins_with(SK, :prefix)",
+                "ExpressionAttributeValues": serialize_item(
+                    {
+                        ":partition": application_partition(owner_user_id, application_id),
+                        ":prefix": "NOTE#",
+                    }
+                ),
+                "Limit": min(100, self._max_notes - len(notes)),
+            }
+            if exclusive_start_key is not None:
+                arguments["ExclusiveStartKey"] = exclusive_start_key
+            try:
+                response = self._client.query(**arguments)
+            except ClientError as error:
+                raise PersistenceError("Unable to preview application notes.") from error
+            notes.extend(
+                note_from_item(deserialize_item(item)) for item in response.get("Items", [])
+            )
+            exclusive_start_key = response.get("LastEvaluatedKey")
+            if not exclusive_start_key:
+                break
+        notes.sort(key=lambda note: (note.updated_at, note.note_id), reverse=True)
+        return NotePreview(items=tuple(notes[:limit]), total_count=len(notes))
+
     def replace_note(self, note: Note, *, expected_version: int, activity: Activity) -> None:
         self._replace_child(
             note_to_item(note),
@@ -230,21 +261,37 @@ class DynamoWorkspaceResourceRepository:
         self,
         owner_user_id: str,
         *,
-        scheduled_after: datetime,
+        scheduled_after: datetime | None,
+        include_history: bool = False,
         limit: int,
         cursor: str | None = None,
     ) -> ResourcePage[Interview]:
+        index_name = GSI1_NAME if include_history else GSI3_NAME
+        partition_name = "GSI1PK" if include_history else "GSI3PK"
+        sort_name = "GSI1SK" if include_history else "GSI3SK"
+        partition_value = (
+            owner_interviews_key(owner_user_id)
+            if include_history
+            else owner_schedule_key(owner_user_id)
+        )
+        key_condition = f"{partition_name} = :partition"
+        values: dict[str, object] = {":partition": partition_value}
+        if scheduled_after is not None:
+            key_condition += f" AND {sort_name} >= :lower_bound"
+            values[":lower_bound"] = (
+                format_timestamp(scheduled_after)
+                if include_history
+                else f"INTERVIEW#{format_timestamp(scheduled_after)}"
+            )
         arguments: dict[str, Any] = {
             "TableName": self._table_name,
-            "IndexName": GSI3_NAME,
-            "KeyConditionExpression": "GSI3PK = :partition AND GSI3SK >= :lower_bound",
-            "ExpressionAttributeValues": serialize_item(
-                {
-                    ":partition": owner_schedule_key(owner_user_id),
-                    ":lower_bound": f"INTERVIEW#{format_timestamp(scheduled_after)}",
-                }
-            ),
-            "ScanIndexForward": True,
+            "IndexName": index_name,
+            "KeyConditionExpression": key_condition,
+            "ExpressionAttributeValues": serialize_item(values),
+            # The workspace history view starts with the most recent interview so
+            # an account with a long history cannot hide its current journey on a
+            # later page. The upcoming-only view remains earliest-first.
+            "ScanIndexForward": not include_history,
             "Limit": limit + 1,
         }
         if cursor:
@@ -252,7 +299,7 @@ class DynamoWorkspaceResourceRepository:
                 cursor,
                 kind="workspace-interviews",
                 owner_user_id=owner_user_id,
-                scope="workspace",
+                scope="workspace#all" if include_history else "workspace#upcoming",
             )
             try:
                 application_id, interview_id = position.item_id.split(":", maxsplit=1)
@@ -262,8 +309,12 @@ class DynamoWorkspaceResourceRepository:
                 {
                     "PK": application_partition(owner_user_id, application_id),
                     "SK": f"INTERVIEW#{interview_id}",
-                    "GSI3PK": owner_schedule_key(owner_user_id),
-                    "GSI3SK": f"INTERVIEW#{position.timestamp}#{interview_id}",
+                    partition_name: partition_value,
+                    sort_name: (
+                        f"{position.timestamp}#{interview_id}"
+                        if include_history
+                        else f"INTERVIEW#{position.timestamp}#{interview_id}"
+                    ),
                 }
             )
         try:
@@ -278,7 +329,7 @@ class DynamoWorkspaceResourceRepository:
             next_cursor = self._cursor_codec.encode(
                 kind="workspace-interviews",
                 owner_user_id=owner_user_id,
-                scope="workspace",
+                scope="workspace#all" if include_history else "workspace#upcoming",
                 timestamp=format_timestamp(last.scheduled_at),
                 item_id=f"{last.application_id}:{last.interview_id}",
             )

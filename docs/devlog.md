@@ -2,6 +2,20 @@
 
 This log records the engineering work, decisions, problems, and validation completed for HireFlux. It is written so the project can be discussed clearly in portfolio reviews and technical interviews.
 
+## 2026-08-25 - Interview journey workspace redesign
+
+Rebuilt Interviews around the candidate's interview lifecycle instead of cards and summary counters. The page now uses a URL-backed chronological schedule and one selected workspace: desktop receives a schedule/detail composition, while tablet and phone keep the selected interview first and preserve a deliberate focus/scroll transition when another round is chosen. Each interview appears once in chronology, completed and canceled records move into Past interviews, and the selected workspace connects preparation, access details, application context, and all loaded rounds into a single journey.
+
+Extended the existing server-owned workflow context with `IMMINENT` for interviews starting within four hours and `CAPTURE` for completed interviews whose debrief has not been completed. Their recommended actions are `JOIN_MEETING`/preparation as supported by the record and `CAPTURE_NOTES`; no reminder delivery, calendar sync, score, probability, employer feedback, or new persistence field was invented. Completed interview drawers now put the private debrief first while retaining the original preparation record. The `ALL` owner-index query returns newest interviews first so long histories cannot push the current journey off the initial page; upcoming-only ordering remains earliest first and no scan or index was added.
+
+Focused integration and component coverage now exercises imminent, missed, capture, follow-up, terminal history, timezone rendering, deep-link selection, keyboard selection, pagination, safe cancellation, preparation drawers, and multiple-round timelines. Deterministic browser fixtures include the enriched global context for responsive visual and interaction QA, while the component fixture covers the two-round application journey directly.
+
+## 2026-08-24 - Interviews workflow workspace
+
+Interviews is now a dedicated candidate workflow surface rather than an upcoming-events-only list. The global interview API retains its backward-compatible `UPCOMING` view and adds an `ALL` view through the existing owner interview GSI, with view-bound cursors and server-owned application/workflow context. Context classifies preparation, upcoming, missed, follow-up, history, and canceled interviews using the saved workspace time zone and recommends the next action without moving policy into React.
+
+The page now foregrounds the next interview, separates preparation and follow-up work into a Needs attention section, groups future conversations by Today/Tomorrow/This week/Later, and keeps completed or canceled rounds in a compact application-grouped history disclosure. Existing schedule, edit, completion, cancellation, preparation, debrief, optimistic-concurrency, meeting-link, and application-focus flows remain canonical; the global page reuses those service endpoints and links to the application Interviews tab for full round history. Calendar export and external calendar/notification integrations remain deferred.
+
 ## 2026-08-24 - P2/P3 release-hardening pass
 
 Verified and remediated the six P2 and three P3 findings from the latest full-stack security audit. CSV exports now neutralize spreadsheet formula prefixes in user-controlled text while retaining standards-compliant CSV quoting. Hosted CSP generation accepts one exact HTTPS API origin, rejects wildcards, and keeps the committed policy fail closed. Application label edits transactionally synchronize every denormalized interview projection with optimistic interview-version checks, and the frontend invalidates nested and global interview caches.
