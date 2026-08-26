@@ -2,6 +2,7 @@ import {
   activityListResponseSchema,
   applicationListResponseSchema,
   applicationSchema,
+  duplicateCandidateListResponseSchema,
   type Application,
   type ApplicationListResponse,
   type ApplicationStatus,
@@ -13,6 +14,7 @@ import {
   type RoleFamily,
   type WorkMode,
   type Activity,
+  type DuplicateCandidate,
   userSchema,
   type User,
 } from "./schemas";
@@ -33,8 +35,26 @@ export interface ApplicationFields {
   role_family: RoleFamily | null;
 }
 
-export interface CreateApplicationRequest extends ApplicationFields {
-  status: Extract<ApplicationStatus, "DRAFT" | "APPLIED">;
+export interface CreateApplicationRequest {
+  company_name: string;
+  job_title: string;
+  status: Extract<ApplicationStatus, "DRAFT" | "APPLIED" | "INTERVIEW">;
+  applied_date: string | null;
+  job_url?: string | null;
+  location?: string | null;
+  work_mode?: WorkMode | null;
+  source?: ApplicationSource | null;
+  source_detail?: string | null;
+  salary_text?: string | null;
+  description?: string | null;
+}
+
+export interface DuplicateCandidateRequest {
+  company_name?: string;
+  job_title?: string;
+  job_url?: string;
+  location?: string;
+  requisition_id?: string;
 }
 
 export interface UpdateApplicationRequest extends Partial<ApplicationFields> {
@@ -133,6 +153,17 @@ export function createApplication(
     method: "POST",
     json: request,
   });
+}
+
+export function getDuplicateCandidates(
+  request: DuplicateCandidateRequest,
+  signal?: AbortSignal,
+): Promise<{ candidates: DuplicateCandidate[] }> {
+  return apiRequest(
+    "/api/v1/applications/duplicate-candidates",
+    duplicateCandidateListResponseSchema,
+    { method: "POST", json: request, signal },
+  );
 }
 
 export function updateApplication(

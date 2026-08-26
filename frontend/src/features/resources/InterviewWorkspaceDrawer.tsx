@@ -28,6 +28,7 @@ import { Drawer } from "../../components/ui/Drawer";
 import { ErrorPanel } from "../../components/ui/Feedback";
 import { useToast } from "../../components/ui/toastContext";
 import {
+  formatTimestamp,
   formatRoleFamily,
 } from "../applications/format";
 import {
@@ -70,16 +71,26 @@ const textAreaClassName =
 const focusClassName =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
+type DrawerMode = "PREPARE" | "CAPTURE" | "REVIEW" | "EDIT";
+
+function modeFor(interview: Interview): DrawerMode {
+  if (interview.status !== "COMPLETED") return "PREPARE";
+  return interview.debrief_completed_at ? "REVIEW" : "CAPTURE";
+}
+
 export function InterviewWorkspaceDrawer({
   applicationId,
   interview,
+  timeZone,
   onClose,
 }: {
   applicationId: string;
   interview: Interview;
+  timeZone: string;
   onClose: () => void;
 }) {
   const [currentInterview, setCurrentInterview] = useState(interview);
+  const [mode, setMode] = useState<DrawerMode>(() => modeFor(interview));
   const [draft, setDraft] = useState<WorkspaceDraft>(() => draftFrom(interview));
   const [roleChoice, setRoleChoice] = useState<RoleFamily | "AUTO">(
     interview.guidance.role_context.source === "USER_SELECTED"
@@ -91,6 +102,7 @@ export function InterviewWorkspaceDrawer({
   const [showMoreSuggestions, setShowMoreSuggestions] = useState(false);
   const questionRefs = useRef<Array<HTMLInputElement | null>>([]);
   const addQuestionRef = useRef<HTMLButtonElement>(null);
+  const editReflectionRef = useRef<HTMLButtonElement>(null);
   const applicationQuery = useApplication(applicationId);
   const roleMutation = useUpdateApplication();
   const workspaceMutation = useUpdateInterviewWorkspace(applicationId);
@@ -140,9 +152,9 @@ export function InterviewWorkspaceDrawer({
     createItemMutation.error ||
     deleteItemMutation.error;
 
-  async function save(debriefComplete: boolean) {
+  async function save(debriefComplete: boolean, returnToReview = false) {
     try {
-      await workspaceMutation.mutateAsync({
+      const updated = await workspaceMutation.mutateAsync({
         interviewId: currentInterview.interview_id,
         version: currentInterview.version,
         debriefComplete,
@@ -160,10 +172,23 @@ export function InterviewWorkspaceDrawer({
         debriefComplete ? "Interview debrief saved." : "Interview preparation saved.",
         { title: "Interview workspace updated", tone: "success" },
       );
-      onClose();
+      if (returnToReview) {
+        setCurrentInterview(updated);
+        setDraft(draftFrom(updated));
+        setMode("REVIEW");
+        window.setTimeout(() => editReflectionRef.current?.focus(), 0);
+      } else {
+        onClose();
+      }
     } catch {
       return;
     }
+  }
+
+  function cancelReflectionEdit() {
+    setDraft(draftFrom(currentInterview));
+    setMode("REVIEW");
+    window.setTimeout(() => editReflectionRef.current?.focus(), 0);
   }
 
   async function applyRoleFocus() {
@@ -287,19 +312,48 @@ export function InterviewWorkspaceDrawer({
     <Drawer
       open
       onClose={onClose}
-      title={currentInterview.status === "COMPLETED" ? "Interview debrief" : "Interview preparation"}
+      title={
+        mode === "PREPARE"
+          ? "Interview preparation"
+          : mode === "CAPTURE"
+            ? "Capture interview debrief"
+            : mode === "EDIT"
+              ? "Edit interview reflection"
+              : "Interview reflection"
+      }
       description={`${currentInterview.company_name} · ${currentInterview.job_title}`}
       size="xl"
       footer={
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
-          {currentInterview.status === "COMPLETED" ? (
+          {mode === "REVIEW" ? (
+            <Button
+              ref={editReflectionRef}
+              type="button"
+              onClick={() => setMode("EDIT")}
+            >
+              Edit reflection
+            </Button>
+          ) : mode === "EDIT" ? (
+            <>
+              <Button type="button" variant="secondary" onClick={cancelReflectionEdit}>
+                Cancel editing
+              </Button>
+              <Button
+                type="button"
+                disabled={!canCompleteDebrief || pending}
+                onClick={() => void save(true, true)}
+              >
+                {workspaceMutation.isPending ? "Saving…" : "Save reflection"}
+              </Button>
+            </>
+          ) : mode === "CAPTURE" ? (
             <>
               <Button type="button" variant="secondary" disabled={pending} onClick={() => void save(false)}>
                 Save draft
               </Button>
               <Button type="button" disabled={!canCompleteDebrief || pending} onClick={() => void save(true)}>
-                {currentInterview.debrief_completed_at ? "Save debrief" : "Complete debrief"}
+                Complete debrief
               </Button>
             </>
           ) : (
@@ -313,10 +367,14 @@ export function InterviewWorkspaceDrawer({
       <div className="space-y-7">
         {mutationError ? <ErrorPanel compact title="Workspace could not be saved" error={mutationError} /> : null}
 
-        {currentInterview.status === "COMPLETED" ? (
+        {mode === "REVIEW" ? (
+          <DebriefReview interview={currentInterview} timeZone={timeZone} />
+        ) : mode === "CAPTURE" || mode === "EDIT" ? (
           <DebriefSection draft={draft} setDraft={setDraft} />
         ) : null}
 
+        {currentInterview.status !== "COMPLETED" ? (
+          <>
         <section aria-labelledby="readiness-title" className="rounded-2xl border border-accent/20 bg-accent-soft p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -416,8 +474,117 @@ export function InterviewWorkspaceDrawer({
           </div>
           <div className="mt-4 rounded-xl bg-surface-muted p-3"><p className="text-xs font-bold uppercase tracking-wide text-ink-muted">HireFlux suggestions</p><div id="additional-question-suggestions" className="mt-2 grid gap-2">{guidance.suggested_questions.slice(0, showMoreSuggestions ? undefined : 3).map((suggestion) => { const added = normalizedQuestions.some((value) => value.toLowerCase() === suggestion.text.toLowerCase()); return <button key={suggestion.text} type="button" disabled={added || normalizedQuestions.length >= 8} aria-label={`${added ? "Added" : "Add suggested question"}: ${suggestion.text}`} className={`rounded-xl border border-line bg-surface px-3 py-2 text-left text-xs leading-5 text-ink disabled:opacity-60 ${focusClassName}`} onClick={() => addSuggestedQuestion(suggestion.text)}><span className="font-semibold">{added ? "Added · " : "+ "}{suggestion.text}</span><span className="mt-1 block text-[11px] text-ink-muted">{suggestion.source_label}</span></button>; })}</div>{guidance.suggested_questions.length > 3 ? <button type="button" aria-expanded={showMoreSuggestions} aria-controls="additional-question-suggestions" className={`mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent ${focusClassName}`} onClick={() => setShowMoreSuggestions((value) => !value)}>{showMoreSuggestions ? "Show fewer suggestions" : `See ${guidance.suggested_questions.length - 3} more suggestions`}<ChevronDown aria-hidden="true" className={`size-4 ${showMoreSuggestions ? "rotate-180" : ""}`} /></button> : null}</div>
         </section>
+          </>
+        ) : (
+          <PreparationHistory interview={currentInterview} />
+        )}
       </div>
     </Drawer>
+  );
+}
+
+function DebriefReview({
+  interview,
+  timeZone,
+}: {
+  interview: Interview;
+  timeZone: string;
+}) {
+  const fields = [
+    ["What went well", interview.debrief_went_well],
+    ["What would you improve", interview.debrief_improve],
+    ["Signals you noticed", interview.debrief_signals],
+    ["Concrete next step", interview.debrief_next_step],
+  ] as const;
+  return (
+    <section
+      aria-labelledby="debrief-review-title"
+      className="rounded-2xl border border-violet/20 bg-violet-soft p-4 sm:p-5"
+    >
+      <div className="flex items-start gap-3">
+        <CheckCircle2
+          aria-hidden="true"
+          className="mt-0.5 size-5 shrink-0 text-violet"
+        />
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-violet">
+            Saved private reflection
+          </p>
+          <h3 id="debrief-review-title" className="mt-1 font-bold text-ink">
+            Interview debrief
+          </h3>
+          {interview.debrief_completed_at ? (
+            <p className="mt-1 text-xs text-ink-muted">
+              Completed {formatTimestamp(interview.debrief_completed_at, timeZone)}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      <dl className="mt-5 grid gap-5 sm:grid-cols-2">
+        {fields.map(([label, value]) => (
+          <div key={label}>
+            <dt className="text-sm font-semibold text-ink">{label}</dt>
+            <dd className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink-muted">
+              {value || "Not recorded"}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function PreparationHistory({ interview }: { interview: Interview }) {
+  const completed = new Set(interview.completed_checklist_items);
+  return (
+    <details className="group rounded-2xl border border-line bg-surface-muted p-4">
+      <summary
+        className={`flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-semibold text-ink marker:hidden ${focusClassName}`}
+      >
+        <span>Preparation record</span>
+        <ChevronDown
+          aria-hidden="true"
+          className="size-4 text-ink-muted transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <div className="space-y-4 border-t border-line pt-4">
+        <p className="text-xs leading-5 text-ink-muted">
+          Preparation is preserved as a read-only historical record after the
+          interview is completed.
+        </p>
+        <ul className="space-y-2">
+          {interview.guidance.checklist_items.map((item) => (
+            <li key={item.item_id} className="flex items-start gap-2 text-sm">
+              <span className="mt-0.5 font-bold text-ink-muted" aria-hidden="true">
+                {completed.has(item.item_id) ? "✓" : "–"}
+              </span>
+              <span className="text-ink">{item.label}</span>
+              <span className="sr-only">
+                {completed.has(item.item_id) ? "Completed" : "Not completed"}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {interview.preparation_notes ? (
+          <div>
+            <h4 className="text-sm font-semibold text-ink">Preparation notes</h4>
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink-muted">
+              {interview.preparation_notes}
+            </p>
+          </div>
+        ) : null}
+        {interview.candidate_questions.length ? (
+          <div>
+            <h4 className="text-sm font-semibold text-ink">Saved questions</h4>
+            <ol className="mt-1 list-decimal space-y-1 pl-5 text-sm leading-6 text-ink-muted">
+              {interview.candidate_questions.map((question) => (
+                <li key={question}>{question}</li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
+      </div>
+    </details>
   );
 }
 

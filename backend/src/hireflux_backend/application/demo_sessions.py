@@ -9,6 +9,7 @@ from hireflux_backend.application.resource_services import (
     CreateInterviewCommand,
     CreateNoteCommand,
     TransitionInterviewCommand,
+    UpdateInterviewWorkspaceCommand,
     WorkspaceResourceService,
 )
 from hireflux_backend.application.services import (
@@ -476,6 +477,46 @@ class DemoSessionService:
                     content="Review role requirements and prepare concrete examples."
                 ),
             )
+        earlier_round = self._resource_service.create_interview(
+            identity,
+            applications[7].application_id,
+            CreateInterviewCommand(
+                interview_type=InterviewType.RECRUITER_CALL,
+                scheduled_at=now - timedelta(days=12),
+                duration_minutes=30,
+                meeting_url="https://example.com/demo-recruiter-call",
+            ),
+        )
+        earlier_round = self._resource_service.transition_interview(
+            identity,
+            earlier_round.application_id,
+            earlier_round.interview_id,
+            TransitionInterviewCommand(
+                status=InterviewStatus.COMPLETED,
+                expected_version=earlier_round.version,
+            ),
+        )
+        self._resource_service.update_interview_workspace(
+            identity,
+            earlier_round.application_id,
+            earlier_round.interview_id,
+            UpdateInterviewWorkspaceCommand(
+                expected_version=earlier_round.version,
+                completed_checklist_items=(),
+                preparation_notes="Prepared a concise cloud migration example.",
+                candidate_questions=(
+                    "How will success be measured in the first 90 days?",
+                    "How does the team make architecture decisions?",
+                ),
+                debrief_went_well=(
+                    "I connected my migration experience to the team's immediate needs."
+                ),
+                debrief_improve="Use a shorter example and state the measurable result earlier.",
+                debrief_signals="The next round will focus on incident response and tradeoffs.",
+                debrief_next_step="Prepare one reliability story for the technical round.",
+                debrief_complete=True,
+            ),
+        )
         self._resource_service.create_interview(
             identity,
             applications[7].application_id,

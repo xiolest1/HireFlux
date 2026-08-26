@@ -1,5 +1,5 @@
 import type { Activity, Application, Interview, Pipeline, Settings, User, WorkspaceInterview } from "../api/schemas";
-import type { Dashboard } from "../api/workspace";
+import type { Analytics, Dashboard } from "../api/workspace";
 
 export const testUser: User = {
   user_id: "local-user-001",
@@ -219,6 +219,153 @@ export const testDashboard: Dashboard = {
   ],
   status_breakdown: [{ status: "APPLIED", count: 4 }],
 };
+
+export function makeAnalytics(range: "30d" | "90d" | "all" = "30d"): Analytics {
+  const comparisonAvailable = range !== "all";
+  return {
+    range,
+    filters: { status: null, source: null, work_mode: null },
+    generated_at: "2026-08-12T13:00:00Z",
+    summary: testDashboard.summary,
+    rates: testDashboard.rates,
+    status_breakdown: testDashboard.status_breakdown,
+    submission_trend: testDashboard.submission_trend,
+    funnel: [{ stage: "SUBMITTED", count: 13, rate: 1 }],
+    stage_aging: [],
+    source_performance: [],
+    source_period: {
+      label: "Selected range",
+      current_start: "2026-07-13",
+      current_end: "2026-08-12",
+      previous_start: "2026-06-12",
+      previous_end: "2026-07-12",
+    },
+    source_summary: {
+      submitted_count: 13,
+      sufficient_for_strategy: true,
+      top_volume: null,
+      strongest_response: null,
+      recent_movement: null,
+      concentration: {
+        flagged: false,
+        source: null,
+        application_share: 0,
+        threshold: 0.5,
+        submitted_count: 13,
+      },
+    },
+    work_mode_breakdown: [],
+    average_days_to_first_response: 3.5,
+    no_response_count: 5,
+    period_comparison: comparisonAvailable ? {
+      available: true,
+      current_start: "2026-07-13",
+      current_end: "2026-08-12",
+      previous_start: "2026-06-12",
+      previous_end: "2026-07-12",
+      current: {
+        submitted_count: 8,
+        response_rate: 0.5,
+        interview_rate: 0.25,
+        offer_rate: 0.125,
+        acceptance_rate: 0,
+        average_days_to_first_response: 3.5,
+      },
+      previous: {
+        submitted_count: 5,
+        response_rate: 0.3,
+        interview_rate: 0.2,
+        offer_rate: 0,
+        acceptance_rate: 0,
+        average_days_to_first_response: 4,
+      },
+      deltas: {
+        submitted_count: 3,
+        response_rate: 0.2,
+        interview_rate: 0.05,
+        offer_rate: 0.125,
+        acceptance_rate: 0,
+        average_days_to_first_response: -0.5,
+      },
+    } : {
+      available: false,
+      current_start: null,
+      current_end: null,
+      previous_start: null,
+      previous_end: null,
+      current: null,
+      previous: null,
+      deltas: null,
+    },
+    follow_up_coverage: {
+      active_count: 7,
+      scheduled_count: 5,
+      coverage_rate: 5 / 7,
+      overdue_count: 1,
+      due_today_count: 1,
+      missing_count: 2,
+    },
+    progress_narrative: {
+      state: comparisonAvailable ? "READY" : "ALL_TIME",
+      tone: comparisonAvailable ? "POSITIVE" : "NEUTRAL",
+      headline: comparisonAvailable ? "Recent applications are converting more effectively" : "Your complete tracked search history",
+      explanation: comparisonAvailable ? "Response and interview conversion improved across equal comparison periods." : "All-time results show the full journey without treating separate periods as directly comparable.",
+      primary_signal: comparisonAvailable ? {
+        code: "SEARCH_CONVERTING",
+        category: "PERFORMANCE",
+        direction: "IMPROVING",
+        priority: 60,
+        evidence_metric_keys: ["RESPONSE_RATE", "INTERVIEW_RATE"],
+        evidence_summary: "50% response · 25% interview",
+        sample_label: "Early signal · Based on 13 applications",
+      } : null,
+      supporting_signals: [
+        { metric_key: "SUBMISSIONS", category: "ACTIVITY", direction: comparisonAvailable ? "IMPROVING" : "NOT_AVAILABLE", emphasis: "CONTEXT" },
+        { metric_key: "RESPONSE_RATE", category: "PERFORMANCE", direction: comparisonAvailable ? "IMPROVING" : "NOT_AVAILABLE", emphasis: comparisonAvailable ? "PRIMARY" : "CONTEXT" },
+        { metric_key: "INTERVIEW_RATE", category: "PERFORMANCE", direction: comparisonAvailable ? "IMPROVING" : "NOT_AVAILABLE", emphasis: comparisonAvailable ? "PRIMARY" : "CONTEXT" },
+      ],
+      process_health: {
+        tone: "ACTION_NEEDED",
+        summary: "Some active opportunities need follow-up attention now.",
+        active_count: 7,
+        scheduled_count: 5,
+        coverage_rate: 5 / 7,
+        overdue_count: 1,
+        due_today_count: 1,
+        missing_count: 2,
+      },
+      recommended_focus: {
+        title: "1 follow-up is overdue",
+        explanation: "2 other active applications do not have a next step scheduled.",
+        tone: "ACTION_NEEDED",
+        action: {
+          kind: "VIEW_APPLICATIONS",
+          label: "Review follow-ups",
+          parameters: { view: "ACTIVE", follow_up: "NEEDS_ATTENTION" },
+        },
+      },
+    },
+    insights: [{
+      code: "FOLLOW_UP_ATTENTION",
+      category: "follow_up",
+      semantic_type: "action",
+      tone: "ACTION_NEEDED",
+      title: "1 follow-up is overdue",
+      description: "2 other active applications do not have a next step scheduled.",
+      evidence_summary: "1 overdue · 2 missing a next step",
+      evidence: "1 follow-up overdue and 2 without a next step scheduled across 7 active applications.",
+      evidence_strength: "STRONG",
+      evidence_label: null,
+      priority: 100,
+      action: {
+        kind: "VIEW_APPLICATIONS",
+        label: "Review follow-ups",
+        parameters: { view: "ACTIVE", follow_up: "NEEDS_ATTENTION" },
+      },
+    }],
+    disclaimer: "This dataset is descriptive, not predictive.",
+  };
+}
 
 export function makeActivity(overrides: Partial<Activity> = {}): Activity {
   return {

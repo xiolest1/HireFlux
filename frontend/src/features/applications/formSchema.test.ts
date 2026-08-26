@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  applicationFormDefaults,
+  applicationCreateFormSchema,
   applicationFormSchema,
-  preferredFollowUpDate,
+  currentDateInTimeZone,
+  toCreateApplicationRequest,
 } from "./formSchema";
 
 const baseInput = {
@@ -21,8 +22,15 @@ const baseInput = {
 };
 
 describe("applicationFormSchema", () => {
+  it("derives calendar defaults in the saved workspace time zone", () => {
+    const instant = new Date("2026-08-21T02:00:00Z");
+
+    expect(currentDateInTimeZone("America/New_York", instant)).toBe("2026-08-20");
+    expect(currentDateInTimeZone("Asia/Tokyo", instant)).toBe("2026-08-21");
+  });
+
   it("trims required fields and normalizes blank optional fields to null", () => {
-    const result = applicationFormSchema("create").parse(baseInput);
+    const result = applicationFormSchema().parse(baseInput);
 
     expect(result).toMatchObject({
       company_name: "Northstar Labs",
@@ -36,7 +44,7 @@ describe("applicationFormSchema", () => {
   });
 
   it("requires an applied date when a new application starts as Applied", () => {
-    const result = applicationFormSchema("create").safeParse({
+    const result = applicationCreateFormSchema().safeParse({
       ...baseInput,
       status: "APPLIED",
     });
@@ -52,7 +60,7 @@ describe("applicationFormSchema", () => {
   });
 
   it("rejects an applied date after the workspace current date", () => {
-    const result = applicationFormSchema("create", "2026-08-20").safeParse({
+    const result = applicationCreateFormSchema("2026-08-20").safeParse({
       ...baseInput,
       status: "APPLIED",
       applied_date: "2026-08-21",
@@ -72,7 +80,7 @@ describe("applicationFormSchema", () => {
   });
 
   it("rejects non-http job URLs", () => {
-    const result = applicationFormSchema("create").safeParse({
+    const result = applicationCreateFormSchema().safeParse({
       ...baseInput,
       job_url: "javascript:alert(1)",
     });
@@ -80,16 +88,31 @@ describe("applicationFormSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("defaults a new follow-up using the workspace calendar and interval", () => {
-    const preferences = {
-      defaultFollowUpDays: 7,
-      timeZone: "America/Los_Angeles",
-      now: new Date("2026-08-13T02:30:00Z"),
-    };
+  it("requires an applied date for Interviewing and omits it for Saved", () => {
+    const missingDate = applicationCreateFormSchema().safeParse({
+      ...baseInput,
+      status: "INTERVIEW",
+    });
+    expect(missingDate.success).toBe(false);
 
-    expect(preferredFollowUpDate(preferences)).toBe("2026-08-19");
-    expect(applicationFormDefaults(undefined, preferences).follow_up_date).toBe(
-      "2026-08-19",
-    );
+    const saved = applicationCreateFormSchema().parse({
+      ...baseInput,
+      applied_date: "2026-08-20",
+    });
+    const request = toCreateApplicationRequest(saved);
+    expect(request.applied_date).toBeNull();
+    expect(request).not.toHaveProperty("follow_up_date");
+    expect(request).not.toHaveProperty("role_family");
   });
+
+  it("rejects lifecycle stages that are not valid creation choices", () => {
+    expect(
+      applicationCreateFormSchema().safeParse({
+        ...baseInput,
+        status: "OFFER",
+        applied_date: "2026-08-20",
+      }).success,
+    ).toBe(false);
+  });
+
 });

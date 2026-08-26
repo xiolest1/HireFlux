@@ -10,6 +10,7 @@ import {
   createApplication,
   completeFollowUp,
   getApplication,
+  getDuplicateCandidates,
   getMe,
   listApplicationActivity,
   listApplications,
@@ -17,6 +18,7 @@ import {
   transitionApplication,
   updateApplication,
   type CreateApplicationRequest,
+  type DuplicateCandidateRequest,
   type ApplicationListFilters,
   type TransitionApplicationRequest,
   type UpdateApplicationRequest,
@@ -33,6 +35,7 @@ export const applicationKeys = {
     [...applicationKeys.details(), applicationId] as const,
   activity: (applicationId: string, order: "asc" | "desc" = "asc", limit = 25) =>
     [...applicationKeys.detail(applicationId), "activity", { order, limit }] as const,
+  duplicateCandidates: () => [...applicationKeys.all, "duplicate-candidates"] as const,
 };
 
 function invalidateWorkspaceInsights(queryClient: QueryClient) {
@@ -106,8 +109,20 @@ export function useCreateApplication() {
         application,
       );
       void queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: applicationKeys.duplicateCandidates() });
       invalidateWorkspaceInsights(queryClient);
     },
+  });
+}
+
+export function useDuplicateCandidates(
+  request: DuplicateCandidateRequest | null,
+) {
+  return useQuery({
+    queryKey: [...applicationKeys.duplicateCandidates(), request],
+    queryFn: ({ signal }) => getDuplicateCandidates(request ?? {}, signal),
+    enabled: request !== null,
+    staleTime: 30_000,
   });
 }
 
@@ -127,6 +142,7 @@ export function useUpdateApplication() {
         application,
       );
       void queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: applicationKeys.duplicateCandidates() });
       void queryClient.invalidateQueries({
         queryKey: [...applicationKeys.detail(application.application_id), "activity"],
       });
@@ -155,6 +171,7 @@ export function useTransitionApplication() {
         application,
       );
       void queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: applicationKeys.duplicateCandidates() });
       void queryClient.invalidateQueries({
         queryKey: [...applicationKeys.detail(application.application_id), "activity"],
       });

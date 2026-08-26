@@ -488,15 +488,64 @@ def test_workspace_interview_view_includes_history_and_server_context(client: Te
         },
     )
     assert debrief.status_code == 200
+    original_completed_at = debrief.json()["debrief_completed_at"]
+    revised_debrief = client.patch(
+        f"{completed_path}/workspace",
+        json={
+            "expected_version": debrief.json()["version"],
+            "completed_checklist_items": [],
+            "preparation_notes": None,
+            "candidate_questions": [],
+            "debrief_went_well": "I clarified the tradeoffs with a concrete example.",
+            "debrief_improve": "Lead with the result.",
+            "debrief_signals": None,
+            "debrief_next_step": "Send a concise follow-up.",
+            "debrief_complete": True,
+        },
+    )
+    assert revised_debrief.status_code == 200
+    assert revised_debrief.json()["debrief_completed_at"] == original_completed_at
     refreshed = client.get("/api/v1/interviews", params={"view": "ALL"})
     refreshed_by_id = {item["interview_id"]: item for item in refreshed.json()["items"]}
     assert (
-        refreshed_by_id[completed.json()["interview_id"]]["context"]["workflow_state"]
-        == "FOLLOW_UP"
+        refreshed_by_id[completed.json()["interview_id"]]["context"]["workflow_state"] == "HISTORY"
     )
     assert (
         refreshed_by_id[completed.json()["interview_id"]]["context"]["next_action"]
-        == "REVIEW_FOLLOW_UP"
+        == "REVIEW_DEBRIEF"
+    )
+
+    dated = client.patch(
+        path,
+        json={"expected_version": application["version"], "applied_date": now.date().isoformat()},
+    )
+    assert dated.status_code == 200
+    active = client.post(
+        f"{path}/status",
+        json={"status": "APPLIED", "expected_version": dated.json()["version"]},
+    )
+    assert active.status_code == 200
+    active_context = client.get("/api/v1/interviews", params={"view": "ALL"}).json()["items"]
+    active_by_id = {item["interview_id"]: item for item in active_context}
+    assert active_by_id[completed.json()["interview_id"]]["context"]["workflow_state"] == (
+        "FOLLOW_UP"
+    )
+    assert active_by_id[completed.json()["interview_id"]]["context"]["next_action"] == (
+        "REVIEW_FOLLOW_UP"
+    )
+
+    archived = client.post(
+        f"{path}/status",
+        json={"status": "ARCHIVED", "expected_version": active.json()["version"]},
+    )
+    assert archived.status_code == 200
+    archived_context = client.get("/api/v1/interviews", params={"view": "ALL"}).json()["items"]
+    archived_by_id = {item["interview_id"]: item for item in archived_context}
+    assert archived_by_id[completed.json()["interview_id"]]["context"]["workflow_state"] == (
+        "HISTORY"
+    )
+    assert archived_by_id[completed.json()["interview_id"]]["context"]["next_action"] == (
+        "REVIEW_DEBRIEF"
     )
     invalid_view = client.get("/api/v1/interviews", params={"view": "INVALID"})
     assert invalid_view.status_code == 422

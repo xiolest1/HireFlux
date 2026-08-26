@@ -130,6 +130,28 @@ export const applicationListResponseSchema = z.object({
   next_cursor: z.string().min(1).nullable(),
 });
 
+export const duplicateConfidenceSchema = z.enum(["HIGH", "MEDIUM"]);
+export const duplicateSignalSchema = z.enum([
+  "JOB_URL",
+  "REQUISITION_ID",
+  "COMPANY",
+  "TITLE",
+  "LOCATION",
+]);
+export const duplicateCandidateSchema = z.object({
+  application_id: z.string().uuid(),
+  company_name: z.string().min(1),
+  job_title: z.string().min(1),
+  status: applicationStatusSchema,
+  applied_date: dateOnlySchema.nullable(),
+  created_at: timestampSchema,
+  confidence: duplicateConfidenceSchema,
+  matched_on: z.array(duplicateSignalSchema),
+});
+export const duplicateCandidateListResponseSchema = z.object({
+  candidates: z.array(duplicateCandidateSchema).max(3),
+});
+
 export const pipelineCardSchema = z.object({
   application: applicationSchema,
   stage_age_days: z.number().int().nonnegative().nullable(),
@@ -282,6 +304,7 @@ const interviewWorkspaceContextSchema = z.object({
     "MARK_COMPLETE",
     "CAPTURE_NOTES",
     "REVIEW_FOLLOW_UP",
+    "REVIEW_DEBRIEF",
     "OPEN_APPLICATION",
   ]),
 });
@@ -326,6 +349,7 @@ export const workspaceExportSchema = z.object({
 export type ApplicationStatus = z.infer<typeof applicationStatusSchema>;
 export type WorkMode = z.infer<typeof workModeSchema>;
 export type ApplicationSource = z.infer<typeof applicationSourceSchema>;
+export type DuplicateCandidate = z.infer<typeof duplicateCandidateSchema>;
 export type RoleFamily = z.infer<typeof roleFamilySchema>;
 export type InterviewType = z.infer<typeof interviewTypeSchema>;
 export type InterviewStatus = z.infer<typeof interviewStatusSchema>;

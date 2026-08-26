@@ -2,7 +2,7 @@ import axe from "axe-core";
 import { screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { makeApplication, testDashboard } from "./fixtures";
+import { makeAnalytics, makeApplication, testDashboard } from "./fixtures";
 import { renderApp } from "./renderApp";
 import { API_ORIGIN, server } from "./server";
 
@@ -74,6 +74,7 @@ function useAnalyticsFixture() {
           deltas: { submitted_count: 1, response_rate: 0.5, interview_rate: 0.5, offer_rate: 0, acceptance_rate: 0, average_days_to_first_response: null },
         },
         follow_up_coverage: { active_count: 1, scheduled_count: 0, coverage_rate: 0, overdue_count: 0, due_today_count: 0, missing_count: 1 },
+        progress_narrative: makeAnalytics("90d").progress_narrative,
         insights: [{ code: "BUILD_SAMPLE", category: "response", semantic_type: "observation", tone: "INFO", title: "Search Health is still building your picture", description: "Track more applications before judging rates.", evidence_summary: "2 submitted · trends begin at 5", evidence: "This view contains 2 submitted applications.", evidence_strength: "LIMITED", evidence_label: "Early signal", priority: 20, action: { kind: "ADD_APPLICATION", label: "Add application", parameters: {} } }],
         disclaimer: "This demo dataset is descriptive, not predictive.",
       }),
@@ -98,6 +99,14 @@ describe("principal route accessibility", () => {
     useAnalyticsFixture();
     renderApp("/analytics");
     expect(await screen.findByRole("heading", { name: "Analytics", level: 1 })).toBeVisible();
+    await expectNoAxeViolations();
+  });
+
+  it("has no automated violations in the expanded Home progress story", async () => {
+    const { user } = renderApp("/dashboard");
+    expect(await screen.findByText("Recent applications are converting more effectively")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "See what changed and why" }));
+    expect(await screen.findByRole("heading", { name: "50% response · 25% interview" })).toBeVisible();
     await expectNoAxeViolations();
   });
 

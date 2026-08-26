@@ -2,6 +2,11 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
+from hireflux_backend.application.duplicate_candidates import (
+    DuplicateCandidate,
+    DuplicateConfidence,
+    DuplicateSignal,
+)
 from hireflux_backend.domain.enums import (
     ActivityType,
     ApplicationSource,
@@ -32,6 +37,53 @@ class ApplicationCreateRequest(RequestModel):
     salary_text: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = Field(default=None, min_length=1, max_length=5_000)
     role_family: RoleFamily | None = None
+
+
+class DuplicateCandidateRequest(RequestModel):
+    company_name: str | None = Field(default=None, min_length=1, max_length=120)
+    job_title: str | None = Field(default=None, min_length=1, max_length=120)
+    job_url: HttpUrl | None = Field(default=None, max_length=2048)
+    location: str | None = Field(default=None, min_length=1, max_length=160)
+    requisition_id: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @model_validator(mode="after")
+    def enough_evidence(self) -> "DuplicateCandidateRequest":
+        if (
+            self.job_url
+            or (self.company_name and self.job_title)
+            or (self.company_name and self.requisition_id)
+        ):
+            return self
+        raise ValueError("Provide a job URL, company and title, or company and requisition ID.")
+
+
+class DuplicateCandidateResponse(BaseModel):
+    application_id: str
+    company_name: str
+    job_title: str
+    status: ApplicationStatus
+    applied_date: date | None
+    created_at: datetime
+    confidence: DuplicateConfidence
+    matched_on: list[DuplicateSignal]
+
+    @classmethod
+    def from_domain(cls, candidate: DuplicateCandidate) -> "DuplicateCandidateResponse":
+        application = candidate.application
+        return cls(
+            application_id=application.application_id,
+            company_name=application.company_name,
+            job_title=application.job_title,
+            status=application.status,
+            applied_date=application.applied_date,
+            created_at=application.created_at,
+            confidence=candidate.confidence,
+            matched_on=list(candidate.matched_on),
+        )
+
+
+class DuplicateCandidateListResponse(BaseModel):
+    candidates: list[DuplicateCandidateResponse]
 
 
 class ApplicationUpdateRequest(RequestModel):

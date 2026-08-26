@@ -329,6 +329,122 @@ def test_create_read_update_page_and_activity(client: TestClient) -> None:
     assert activity.json()["items"][0]["activity_type"] == "APPLICATION_CREATED"
 
 
+def test_interview_creation_initializes_truthful_milestones_and_duplicate_advice(
+    client: TestClient,
+) -> None:
+    applied_on = (date.today() - timedelta(days=14)).isoformat()
+    response = client.post(
+        "/api/v1/applications",
+        json=draft_payload("Acme, Inc.")
+        | {
+            "status": "INTERVIEW",
+            "applied_date": applied_on,
+            "job_url": "https://jobs.example.com/opening?job_id=ENG-42&utm_source=email",
+        },
+    )
+
+    assert response.status_code == 201
+    created = response.json()
+    assert created["status"] == "INTERVIEW"
+    assert created["applied_date"] == applied_on
+    assert created["submitted_at"] is not None
+    assert created["first_response_at"] == created["submitted_at"]
+    assert created["first_interview_at"] == created["submitted_at"]
+    assert created["stage_entered_at"] == created["submitted_at"]
+
+    activity = client.get(f"/api/v1/applications/{created['application_id']}/activity").json()[
+        "items"
+    ]
+    assert len(activity) == 1
+    assert activity[0]["activity_type"] == "APPLICATION_CREATED"
+    assert activity[0]["summary"] == "Application added at Interview stage."
+    assert activity[0]["metadata"] == {
+        "status": "INTERVIEW",
+        "initialization": "true",
+    }
+
+    dashboard = client.get("/api/v1/dashboard").json()
+    assert {item["status"]: item["count"] for item in dashboard["status_breakdown"]}[
+        "INTERVIEW"
+    ] == 1
+    assert dashboard["rates"]["submitted_count"] == 1
+    assert dashboard["rates"]["response_count"] == 1
+    assert dashboard["rates"]["interview_count"] == 1
+
+    duplicate = client.post(
+        "/api/v1/applications/duplicate-candidates",
+        json={
+            "company_name": "ACME",
+            "job_title": "Platform Engineer",
+            "job_url": "https://jobs.example.com/opening?job_id=ENG-42&fbclid=tracking",
+        },
+    )
+    assert duplicate.status_code == 200
+    candidates = duplicate.json()["candidates"]
+    assert len(candidates) == 1
+    assert candidates[0] == {
+        "application_id": created["application_id"],
+        "company_name": "Acme, Inc.",
+        "job_title": "Platform Engineer",
+        "status": "INTERVIEW",
+        "applied_date": applied_on,
+        "created_at": created["created_at"],
+        "confidence": "HIGH",
+        "matched_on": ["JOB_URL", "COMPANY", "TITLE"],
+    }
+
+
+def test_duplicate_candidates_are_owner_scoped(dynamodb_client: Any) -> None:
+    app = create_app(build_test_settings(), dynamodb_client=dynamodb_client)
+    owner_a = _identity("00000000-0000-4000-8000-0000000000a1", "Owner A")
+    owner_b = _identity("00000000-0000-4000-8000-0000000000b2", "Owner B")
+
+    with TestClient(app) as client:
+        _use_identity(app, owner_a)
+        created = client.post(
+            "/api/v1/applications",
+            json=draft_payload("Private Opportunity"),
+        )
+        assert created.status_code == 201
+
+        _use_identity(app, owner_b)
+        response = client.post(
+            "/api/v1/applications/duplicate-candidates",
+            json={
+                "company_name": "Private Opportunity",
+                "job_title": "Platform Engineer",
+                "job_url": "https://example.com/jobs/123",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"candidates": []}
+
+
+def test_creation_and_duplicate_candidate_validation_reject_contradictory_input(
+    client: TestClient,
+) -> None:
+    draft_with_date = client.post(
+        "/api/v1/applications",
+        json=draft_payload("Contradictory") | {"applied_date": date.today().isoformat()},
+    )
+    assert draft_with_date.status_code == 422
+    assert draft_with_date.json()["error"]["code"] == "DOMAIN_VALIDATION_ERROR"
+
+    interview_without_date = client.post(
+        "/api/v1/applications",
+        json=draft_payload("Missing History") | {"status": "INTERVIEW"},
+    )
+    assert interview_without_date.status_code == 422
+
+    insufficient_evidence = client.post(
+        "/api/v1/applications/duplicate-candidates",
+        json={"company_name": "Company only"},
+    )
+    assert insufficient_evidence.status_code == 422
+    assert insufficient_evidence.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
 def test_status_workflow_archive_restore_and_filter(client: TestClient) -> None:
     created = client.post("/api/v1/applications", json=draft_payload()).json()
     path = f"/api/v1/applications/{created['application_id']}/status"

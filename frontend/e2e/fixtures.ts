@@ -474,6 +474,54 @@ export async function installDeterministicApi(page: Page) {
           due_today_count: 0,
           missing_count: 1,
         },
+        progress_narrative: {
+          state: "LIMITED",
+          tone: "NEUTRAL",
+          headline: "Your recent search is still building a reliable pattern",
+          explanation:
+            "The current numbers are useful context, but there is not enough comparison data for a strong conclusion yet.",
+          primary_signal: null,
+          supporting_signals: [
+            {
+              metric_key: "SUBMISSIONS",
+              category: "ACTIVITY",
+              direction: "IMPROVING",
+              emphasis: "CONTEXT",
+            },
+            {
+              metric_key: "RESPONSE_RATE",
+              category: "PERFORMANCE",
+              direction: "IMPROVING",
+              emphasis: "CONTEXT",
+            },
+            {
+              metric_key: "INTERVIEW_RATE",
+              category: "PERFORMANCE",
+              direction: "IMPROVING",
+              emphasis: "CONTEXT",
+            },
+          ],
+          process_health: {
+            tone: "ACTION_NEEDED",
+            summary: "One active opportunity needs a next step.",
+            active_count: 1,
+            scheduled_count: 0,
+            coverage_rate: 0,
+            overdue_count: 0,
+            due_today_count: 0,
+            missing_count: 1,
+          },
+          recommended_focus: {
+            title: "Add a next step",
+            explanation: "One active application has no follow-up scheduled.",
+            tone: "ACTION_NEEDED",
+            action: {
+              kind: "VIEW_APPLICATIONS",
+              label: "Review applications",
+              parameters: { view: "ACTIVE", follow_up: "NEEDS_ATTENTION" },
+            },
+          },
+        },
         insights: [
           {
             code: "BUILD_SAMPLE",
@@ -652,6 +700,10 @@ export async function installDeterministicApi(page: Page) {
     }
     if (path.endsWith("/interviews")) {
       await json(route, { items: [interview], next_cursor: null });
+      return;
+    }
+    if (path === "/api/v1/applications/duplicate-candidates") {
+      await json(route, { candidates: [] });
       return;
     }
     if (path === "/api/v1/applications") {

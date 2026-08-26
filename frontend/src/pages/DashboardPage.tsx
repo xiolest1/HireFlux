@@ -5,8 +5,12 @@ import {
   CheckCircle2,
   ChevronDown,
   Circle,
+  CircleGauge,
   Clock3,
+  Minus,
   Sparkles,
+  TrendingDown,
+  TrendingUp,
   TriangleAlert,
   X,
 } from "lucide-react";
@@ -27,7 +31,10 @@ import { PanelSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { useToast } from "../components/ui/toastContext";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { formatDateOnly, formatTimestamp } from "../features/applications/format";
-import { percentagePointDelta } from "../features/analytics/format";
+import {
+  applicationCreateRouteState,
+  readApplicationCreatedRouteState,
+} from "../features/applications/createNavigation";
 import { useSettings } from "../features/resources/queries";
 import {
   readSearchTour,
@@ -185,11 +192,11 @@ export function DashboardPage() {
       ? state.notice
       : null;
   });
-  const dashboardQuery = useDashboard(range);
-  const analyticsQuery = useAnalytics(
-    { range },
-    { enabled: progressDetailsOpen },
+  const [createdState, setCreatedState] = useState(() =>
+    readApplicationCreatedRouteState(location.state),
   );
+  const dashboardQuery = useDashboard(range);
+  const analyticsQuery = useAnalytics({ range });
   const completeMutation = useCompleteFollowUp();
   const rescheduleMutation = useRescheduleFollowUp();
 
@@ -212,9 +219,10 @@ export function DashboardPage() {
     const state = location.state;
     if (state && typeof state === "object" && "notice" in state && typeof state.notice === "string") {
       setNotice(state.notice);
+      setCreatedState(readApplicationCreatedRouteState(state));
     }
-    if (state) void navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, location.state, navigate]);
+    if (state) void navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+  }, [location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
     const syncTour = () => setTour(readSearchTour());
@@ -236,6 +244,7 @@ export function DashboardPage() {
   }
 
   const dashboard = dashboardQuery.data;
+  const progressAnalytics = analyticsQuery.data?.range === range ? analyticsQuery.data : undefined;
   const timeZone = settingsQuery.data?.time_zone ?? "UTC";
   const groupedActions = (["Overdue", "Today", "Upcoming"] as const).map((name) => ({
     name,
@@ -338,7 +347,7 @@ export function DashboardPage() {
               <select id="dashboard-range" value={range} onChange={(event) => setRange(event.target.value as DashboardRange)} className="min-h-11 rounded-xl border border-line bg-surface-raised px-3 text-sm font-semibold text-ink">
                 <option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="all">All time</option>
               </select>
-              {overdueCount > 0 ? <a href="#attention-title" className={buttonClassName("primary")}>Review what needs you</a> : nextInterview ? <Link to="/interviews" className={buttonClassName("primary")}>Prepare for interview</Link> : dashboard.rates.submitted_count < 5 ? <Link to="/applications/new" className={buttonClassName("primary")}>Add an application</Link> : <Link to="/analytics?section=pipeline" className={buttonClassName("primary")}>Review pipeline</Link>}
+              {overdueCount > 0 ? <a href="#attention-title" className={buttonClassName("primary")}>Review what needs you</a> : nextInterview ? <Link to="/interviews" className={buttonClassName("primary")}>Prepare for interview</Link> : dashboard.rates.submitted_count < 5 ? <Link to="/applications/new" state={applicationCreateRouteState("dashboard", location.pathname, location.search)} className={buttonClassName("primary")}>Add an application</Link> : <Link to="/analytics?section=pipeline" className={buttonClassName("primary")}>Review pipeline</Link>}
             </div>
           </div>
           <section className="mt-7 border-t border-line pt-6" aria-labelledby="search-overview-title">
@@ -356,7 +365,7 @@ export function DashboardPage() {
       </header>
 
       {dashboardQuery.isFetching && !dashboardQuery.isPending ? <p className="text-xs font-semibold text-ink-muted" role="status">Refreshing your search story…</p> : null}
-      {notice ? <SuccessBanner>{notice}</SuccessBanner> : null}
+      {notice ? <SuccessBanner><span className="flex flex-wrap items-center justify-between gap-3"><span>{notice}</span>{createdState ? <Link to={`/applications/${createdState.createdApplicationId}`} className="font-semibold underline underline-offset-4">View application</Link> : null}</span></SuccessBanner> : null}
       {completeMutation.error || rescheduleMutation.error ? <ErrorPanel compact title="Follow-up could not be updated" error={completeMutation.error ?? rescheduleMutation.error} /> : null}
       {!tour.dismissed ? <SearchTour tour={tour} onDismiss={dismissTour} /> : null}
 
@@ -369,7 +378,7 @@ export function DashboardPage() {
         <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Coming next</p><h2 id="next-title" className="mt-1 text-2xl font-bold text-ink">What should I do next?</h2></div>
         <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
           <section className="rounded-3xl border border-line bg-surface-raised p-5 shadow-panel sm:p-6" aria-labelledby="interviews-title"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">Next conversation</p><h3 id="interviews-title" className="mt-1 text-xl font-bold text-ink">{nextInterview ? nextInterview.job_title ?? "Upcoming interview" : "No interview is currently scheduled"}</h3></div><CalendarClock aria-hidden="true" className="size-6 text-accent" /></div>{nextInterview ? <><time dateTime={nextInterview.scheduled_at} className="mt-5 block text-lg font-bold text-ink">{formatTimestamp(nextInterview.scheduled_at, timeZone)}</time><p className="mt-1 text-sm text-ink-muted">{nextInterview.company_name ?? "Application interview"}</p><div className="mt-5 flex flex-wrap gap-3"><Link to="/interviews" className={buttonClassName("primary")}>Prepare and review</Link><Link to={`/applications/${nextInterview.application_id}`} className={buttonClassName("secondary")}>Open application</Link></div></> : <><p className="mt-4 text-sm leading-6 text-ink-muted">When a conversation is scheduled, Home will bring the next one forward here.</p><Link to="/analytics?section=pipeline" className="mt-4 inline-flex min-h-11 items-center font-bold text-accent hover:underline">Review active pipeline<ArrowRight aria-hidden="true" className="ml-2 size-4" /></Link></>}</section>
-          <section className="rounded-3xl border border-line bg-surface-muted p-5 sm:p-6" aria-labelledby="continuity-title"><h3 id="continuity-title" className="text-lg font-bold text-ink">Keep the search moving</h3><p className="mt-2 text-sm leading-6 text-ink-muted">{overdueCount > 0 ? `${overdueCount} overdue ${overdueCount === 1 ? "item is" : "items are"} the clearest next step.` : todayCount > 0 ? `${todayCount} ${todayCount === 1 ? "item is" : "items are"} due today.` : "Nothing needs immediate attention. You can continue without creating urgency."}</p><div className="mt-5 flex flex-col gap-2"><Link to="/applications/new" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Add an application<ArrowRight aria-hidden="true" className="size-4" /></Link><Link to="/analytics?section=pipeline" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Review pipeline<ArrowRight aria-hidden="true" className="size-4" /></Link><Link to="/analytics" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Explore patterns<ArrowRight aria-hidden="true" className="size-4" /></Link></div></section>
+          <section className="rounded-3xl border border-line bg-surface-muted p-5 sm:p-6" aria-labelledby="continuity-title"><h3 id="continuity-title" className="text-lg font-bold text-ink">Keep the search moving</h3><p className="mt-2 text-sm leading-6 text-ink-muted">{overdueCount > 0 ? `${overdueCount} overdue ${overdueCount === 1 ? "item is" : "items are"} the clearest next step.` : todayCount > 0 ? `${todayCount} ${todayCount === 1 ? "item is" : "items are"} due today.` : "Nothing needs immediate attention. You can continue without creating urgency."}</p><div className="mt-5 flex flex-col gap-2"><Link to="/applications/new" state={applicationCreateRouteState("dashboard", location.pathname, location.search)} className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Add an application<ArrowRight aria-hidden="true" className="size-4" /></Link><Link to="/analytics?section=pipeline" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Review pipeline<ArrowRight aria-hidden="true" className="size-4" /></Link><Link to="/analytics" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Explore patterns<ArrowRight aria-hidden="true" className="size-4" /></Link></div></section>
         </div>
       </section>
 
@@ -481,76 +490,416 @@ export function DashboardPage() {
         </div>
       </section>
 
-      <section aria-labelledby="success-title"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Your progress</p><h2 id="success-title" className="mt-1 text-2xl font-bold text-ink">How successful has my search been?</h2><p className="mt-1 text-sm text-ink-muted">A lightweight view of milestones reached, with deeper patterns kept in Analytics.</p></div><Link to={analyticsHref(range)} className="text-sm font-bold text-accent hover:underline">Explore analytics</Link></div><ol className="mt-6 grid gap-2 sm:grid-cols-4">{[["Submitted", dashboard.rates.submitted_count, `${dashboard.rates.submitted_count} tracked submissions`], ["Responses", dashboard.rates.response_count, `${dashboard.rates.response_count} of ${dashboard.rates.submitted_count} submitted applications`], ["Interviews", dashboard.rates.interview_count, `${percent(dashboard.rates.interview_rate)} reached interview`], ["Offers", dashboard.rates.offer_count, `${percent(dashboard.rates.offer_rate)} reached offer`]].map(([label, count, context], index) => <li key={label} className="relative rounded-2xl border border-line bg-surface-raised p-4"><div className="flex items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-black text-accent">{index + 1}</span><div><p className="text-sm font-bold text-ink">{label}</p><p className="text-2xl font-black text-ink">{count}</p></div></div><p className="mt-3 text-xs text-ink-muted">{context}</p></li>)}</ol><ProgressBrief range={range} open={progressDetailsOpen} onOpenChange={setProgressDetailsOpen} analytics={analyticsQuery.data} isPending={analyticsQuery.isPending} isError={analyticsQuery.isError} error={analyticsQuery.error} onRetry={() => void analyticsQuery.refetch()} /></section>
+      <ProgressStory
+        dashboard={dashboard}
+        range={range}
+        createState={applicationCreateRouteState("dashboard", location.pathname, location.search)}
+        open={progressDetailsOpen}
+        onOpenChange={setProgressDetailsOpen}
+        analytics={progressAnalytics}
+        isPending={analyticsQuery.isPending || (analyticsQuery.isFetching && !progressAnalytics)}
+        isError={analyticsQuery.isError}
+        onRetry={() => void analyticsQuery.refetch()}
+      />
     </div>
   );
 }
 
-function ProgressBrief({
+function ProgressStory({
+  dashboard,
   range,
+  createState,
   open,
   onOpenChange,
   analytics,
   isPending,
   isError,
-  error,
   onRetry,
 }: {
+  dashboard: Dashboard;
   range: DashboardRange;
+  createState: ReturnType<typeof applicationCreateRouteState>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   analytics: Analytics | undefined;
   isPending: boolean;
   isError: boolean;
-  error: unknown;
   onRetry: () => void;
 }) {
-  const comparison = analytics?.period_comparison;
-  const insight = analytics?.insights?.[0];
-  const coverage = analytics?.follow_up_coverage;
-  const maxTrend = Math.max(1, ...(analytics?.submission_trend?.map((point) => point.count) ?? []));
+  const rates = analytics?.rates ?? (dashboard.range === range ? dashboard.rates : undefined);
+  const narrative = analytics?.progress_narrative;
+  const tone = narrative?.tone ?? "NEUTRAL";
+  const focus = narrative?.recommended_focus;
 
   return (
-    <details
-      className="mt-4 rounded-2xl border border-line bg-surface-muted"
-      open={open}
-      onToggle={(event) => onOpenChange(event.currentTarget.open)}
-    >
-      <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-3 px-4 font-bold text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpenChange(!open); } }}>
-        View supporting progress details
-        <ChevronDown aria-hidden="true" className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
-      </summary>
-      <div className="border-t border-line p-4 sm:p-5">
-        {open ? <>
-        {isPending ? <ProgressBriefSkeleton /> : null}
-        {isError ? <ErrorPanel compact title="Progress details could not be loaded" error={error} onRetry={onRetry} /> : null}
-        {analytics ? <div className="space-y-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Progress brief</p><h3 className="mt-1 text-lg font-bold text-ink">What the recent data is showing</h3></div>
-            <Link to={analyticsHref(range)} className="inline-flex min-h-10 items-center font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Open Analytics<ArrowRight aria-hidden="true" className="ml-1.5 size-4" /></Link>
-          </div>
-
-          {comparison?.available && comparison.current && comparison.deltas ? <section aria-labelledby="progress-comparison-title"><h4 id="progress-comparison-title" className="text-sm font-bold text-ink">Compared with the previous period</h4><p className="mt-1 text-xs leading-5 text-ink-muted"><time dateTime={comparison.previous_start ?? undefined}>{comparison.previous_start ? formatDateOnly(comparison.previous_start) : ""}</time>–<time dateTime={comparison.previous_end ?? undefined}>{comparison.previous_end ? formatDateOnly(comparison.previous_end) : ""}</time> is the adjacent comparison window.</p><dl className="mt-3 grid gap-3 sm:grid-cols-3"><ProgressMetric label="Submissions" value={String(comparison.current.submitted_count)} detail={`${comparison.deltas.submitted_count >= 0 ? "+" : ""}${comparison.deltas.submitted_count} from previous period`} /><ProgressMetric label="Response rate" value={percent(comparison.current.response_rate)} detail={`${percentagePointDelta(comparison.deltas.response_rate)} from previous period`} /><ProgressMetric label="Interview rate" value={percent(comparison.current.interview_rate)} detail={`${percentagePointDelta(comparison.deltas.interview_rate)} from previous period`} /></dl></section> : <section className="rounded-xl border border-line bg-surface-raised p-4" aria-labelledby="progress-comparison-title"><h4 id="progress-comparison-title" className="font-bold text-ink">Complete history, not a period comparison</h4><p className="mt-1 text-sm leading-6 text-ink-muted">All time shows your full tracked history. Choose a 30- or 90-day range to compare equal-length periods.</p></section>}
-
-          <figure aria-labelledby="progress-trend-title"><figcaption id="progress-trend-title" className="text-sm font-bold text-ink">Submission activity</figcaption><p className="mt-1 text-xs leading-5 text-ink-muted">Applications first submitted each week in the selected range.</p>{analytics.submission_trend.length === 0 ? <p className="mt-3 text-sm text-ink-muted">No submissions are available in this range yet.</p> : <div className="mt-4 flex h-28 items-end gap-1.5" role="img" aria-label="Weekly submission activity"><>{analytics.submission_trend.map((point) => <div key={point.week_start} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1" title={`Week of ${formatDateOnly(point.week_start)}: ${point.count} submissions`}><span className="text-[0.68rem] font-bold text-ink-muted">{point.count}</span><span aria-hidden="true" className="w-full max-w-10 rounded-t bg-gradient-to-t from-accent to-violet" style={{ height: `${Math.max(4, (point.count / maxTrend) * 64)}px` }} /><time dateTime={point.week_start} className="max-w-full truncate text-[0.62rem] font-semibold text-ink-muted">{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${point.week_start}T00:00:00Z`))}</time></div>)}</></div>}</figure>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <section className="rounded-xl border border-line bg-surface-raised p-4" aria-labelledby="progress-insight-title"><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Search Health</p>{insight ? <><h4 id="progress-insight-title" className="mt-2 font-bold text-ink">{insight.title}</h4><p className="mt-1 text-sm leading-6 text-ink-muted">{insight.description}</p><p className="mt-3 text-xs font-bold leading-5 text-ink">{insight.evidence_summary}</p>{insight.action ? <Link to={insightActionHref(insight.action)} aria-label={`Suggested action: ${insight.action.label}`} className="mt-3 inline-flex min-h-10 items-center font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">{insight.action.label}<ArrowRight aria-hidden="true" className="ml-1.5 size-4" /></Link> : null}</> : <><h4 id="progress-insight-title" className="mt-2 font-bold text-ink">Still building your picture</h4><p className="mt-1 text-sm leading-6 text-ink-muted">Track more applications and outcomes to surface a useful pattern here.</p></>}</section>
-            {coverage && coverage.active_count > 0 ? <section className="rounded-xl border border-line bg-surface-raised p-4" aria-labelledby="progress-coverage-title"><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Next-step coverage</p><h4 id="progress-coverage-title" className="mt-2 font-bold text-ink">{percent(coverage.coverage_rate)} of active opportunities have a next step</h4><p className="mt-1 text-sm leading-6 text-ink-muted">{coverage.scheduled_count} of {coverage.active_count} active applications have a follow-up date scheduled.</p>{coverage.overdue_count + coverage.due_today_count + coverage.missing_count > 0 ? <p className="mt-3 text-xs font-bold leading-5 text-ink">{coverage.overdue_count} overdue · {coverage.due_today_count} due today · {coverage.missing_count} missing a next step</p> : <p className="mt-3 text-xs font-bold leading-5 text-success">Every active opportunity has a next step scheduled.</p>}</section> : <section className="rounded-xl border border-line bg-surface-raised p-4" aria-labelledby="progress-coverage-title"><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Next-step coverage</p><h4 id="progress-coverage-title" className="mt-2 font-bold text-ink">No active opportunities to schedule yet</h4><p className="mt-1 text-sm leading-6 text-ink-muted">When applications become active, HireFlux will show how much of the pipeline has a planned next step.</p></section>}
-          </div>
-        </div> : null}
-        </> : null}
+    <section aria-labelledby="progress-story-title">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Your progress</p>
+          <h2 id="progress-story-title" className="mt-1 text-2xl font-bold text-ink">
+            How is my search progressing?
+          </h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="rounded-full border border-line bg-surface-muted px-3 py-1 text-xs font-bold text-ink-muted">
+            {rangeLabel(range)}
+          </span>
+          <Link
+            to={analyticsHref(range)}
+            className="inline-flex min-h-10 items-center text-sm font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            View full Analytics
+            <ArrowRight aria-hidden="true" className="ml-1.5 size-4" />
+          </Link>
+        </div>
       </div>
-    </details>
+
+      <div className={`mt-5 overflow-hidden rounded-3xl border shadow-panel ${progressToneClass(tone)}`}>
+        <div className="grid gap-7 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-center lg:p-7">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em]">
+              <ProgressToneIcon tone={tone} />
+              {progressToneLabel(tone)}
+            </div>
+            {isPending ? (
+              <div className="mt-4 space-y-3" role="status" aria-label="Interpreting your recent progress">
+                <Skeleton className="h-7 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <span className="sr-only">Interpreting your recent progress…</span>
+              </div>
+            ) : (
+              <>
+                <h3 className="mt-3 text-2xl font-black leading-tight text-ink sm:text-3xl">
+                  {narrative?.headline ?? "Your tracked milestones are still available"}
+                </h3>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted sm:text-base">
+                  {narrative?.explanation ?? "HireFlux could not interpret the comparison right now, but your milestone counts remain visible."}
+                </p>
+              </>
+            )}
+          </div>
+          {rates ? <SearchProgression rates={rates} /> : <SearchProgressionSkeleton />}
+        </div>
+
+        {narrative ? (
+          <div className="border-t border-current/10 px-5 py-4 sm:px-6 lg:px-7">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">
+              {focus ? "What deserves attention" : "Current process health"}
+            </p>
+            <p className="mt-1 font-bold text-ink">
+              {focus?.title ?? narrative.process_health.summary}
+            </p>
+          </div>
+        ) : null}
+
+        {isError && !analytics ? (
+          <div className="flex flex-col gap-3 border-t border-danger/20 bg-danger-soft px-5 py-4 text-danger sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-7" role="status">
+            <div>
+              <p className="font-bold">Progress interpretation is temporarily unavailable.</p>
+              <p className="mt-1 text-sm leading-6">The milestone path above still comes from your current Home summary.</p>
+            </div>
+            <button type="button" className={buttonClassName("secondary", "shrink-0")} onClick={onRetry}>
+              Try again
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="flex min-h-12 w-full items-center justify-between gap-3 border-t border-current/10 px-5 text-left font-bold text-ink hover:bg-surface-raised/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-accent sm:px-6 lg:px-7"
+              aria-expanded={open}
+              aria-controls="progress-story-details"
+              onClick={() => onOpenChange(!open)}
+            >
+              See what changed and why
+              <ChevronDown aria-hidden="true" className={`size-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+            </button>
+
+            <div id="progress-story-details" hidden={!open} className="border-t border-current/10 bg-surface-raised/45">
+              {open ? (
+                <div className="p-5 sm:p-6 lg:p-7">
+                  {isPending ? <ProgressStorySkeleton /> : null}
+                  {analytics ? <ExpandedProgressStory analytics={analytics} createState={createState} /> : null}
+                </div>
+              ) : null}
+            </div>
+          </>
+        )}
+      </div>
+    </section>
   );
 }
 
-function ProgressMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return <div className="rounded-xl border border-line bg-surface-raised p-4"><dt className="text-xs font-bold uppercase tracking-wide text-ink-muted">{label}</dt><dd className="mt-2 text-2xl font-black text-ink">{value}</dd><dd className="mt-1 text-xs leading-5 text-ink-muted">{detail}</dd></div>;
+function SearchProgression({ rates }: { rates: Analytics["rates"] | Dashboard["rates"] }) {
+  const milestones = [
+    { label: "Submitted", count: rates.submitted_count, context: "tracked applications" },
+    { label: "Responses", count: rates.response_count, context: `${percent(rates.response_rate)} of submissions` },
+    { label: "Interviews", count: rates.interview_count, context: `${percent(rates.interview_rate)} of submissions` },
+    { label: "Offers", count: rates.offer_count, context: `${percent(rates.offer_rate)} of submissions` },
+  ];
+
+  return (
+    <div aria-label="Application progress from submission to offer">
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">Your search path</p>
+      <ol className="mt-4 grid sm:grid-cols-4">
+        {milestones.map((milestone, index) => (
+          <li
+            key={milestone.label}
+            className={`relative border-l border-line py-2 pl-5 last:border-l-0 sm:border-l-0 sm:border-t sm:px-3 sm:pb-0 sm:pt-6 ${
+              index === 0 ? "pt-0" : ""
+            } ${index === milestones.length - 1 ? "pb-0" : ""}`}
+          >
+            <span
+              aria-hidden="true"
+              className={`absolute -left-1.5 size-3 rounded-full border-2 border-accent bg-surface-raised sm:-top-2 sm:left-0 ${
+                index === 0 ? "top-0" : "top-4"
+              }`}
+            />
+            <p className="text-xs font-bold text-ink-muted">{index + 1}. {milestone.label}</p>
+            <p className="mt-0.5 text-2xl font-black text-ink">{milestone.count}</p>
+            <p className="mt-0.5 text-xs leading-5 text-ink-muted">{milestone.context}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
 }
 
-function ProgressBriefSkeleton() {
-  return <div className="space-y-5" role="status" aria-label="Loading supporting progress details"><span className="sr-only">Loading supporting progress details…</span><Skeleton className="h-5 w-52" /><div className="grid gap-3 sm:grid-cols-3">{Array.from({ length: 3 }, (_, index) => <Skeleton key={index} rounded="lg" className="h-28 w-full" />)}</div><Skeleton className="h-28 w-full" /></div>;
+function SearchProgressionSkeleton() {
+  return (
+    <div className="space-y-3" role="status" aria-label="Updating application progress for the selected range">
+      <span className="sr-only">Updating application progress for the selected range…</span>
+      <Skeleton className="h-4 w-32" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton key={index} rounded="lg" className="h-20 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ExpandedProgressStory({
+  analytics,
+  createState,
+}: {
+  analytics: Analytics;
+  createState: ReturnType<typeof applicationCreateRouteState>;
+}) {
+  const narrative = analytics.progress_narrative;
+  const comparison = analytics.period_comparison;
+  const process = narrative.process_health;
+  const focus = narrative.recommended_focus;
+  const primarySignals = narrative.supporting_signals.filter(
+    (signal) => signal.emphasis === "PRIMARY",
+  );
+
+  return (
+    <div className="divide-y divide-line">
+      <section className="pb-6" aria-labelledby="progress-change-title">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">What changed</p>
+        <h4 id="progress-change-title" className="mt-2 text-lg font-bold text-ink">
+          {narrative.primary_signal?.evidence_summary ?? progressStateHeading(narrative.state)}
+        </h4>
+        {comparison.available && comparison.current && comparison.deltas && narrative.primary_signal ? (
+          <>
+            <dl className={`mt-5 grid gap-4 ${primarySignals.length > 1 ? "sm:grid-cols-2" : "sm:grid-cols-1"} sm:divide-x sm:divide-line`}>
+              {primarySignals.map((signal) => (
+                <ProgressComparisonMetric
+                  key={signal.metric_key}
+                  signal={signal}
+                  comparison={comparison}
+                />
+              ))}
+            </dl>
+          </>
+        ) : (
+          <p className="mt-2 text-sm leading-6 text-ink-muted">
+            {progressStateExplanation(narrative.state)}
+          </p>
+        )}
+      </section>
+
+      <section className="py-6" aria-labelledby="progress-comparison-title">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Compared with what</p>
+        {comparison.available && comparison.current_start && comparison.current_end && comparison.previous_start && comparison.previous_end ? (
+          <>
+            <h4 id="progress-comparison-title" className="mt-2 font-bold text-ink">Two equal-length periods in your selected range</h4>
+            <p className="mt-2 text-sm leading-6 text-ink-muted">
+              <time dateTime={comparison.current_start}>{formatDateOnly(comparison.current_start)}</time>–<time dateTime={comparison.current_end}>{formatDateOnly(comparison.current_end)}</time> is compared with <time dateTime={comparison.previous_start}>{formatDateOnly(comparison.previous_start)}</time>–<time dateTime={comparison.previous_end}>{formatDateOnly(comparison.previous_end)}</time>.
+            </p>
+          </>
+        ) : (
+          <>
+            <h4 id="progress-comparison-title" className="mt-2 font-bold text-ink">Complete history, without a period comparison</h4>
+            <p className="mt-2 text-sm leading-6 text-ink-muted">All time describes your full tracked history. Choose 30 or 90 days to compare two equal-length periods.</p>
+          </>
+        )}
+      </section>
+
+      <section className="py-6" aria-labelledby="progress-meaning-title">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Why it matters</p>
+        <h4 id="progress-meaning-title" className="mt-2 font-bold text-ink">
+          {progressMeaningHeading(narrative.state, narrative.primary_signal !== null)}
+        </h4>
+        <p className="mt-2 text-sm leading-6 text-ink-muted">{narrative.explanation}</p>
+        {narrative.primary_signal?.sample_label ? (
+          <p className="mt-3 text-xs font-bold text-ink-muted">{narrative.primary_signal.sample_label}</p>
+        ) : null}
+      </section>
+
+      <section className="py-6" aria-labelledby="progress-process-title">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">How your active search is being managed</p>
+        <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h4 id="progress-process-title" className="font-bold text-ink">{process.summary}</h4>
+            <p className="mt-1 text-sm leading-6 text-ink-muted">
+              {process.scheduled_count} of {process.active_count} active opportunities have a next step scheduled across this workspace.
+            </p>
+          </div>
+          <p className="shrink-0 text-3xl font-black text-ink">{percent(process.coverage_rate)}</p>
+        </div>
+        <div
+          className="mt-4 h-2 overflow-hidden rounded-full bg-surface-muted"
+          role="progressbar"
+          aria-label="Active opportunities with a scheduled next step"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(process.coverage_rate * 100)}
+        >
+          <div className="h-full rounded-full bg-accent" style={{ width: `${process.coverage_rate * 100}%` }} />
+        </div>
+        <p className="mt-3 text-xs font-bold leading-5 text-ink-muted">
+          {process.overdue_count} overdue follow-ups · {process.due_today_count} due today · {process.missing_count} without a next step
+        </p>
+      </section>
+
+      <section className="pt-6" aria-labelledby="progress-focus-title">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">What to focus on next</p>
+        {focus ? (
+          <>
+            <h4 id="progress-focus-title" className="mt-2 text-lg font-bold text-ink">{focus.title}</h4>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">{focus.explanation}</p>
+            <Link
+              to={insightActionHref(focus.action)}
+              state={focus.action.kind === "ADD_APPLICATION" ? createState : undefined}
+              className="mt-3 inline-flex min-h-11 items-center font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              {focus.action.label}
+              <ArrowRight aria-hidden="true" className="ml-1.5 size-4" />
+            </Link>
+          </>
+        ) : (
+          <>
+            <h4 id="progress-focus-title" className="mt-2 font-bold text-ink">Keep the picture current</h4>
+            <p className="mt-2 text-sm leading-6 text-ink-muted">No specific action currently outranks the rest of your tracked search.</p>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function ProgressComparisonMetric({
+  signal,
+  comparison,
+}: {
+  signal: Analytics["progress_narrative"]["supporting_signals"][number];
+  comparison: Analytics["period_comparison"];
+}) {
+  if (!comparison.current || !comparison.deltas) return null;
+  const presentation = comparisonMetricPresentation(signal.metric_key, comparison.current, comparison.deltas, signal.direction);
+  return (
+    <div className={`min-w-0 sm:px-4 sm:first:pl-0 ${signal.emphasis === "PRIMARY" ? "text-ink" : "text-ink-muted"}`}>
+      <dt className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide">
+        <ProgressDirectionIcon direction={signal.direction} />
+        {presentation.label}
+      </dt>
+      <dd className="mt-2 text-2xl font-black text-ink">{presentation.value}</dd>
+      <dd className="mt-1 text-xs leading-5">{presentation.detail}</dd>
+    </div>
+  );
+}
+
+function comparisonMetricPresentation(
+  metric: Analytics["progress_narrative"]["supporting_signals"][number]["metric_key"],
+  current: NonNullable<Analytics["period_comparison"]["current"]>,
+  deltas: NonNullable<Analytics["period_comparison"]["deltas"]>,
+  direction: Analytics["progress_narrative"]["supporting_signals"][number]["direction"],
+) {
+  const definitions = {
+    SUBMISSIONS: { label: "Submissions", value: String(current.submitted_count), delta: deltas.submitted_count, rate: false },
+    RESPONSE_RATE: { label: "Response rate", value: percent(current.response_rate), delta: deltas.response_rate, rate: true },
+    INTERVIEW_RATE: { label: "Interview rate", value: percent(current.interview_rate), delta: deltas.interview_rate, rate: true },
+  } as const;
+  const definition = definitions[metric];
+  if (direction === "STABLE") return { ...definition, detail: "About the same as the previous period" };
+  if (direction === "NOT_AVAILABLE") return { ...definition, detail: "No reliable comparison yet" };
+  const amount = definition.rate ? Math.round(Math.abs(definition.delta) * 100) : Math.abs(definition.delta);
+  const unit = definition.rate ? "percentage points" : amount === 1 ? "application" : "applications";
+  return {
+    ...definition,
+    detail: `${amount} ${unit} ${direction === "IMPROVING" ? "higher" : "lower"} than the previous period`,
+  };
+}
+
+function ProgressToneIcon({ tone }: { tone: Analytics["progress_narrative"]["tone"] }) {
+  const Icon = tone === "POSITIVE" ? CheckCircle2 : tone === "WATCH" ? TrendingDown : tone === "ACTION_NEEDED" ? TriangleAlert : CircleGauge;
+  return <Icon aria-hidden="true" className="size-4" />;
+}
+
+function ProgressDirectionIcon({ direction }: { direction: Analytics["progress_narrative"]["supporting_signals"][number]["direction"] }) {
+  const Icon = direction === "IMPROVING" ? TrendingUp : direction === "DECLINING" ? TrendingDown : Minus;
+  return <Icon aria-hidden="true" className="size-3.5" />;
+}
+
+function progressToneClass(tone: Analytics["progress_narrative"]["tone"] | "NEUTRAL") {
+  return {
+    POSITIVE: "border-success/30 bg-gradient-to-br from-success-soft via-surface-raised to-surface-raised text-success",
+    WATCH: "border-warning/30 bg-gradient-to-br from-warning-soft via-surface-raised to-surface-raised text-warning",
+    ACTION_NEEDED: "border-danger/30 bg-gradient-to-br from-danger-soft via-surface-raised to-surface-raised text-danger",
+    NEUTRAL: "border-line bg-gradient-to-br from-accent-soft/70 via-surface-raised to-surface-raised text-accent",
+  }[tone];
+}
+
+function progressToneLabel(tone: Analytics["progress_narrative"]["tone"] | "NEUTRAL") {
+  return { POSITIVE: "Healthy signal", WATCH: "Worth watching", ACTION_NEEDED: "Needs attention", NEUTRAL: "Building context" }[tone];
+}
+
+function rangeLabel(range: DashboardRange) {
+  return range === "30d" ? "Last 30 days" : range === "90d" ? "Last 90 days" : "All time";
+}
+
+function progressStateHeading(state: Analytics["progress_narrative"]["state"]) {
+  return state === "EMPTY" ? "No submitted activity in this range" : state === "LIMITED" ? "A pattern is still forming" : state === "ALL_TIME" ? "Complete tracked history" : "No major change stands out";
+}
+
+function progressStateExplanation(state: Analytics["progress_narrative"]["state"]) {
+  if (state === "ALL_TIME") return "All time includes your complete tracked history. Choose a 30- or 90-day range to compare equal periods.";
+  if (state === "LIMITED") return "The current sample is too small for a confident period-over-period interpretation.";
+  if (state === "EMPTY") return "There are no submitted applications in the selected range to compare yet.";
+  return "The selected periods do not contain a meaningful change that meets the evidence thresholds.";
+}
+
+function progressMeaningHeading(
+  state: Analytics["progress_narrative"]["state"],
+  hasPrimarySignal: boolean,
+) {
+  if (state === "ALL_TIME") return "History is context, not a trend";
+  if (state === "EMPTY") return "Tracking creates the comparison";
+  if (state === "LIMITED") return "More evidence will make the pattern clearer";
+  return hasPrimarySignal ? "The relationship is the useful signal" : "Steady can be useful context";
+}
+
+function ProgressStorySkeleton() {
+  return (
+    <div className="space-y-5" role="status" aria-label="Loading progress reasoning">
+      <span className="sr-only">Loading progress reasoning…</span>
+      <Skeleton className="h-5 w-40" />
+      <Skeleton className="h-16 w-full" />
+      <Skeleton className="h-24 w-full" />
+    </div>
+  );
 }
 
 function DashboardSkeleton() {

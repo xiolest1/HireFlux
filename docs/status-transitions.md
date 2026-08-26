@@ -2,7 +2,7 @@
 
 ## Policy
 
-Status is never null. Creation starts in `DRAFT` or `APPLIED`; other initial states would skip required workflow history. Status can change only through the dedicated backend transition service. Editing application details cannot change status.
+Status is never null. Creation may start in `DRAFT`, `APPLIED`, or `INTERVIEW` so a candidate can begin tracking an opportunity at the point where HireFlux first learns about it. Direct `INTERVIEW` creation initializes the submitted, first-response, and first-interview milestones at creation time, retains the supplied `applied_date` as historical calendar context, and writes one truthful creation activity rather than fabricating intermediate user-driven transitions. Status can change only through the dedicated backend transition service. Editing application details cannot change status.
 
 `applied_date` is required whenever an application has left `DRAFT`. A draft may omit it, and an archived former draft may also omit it.
 
@@ -32,6 +32,7 @@ Status is never null. Creation starts in `DRAFT` or `APPLIED`; other initial sta
 - `REJECTED -> OFFER` is an explicit correction path for an application that was marked rejected by mistake or later resulted in an offer. It does not permit `REJECTED -> INTERVIEW`.
 - Backward movement such as `INTERVIEW -> APPLIED` is forbidden. A correction can use a future explicit administrative repair workflow rather than weakening ordinary transitions.
 - Moving a draft to `APPLIED` requires an `applied_date` in the transition request if the record does not already have one. The server does not silently invent the date.
+- `APPLIED` and `INTERVIEW` creation require `applied_date`. `DRAFT` creation rejects an applied date so persisted state cannot contradict its lifecycle stage.
 - Each successful change, including archive and restore, appends a human-readable activity item. The service produces its meaning; the repository handles atomic persistence.
 - The backend records the first time an application reaches submitted, response, screening, interview, offer, and acceptance milestones. These server-owned timestamps support historical funnel rates even after the current status changes.
 

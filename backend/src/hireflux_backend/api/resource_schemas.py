@@ -331,6 +331,7 @@ class InterviewWorkspaceContextResponse(BaseModel):
         "MARK_COMPLETE",
         "CAPTURE_NOTES",
         "REVIEW_FOLLOW_UP",
+        "REVIEW_DEBRIEF",
         "OPEN_APPLICATION",
     ]
 
@@ -362,6 +363,7 @@ class WorkspaceInterviewResponse(InterviewResponse):
             "MARK_COMPLETE",
             "CAPTURE_NOTES",
             "REVIEW_FOLLOW_UP",
+            "REVIEW_DEBRIEF",
             "OPEN_APPLICATION",
         ],
     ) -> "WorkspaceInterviewResponse":

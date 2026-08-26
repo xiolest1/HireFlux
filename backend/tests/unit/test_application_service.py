@@ -10,7 +10,12 @@ from hireflux_backend.application.services import (
     CreateApplicationCommand,
     TransitionApplicationCommand,
 )
-from hireflux_backend.domain.enums import ApplicationStatus, StageAgeBucket, UserRole
+from hireflux_backend.domain.enums import (
+    ApplicationSource,
+    ApplicationStatus,
+    StageAgeBucket,
+    UserRole,
+)
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity
 from hireflux_backend.domain.resources import DefaultApplicationView
 
@@ -18,9 +23,11 @@ from hireflux_backend.domain.resources import DefaultApplicationView
 class ApplicationRepositoryStub:
     def __init__(self) -> None:
         self.application: Application | None = None
+        self.activity: Activity | None = None
 
     def create(self, application: Application, activity: Activity) -> None:
         self.application = application
+        self.activity = activity
 
     def get(self, owner_user_id: str, application_id: str) -> Application | None:
         return self.application
@@ -82,6 +89,48 @@ def test_submission_milestones_use_actual_instants_not_applied_date_noon() -> No
         identity(), reporting_range="all", filters=InsightFilters()
     )
     assert analytics["average_days_to_first_response"] == 0.1
+
+
+def test_interview_application_is_initialized_without_synthetic_transitions() -> None:
+    created_at = datetime(2026, 8, 25, 14, tzinfo=UTC)
+    repository = ApplicationRepositoryStub()
+    service = ApplicationService(repository, clock=lambda: created_at)
+
+    created = service.create(
+        identity(),
+        CreateApplicationCommand(
+            company_name="Interview Co",
+            job_title="Product Engineer",
+            status=ApplicationStatus.INTERVIEW,
+            applied_date=date(2026, 8, 1),
+        ),
+    )
+
+    assert created.status is ApplicationStatus.INTERVIEW
+    assert created.submitted_at == created_at
+    assert created.first_interview_at == created_at
+    assert created.first_response_at == created_at
+    assert created.first_screening_at is None
+    assert repository.activity is not None
+    assert repository.activity.summary == "Application added at Interview stage."
+    assert repository.activity.activity_type.value == "APPLICATION_CREATED"
+
+
+def test_draft_creation_rejects_an_applied_date() -> None:
+    service = ApplicationService(
+        ApplicationRepositoryStub(),
+        clock=lambda: datetime(2026, 8, 25, 14, tzinfo=UTC),
+    )
+
+    with pytest.raises(ValidationError, match="must be empty"):
+        service.create(
+            identity(),
+            CreateApplicationCommand(
+                company_name="Saved Co",
+                job_title="Engineer",
+                applied_date=date(2026, 8, 25),
+            ),
+        )
 
 
 def test_draft_to_applied_captures_transition_instant() -> None:
@@ -340,6 +389,7 @@ def test_analytics_compares_adjacent_windows_and_tracks_follow_up_coverage() -> 
         *,
         response_days: int | None = None,
         follow_up_date: date | None = None,
+        source: ApplicationSource | None = None,
     ) -> Application:
         submitted_at = datetime.combine(applied_on, datetime.min.time(), tzinfo=UTC)
         return Application(
@@ -353,7 +403,7 @@ def test_analytics_compares_adjacent_windows_and_tracks_follow_up_coverage() -> 
             job_url=None,
             location=None,
             work_mode=None,
-            source=None,
+            source=source,
             salary_text=None,
             description=None,
             created_at=submitted_at,
@@ -367,7 +417,13 @@ def test_analytics_compares_adjacent_windows_and_tracks_follow_up_coverage() -> 
         )
 
     applications = (
-        application(1, date(2026, 8, 22), response_days=2, follow_up_date=date(2026, 8, 22)),
+        application(
+            1,
+            date(2026, 8, 22),
+            response_days=2,
+            follow_up_date=date(2026, 8, 22),
+            source=ApplicationSource.LINKEDIN,
+        ),
         application(2, date(2026, 7, 23), follow_up_date=date(2026, 8, 21)),
         application(3, date(2026, 7, 22), response_days=4),
         application(4, date(2026, 6, 22)),
@@ -410,3 +466,28 @@ def test_analytics_compares_adjacent_windows_and_tracks_follow_up_coverage() -> 
         "due_today_count": 1,
         "missing_count": 0,
     }
+    narrative = analytics["progress_narrative"]
+    assert narrative["state"] == "LIMITED"  # type: ignore[index]
+    assert narrative["process_health"] == {  # type: ignore[index]
+        "tone": "ACTION_NEEDED",
+        "summary": "Some active opportunities need follow-up attention now.",
+        "active_count": 4,
+        "scheduled_count": 2,
+        "coverage_rate": 0.5,
+        "overdue_count": 1,
+        "due_today_count": 1,
+        "missing_count": 2,
+    }
+
+    filtered_analytics = InsightsService(AnalyticsRepositoryStub(), clock=lambda: now).analytics(  # type: ignore[arg-type]
+        identity(),
+        reporting_range="30d",
+        filters=InsightFilters(source=ApplicationSource.LINKEDIN),
+    )
+    assert filtered_analytics["follow_up_coverage"]["active_count"] == 1  # type: ignore[index]
+    assert (
+        filtered_analytics["progress_narrative"]["process_health"][  # type: ignore[index]
+            "active_count"
+        ]
+        == 4
+    )

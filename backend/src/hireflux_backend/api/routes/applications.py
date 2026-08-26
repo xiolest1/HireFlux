@@ -13,9 +13,13 @@ from hireflux_backend.api.schemas import (
     ApplicationResponse,
     ApplicationStatusRequest,
     ApplicationUpdateRequest,
+    DuplicateCandidateListResponse,
+    DuplicateCandidateRequest,
+    DuplicateCandidateResponse,
     FollowUpCompleteRequest,
     FollowUpRescheduleRequest,
 )
+from hireflux_backend.application.duplicate_candidates import DuplicateEvidence
 from hireflux_backend.application.services import (
     CompleteFollowUpCommand,
     CreateApplicationCommand,
@@ -61,6 +65,27 @@ def create_application(
         ),
     )
     return ApplicationResponse.from_domain(application)
+
+
+@router.post("/duplicate-candidates", response_model=DuplicateCandidateListResponse)
+def duplicate_candidates(
+    request: DuplicateCandidateRequest,
+    identity: IdentityDependency,
+    service: ApplicationServiceDependency,
+) -> DuplicateCandidateListResponse:
+    candidates = service.duplicate_candidates(
+        identity,
+        DuplicateEvidence(
+            company_name=request.company_name,
+            job_title=request.job_title,
+            job_url=str(request.job_url) if request.job_url else None,
+            location=request.location,
+            requisition_id=request.requisition_id,
+        ),
+    )
+    return DuplicateCandidateListResponse(
+        candidates=[DuplicateCandidateResponse.from_domain(item) for item in candidates]
+    )
 
 
 @router.get("", response_model=ApplicationListResponse)

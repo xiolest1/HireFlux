@@ -39,9 +39,8 @@ import {
   useWorkspaceInterviews,
 } from "../features/resources/queries";
 
-const ACTIVE_WORKFLOW_STATES = new Set([
+const ATTENTION_WORKFLOW_STATES = new Set([
   "PREPARE",
-  "UPCOMING",
   "IMMINENT",
   "MISSED",
   "CAPTURE",
@@ -62,40 +61,12 @@ const STATE_PRIORITY: Record<
   CANCELED: 7,
 };
 
-function calendarKey(value: string, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date(value));
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}`;
-}
-
-function offsetDateKey(key: string, days: number) {
-  const date = new Date(`${key}T12:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function scheduleGroup(value: string, timeZone: string) {
-  const key = calendarKey(value, timeZone);
-  const today = calendarKey(new Date().toISOString(), timeZone);
-  if (key < today) return "Earlier";
-  if (key === today) return "Today";
-  if (key === offsetDateKey(today, 1)) return "Tomorrow";
-  if (key <= offsetDateKey(today, 7)) return "This week";
-  return "Later";
-}
-
 function applicationHref(interview: WorkspaceInterview) {
   return `/applications/${interview.application_id}?section=interviews&interview=${interview.interview_id}`;
 }
 
 function followUpHref(interview: WorkspaceInterview) {
-  return `/applications/${interview.application_id}/edit`;
+  return `/applications/${interview.application_id}/edit?focus=follow_up`;
 }
 
 function dateOnlyLabel(value: string | null) {
@@ -216,7 +187,7 @@ export function InterviewsPage() {
   const timeZone = settingsQuery.data?.time_zone ?? "UTC";
   const [searchParams, setSearchParams] = useSearchParams();
   const [workspaceInterview, setWorkspaceInterview] =
-    useState<WorkspaceInterview | null>(null);
+    useState<Interview | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const detailRef = useRef<HTMLElement | null>(null);
   const transitionMutation = useTransitionWorkspaceInterview();
@@ -231,15 +202,25 @@ export function InterviewsPage() {
       ),
     [interviewsQuery.data],
   );
-  const active = interviews.filter((interview) =>
-    ACTIVE_WORKFLOW_STATES.has(interview.context.workflow_state),
-  );
-  const past = interviews
-    .filter(
-      (interview) =>
-        !ACTIVE_WORKFLOW_STATES.has(interview.context.workflow_state),
+  const needsAttention = interviews
+    .filter((interview) =>
+      ATTENTION_WORKFLOW_STATES.has(interview.context.workflow_state),
+    )
+    .sort((left, right) => {
+      const priority =
+        STATE_PRIORITY[left.context.workflow_state] -
+        STATE_PRIORITY[right.context.workflow_state];
+      return priority || left.scheduled_at.localeCompare(right.scheduled_at);
+    });
+  const upcoming = interviews
+    .filter((interview) => interview.context.workflow_state === "UPCOMING")
+    .sort((left, right) => left.scheduled_at.localeCompare(right.scheduled_at));
+  const completed = interviews
+    .filter((interview) =>
+      ["HISTORY", "CANCELED"].includes(interview.context.workflow_state),
     )
     .sort((left, right) => right.scheduled_at.localeCompare(left.scheduled_at));
+  const activeCount = needsAttention.length + upcoming.length;
   const requestedId = searchParams.get("interview");
   const selected =
     interviews.find((interview) => interview.interview_id === requestedId) ??
@@ -307,7 +288,7 @@ export function InterviewsPage() {
             Interviews
           </h1>
           <p className="mt-2 max-w-3xl text-base leading-7 text-ink-muted">
-            {orientation(selected, active.length)}
+            {orientation(selected, activeCount)}
           </p>
           <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
             <Clock3 aria-hidden="true" className="size-3.5" />
@@ -346,8 +327,9 @@ export function InterviewsPage() {
           <div className="grid items-start gap-6 lg:grid-cols-[minmax(18rem,0.78fr)_minmax(0,1.35fr)]">
             <SchedulePane
               className="order-2 lg:order-1 lg:sticky lg:top-24"
-              active={active}
-              past={past}
+              needsAttention={needsAttention}
+              upcoming={upcoming}
+              completed={completed}
               selectedId={selected.interview_id}
               timeZone={timeZone}
               onSelect={selectInterview}
@@ -362,7 +344,7 @@ export function InterviewsPage() {
               timeZone={timeZone}
               cancelingId={cancelingId}
               mutationError={transitionMutation.error}
-              onPrepare={() => setWorkspaceInterview(selected)}
+              onOpenWorkspace={setWorkspaceInterview}
               onCancelRequest={setCancelingId}
               onCancelKeep={() => setCancelingId(null)}
               onTransition={transition}
@@ -373,8 +355,10 @@ export function InterviewsPage() {
 
       {workspaceInterview ? (
         <InterviewWorkspaceDrawer
+          key={workspaceInterview.interview_id}
           applicationId={workspaceInterview.application_id}
           interview={workspaceInterview}
+          timeZone={timeZone}
           onClose={() => setWorkspaceInterview(null)}
         />
       ) : null}
@@ -384,8 +368,9 @@ export function InterviewsPage() {
 
 function SchedulePane({
   className,
-  active,
-  past,
+  needsAttention,
+  upcoming,
+  completed,
   selectedId,
   timeZone,
   onSelect,
@@ -394,8 +379,9 @@ function SchedulePane({
   onLoadMore,
 }: {
   className?: string;
-  active: WorkspaceInterview[];
-  past: WorkspaceInterview[];
+  needsAttention: WorkspaceInterview[];
+  upcoming: WorkspaceInterview[];
+  completed: WorkspaceInterview[];
   selectedId: string;
   timeZone: string;
   onSelect: (interview: WorkspaceInterview) => void;
@@ -403,12 +389,6 @@ function SchedulePane({
   isFetchingNextPage: boolean;
   onLoadMore: () => void;
 }) {
-  const groups = new Map<string, WorkspaceInterview[]>();
-  active.forEach((interview) => {
-    const group = scheduleGroup(interview.scheduled_at, timeZone);
-    groups.set(group, [...(groups.get(group) ?? []), interview]);
-  });
-
   return (
     <aside
       className={`${className ?? ""} min-w-0`}
@@ -417,60 +397,49 @@ function SchedulePane({
       <div className="rounded-2xl border border-line bg-surface shadow-panel">
         <div className="border-b border-line px-4 py-4 sm:px-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
-            Chronology
+            Your next steps
           </p>
           <h2 id="schedule-title" className="mt-1 text-xl font-bold text-ink">
-            Your schedule
+            Interview queue
           </h2>
           <p className="mt-1 text-sm leading-6 text-ink-muted">
-            {active.length
-              ? `${active.length} active interview ${active.length === 1 ? "step" : "steps"}. Select one to manage it.`
+            {needsAttention.length
+              ? `${needsAttention.length} interview ${needsAttention.length === 1 ? "needs" : "need"} attention. Select one to continue.`
+              : upcoming.length
+                ? `${upcoming.length} prepared interview ${upcoming.length === 1 ? "is" : "are"} coming up.`
               : "Nothing needs action right now."}
           </p>
         </div>
 
-        {active.length ? (
-          <div className="px-2 py-3">
-            {["Earlier", "Today", "Tomorrow", "This week", "Later"].map(
-              (group) =>
-                groups.has(group) ? (
-                  <section
-                    key={group}
-                    aria-labelledby={`schedule-${group.replaceAll(" ", "-").toLowerCase()}`}
-                  >
-                    <h3
-                      id={`schedule-${group.replaceAll(" ", "-").toLowerCase()}`}
-                      className="px-3 pb-1 pt-3 text-[0.68rem] font-bold uppercase tracking-[0.17em] text-ink-muted first:pt-1"
-                    >
-                      {group}
-                    </h3>
-                    <ul className="space-y-1">
-                      {groups.get(group)?.map((interview) => (
-                        <ScheduleRow
-                          key={interview.interview_id}
-                          interview={interview}
-                          selected={interview.interview_id === selectedId}
-                          timeZone={timeZone}
-                          onSelect={() => onSelect(interview)}
-                        />
-                      ))}
-                    </ul>
-                  </section>
-                ) : null,
-            )}
-          </div>
-        ) : null}
+        <div className="divide-y divide-line">
+          <QueueGroup
+            id="needs-attention"
+            title="Needs attention"
+            interviews={needsAttention}
+            selectedId={selectedId}
+            timeZone={timeZone}
+            onSelect={onSelect}
+          />
+          <QueueGroup
+            id="upcoming"
+            title="Upcoming"
+            interviews={upcoming}
+            selectedId={selectedId}
+            timeZone={timeZone}
+            onSelect={onSelect}
+          />
+        </div>
 
-        {past.length ? (
+        {completed.length ? (
           <details
             className="group border-t border-line"
-            open={active.length === 0 || undefined}
+            open={needsAttention.length === 0 && upcoming.length === 0}
           >
             <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 font-semibold text-ink marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent">
               <span>
-                Past interviews{" "}
+                Completed{" "}
                 <span className="ml-1 text-sm text-ink-muted">
-                  {past.length}
+                  {completed.length}
                 </span>
               </span>
               <ChevronDown
@@ -478,8 +447,8 @@ function SchedulePane({
                 className="size-4 text-ink-muted transition-transform group-open:rotate-180"
               />
             </summary>
-            <PastRows
-              interviews={past}
+            <QueueRows
+              interviews={completed}
               selectedId={selectedId}
               timeZone={timeZone}
               onSelect={onSelect}
@@ -495,7 +464,7 @@ function SchedulePane({
               disabled={isFetchingNextPage}
               onClick={onLoadMore}
             >
-              {isFetchingNextPage ? "Loading more…" : "Load more schedule"}
+              {isFetchingNextPage ? "Loading more…" : "Load more interviews"}
             </button>
           </div>
         ) : null}
@@ -504,7 +473,41 @@ function SchedulePane({
   );
 }
 
-function PastRows({
+function QueueGroup({
+  id,
+  title,
+  interviews,
+  selectedId,
+  timeZone,
+  onSelect,
+}: {
+  id: string;
+  title: string;
+  interviews: WorkspaceInterview[];
+  selectedId: string;
+  timeZone: string;
+  onSelect: (interview: WorkspaceInterview) => void;
+}) {
+  if (!interviews.length) return null;
+  return (
+    <section className="px-2 py-3" aria-labelledby={`queue-${id}`}>
+      <h3
+        id={`queue-${id}`}
+        className="px-3 pb-2 text-[0.68rem] font-bold uppercase tracking-[0.17em] text-ink-muted"
+      >
+        {title} <span className="ml-1">{interviews.length}</span>
+      </h3>
+      <QueueRows
+        interviews={interviews}
+        selectedId={selectedId}
+        timeZone={timeZone}
+        onSelect={onSelect}
+      />
+    </section>
+  );
+}
+
+function QueueRows({
   interviews,
   selectedId,
   timeZone,
@@ -572,9 +575,7 @@ function ScheduleRow({
             <p className="truncate text-xs text-ink-muted">
               {formatInterviewType(interview.interview_type)}
             </p>
-            <span
-              className={`mt-2 inline-flex max-w-full rounded-full px-2 py-1 text-[0.68rem] font-bold ${stateTone(interview)}`}
-            >
+            <span className="mt-2 block text-xs font-semibold leading-5 text-ink-muted">
               {stateLabel(interview)}
             </span>
           </div>
@@ -591,7 +592,7 @@ const InterviewDetail = function InterviewDetail({
   timeZone,
   cancelingId,
   mutationError,
-  onPrepare,
+  onOpenWorkspace,
   onCancelRequest,
   onCancelKeep,
   onTransition,
@@ -602,7 +603,7 @@ const InterviewDetail = function InterviewDetail({
   timeZone: string;
   cancelingId: string | null;
   mutationError: unknown;
-  onPrepare: () => void;
+  onOpenWorkspace: (interview: Interview) => void;
   onCancelRequest: (id: string) => void;
   onCancelKeep: () => void;
   onTransition: (
@@ -627,6 +628,18 @@ const InterviewDetail = function InterviewDetail({
   );
   const scheduled = interview.status === "SCHEDULED";
   const completed = interview.status === "COMPLETED";
+  const previousRound = scheduled
+    ? [...rounds]
+        .filter(
+          (round) =>
+            round.status === "COMPLETED" &&
+            Boolean(round.debrief_completed_at) &&
+            round.scheduled_at < interview.scheduled_at,
+        )
+        .sort((left, right) =>
+          right.scheduled_at.localeCompare(left.scheduled_at),
+        )[0] ?? null
+    : null;
 
   useEffect(() => {
     if (cancelingId === interview.interview_id) {
@@ -701,23 +714,9 @@ const InterviewDetail = function InterviewDetail({
                 </p>
               </div>
               {interview.meeting_url ? (
-                <a
-                  href={interview.meeting_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={buttonClassName(
-                    interview.context.next_action === "JOIN_MEETING"
-                      ? "primary"
-                      : "secondary",
-                  )}
-                >
-                  Join meeting
-                  <ExternalLink
-                    aria-hidden="true"
-                    className="ml-1.5 size-3.5"
-                  />
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
+                <p className="text-sm font-semibold text-accent">
+                  Meeting link ready
+                </p>
               ) : null}
             </div>
           ) : null}
@@ -731,12 +730,26 @@ const InterviewDetail = function InterviewDetail({
               error={mutationError}
             />
           ) : null}
+          <LifecycleIndicator interview={interview} />
           <ContextCommand
             interview={interview}
-            onPrepare={onPrepare}
+            onOpenWorkspace={() => onOpenWorkspace(interview)}
             onTransition={onTransition}
           />
-          <PreparationSnapshot interview={interview} timeZone={timeZone} />
+          <PreparationSnapshot
+            interview={interview}
+            timeZone={timeZone}
+            onOpenWorkspace={() => onOpenWorkspace(interview)}
+          />
+          {previousRound ? (
+            <PreviousRoundContext
+              interview={previousRound}
+              roundNumber={rounds.findIndex(
+                (round) => round.interview_id === previousRound.interview_id,
+              ) + 1}
+              onReview={() => onOpenWorkspace(previousRound)}
+            />
+          ) : null}
           {rounds.length ? (
             <RoundJourney
               rounds={rounds}
@@ -848,12 +861,23 @@ const InterviewDetail = function InterviewDetail({
             </details>
           ) : null}
           {completed ? (
-            <Link
-              to={applicationHref(interview)}
-              className={buttonClassName("secondary", "w-full sm:w-auto")}
-            >
-              Schedule next round
-            </Link>
+            <details className="group border-t border-line pt-2">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 font-semibold text-ink-muted marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                <span>Related journey actions</span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className="size-4 transition-transform group-open:rotate-180"
+                />
+              </summary>
+              <div className="pb-2 pt-2">
+                <Link
+                  to={applicationHref(interview)}
+                  className={buttonClassName("secondary", "w-full sm:w-auto")}
+                >
+                  Schedule another round
+                </Link>
+              </div>
+            </details>
           ) : null}
         </div>
       </div>
@@ -861,13 +885,84 @@ const InterviewDetail = function InterviewDetail({
   );
 };
 
+function LifecycleIndicator({ interview }: { interview: WorkspaceInterview }) {
+  const steps = ["Prepare", "Interview", "Reflect", "Follow up", "Next round"];
+  const state = interview.context.workflow_state;
+  if (state === "CANCELED") {
+    return (
+      <section
+        className="rounded-2xl border border-line bg-surface-muted p-4"
+        aria-labelledby="interview-lifecycle-title"
+      >
+        <p
+          id="interview-lifecycle-title"
+          className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted"
+        >
+          Interview lifecycle
+        </p>
+        <p className="mt-2 font-semibold text-ink">Canceled interview</p>
+        <p className="mt-1 text-sm text-ink-muted">
+          This round remains in your history without being shown as completed.
+        </p>
+      </section>
+    );
+  }
+  const currentIndex =
+    state === "PREPARE"
+      ? 0
+      : ["UPCOMING", "IMMINENT", "MISSED"].includes(state)
+        ? 1
+        : state === "CAPTURE"
+          ? 2
+          : state === "FOLLOW_UP"
+            ? 3
+            : -1;
+  const completedThrough = state === "HISTORY" ? 3 : currentIndex - 1;
+  return (
+    <section aria-labelledby="interview-lifecycle-title">
+      <h3
+        id="interview-lifecycle-title"
+        className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted"
+      >
+        Interview lifecycle
+      </h3>
+      <ol className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {steps.map((step, index) => {
+          const isComplete = index <= completedThrough;
+          const isCurrent = index === currentIndex;
+          return (
+            <li
+              key={step}
+              aria-current={isCurrent ? "step" : undefined}
+              className={`rounded-xl border px-3 py-2 text-xs font-semibold ${isCurrent ? "border-accent bg-accent-soft text-accent" : isComplete ? "border-success/20 bg-success-soft text-success" : "border-line bg-surface-muted text-ink-muted"}`}
+            >
+              <span className="block text-[0.65rem] uppercase tracking-wide">
+                {isComplete
+                  ? "Complete"
+                  : isCurrent
+                    ? state === "MISSED"
+                      ? "Unresolved"
+                      : "Current"
+                    : state === "HISTORY" && step === "Next round"
+                      ? "Optional"
+                      : "Later"}
+              </span>
+              <span className="mt-0.5 block">{step}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 function ContextCommand({
   interview,
-  onPrepare,
+  onOpenWorkspace,
   onTransition,
 }: {
   interview: WorkspaceInterview;
-  onPrepare: () => void;
+  onOpenWorkspace: () => void;
   onTransition: (
     interview: WorkspaceInterview,
     status: "COMPLETED" | "CANCELED",
@@ -877,111 +972,47 @@ function ContextCommand({
   let eyebrow = "What to do now";
   let title = "Keep this interview journey moving";
   let description = "Review the interview context and choose the next step.";
-  let action: ReactNode = (
-    <Link
-      to={applicationHref(interview)}
-      className={buttonClassName("primary")}
-    >
-      Open application
-    </Link>
-  );
+  let action: ReactNode;
   if (state === "IMMINENT") {
     eyebrow = "Attend";
     title = "Your interview is coming up soon";
     description = interview.meeting_url
       ? "The meeting link is ready above. Use the remaining time for a final preparation check."
       : "Confirm the location and review any unfinished preparation before the interview.";
-    action = interview.meeting_url ? (
-      <a
-        href={interview.meeting_url}
-        target="_blank"
-        rel="noreferrer"
-        className={buttonClassName("primary")}
-      >
-        Join meeting
-        <ExternalLink aria-hidden="true" className="ml-1.5 size-3.5" />
-        <span className="sr-only"> (opens in a new tab)</span>
-      </a>
-    ) : (
-      <button
-        type="button"
-        className={buttonClassName("primary")}
-        onClick={onPrepare}
-      >
-        Review preparation
-      </button>
-    );
   }
   if (state === "PREPARE") {
     eyebrow = "Prepare";
     title = "Continue your preparation";
     description =
       "Work through the remaining checklist, questions, and private preparation notes.";
-    action = (
-      <button
-        type="button"
-        className={buttonClassName("primary")}
-        onClick={onPrepare}
-      >
-        Continue preparation
-      </button>
-    );
   }
   if (state === "UPCOMING") {
     eyebrow = "Ready";
     title = "Preparation is complete";
     description =
       "Keep the time and access details close. You can still review your preparation before the conversation.";
-    action = (
-      <button
-        type="button"
-        className={buttonClassName("secondary")}
-        onClick={onPrepare}
-      >
-        Review preparation
-      </button>
-    );
   }
   if (state === "MISSED") {
     eyebrow = "Confirm";
     title = "The scheduled time has passed";
     description =
       "Mark the interview complete if it happened, then capture what you learned. Otherwise, edit or reschedule it from the application.";
-    action = (
-      <button
-        type="button"
-        className={buttonClassName("primary")}
-        onClick={() => void onTransition(interview, "COMPLETED")}
-      >
-        Mark complete
-      </button>
-    );
   }
   if (state === "CAPTURE") {
     eyebrow = "Capture";
     title = "Record what happened while it is fresh";
     description =
       "Save your private reflection, signals you noticed, and the concrete next step. This does not assume an outcome.";
-    action = (
-      <button
-        type="button"
-        className={buttonClassName("primary")}
-        onClick={onPrepare}
-      >
-        Capture interview notes
-      </button>
-    );
   }
   if (state === "FOLLOW_UP") {
     eyebrow = "Follow up";
     title = followUpLabel(interview);
     description =
-      "HireFlux uses the application follow-up date as the single next-step system for this interview journey.";
-    action = (
-      <Link to={followUpHref(interview)} className={buttonClassName("primary")}>
-        Review follow-up
-      </Link>
-    );
+      interview.context.follow_up_state === "OVERDUE"
+        ? "Your follow-up is overdue. Review the opportunity and decide what you want to do next."
+        : interview.context.follow_up_state === "TODAY"
+          ? "Follow-up is due today. Review the opportunity and record your next step."
+          : "You still need to decide the next step for this opportunity.";
   }
   if (state === "HISTORY" || state === "CANCELED") {
     eyebrow = "History";
@@ -990,7 +1021,95 @@ function ContextCommand({
         ? "This interview was canceled"
         : "This round is complete";
     description =
-      "Review the connected interview rounds or open the application for the full record.";
+      state === "CANCELED"
+        ? "Open the application to review the record or schedule a replacement round."
+        : "Your reflection is saved and available whenever you want to revisit this round.";
+  }
+  switch (interview.context.next_action) {
+    case "PREPARE":
+      action = (
+        <button
+          type="button"
+          className={buttonClassName("primary")}
+          onClick={onOpenWorkspace}
+        >
+          {state === "PREPARE" ? "Continue preparation" : "Review preparation"}
+        </button>
+      );
+      break;
+    case "JOIN_MEETING":
+      action = interview.meeting_url ? (
+        <a
+          href={interview.meeting_url}
+          target="_blank"
+          rel="noreferrer"
+          className={buttonClassName("primary")}
+        >
+          Join meeting
+          <ExternalLink aria-hidden="true" className="ml-1.5 size-3.5" />
+          <span className="sr-only"> (opens in a new tab)</span>
+        </a>
+      ) : (
+        <Link
+          to={applicationHref(interview)}
+          className={buttonClassName("primary")}
+        >
+          Open application
+        </Link>
+      );
+      break;
+    case "MARK_COMPLETE":
+      action = (
+        <button
+          type="button"
+          className={buttonClassName("primary")}
+          onClick={() => void onTransition(interview, "COMPLETED")}
+        >
+          Mark complete
+        </button>
+      );
+      break;
+    case "CAPTURE_NOTES":
+      action = (
+        <button
+          type="button"
+          className={buttonClassName("primary")}
+          onClick={onOpenWorkspace}
+        >
+          Capture interview notes
+        </button>
+      );
+      break;
+    case "REVIEW_FOLLOW_UP":
+      action = (
+        <Link
+          to={followUpHref(interview)}
+          className={buttonClassName("primary")}
+        >
+          Review follow-up
+        </Link>
+      );
+      break;
+    case "REVIEW_DEBRIEF":
+      action = (
+        <button
+          type="button"
+          className={buttonClassName("primary")}
+          onClick={onOpenWorkspace}
+        >
+          Review debrief
+        </button>
+      );
+      break;
+    default:
+      action = (
+        <Link
+          to={applicationHref(interview)}
+          className={buttonClassName("primary")}
+        >
+          Open application
+        </Link>
+      );
   }
   return (
     <section
@@ -1018,28 +1137,30 @@ function ContextCommand({
 function PreparationSnapshot({
   interview,
   timeZone,
+  onOpenWorkspace,
 }: {
   interview: WorkspaceInterview;
   timeZone: string;
+  onOpenWorkspace: () => void;
 }) {
   if (interview.status === "CANCELED") return null;
   const completed = new Set(interview.completed_checklist_items);
   const isDebrief = interview.status === "COMPLETED";
+  if (isDebrief && !interview.debrief_completed_at) return null;
+  const reflection = reflectionExcerpts(interview);
   return (
     <section aria-labelledby="preparation-snapshot-title">
       <div>
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted">
-            {isDebrief ? "Private reflection" : "Preparation"}
+            {isDebrief ? "Saved reflection" : "Preparation"}
           </p>
           <h3
             id="preparation-snapshot-title"
             className="mt-1 text-lg font-bold text-ink"
           >
             {isDebrief
-              ? interview.debrief_completed_at
-                ? "Debrief complete"
-                : "Debrief not captured yet"
+              ? "Interview reflection"
               : `${interview.guidance.readiness.completed_steps} of ${interview.guidance.readiness.total_steps} ready`}
           </h3>
         </div>
@@ -1075,17 +1196,113 @@ function PreparationSnapshot({
             );
           })}
         </ul>
-      ) : interview.debrief_completed_at ? (
-        <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-success">
-          <CheckCircle2 aria-hidden="true" className="size-4" />
-          Saved {formatTimestamp(interview.debrief_completed_at, timeZone)}
-        </p>
       ) : (
-        <p className="mt-3 text-sm leading-6 text-ink-muted">
-          Capture what went well, what you would improve, signals you noticed,
-          and the next step.
-        </p>
+        <div className="mt-3">
+          <p className="inline-flex items-center gap-2 text-sm font-semibold text-success">
+            <CheckCircle2 aria-hidden="true" className="size-4" />
+            Completed {formatTimestamp(interview.debrief_completed_at!, timeZone)}
+          </p>
+          <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+            {reflection.map((item) => (
+              <div
+                key={item.label}
+                className="min-w-0 rounded-xl border border-line bg-surface-raised p-3"
+              >
+                <dt className="text-xs font-bold uppercase tracking-wide text-ink-muted">
+                  {item.label}
+                </dt>
+                <dd className="mt-1 line-clamp-4 text-sm leading-6 text-ink">
+                  {item.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <button
+            type="button"
+            className={`${buttonClassName("secondary")} mt-4`}
+            onClick={onOpenWorkspace}
+          >
+            Review reflection
+          </button>
+        </div>
       )}
+    </section>
+  );
+}
+
+function reflectionExcerpts(interview: Interview) {
+  const items: Array<{ label: string; value: string }> = [];
+  if (interview.debrief_went_well) {
+    items.push({ label: "Went well", value: interview.debrief_went_well });
+  }
+  const carryForward = interview.debrief_improve ?? interview.debrief_signals;
+  if (carryForward) {
+    items.push({ label: "Carry forward", value: carryForward });
+  }
+  if (interview.debrief_next_step) {
+    items.push({
+      label: "Recorded next step",
+      value: interview.debrief_next_step,
+    });
+  }
+  return items.slice(0, 3);
+}
+
+function PreviousRoundContext({
+  interview,
+  roundNumber,
+  onReview,
+}: {
+  interview: Interview;
+  roundNumber: number;
+  onReview: () => void;
+}) {
+  const signals: Array<{ label: string; value: string }> = [];
+  if (interview.debrief_improve) {
+    signals.push({ label: "Carry forward", value: interview.debrief_improve });
+  }
+  if (interview.debrief_signals) {
+    signals.push({ label: "What you noticed", value: interview.debrief_signals });
+  }
+  if (signals.length < 2 && interview.debrief_next_step) {
+    signals.push({
+      label: "Recorded next step",
+      value: interview.debrief_next_step,
+    });
+  }
+  const visible = signals.slice(0, 2);
+  if (!visible.length) return null;
+  return (
+    <section
+      className="rounded-2xl border border-violet/20 bg-violet-soft p-4 sm:p-5"
+      aria-labelledby="previous-round-context-title"
+    >
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet">
+        From Round {roundNumber} · {formatInterviewType(interview.interview_type)}
+      </p>
+      <h3
+        id="previous-round-context-title"
+        className="mt-1 text-lg font-bold text-ink"
+      >
+        Previous round context
+      </h3>
+      <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+        {visible.map((signal) => (
+          <div key={signal.label}>
+            <dt className="text-xs font-bold uppercase tracking-wide text-ink-muted">
+              {signal.label}
+            </dt>
+            <dd className="mt-1 text-sm leading-6 text-ink">{signal.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <button
+        type="button"
+        className={`${buttonClassName("secondary")} mt-4`}
+        onClick={onReview}
+      >
+        Review Round {roundNumber} debrief
+      </button>
     </section>
   );
 }

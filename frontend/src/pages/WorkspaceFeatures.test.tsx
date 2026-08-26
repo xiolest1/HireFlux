@@ -41,6 +41,42 @@ function makeProgressAnalytics(range: "30d" | "90d" | "all" = "30d"): Analytics 
       deltas: { submitted_count: 3, response_rate: 0.2, interview_rate: 0.05, offer_rate: 0.125, acceptance_rate: 0, average_days_to_first_response: -0.5 },
     } : { available: false, current_start: null, current_end: null, previous_start: null, previous_end: null, current: null, previous: null, deltas: null },
     follow_up_coverage: { active_count: 4, scheduled_count: 2, coverage_rate: 0.5, overdue_count: 1, due_today_count: 1, missing_count: 1 },
+    progress_narrative: {
+      state: range === "all" ? "ALL_TIME" : "READY",
+      tone: range === "all" ? "NEUTRAL" : "POSITIVE",
+      headline: range === "all" ? "Your complete tracked search history" : "Recent applications are converting more effectively",
+      explanation: range === "all" ? "All-time results show the full journey without treating separate periods as directly comparable." : "Response and interview conversion improved across equal comparison periods.",
+      primary_signal: range === "all" ? null : {
+        code: "SEARCH_CONVERTING",
+        category: "PERFORMANCE",
+        direction: "IMPROVING",
+        priority: 60,
+        evidence_metric_keys: ["RESPONSE_RATE", "INTERVIEW_RATE"],
+        evidence_summary: "50% response · 25% interview",
+        sample_label: "Early signal · Based on 13 applications",
+      },
+      supporting_signals: [
+        { metric_key: "SUBMISSIONS", category: "ACTIVITY", direction: range === "all" ? "NOT_AVAILABLE" : "IMPROVING", emphasis: "CONTEXT" },
+        { metric_key: "RESPONSE_RATE", category: "PERFORMANCE", direction: range === "all" ? "NOT_AVAILABLE" : "IMPROVING", emphasis: range === "all" ? "CONTEXT" : "PRIMARY" },
+        { metric_key: "INTERVIEW_RATE", category: "PERFORMANCE", direction: range === "all" ? "NOT_AVAILABLE" : "IMPROVING", emphasis: range === "all" ? "CONTEXT" : "PRIMARY" },
+      ],
+      process_health: {
+        tone: "ACTION_NEEDED",
+        summary: "Some active opportunities need follow-up attention now.",
+        active_count: 4,
+        scheduled_count: 2,
+        coverage_rate: 0.5,
+        overdue_count: 1,
+        due_today_count: 1,
+        missing_count: 1,
+      },
+      recommended_focus: {
+        title: "1 follow-up is overdue",
+        explanation: "1 other active application does not have a next step scheduled.",
+        tone: "ACTION_NEEDED",
+        action: { kind: "VIEW_APPLICATIONS", label: "Review follow-ups", parameters: { view: "ACTIVE", follow_up: "NEEDS_ATTENTION" } },
+      },
+    },
     insights: [{ code: "FOLLOW_UP_ATTENTION", category: "follow_up", semantic_type: "action", tone: "ACTION_NEEDED", title: "1 follow-up is overdue", description: "1 other active application does not have a next step scheduled.", evidence_summary: "1 overdue · 1 missing a next step", evidence: "1 follow-up overdue and 1 without a next step scheduled across 4 active applications.", evidence_strength: "STRONG", evidence_label: null, priority: 100, action: { kind: "VIEW_APPLICATIONS", label: "Review follow-ups", parameters: { view: "ACTIVE", follow_up: "NEEDS_ATTENTION" } } }],
     disclaimer: "This dataset is descriptive, not predictive.",
   };
@@ -116,7 +152,7 @@ describe("workspace milestone features", () => {
 
     const { user, queryClient } = renderApp("/dashboard");
     const analyticsKey = ["analytics", { range: "30d" }] as const;
-    queryClient.setQueryData(analyticsKey, { seeded: true });
+    queryClient.setQueryData(analyticsKey, makeProgressAnalytics());
     expect(
       await screen.findByRole("heading", {
         name: "How many jobs am I pursuing?",
@@ -127,10 +163,10 @@ describe("workspace milestone features", () => {
     ).toBeVisible();
     expect(
       screen.getByRole("heading", {
-        name: "How successful has my search been?",
+        name: "How is my search progressing?",
       }),
     ).toBeVisible();
-    expect(screen.getByText("8 of 13 submitted applications")).toBeVisible();
+    expect(screen.getByText("62% of submissions")).toBeVisible();
     expect(
       screen.getByText(/Complete overdue follow-up.*Aug 11, 2026/),
     ).toBeVisible();
@@ -167,10 +203,15 @@ describe("workspace milestone features", () => {
     );
     expect(screen.getByRole("button", { name: "Complete" })).toBeVisible();
 
+    const analyticsUpdatedAt = queryClient.getQueryState(analyticsKey)?.dataUpdatedAt ?? 0;
     await user.click(screen.getByRole("button", { name: "Complete" }));
     expect(await screen.findByText("Follow-up completed.")).toBeVisible();
     expect(body).toEqual({ expected_version: 3 });
-    expect(queryClient.getQueryState(analyticsKey)?.isInvalidated).toBe(true);
+    await waitFor(() =>
+      expect(queryClient.getQueryState(analyticsKey)?.dataUpdatedAt).toBeGreaterThan(
+        analyticsUpdatedAt,
+      ),
+    );
   });
 
   it("adapts Home for an early, calm search without inventing urgency", async () => {
@@ -212,7 +253,7 @@ describe("workspace milestone features", () => {
     ).toBeVisible();
   });
 
-  it("loads an analytical progress brief only after it is opened", async () => {
+  it("loads one progress narrative eagerly and reveals its reasoning on demand", async () => {
     let analyticsRequests = 0;
     server.use(
       http.get(`${API_ORIGIN}/api/v1/analytics`, () => {
@@ -222,59 +263,71 @@ describe("workspace milestone features", () => {
     );
 
     const { user } = renderApp("/dashboard");
-    await screen.findByRole("heading", {
-      name: "How successful has my search been?",
-    });
-    expect(analyticsRequests).toBe(0);
+    expect(await screen.findByText("Recent applications are converting more effectively")).toBeVisible();
+    expect(analyticsRequests).toBe(1);
     expect(
-      screen.queryByText("What the recent data is showing"),
+      screen.queryByRole("heading", { name: "50% response · 25% interview" }),
     ).not.toBeInTheDocument();
 
-    await user.click(screen.getByText("View supporting progress details"));
+    const progressDisclosure = screen.getByRole("button", {
+      name: "See what changed and why",
+    });
+    expect(progressDisclosure).toHaveAttribute("aria-expanded", "false");
+    expect(progressDisclosure).toHaveAttribute("aria-controls", "progress-story-details");
+    await user.click(progressDisclosure);
 
     expect(
-      await screen.findByText("What the recent data is showing"),
+      await screen.findByRole("heading", { name: "50% response · 25% interview" }),
     ).toBeVisible();
     expect(analyticsRequests).toBe(1);
-    expect(screen.getByText("+3 from previous period")).toBeVisible();
-    expect(screen.getByText("+20 pp from previous period")).toBeVisible();
-    expect(screen.getByText("+5 pp from previous period")).toBeVisible();
+    expect(screen.queryByText("3 applications higher than the previous period")).not.toBeInTheDocument();
+    expect(screen.getByText("20 percentage points higher than the previous period")).toBeVisible();
+    expect(screen.getByText("5 percentage points higher than the previous period")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Two equal-length periods in your selected range" })).toBeVisible();
+    expect(
+      screen.getByText((_, element) =>
+        element?.tagName === "P"
+        && element.textContent === "Jul 13, 2026–Aug 12, 2026 is compared with Jun 12, 2026–Jul 12, 2026.",
+      ),
+    ).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "1 follow-up is overdue" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "Suggested action: Review follow-ups" }),
+      screen.getByRole("link", { name: "Review follow-ups" }),
     ).toHaveAttribute(
       "href",
       "/applications?view=ACTIVE&follow_up=NEEDS_ATTENTION",
     );
     expect(
-      screen.getByText("1 overdue · 1 due today · 1 missing a next step"),
+      screen.getByText("1 overdue follow-ups · 1 due today · 1 without a next step"),
     ).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "Open Analytics" }),
+      screen.getByRole("link", { name: "View full Analytics" }),
     ).toHaveAttribute("href", "/analytics?range=30d");
 
-    const progressDisclosure = screen.getByText(
-      "View supporting progress details",
-    );
     await user.click(progressDisclosure);
     expect(
-      screen.queryByText("What the recent data is showing"),
+      screen.queryByRole("heading", { name: "50% response · 25% interview" }),
     ).not.toBeInTheDocument();
     progressDisclosure.focus();
     await user.keyboard("{Enter}");
     expect(
-      await screen.findByText("What the recent data is showing"),
+      await screen.findByRole("heading", { name: "50% response · 25% interview" }),
     ).toBeVisible();
+    await user.keyboard(" ");
+    expect(
+      screen.queryByRole("heading", { name: "50% response · 25% interview" }),
+    ).not.toBeInTheDocument();
   });
 
   it("explains all-time progress and allows an analytics retry", async () => {
-    let attempts = 0;
+    let allTimeAttempts = 0;
     server.use(
       http.get(`${API_ORIGIN}/api/v1/analytics`, ({ request }) => {
-        attempts += 1;
-        if (attempts === 1) {
+        const range = new URL(request.url).searchParams.get("range");
+        if (range === "all") allTimeAttempts += 1;
+        if (range === "all" && allTimeAttempts === 1) {
           return HttpResponse.json(
             {
               error: {
@@ -286,7 +339,6 @@ describe("workspace milestone features", () => {
             { status: 503 },
           );
         }
-        const range = new URL(request.url).searchParams.get("range");
         return HttpResponse.json(
           makeProgressAnalytics(range === "all" ? "all" : "30d"),
         );
@@ -295,25 +347,105 @@ describe("workspace milestone features", () => {
 
     const { user } = renderApp("/dashboard");
     await screen.findByRole("heading", {
-      name: "How successful has my search been?",
+      name: "How is my search progressing?",
     });
     await user.selectOptions(screen.getByLabelText("Summary range"), "all");
-    await user.click(screen.getByText("View supporting progress details"));
 
     expect(
-      await screen.findByRole("heading", {
-        name: "Progress details could not be loaded",
-      }),
+      await screen.findByText("Progress interpretation is temporarily unavailable."),
     ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Try again" }));
 
+    expect(await screen.findByText("Your complete tracked search history")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "See what changed and why" }));
     expect(
-      await screen.findByText("Complete history, not a period comparison"),
+      await screen.findByRole("heading", { name: "Complete tracked history" }),
     ).toBeVisible();
-    expect(attempts).toBe(2);
     expect(
-      screen.getByRole("link", { name: "Open Analytics" }),
+      screen.getByRole("heading", { name: "History is context, not a trend" }),
+    ).toBeVisible();
+    expect(allTimeAttempts).toBe(2);
+    expect(
+      screen.getByRole("link", { name: "View full Analytics" }),
     ).toHaveAttribute("href", "/analytics?range=all");
+  });
+
+  it("does not display a previous-range narrative while the selected range loads", async () => {
+    let releaseNinetyDayResponse: (() => void) | undefined;
+    const ninetyDayGate = new Promise<void>((resolve) => {
+      releaseNinetyDayResponse = resolve;
+    });
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/analytics`, async ({ request }) => {
+        const selectedRange = new URL(request.url).searchParams.get("range");
+        if (selectedRange === "90d") await ninetyDayGate;
+        const response = makeProgressAnalytics(selectedRange === "90d" ? "90d" : "30d");
+        if (selectedRange === "90d") {
+          response.progress_narrative.headline = "Ninety-day progress is ready";
+        }
+        return HttpResponse.json(response);
+      }),
+    );
+
+    const { user } = renderApp("/dashboard");
+    expect(await screen.findByText("Recent applications are converting more effectively")).toBeVisible();
+    await user.selectOptions(screen.getByLabelText("Summary range"), "90d");
+
+    expect(screen.queryByText("Recent applications are converting more effectively")).not.toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Interpreting your recent progress" })).toBeVisible();
+
+    releaseNinetyDayResponse?.();
+    expect(await screen.findByText("Ninety-day progress is ready")).toBeVisible();
+  });
+
+  it("renders an empty calm workspace without inventing a warning or action", async () => {
+    const emptyAnalytics = makeProgressAnalytics();
+    emptyAnalytics.rates = {
+      submitted_count: 0,
+      response_count: 0,
+      response_rate: 0,
+      interview_count: 0,
+      interview_rate: 0,
+      offer_count: 0,
+      offer_rate: 0,
+      acceptance_count: 0,
+      acceptance_rate: 0,
+    };
+    emptyAnalytics.progress_narrative = {
+      ...emptyAnalytics.progress_narrative,
+      state: "EMPTY",
+      tone: "NEUTRAL",
+      headline: "Your recent progress picture is waiting for activity",
+      explanation: "Submit and track applications to start seeing meaningful changes over time.",
+      primary_signal: null,
+      supporting_signals: emptyAnalytics.progress_narrative.supporting_signals.map((signal) => ({
+        ...signal,
+        direction: "NOT_AVAILABLE" as const,
+        emphasis: "CONTEXT" as const,
+      })),
+      process_health: {
+        tone: "NEUTRAL",
+        summary: "There are no active opportunities to schedule yet.",
+        active_count: 0,
+        scheduled_count: 0,
+        coverage_rate: 0,
+        overdue_count: 0,
+        due_today_count: 0,
+        missing_count: 0,
+      },
+      recommended_focus: null,
+    };
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/analytics`, () => HttpResponse.json(emptyAnalytics)),
+    );
+
+    const { user } = renderApp("/dashboard");
+    expect(await screen.findByText("Your recent progress picture is waiting for activity")).toBeVisible();
+    expect(screen.getByText("There are no active opportunities to schedule yet.")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "See what changed and why" }));
+    expect(screen.getByRole("heading", { name: "No submitted activity in this range" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Tracking creates the comparison" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Review follow-ups" })).not.toBeInTheDocument();
   });
 
   it("keeps large action groups compact while revealing every action on demand", async () => {
@@ -670,6 +802,7 @@ describe("workspace milestone features", () => {
             due_today_count: 0,
             missing_count: 1,
           },
+          progress_narrative: makeProgressAnalytics().progress_narrative,
           insights: [
             {
               code: "FOLLOW_UP_ATTENTION",
@@ -943,6 +1076,7 @@ describe("workspace milestone features", () => {
             due_today_count: 0,
             missing_count: 1,
           },
+          progress_narrative: makeProgressAnalytics("90d").progress_narrative,
           insights: [
             {
               code: "BUILD_SAMPLE",
@@ -1352,7 +1486,7 @@ describe("workspace milestone features", () => {
     );
   });
 
-  it("groups the schedule by candidate chronology and switches the selected workspace", async () => {
+  it("groups interviews by lifecycle state and switches the selected workspace", async () => {
     const today = new Date();
     today.setUTCHours(15, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -1377,10 +1511,11 @@ describe("workspace milestone features", () => {
 
     const { user } = renderApp("/interviews");
     expect(
-      await screen.findByRole("heading", { name: "Your schedule" }),
+      await screen.findByRole("heading", { name: "Interview queue" }),
     ).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Today" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Tomorrow" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /Needs attention/ })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Today" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Tomorrow" })).not.toBeInTheDocument();
     const second = screen.getByRole("button", {
       name: /Second Studio, Hiring manager/,
     });
@@ -1584,7 +1719,7 @@ describe("workspace milestone features", () => {
     }
   });
 
-  it("loads more chronology without replacing the selected interview", async () => {
+  it("loads more interviews without replacing the selected interview", async () => {
     const cursors: Array<string | null> = [];
     server.use(
       ...interviewContextHandlers(),
@@ -1613,7 +1748,7 @@ describe("workspace milestone features", () => {
       await screen.findByRole("heading", { name: "Northstar Labs" }),
     ).toBeVisible();
     await user.click(
-      screen.getByRole("button", { name: "Load more schedule" }),
+      screen.getByRole("button", { name: "Load more interviews" }),
     );
     expect(
       await screen.findByRole("button", { name: /Second Company/ }),
@@ -1666,13 +1801,16 @@ describe("workspace milestone features", () => {
     const completed = makeWorkspaceInterview({
       status: "COMPLETED",
       debrief_completed_at: "2026-08-14T18:00:00Z",
+      debrief_went_well: "I explained the project impact clearly.",
+      debrief_improve: "Lead with the result next time.",
+      debrief_next_step: "Send a thank-you note.",
       allowed_statuses: [],
       context: {
         application_status: "INTERVIEW",
         follow_up_date: "2026-08-30",
         follow_up_state: "UPCOMING",
         workflow_state: "HISTORY",
-        next_action: "OPEN_APPLICATION",
+        next_action: "REVIEW_DEBRIEF",
       },
     });
     const canceled = makeWorkspaceInterview({
@@ -1697,8 +1835,9 @@ describe("workspace milestone features", () => {
     renderApp("/interviews");
     expect(await screen.findByText(/Nothing is upcoming/)).toBeVisible();
     const historySummary = screen
-      .getByText(/Past interviews/)
-      .closest("summary");
+      .getAllByText(/^Completed$/)
+      .map((element) => element.closest("summary"))
+      .find(Boolean);
     expect(historySummary).not.toBeNull();
     expect(
       screen.getByRole("button", { name: /Northstar Labs.*Completed/ }),
@@ -1707,8 +1846,192 @@ describe("workspace milestone features", () => {
       screen.getByRole("button", { name: /Northstar Labs.*Canceled/ }),
     ).toBeVisible();
     expect(
-      screen.getByRole("heading", { name: "Debrief complete" }),
+      screen.getByRole("heading", { name: "Interview reflection" }),
     ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Review debrief" })).toBeVisible();
+  });
+
+  it("orders the state-first queue and keeps each interview in one group", async () => {
+    const prepare = makeWorkspaceInterview({
+      interview_id: "11111111-aaaa-4111-8111-111111111111",
+      company_name: "Prepare Company",
+      scheduled_at: "2026-08-20T15:00:00Z",
+    });
+    const imminent = makeWorkspaceInterview({
+      interview_id: "22222222-aaaa-4222-8222-222222222222",
+      company_name: "Imminent Company",
+      scheduled_at: "2026-08-22T15:00:00Z",
+      context: {
+        application_status: "INTERVIEW",
+        follow_up_date: null,
+        follow_up_state: "NONE",
+        workflow_state: "IMMINENT",
+        next_action: "JOIN_MEETING",
+      },
+    });
+    const upcoming = makeWorkspaceInterview({
+      interview_id: "33333333-aaaa-4333-8333-333333333333",
+      company_name: "Upcoming Company",
+      scheduled_at: "2026-08-21T15:00:00Z",
+      context: {
+        application_status: "INTERVIEW",
+        follow_up_date: null,
+        follow_up_state: "NONE",
+        workflow_state: "UPCOMING",
+        next_action: "JOIN_MEETING",
+      },
+    });
+    const items = [prepare, upcoming, imminent];
+    server.use(
+      ...interviewContextHandlers(items),
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+        HttpResponse.json({ items, next_cursor: null }),
+      ),
+    );
+
+    renderApp("/interviews");
+    const attentionHeading = await screen.findByRole("heading", {
+      name: /Needs attention/,
+    });
+    const attention = attentionHeading.closest("section");
+    const upcomingSection = screen
+      .getByRole("heading", { name: /Upcoming/ })
+      .closest("section");
+    expect(attention).not.toBeNull();
+    expect(upcomingSection).not.toBeNull();
+    const attentionButtons = within(attention!).getAllByRole("button");
+    expect(attentionButtons[0]).toHaveAccessibleName(/Imminent Company/);
+    expect(attentionButtons[1]).toHaveAccessibleName(/Prepare Company/);
+    expect(within(upcomingSection!).getByRole("button")).toHaveAccessibleName(
+      /Upcoming Company/,
+    );
+    expect(screen.getAllByRole("button", { name: /Company/ })).toHaveLength(3);
+  });
+
+  it("shows only the latest useful previous-round context and opens read-only review", async () => {
+    let updateBody: Record<string, unknown> | null = null;
+    const completedRound = makeInterview({
+      interview_id: "33333333-3333-4333-8333-333333333333",
+      interview_type: "RECRUITER_CALL",
+      status: "COMPLETED",
+      scheduled_at: "2026-08-10T15:00:00Z",
+      debrief_completed_at: "2026-08-10T16:00:00Z",
+      debrief_went_well: "I connected my experience to the role.",
+      debrief_improve: "State the measurable result sooner.",
+      debrief_signals: "The next round will test prioritization.",
+      debrief_next_step: "Prepare a second leadership example.",
+      allowed_statuses: [],
+    });
+    const selectedRound = makeWorkspaceInterview({
+      scheduled_at: "2026-08-14T15:00:00Z",
+    });
+    server.use(
+      ...interviewContextHandlers([completedRound, selectedRound]),
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+        HttpResponse.json({ items: [selectedRound], next_cursor: null }),
+      ),
+      http.patch(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/interviews/:interviewId/workspace`,
+        async ({ request }) => {
+          updateBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(
+            makeInterview({
+              ...completedRound,
+              version: 3,
+              debrief_went_well: String(updateBody.debrief_went_well),
+            }),
+          );
+        },
+      ),
+    );
+
+    const { user } = renderApp("/interviews");
+    expect(
+      await screen.findByRole("heading", { name: "Previous round context" }),
+    ).toBeVisible();
+    expect(screen.getByText("State the measurable result sooner.")).toBeVisible();
+    expect(
+      screen.getByText("The next round will test prioritization."),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("Prepare a second leadership example."),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Review Round 1 debrief" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Interview reflection" }),
+    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Interview debrief" })).toBeVisible();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByText("Preparation record")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Edit reflection" }));
+    expect(
+      screen.getByRole("dialog", { name: "Edit interview reflection" }),
+    ).toBeVisible();
+    expect(screen.getByLabelText("What went well *")).toHaveValue(
+      "I connected my experience to the role.",
+    );
+    await user.clear(screen.getByLabelText("What went well *"));
+    await user.type(screen.getByLabelText("What went well *"), "Unsaved edit");
+    await user.click(screen.getByRole("button", { name: "Cancel editing" }));
+    expect(
+      screen.getByRole("dialog", { name: "Interview reflection" }),
+    ).toBeVisible();
+    expect(screen.getByText("I connected my experience to the role.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Edit reflection" })).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Edit reflection" }));
+    await user.clear(screen.getByLabelText("What went well *"));
+    await user.type(
+      screen.getByLabelText("What went well *"),
+      "I gave a clearer result-first answer.",
+    );
+    await user.click(screen.getByRole("button", { name: "Save reflection" }));
+    expect(
+      await screen.findByRole("dialog", { name: "Interview reflection" }),
+    ).toBeVisible();
+    expect(updateBody).toMatchObject({
+      expected_version: completedRound.version,
+      debrief_complete: true,
+      debrief_went_well: "I gave a clearer result-first answer.",
+    });
+    expect(screen.getByText("I gave a clearer result-first answer.")).toBeVisible();
+    expect(screen.getByText(/Completed Aug 10, 2026/)).toBeVisible();
+  });
+
+  it("keeps follow-up primary while preserving reflection review as a secondary action", async () => {
+    const completed = makeWorkspaceInterview({
+      status: "COMPLETED",
+      debrief_completed_at: "2026-08-14T18:00:00Z",
+      debrief_went_well: "I answered with concrete examples.",
+      debrief_improve: "Ask a sharper team question.",
+      debrief_next_step: "Set the follow-up date.",
+      allowed_statuses: [],
+      context: {
+        application_status: "INTERVIEW",
+        follow_up_date: null,
+        follow_up_state: "NONE",
+        workflow_state: "FOLLOW_UP",
+        next_action: "REVIEW_FOLLOW_UP",
+      },
+    });
+    server.use(
+      ...interviewContextHandlers([completed]),
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+        HttpResponse.json({ items: [completed], next_cursor: null }),
+      ),
+    );
+
+    renderApp("/interviews");
+    expect(await screen.findByText("You still need to decide the next step for this opportunity.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Review follow-up" })).toHaveAttribute(
+      "href",
+      `/applications/${completed.application_id}/edit?focus=follow_up`,
+    );
+    expect(screen.getByRole("button", { name: "Review reflection" })).toBeVisible();
   });
 
   it("manages application notes and schedules interviews without client-owned fields", async () => {

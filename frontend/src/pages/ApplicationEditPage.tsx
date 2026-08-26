@@ -1,4 +1,10 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { ApiError } from "../api/client";
 import { buttonClassName } from "../components/ui/buttonStyles";
 import { ErrorPanel } from "../components/ui/Feedback";
@@ -19,9 +25,24 @@ import { useSettings } from "../features/resources/queries";
 export function ApplicationEditPage() {
   const { applicationId = "" } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const applicationQuery = useApplication(applicationId);
   const updateMutation = useUpdateApplication();
   const settingsQuery = useSettings();
+
+  useEffect(() => {
+    if (!applicationQuery.isSuccess || searchParams.get("focus") !== "follow_up") {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      const followUpField = document.getElementById("follow_up_date");
+      if (typeof followUpField?.scrollIntoView === "function") {
+        followUpField.scrollIntoView({ block: "center" });
+      }
+      followUpField?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [applicationQuery.isSuccess, searchParams]);
 
   if (applicationQuery.isPending) {
     return <ApplicationFormSkeleton label="Loading application…" />;
@@ -82,16 +103,8 @@ export function ApplicationEditPage() {
       />
 
       <ApplicationForm
-        mode="edit"
         application={application}
-        defaultPreferences={
-          settingsQuery.data
-            ? {
-                defaultFollowUpDays: settingsQuery.data.default_follow_up_days,
-                timeZone: settingsQuery.data.time_zone,
-              }
-            : undefined
-        }
+        timeZone={settingsQuery.data?.time_zone}
         isSubmitting={updateMutation.isPending}
         serverError={updateMutation.error}
         onSubmit={submit}

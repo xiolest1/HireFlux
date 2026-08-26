@@ -74,10 +74,18 @@ class TransitionDecision:
 
 
 def validate_initial_status(status: ApplicationStatus, applied_date: date | None) -> None:
-    if status not in {ApplicationStatus.DRAFT, ApplicationStatus.APPLIED}:
-        raise StatusPolicyError("Applications can only be created as DRAFT or APPLIED.")
-    if status is ApplicationStatus.APPLIED and applied_date is None:
-        raise StatusPolicyError("applied_date is required when creating an APPLIED application.")
+    if status not in {
+        ApplicationStatus.DRAFT,
+        ApplicationStatus.APPLIED,
+        ApplicationStatus.INTERVIEW,
+    }:
+        raise StatusPolicyError("Applications can only be created as DRAFT, APPLIED, or INTERVIEW.")
+    if status is ApplicationStatus.DRAFT and applied_date is not None:
+        raise StatusPolicyError("applied_date must be empty when creating a DRAFT application.")
+    if status in {ApplicationStatus.APPLIED, ApplicationStatus.INTERVIEW} and applied_date is None:
+        raise StatusPolicyError(
+            "applied_date is required when creating an APPLIED or INTERVIEW application."
+        )
 
 
 def validate_applied_date(applied_date: date | None, *, today: date) -> None:

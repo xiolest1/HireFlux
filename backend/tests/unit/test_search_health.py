@@ -1,7 +1,7 @@
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from hireflux_backend.application.search_health import build_search_health
+from hireflux_backend.application.search_health import build_progress_signals, build_search_health
 from hireflux_backend.domain.enums import ApplicationSource, ApplicationStatus
 from hireflux_backend.domain.models import Application
 
@@ -375,6 +375,60 @@ def test_volume_up_and_response_down_combination_is_factual_and_suppresses_compo
         next(item for item in insights if item["code"] == "VOLUME_UP_RESPONSE_DOWN")["description"]
     )
     assert "without assigning a cause" in description
+
+
+def test_volume_up_and_interview_down_outranks_other_volume_signals() -> None:
+    insights = health(
+        tuple(application(index, TODAY - timedelta(days=20 + index)) for index in range(10)),
+        comparison(
+            10,
+            5,
+            current_response=0.2,
+            previous_response=0.6,
+            current_interview=0.1,
+            previous_interview=0.5,
+        ),
+    )
+    result_codes = codes(insights)
+    assert "VOLUME_UP_INTERVIEW_DOWN" in result_codes
+    assert "VOLUME_UP_RESPONSE_DOWN" not in result_codes
+    assert "INTERVIEW_DECLINING" not in result_codes
+    assert "MOMENTUM_UP" not in result_codes
+
+
+def test_interview_conversion_signals_require_qualified_samples() -> None:
+    qualified = health(
+        tuple(application(index, TODAY - timedelta(days=20 + index)) for index in range(10)),
+        comparison(5, 5, current_interview=0.5, previous_interview=0.1),
+    )
+    limited = health(
+        tuple(application(index, TODAY - timedelta(days=20 + index)) for index in range(9)),
+        comparison(4, 5, current_interview=0.5, previous_interview=0.1),
+    )
+    assert "INTERVIEW_IMPROVING" in codes(qualified)
+    assert "INTERVIEW_IMPROVING" not in codes(limited)
+
+
+def test_progress_signals_are_uncapped_and_use_the_selected_period_comparison() -> None:
+    signals = build_progress_signals(
+        comparison(
+            10,
+            5,
+            current_response=0.2,
+            previous_response=0.6,
+            current_interview=0.1,
+            previous_interview=0.5,
+        )
+    )
+
+    assert {
+        "VOLUME_UP_INTERVIEW_DOWN",
+        "INTERVIEW_DECLINING",
+        "RESPONSE_DECLINING",
+        "MOMENTUM_UP",
+    }.issubset(set(codes(signals)))
+    response = next(item for item in signals if item["code"] == "RESPONSE_DECLINING")
+    assert "selected equal-length periods" in str(response["description"])
 
 
 def test_results_are_ranked_bounded_and_deterministic() -> None:

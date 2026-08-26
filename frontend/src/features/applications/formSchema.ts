@@ -4,7 +4,6 @@ import type {
   CreateApplicationRequest,
 } from "../../api/applications";
 import {
-  applicationStatusSchema,
   applicationSourceSchema,
   roleFamilySchema,
   workModeSchema,
@@ -83,7 +82,6 @@ const applicationFormSchemaBase = z.object({
     .trim()
     .min(1, "Job title is required.")
     .max(120, "Job title must be 120 characters or fewer."),
-  status: applicationStatusSchema,
   applied_date: optionalDate("Applied date"),
   follow_up_date: optionalDate("Follow-up date"),
   job_url: optionalUrl,
@@ -108,33 +106,27 @@ export type ApplicationFormValues = z.output<
   typeof applicationFormSchemaBase
 >;
 
-export interface ApplicationFormDefaultPreferences {
-  defaultFollowUpDays: number;
-  timeZone: string;
-  now?: Date;
-}
+const applicationCreateFormSchemaBase = applicationFormSchemaBase.pick({
+  company_name: true,
+  job_title: true,
+  applied_date: true,
+  job_url: true,
+  location: true,
+  work_mode: true,
+  source: true,
+  source_detail: true,
+  salary_text: true,
+  description: true,
+}).extend({ status: z.enum(["DRAFT", "APPLIED", "INTERVIEW"]) });
 
-export function preferredFollowUpDate({
-  defaultFollowUpDays,
-  timeZone,
-  now = new Date(),
-}: ApplicationFormDefaultPreferences): string {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-  const value = (type: "year" | "month" | "day") =>
-    Number(parts.find((part) => part.type === type)?.value);
-  const preferred = new Date(
-    Date.UTC(value("year"), value("month") - 1, value("day") + defaultFollowUpDays),
-  );
-  return preferred.toISOString().slice(0, 10);
-}
+export type ApplicationCreateFormInput = z.input<
+  typeof applicationCreateFormSchemaBase
+>;
+export type ApplicationCreateFormValues = z.output<
+  typeof applicationCreateFormSchemaBase
+>;
 
 export function applicationFormSchema(
-  mode: "create" | "edit",
   today = currentDateInTimeZone(),
 ) {
   return applicationFormSchemaBase.superRefine((values, context) => {
@@ -145,40 +137,65 @@ export function applicationFormSchema(
         message: "Applied date cannot be in the future.",
       });
     }
+  });
+}
+
+export function applicationCreateFormSchema(
+  today = currentDateInTimeZone(),
+) {
+  return applicationCreateFormSchemaBase.superRefine((values, context) => {
+    if (values.applied_date && values.applied_date > today) {
+      context.addIssue({
+        code: "custom",
+        path: ["applied_date"],
+        message: "Applied date cannot be in the future.",
+      });
+    }
     if (
-      mode === "create" &&
-      values.status === "APPLIED" &&
+      ["APPLIED", "INTERVIEW"].includes(values.status) &&
       !values.applied_date
     ) {
       context.addIssue({
         code: "custom",
         path: ["applied_date"],
-        message: "Applied date is required for an applied application.",
+        message: "Choose when you applied for this stage.",
       });
     }
   });
 }
 
+export function applicationCreateFormDefaults(): ApplicationCreateFormInput {
+  return {
+    company_name: "",
+    job_title: "",
+    status: "DRAFT",
+    applied_date: "",
+    job_url: "",
+    location: "",
+    work_mode: "",
+    source: "",
+    source_detail: "",
+    salary_text: "",
+    description: "",
+  };
+}
+
 export function applicationFormDefaults(
-  application?: Application,
-  preferences?: ApplicationFormDefaultPreferences,
+  application: Application,
 ): ApplicationFormInput {
   return {
-    company_name: application?.company_name ?? "",
-    job_title: application?.job_title ?? "",
-    status: application?.status ?? "DRAFT",
-    applied_date: application?.applied_date ?? "",
-    follow_up_date:
-      application?.follow_up_date ??
-      (application ? "" : preferences ? preferredFollowUpDate(preferences) : ""),
-    job_url: application?.job_url ?? "",
-    location: application?.location ?? "",
-    work_mode: application?.work_mode ?? "",
-    source: application?.source ?? "",
-    source_detail: application?.source_detail ?? "",
-    salary_text: application?.salary_text ?? "",
-    description: application?.description ?? "",
-    role_family: application?.role_family ?? "",
+    company_name: application.company_name,
+    job_title: application.job_title,
+    applied_date: application.applied_date ?? "",
+    follow_up_date: application.follow_up_date ?? "",
+    job_url: application.job_url ?? "",
+    location: application.location ?? "",
+    work_mode: application.work_mode ?? "",
+    source: application.source ?? "",
+    source_detail: application.source_detail ?? "",
+    salary_text: application.salary_text ?? "",
+    description: application.description ?? "",
+    role_family: application.role_family ?? "",
   };
 }
 
@@ -202,10 +219,19 @@ export function toApplicationFields(
 }
 
 export function toCreateApplicationRequest(
-  values: ApplicationFormValues,
+  values: ApplicationCreateFormValues,
 ): CreateApplicationRequest {
-  if (values.status !== "DRAFT" && values.status !== "APPLIED") {
-    throw new Error("New applications must begin as DRAFT or APPLIED.");
-  }
-  return { ...toApplicationFields(values), status: values.status };
+  return {
+    company_name: values.company_name,
+    job_title: values.job_title,
+    status: values.status,
+    applied_date: values.status === "DRAFT" ? null : values.applied_date,
+    job_url: values.job_url,
+    location: values.location,
+    work_mode: values.work_mode,
+    source: values.source,
+    source_detail: values.source_detail,
+    salary_text: values.salary_text,
+    description: values.description,
+  };
 }

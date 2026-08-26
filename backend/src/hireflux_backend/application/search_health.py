@@ -92,6 +92,7 @@ def build_search_health(
         *_follow_up(applications, local_today),
         *_pipeline(applications, local_today, time_zone),
         *_combined(period_comparison),
+        *_interviews(period_comparison),
         *_momentum(submitted, local_today, time_zone),
         *_responses(submitted, local_today, time_zone),
         *_sources(submitted, source_signal=source_signal),
@@ -141,6 +142,23 @@ def build_search_health(
             )
         ]
     return [item.response() for item in selected]
+
+
+def build_progress_signals(period_comparison: dict[str, object]) -> list[dict[str, object]]:
+    """Return uncapped, selected-period candidates for the Home narrative.
+
+    Search Health intentionally caps and balances its cards across categories. Home has a
+    different job: deterministically choose the strongest performance relationship for the
+    selected range. Keeping these candidates uncapped prevents an unrelated source or process
+    card from hiding a qualified conversion signal.
+    """
+    candidates = [
+        *_combined(period_comparison),
+        *_interviews(period_comparison),
+        *_period_responses(period_comparison),
+        *_period_activity(period_comparison),
+    ]
+    return [item.response() for item in candidates]
 
 
 def _follow_up(applications: tuple[Application, ...], today: date) -> list[Candidate]:
@@ -265,20 +283,54 @@ def _pipeline(
 
 
 def _combined(comparison: dict[str, object]) -> list[Candidate]:
-    if not comparison.get("available"):
+    values = _comparison_values(comparison)
+    if values is None:
         return []
-    current = comparison.get("current")
-    previous = comparison.get("previous")
-    if not isinstance(current, dict) or not isinstance(previous, dict):
-        return []
-    current_count = int(cast(int | float, current["submitted_count"]))
-    previous_count = int(cast(int | float, previous["submitted_count"]))
-    current_response = float(cast(int | float, current["response_rate"]))
-    previous_response = float(cast(int | float, previous["response_rate"]))
-    current_interview = float(cast(int | float, current["interview_rate"]))
-    previous_interview = float(cast(int | float, previous["interview_rate"]))
+    (
+        current_count,
+        previous_count,
+        current_response,
+        previous_response,
+        current_interview,
+        previous_interview,
+    ) = values
     down = previous_count - current_count >= 3 and current_count <= previous_count * 0.75
     up = current_count - previous_count >= 3 and current_count >= previous_count * 1.5
+    if (
+        min(current_count, previous_count) >= MIN_RATE_SAMPLE
+        and up
+        and previous_interview - current_interview >= RATE_DELTA
+    ):
+        return [
+            Candidate(
+                "VOLUME_UP_INTERVIEW_DOWN",
+                "response",
+                "trend",
+                "WATCH",
+                "More applications are reaching interviews less often",
+                (
+                    "You submitted more applications while interview conversion was lower. "
+                    "The relationship matters more than either number by itself."
+                ),
+                f"{current_count} submissions · {current_interview:.0%} interview rate",
+                (
+                    f"{current_count} submissions at {current_interview:.0%} interview "
+                    f"conversion versus {previous_count} at {previous_interview:.0%} previously."
+                ),
+                _comparison_strength(current_count, previous_count),
+                _trend_priority(72, current_count, previous_count),
+                _view_action("Review recent applications", view="ALL"),
+                _sample_label(current_count, previous_count),
+                frozenset(
+                    {
+                        "MOMENTUM_UP",
+                        "INTERVIEW_DECLINING",
+                        "VOLUME_UP_RESPONSE_DOWN",
+                        "RESPONSE_DECLINING",
+                    }
+                ),
+            )
+        ]
     if (
         previous_count >= MIN_RATE_SAMPLE
         and current_count >= 3
@@ -367,6 +419,153 @@ def _combined(comparison: dict[str, object]) -> list[Candidate]:
             )
         ]
     return []
+
+
+def _interviews(comparison: dict[str, object]) -> list[Candidate]:
+    values = _comparison_values(comparison)
+    if values is None:
+        return []
+    current_count, previous_count, _, _, current_rate, previous_rate = values
+    if min(current_count, previous_count) < MIN_RATE_SAMPLE:
+        return []
+    delta = current_rate - previous_rate
+    if abs(delta) < RATE_DELTA:
+        return []
+    improving = delta > 0
+    return [
+        Candidate(
+            "INTERVIEW_IMPROVING" if improving else "INTERVIEW_DECLINING",
+            "response",
+            "trend",
+            "POSITIVE" if improving else "WATCH",
+            (
+                "Recent applications are reaching interviews more often"
+                if improving
+                else "Recent applications are reaching interviews less often"
+            ),
+            (
+                "Interview conversion improved across equal comparison periods."
+                if improving
+                else (
+                    "Interview conversion declined across equal comparison periods. "
+                    "Keep tracking to see whether the pattern continues."
+                )
+            ),
+            f"{current_rate:.0%} recent · {previous_rate:.0%} previous",
+            (
+                f"{current_count} submissions at {current_rate:.0%} interview conversion, "
+                f"compared with {previous_count} at {previous_rate:.0%} previously."
+            ),
+            _comparison_strength(current_count, previous_count),
+            58 if improving else _trend_priority(68, current_count, previous_count),
+            None if improving else _view_action("Review recent applications", view="ALL"),
+            _sample_label(current_count, previous_count),
+        )
+    ]
+
+
+def _period_responses(comparison: dict[str, object]) -> list[Candidate]:
+    values = _comparison_values(comparison)
+    if values is None:
+        return []
+    current_count, previous_count, current_response, previous_response, _, _ = values
+    if min(current_count, previous_count) < MIN_RATE_SAMPLE:
+        return []
+    delta = current_response - previous_response
+    if abs(delta) < RATE_DELTA:
+        return []
+    improving = delta > 0
+    return [
+        Candidate(
+            "RESPONSE_IMPROVING" if improving else "RESPONSE_DECLINING",
+            "response",
+            "trend",
+            "POSITIVE" if improving else "WATCH",
+            (
+                "Recent applications are getting more responses"
+                if improving
+                else "Recent response activity is lower"
+            ),
+            (
+                "Response conversion improved across the selected equal-length periods."
+                if improving
+                else (
+                    "Response conversion declined across the selected equal-length periods. "
+                    "Keep tracking to see whether the pattern continues."
+                )
+            ),
+            f"{current_response:.0%} recent · {previous_response:.0%} previous",
+            (
+                f"{current_count} submissions at {current_response:.0%} response conversion, "
+                f"compared with {previous_count} at {previous_response:.0%} previously."
+            ),
+            _comparison_strength(current_count, previous_count),
+            52 if improving else _trend_priority(62, current_count, previous_count),
+            None if improving else _view_action("Review recent applications", view="ALL"),
+            _sample_label(current_count, previous_count),
+        )
+    ]
+
+
+def _period_activity(comparison: dict[str, object]) -> list[Candidate]:
+    values = _comparison_values(comparison)
+    if values is None:
+        return []
+    current_count, previous_count, _, _, _, _ = values
+    down = (
+        previous_count >= MIN_RATE_SAMPLE
+        and previous_count - current_count >= 3
+        and current_count <= previous_count * 0.75
+    )
+    up = (
+        previous_count >= 3
+        and current_count - previous_count >= 3
+        and current_count >= previous_count * 1.5
+    )
+    if not (down or up):
+        return []
+    return [
+        Candidate(
+            "MOMENTUM_DOWN" if down else "MOMENTUM_UP",
+            "momentum",
+            "trend",
+            "WATCH" if down else "POSITIVE",
+            "Application activity has slowed" if down else "Application momentum has increased",
+            (
+                "Submission activity was lower across the selected equal-length periods."
+                if down
+                else "Submission activity was higher across the selected equal-length periods."
+            ),
+            f"{current_count} recent · {previous_count} previous",
+            (
+                f"{current_count} submissions in the selected period, compared with "
+                f"{previous_count} in the previous equal-length period."
+            ),
+            _comparison_strength(current_count, previous_count),
+            _trend_priority(56, current_count, previous_count) if down else 40,
+            _add_action() if down else None,
+            _sample_label(current_count, previous_count),
+        )
+    ]
+
+
+def _comparison_values(
+    comparison: dict[str, object],
+) -> tuple[int, int, float, float, float, float] | None:
+    if not comparison.get("available"):
+        return None
+    current = comparison.get("current")
+    previous = comparison.get("previous")
+    if not isinstance(current, dict) or not isinstance(previous, dict):
+        return None
+    return (
+        int(cast(int | float, current["submitted_count"])),
+        int(cast(int | float, previous["submitted_count"])),
+        float(cast(int | float, current["response_rate"])),
+        float(cast(int | float, previous["response_rate"])),
+        float(cast(int | float, current["interview_rate"])),
+        float(cast(int | float, previous["interview_rate"])),
+    )
 
 
 def _momentum(

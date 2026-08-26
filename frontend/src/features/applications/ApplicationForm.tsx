@@ -16,7 +16,6 @@ import {
   applicationFormDefaults,
   applicationFormSchema,
   currentDateInTimeZone,
-  type ApplicationFormDefaultPreferences,
   type ApplicationFormInput,
   type ApplicationFormValues,
 } from "./formSchema";
@@ -35,23 +34,21 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 }
 
 interface ApplicationFormProps {
-  mode: "create" | "edit";
-  application?: Application;
-  defaultPreferences?: ApplicationFormDefaultPreferences;
+  application: Application;
+  timeZone?: string;
   isSubmitting: boolean;
   serverError?: unknown;
   onSubmit: (values: ApplicationFormValues) => void | Promise<void>;
 }
 
 export function ApplicationForm({
-  mode,
   application,
-  defaultPreferences,
+  timeZone,
   isSubmitting,
   serverError,
   onSubmit,
 }: ApplicationFormProps) {
-  const appliedDateMaximum = currentDateInTimeZone(defaultPreferences?.timeZone);
+  const appliedDateMaximum = currentDateInTimeZone(timeZone);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
   const unsavedDialogRef = useRef<HTMLElement>(null);
   const keepEditingButtonRef = useRef<HTMLButtonElement>(null);
@@ -59,7 +56,6 @@ export function ApplicationForm({
   const [allowNavigation, setAllowNavigation] = useState(false);
   const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(
     () =>
-      mode === "edit" &&
       Boolean(
         application?.job_url ||
           application?.location ||
@@ -74,13 +70,11 @@ export function ApplicationForm({
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isDirty },
   } = useForm<ApplicationFormInput, unknown, ApplicationFormValues>({
-    resolver: zodResolver(applicationFormSchema(mode, appliedDateMaximum)),
-    defaultValues: applicationFormDefaults(application, defaultPreferences),
+    resolver: zodResolver(applicationFormSchema(appliedDateMaximum)),
+    defaultValues: applicationFormDefaults(application),
   });
-  const selectedStatus = watch("status");
   const hasErrors = Object.keys(errors).length > 0;
   const hasOptionalErrors = Boolean(
     errors.job_url ||
@@ -95,7 +89,6 @@ export function ApplicationForm({
   const errorSummaryItems = [
     ["company_name", "Company name", errors.company_name?.message],
     ["job_title", "Job title", errors.job_title?.message],
-    ["status", "Starting status", errors.status?.message],
     ["applied_date", "Applied date", errors.applied_date?.message],
     ["follow_up_date", "Follow-up date", errors.follow_up_date?.message],
     ["job_url", "Job URL", errors.job_url?.message],
@@ -253,38 +246,14 @@ export function ApplicationForm({
             <FieldError id="job_title-error" message={errors.job_title?.message} />
           </div>
 
-          {mode === "create" ? (
-            <div>
-              <label htmlFor="status" className="text-sm font-semibold text-ink">
-                Starting status
-              </label>
-              <select
-                id="status"
-                aria-invalid={Boolean(errors.status)}
-                aria-describedby="status-hint"
-                className={fieldClassName}
-                {...register("status")}
-              >
-                <option value="DRAFT">Draft</option>
-                <option value="APPLIED">Applied</option>
-              </select>
-              <p id="status-hint" className="mt-1.5 text-xs leading-5 text-ink-muted">
-                Further status changes happen from the application page.
-              </p>
-            </div>
-          ) : null}
-
           <div>
             <label htmlFor="applied_date" className="text-sm font-semibold text-ink">
-              Applied date{mode === "create" && selectedStatus === "APPLIED" ? (
-                <span className="text-danger"> *</span>
-              ) : null}
+              Applied date
             </label>
             <input
               id="applied_date"
               type="date"
               max={appliedDateMaximum}
-              required={mode === "create" && selectedStatus === "APPLIED"}
               aria-invalid={Boolean(errors.applied_date)}
               aria-describedby={errors.applied_date ? "applied_date-error" : undefined}
               className={fieldClassName}
@@ -502,20 +471,14 @@ export function ApplicationForm({
       <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 -mx-2 flex flex-col-reverse gap-3 rounded-2xl border border-line bg-surface-raised/95 p-3 shadow-xl backdrop-blur sm:flex-row sm:justify-end lg:bottom-4">
         <Link
           to={
-            mode === "edit" && application
-              ? `/applications/${application.application_id}`
-              : "/applications"
+            `/applications/${application.application_id}`
           }
           className={buttonClassName("secondary")}
         >
           Cancel
         </Link>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting
-            ? "Saving…"
-            : mode === "create"
-              ? "Create application"
-              : "Save changes"}
+          {isSubmitting ? "Saving…" : "Save changes"}
         </Button>
       </div>
     </form>

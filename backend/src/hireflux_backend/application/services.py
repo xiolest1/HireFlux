@@ -4,6 +4,11 @@ from datetime import UTC, date, datetime, timedelta
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
+from hireflux_backend.application.duplicate_candidates import (
+    DuplicateCandidate,
+    DuplicateEvidence,
+    find_duplicate_candidates,
+)
 from hireflux_backend.application.errors import ConflictError, NotFoundError, ValidationError
 from hireflux_backend.application.ports import (
     ActivityPage,
@@ -139,7 +144,11 @@ class ApplicationService:
         except StatusPolicyError as error:
             raise ValidationError(str(error)) from error
 
-        submitted_at = now if command.status is ApplicationStatus.APPLIED else None
+        submitted_at = (
+            now
+            if command.status in {ApplicationStatus.APPLIED, ApplicationStatus.INTERVIEW}
+            else None
+        )
         application = Application(
             application_id=self._id_factory(),
             owner_user_id=identity.user_id,
@@ -161,6 +170,8 @@ class ApplicationService:
             version=1,
             submitted_at=submitted_at,
             stage_entered_at=now,
+            first_response_at=(now if command.status is ApplicationStatus.INTERVIEW else None),
+            first_interview_at=(now if command.status is ApplicationStatus.INTERVIEW else None),
             expires_at=identity.expires_at,
         )
         activity = Activity(
@@ -168,13 +179,35 @@ class ApplicationService:
             application_id=application.application_id,
             owner_user_id=identity.user_id,
             activity_type=ActivityType.APPLICATION_CREATED,
-            summary=f"Application created as {application.status.value}.",
+            summary=(
+                "Application added at Interview stage."
+                if application.status is ApplicationStatus.INTERVIEW
+                else f"Application created as {application.status.value}."
+            ),
             created_at=now,
-            metadata={"status": application.status.value},
+            metadata={
+                "status": application.status.value,
+                **(
+                    {"initialization": "true"}
+                    if application.status is ApplicationStatus.INTERVIEW
+                    else {}
+                ),
+            },
             expires_at=identity.expires_at,
         )
         self._repository.create(application, activity)
         return application
+
+    def duplicate_candidates(
+        self, identity: CurrentIdentity, evidence: DuplicateEvidence
+    ) -> tuple[DuplicateCandidate, ...]:
+        now = self._clock()
+        _require_aware(now)
+        return find_duplicate_candidates(
+            self._repository.list_all(identity.user_id),
+            evidence,
+            today=_workspace_today(identity, now, self._workspace_time_zone),
+        )
 
     def get(self, identity: CurrentIdentity, application_id: str) -> Application:
         application = self._repository.get(identity.user_id, application_id)

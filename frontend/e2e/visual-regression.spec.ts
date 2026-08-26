@@ -53,6 +53,11 @@ const routes = [
   { name: "dashboard", path: "/dashboard", heading: "Welcome back" },
   { name: "applications", path: "/applications", heading: "Applications" },
   {
+    name: "application-create",
+    path: "/applications/new",
+    heading: "Add an application",
+  },
+  {
     name: "application-detail",
     path: `/applications/${applicationId}`,
     heading: "Senior Frontend Platform Engineer",
@@ -102,12 +107,57 @@ for (const route of routes) {
   });
 }
 
+test("Home progress story stays coherent, keyboard-operable, and accessible", async ({
+  page,
+}) => {
+  await page.goto("/dashboard");
+  const story = page.getByRole("region", {
+    name: "How is my search progressing?",
+  });
+  await expect(story).toBeVisible();
+  await expect(
+    story.getByRole("link", { name: "View full Analytics" }),
+  ).toHaveCount(1);
+  await expect(story.getByText("Submission activity")).toHaveCount(0);
+  await expect(story.getByText("Progress brief")).toHaveCount(0);
+
+  const disclosure = story.getByRole("button", {
+    name: "See what changed and why",
+  });
+  await expect(disclosure).toHaveAttribute("aria-expanded", "false");
+  await disclosure.focus();
+  await page.keyboard.press("Enter");
+  await expect(disclosure).toHaveAttribute("aria-expanded", "true");
+  await expect(story.getByText("Compared with what", { exact: true })).toBeVisible();
+  await expect(
+    story.getByRole("heading", {
+      name: "Two equal-length periods in your selected range",
+    }),
+  ).toBeVisible();
+  await expect(story.getByText(/is compared with/)).toBeVisible();
+  await expect(
+    story.getByRole("progressbar", {
+      name: "Active opportunities with a scheduled next step",
+    }),
+  ).toBeVisible();
+  await expectNoHorizontalPageOverflow(page);
+
+  const accessibility = await new AxeBuilder({ page })
+    .include('section[aria-labelledby="progress-story-title"]')
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+
+  await page.keyboard.press("Space");
+  await expect(disclosure).toHaveAttribute("aria-expanded", "false");
+});
+
 test("interview journey selection, preparation, and deep-link refresh stay connected", async ({
   page,
 }) => {
   await page.goto("/interviews");
   await expect(
-    page.getByRole("heading", { name: "Your schedule" }),
+    page.getByRole("heading", { name: "Interview queue" }),
   ).toBeVisible();
 
   const scheduledRound = page.getByRole("button", {
@@ -425,18 +475,88 @@ test("application layouts, transition drawer, and progressive form disclosure st
   ).toBeVisible();
   const optionalDetails = page
     .locator("details")
-    .filter({ hasText: "Optional details" });
+    .filter({ hasText: "More details" });
   await expect(optionalDetails).not.toHaveAttribute("open", "");
   await optionalDetails.locator("summary").click();
   await expect(optionalDetails).toHaveAttribute("open", "");
-  await page.getByLabel(/Job URL/).fill("not-a-complete-url");
+  await page.getByLabel(/Company/).fill("Acme");
+  await page.getByLabel(/Role/).fill("Platform Engineer");
+  await page.getByLabel(/Job description/).evaluate((element) => {
+    const textarea = element as HTMLTextAreaElement;
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      "value",
+    )?.set;
+    valueSetter?.call(textarea, "x".repeat(5001));
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  });
   await optionalDetails.locator("summary").click();
   await expect(optionalDetails).not.toHaveAttribute("open", "");
-  await page.getByRole("button", { name: "Create application" }).click();
+  await page.getByRole("button", { name: "Add application" }).click();
+  await expect(page.getByText("Description must be 5000 characters or fewer.")).toBeVisible();
+  await expect(optionalDetails).toHaveAttribute("open", "");
+  await expect(page.getByLabel(/Job description/)).toBeFocused();
+});
+
+test("duplicate advice and creation failures remain non-blocking and preserve quick-capture data", async ({
+  page,
+}) => {
+  await page.route(
+    "http://localhost:8000/api/v1/applications/duplicate-candidates",
+    async (route) => {
+      await fulfillJson(route, {
+        candidates: [
+          {
+            application_id: applicationId,
+            company_name: "Northstar Labs",
+            job_title: "Senior Frontend Platform Engineer",
+            status: "APPLIED",
+            applied_date: "2026-08-08",
+            created_at: "2026-08-08T13:00:00Z",
+            confidence: "HIGH",
+            matched_on: ["COMPANY", "TITLE"],
+          },
+        ],
+      });
+    },
+  );
+  await page.route("http://localhost:8000/api/v1/applications", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
+    await fulfillJson(
+      route,
+      {
+        error: {
+          code: "TEMPORARILY_UNAVAILABLE",
+          message: "Creation is temporarily unavailable.",
+          request_id: "browser-create-failure",
+        },
+      },
+      503,
+    );
+  });
+
+  await page.goto("/applications/new");
+  const company = page.getByLabel(/Company/);
+  const role = page.getByLabel(/Role/);
+  await company.fill("Northstar Labs");
+  await role.fill("Senior Frontend Platform Engineer");
+  await expect(page.getByText("You may already be tracking this role")).toBeVisible();
+  await page.getByRole("button", { name: "Add application" }).click();
+
   await expect(
-    page.getByRole("link", { name: /Job URL: Enter a complete/ }),
-  ).toHaveAttribute("href", "#job_url");
-  await expect(optionalDetails).toHaveAttribute("open", "");
+    page.getByRole("heading", { name: "Application could not be added" }),
+  ).toBeVisible();
+  await expect(company).toHaveValue("Northstar Labs");
+  await expect(role).toHaveValue("Senior Frontend Platform Engineer");
+  await expect(page.getByText("You may already be tracking this role")).toBeVisible();
+  await expectNoHorizontalPageOverflow(page);
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
 });
 
 test("the explicit light theme persists and remains accessible", async ({
@@ -464,6 +584,39 @@ test("the explicit light theme persists and remains accessible", async ({
   await expect(page).toHaveScreenshot("landing-light.png", { fullPage: true });
 });
 
+test("quick capture remains accessible in explicit light mode", async ({
+  page,
+}, testInfo) => {
+  await page.addInitScript(() =>
+    window.localStorage.setItem("hireflux-color-theme", "light"),
+  );
+  await page.route("http://localhost:8000/api/v1/settings", async (route) => {
+    await fulfillJson(route, {
+      time_zone: "UTC",
+      default_follow_up_days: 7,
+      default_application_view: "ACTIVE",
+      default_dashboard_range: "30d",
+      theme: "LIGHT",
+      created_at: "2026-08-10T13:00:00Z",
+      updated_at: "2026-08-10T13:00:00Z",
+      version: 1,
+    });
+  });
+  await page.goto("/applications/new");
+  await expect(page.getByRole("heading", { name: "Add an application" })).toBeVisible();
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
+  await expectNoHorizontalPageOverflow(page);
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+  if (testInfo.project.name === "desktop-1280") {
+    await expect(page).toHaveScreenshot("light-application-create.png", {
+      fullPage: true,
+    });
+  }
+});
+
 test("principal workspace routes retain their layout in light mode", async ({
   page,
 }, testInfo) => {
@@ -472,7 +625,9 @@ test("principal workspace routes retain their layout in light mode", async ({
     "Desktop light-mode baselines only.",
   );
 
-  for (const route of routes.filter(({ name }) => name !== "landing")) {
+  for (const route of routes.filter(
+    ({ name }) => name !== "landing" && name !== "application-create",
+  )) {
     await page.goto(route.path);
     await expect(
       page.getByRole("heading", { name: route.heading, level: 1 }),

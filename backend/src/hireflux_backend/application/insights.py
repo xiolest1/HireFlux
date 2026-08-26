@@ -6,8 +6,13 @@ from typing import cast
 from zoneinfo import ZoneInfo
 
 from hireflux_backend.application.ports import ApplicationRepository
+from hireflux_backend.application.progress_narrative import build_progress_narrative
 from hireflux_backend.application.resource_services import WorkspaceResourceService
-from hireflux_backend.application.search_health import build_search_health, submission_date
+from hireflux_backend.application.search_health import (
+    build_progress_signals,
+    build_search_health,
+    submission_date,
+)
 from hireflux_backend.application.services import utc_now
 from hireflux_backend.application.source_strategy import build_source_strategy
 from hireflux_backend.domain.enums import ApplicationSource, ApplicationStatus, WorkMode
@@ -164,6 +169,10 @@ class InsightsService:
             time_zone=workspace_time_zone,
         )
         follow_up_coverage = _follow_up_coverage(current_population, local_today)
+        # Process health intentionally remains workspace-wide. Analytics filters
+        # narrow performance evidence, but they must not make active follow-up
+        # obligations disappear from the Home narrative.
+        workspace_process_coverage = _follow_up_coverage(all_applications, local_today)
         source_performance, source_summary, source_signal = build_source_strategy(
             submitted,
             recent_applications=recent_sources,
@@ -173,6 +182,21 @@ class InsightsService:
             current_population,
             now,
             time_zone=workspace_time_zone,
+        )
+        insights = build_search_health(
+            filtered,
+            local_today=local_today,
+            time_zone=workspace_time_zone,
+            period_comparison=period_comparison,
+            source_signal=source_signal,
+        )
+        progress_narrative = build_progress_narrative(
+            reporting_range=reporting_range,
+            rates=rates,
+            period_comparison=period_comparison,
+            performance_signals=build_progress_signals(period_comparison),
+            insights=insights,
+            process_coverage=workspace_process_coverage,
         )
         return {
             "range": reporting_range,
@@ -202,13 +226,8 @@ class InsightsService:
             "no_response_count": sum(item.first_response_at is None for item in submitted),
             "period_comparison": period_comparison,
             "follow_up_coverage": follow_up_coverage,
-            "insights": build_search_health(
-                filtered,
-                local_today=local_today,
-                time_zone=workspace_time_zone,
-                period_comparison=period_comparison,
-                source_signal=source_signal,
-            ),
+            "insights": insights,
+            "progress_narrative": progress_narrative,
             "disclaimer": (
                 "These analytics describe this demo workspace dataset and are not career "
                 "predictions. Rate-based Search Health signals require meaningful sample sizes."

@@ -16,7 +16,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   APPLICATION_SOURCES,
   APPLICATION_STATUSES,
@@ -39,6 +39,10 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 import { Drawer } from "../components/ui/Drawer";
 import { ApplicationCard } from "../features/applications/ApplicationCard";
 import { ApplicationListSkeleton } from "../features/applications/ApplicationSkeletons";
+import {
+  applicationCreateRouteState,
+  readApplicationCreatedRouteState,
+} from "../features/applications/createNavigation";
 import {
   formatDateOnly,
   formatStageAge,
@@ -112,6 +116,7 @@ function applicationViewLabel(view: ApplicationView): string {
 
 export function ApplicationListPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const status = statusFromSearchParam(searchParams.get("status"));
   const settingsQuery = useSettings();
@@ -182,13 +187,28 @@ export function ApplicationListPage() {
   const applications = deduplicateApplications(
     applicationsQuery.data?.pages.flatMap((page) => page.items) ?? [],
   );
-  const notice =
-    location.state &&
-    typeof location.state === "object" &&
-    "notice" in location.state &&
-    typeof location.state.notice === "string"
+  const [createdState] = useState(() => readApplicationCreatedRouteState(location.state));
+  const [notice] = useState<string | null>(() => {
+    if (createdState) return createdState.notice;
+    return location.state &&
+      typeof location.state === "object" &&
+      "notice" in location.state &&
+      typeof location.state.notice === "string"
       ? location.state.notice
       : null;
+  });
+  const [highlightedApplicationId, setHighlightedApplicationId] = useState(
+    createdState?.createdApplicationId,
+  );
+
+  useEffect(() => {
+    if (location.state) {
+      void navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    }
+    if (!highlightedApplicationId) return;
+    const timer = window.setTimeout(() => setHighlightedApplicationId(undefined), 5_000);
+    return () => window.clearTimeout(timer);
+  }, [highlightedApplicationId, location.pathname, location.search, location.state, navigate]);
 
   function updateSearchParams(
     update: (next: URLSearchParams) => void,
@@ -335,7 +355,19 @@ export function ApplicationListPage() {
     <div>
       {notice ? (
         <div className="mb-6">
-          <SuccessBanner>{notice}</SuccessBanner>
+          <SuccessBanner>
+            <span className="flex flex-wrap items-center justify-between gap-3">
+              <span>{notice}</span>
+              {createdState ? (
+                <Link
+                  to={`/applications/${createdState.createdApplicationId}`}
+                  className="font-semibold underline underline-offset-4"
+                >
+                  View application
+                </Link>
+              ) : null}
+            </span>
+          </SuccessBanner>
         </div>
       ) : null}
 
@@ -351,7 +383,11 @@ export function ApplicationListPage() {
             Find the next action quickly, then keep every opportunity moving.
           </p>
         </div>
-        <Link to="/applications/new" className={buttonClassName("primary")}>
+        <Link
+          to="/applications/new"
+          state={applicationCreateRouteState("applications", location.pathname, location.search)}
+          className={buttonClassName("primary")}
+        >
           New application
         </Link>
       </div>
@@ -524,7 +560,11 @@ export function ApplicationListPage() {
                   Clear filters
                 </button>
               ) : (
-                <Link to="/applications/new" className={buttonClassName("primary")}>
+                <Link
+                  to="/applications/new"
+                  state={applicationCreateRouteState("applications", location.pathname, location.search)}
+                  className={buttonClassName("primary")}
+                >
                   Create your first application
                 </Link>
               )
@@ -575,14 +615,22 @@ export function ApplicationListPage() {
               <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {applications.map((application) => (
                   <li className="min-w-0" key={application.application_id}>
-                    <ApplicationCard application={application} timeZone={timeZone} />
+                    <ApplicationCard
+                      application={application}
+                      timeZone={timeZone}
+                      isHighlighted={application.application_id === highlightedApplicationId}
+                    />
                   </li>
                 ))}
               </ul>
             </div>
 
             {layout === "list" ? (
-              <ApplicationTable applications={applications} timeZone={timeZone} />
+              <ApplicationTable
+                applications={applications}
+                timeZone={timeZone}
+                highlightedApplicationId={highlightedApplicationId}
+              />
             ) : null}
 
             {applicationsQuery.isFetchNextPageError ? (
@@ -862,9 +910,11 @@ function SortSelect({
 function ApplicationTable({
   applications,
   timeZone,
+  highlightedApplicationId,
 }: {
   applications: Application[];
   timeZone: string;
+  highlightedApplicationId?: string;
 }) {
   return (
     <div className="hidden overflow-x-auto rounded-2xl border border-line bg-surface shadow-panel md:block">
@@ -882,7 +932,7 @@ function ApplicationTable({
         </thead>
         <tbody className="divide-y divide-line">
           {applications.map((application) => (
-            <tr key={application.application_id} className="transition-colors hover:bg-surface-muted focus-within:bg-surface-muted">
+            <tr key={application.application_id} className={`transition-colors hover:bg-surface-muted focus-within:bg-surface-muted ${application.application_id === highlightedApplicationId ? "bg-accent-soft ring-1 ring-inset ring-accent/30" : ""}`}>
               <th scope="row" className="min-w-56 px-4 py-4 font-normal">
                 <Link
                   to={`/applications/${application.application_id}`}

@@ -50,9 +50,11 @@ function followUpPresentation(date: string | null, timeZone: string) {
 export function ApplicationCard({
   application,
   timeZone,
+  isHighlighted = false,
 }: {
   application: Application;
   timeZone: string;
+  isHighlighted?: boolean;
 }) {
   const followUp = followUpPresentation(application.follow_up_date, timeZone);
   const meta = [
@@ -61,7 +63,7 @@ export function ApplicationCard({
   ].filter(Boolean);
 
   return (
-    <article className="group relative h-full min-w-0 overflow-hidden rounded-2xl border border-line bg-surface p-5 shadow-panel transition duration-200 hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
+    <article className={`group relative h-full min-w-0 overflow-hidden rounded-2xl border bg-surface p-5 shadow-panel transition duration-200 hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 ${isHighlighted ? "border-accent ring-2 ring-accent/25" : "border-line"}`}>
       <div
         aria-hidden="true"
         className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"

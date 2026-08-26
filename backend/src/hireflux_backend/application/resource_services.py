@@ -16,6 +16,7 @@ from hireflux_backend.domain.enums import ActivityType, ApplicationStatus
 from hireflux_backend.domain.interview_guidance import checklist_ids_for, guidance_for
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity
 from hireflux_backend.domain.resources import (
+    ACTIVE_APPLICATION_STATUSES,
     INTERVIEW_STATUS_TRANSITIONS,
     CustomPreparationItem,
     DashboardRange,
@@ -113,6 +114,7 @@ InterviewNextAction = Literal[
     "MARK_COMPLETE",
     "CAPTURE_NOTES",
     "REVIEW_FOLLOW_UP",
+    "REVIEW_DEBRIEF",
     "OPEN_APPLICATION",
 ]
 
@@ -862,12 +864,16 @@ def _interview_context(
     elif interview.status is InterviewStatus.COMPLETED and interview.debrief_completed_at is None:
         workflow_state = "CAPTURE"
         next_action = "CAPTURE_NOTES"
-    elif follow_up_state in {"NONE", "TODAY", "OVERDUE"}:
+    elif application.status in ACTIVE_APPLICATION_STATUSES and follow_up_state in {
+        "NONE",
+        "TODAY",
+        "OVERDUE",
+    }:
         workflow_state = "FOLLOW_UP"
         next_action = "REVIEW_FOLLOW_UP"
     else:
         workflow_state = "HISTORY"
-        next_action = "OPEN_APPLICATION"
+        next_action = "REVIEW_DEBRIEF"
     return InterviewWorkspaceContext(
         application_status=application.status,
         follow_up_date=application.follow_up_date,

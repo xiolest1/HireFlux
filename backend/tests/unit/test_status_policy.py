@@ -115,13 +115,18 @@ def test_archive_restore_is_limited_to_prior_status() -> None:
     assert restored.archived_from_status is None
 
 
-def test_initial_status_is_draft_or_applied_only() -> None:
+def test_initial_status_supports_saved_applied_and_interview() -> None:
     validate_initial_status(ApplicationStatus.DRAFT, None)
     validate_initial_status(ApplicationStatus.APPLIED, date(2026, 8, 1))
-    with pytest.raises(StatusPolicyError):
-        validate_initial_status(ApplicationStatus.INTERVIEW, date(2026, 8, 1))
+    validate_initial_status(ApplicationStatus.INTERVIEW, date(2026, 8, 1))
     with pytest.raises(StatusPolicyError, match="applied_date"):
         validate_initial_status(ApplicationStatus.APPLIED, None)
+    with pytest.raises(StatusPolicyError, match="applied_date"):
+        validate_initial_status(ApplicationStatus.INTERVIEW, None)
+    with pytest.raises(StatusPolicyError, match="must be empty"):
+        validate_initial_status(ApplicationStatus.DRAFT, date(2026, 8, 1))
+    with pytest.raises(StatusPolicyError, match="only be created"):
+        validate_initial_status(ApplicationStatus.OFFER, date(2026, 8, 1))
 
 
 def test_applied_date_cannot_be_in_the_future() -> None:

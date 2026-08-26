@@ -20,6 +20,8 @@ Technical-screen and skills-assessment content is role-neutral. Software archite
 
 Preparation notes, saved questions, checklist completion, and custom items remain on the owned interview record. They are not copied into Analytics or activity summaries. Candidate text is normalized, length-bounded, rendered as text, and protected by the same owner isolation and optimistic concurrency as every interview mutation.
 
+Completed interview reflections remain interview-scoped and candidate-private. A completed debrief opens read-only; editing is deliberate and keeps the original `debrief_completed_at` value. The next scheduled round may display no more than two forward-looking values from the latest earlier completed debrief for the same application. This context is referenced in place, never copied into the later round, and never added to generated guidance or Analytics.
+
 Readiness is exactly the number of completed visible checklist items. There is no hidden score, confidence model, employer prediction, or AI judgment. Custom tasks enter the same visible denominator. Unknown or stale completion IDs never increase readiness.
 
 Evidence stories stay in one flexible notes field. The UI provides optional Situation, Role, Action, Result, and Reflection guidance without imposing structured STAR fields. Suggested questions remain distinct from saved candidate questions and combine universal, interview-type, and role-family context.

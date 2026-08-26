@@ -224,14 +224,68 @@ class AnalyticsInsightActionResponse(BaseModel):
     parameters: dict[str, str]
 
 
+class ProgressPrimarySignalResponse(BaseModel):
+    code: Literal[
+        "VOLUME_UP_INTERVIEW_DOWN",
+        "MOMENTUM_WITH_INTERVIEWS",
+        "SEARCH_CONVERTING",
+        "INTERVIEW_DECLINING",
+        "INTERVIEW_IMPROVING",
+        "VOLUME_UP_RESPONSE_DOWN",
+        "RESPONSE_DECLINING",
+        "RESPONSE_IMPROVING",
+        "MOMENTUM_DOWN",
+        "MOMENTUM_UP",
+    ]
+    category: Literal["PERFORMANCE", "ACTIVITY"]
+    direction: Literal["IMPROVING", "DECLINING", "MIXED", "STABLE"]
+    priority: int = Field(ge=0, le=100)
+    evidence_metric_keys: list[Literal["SUBMISSIONS", "RESPONSE_RATE", "INTERVIEW_RATE"]]
+    evidence_summary: str
+    sample_label: str | None
+
+
+class ProgressSupportingSignalResponse(BaseModel):
+    metric_key: Literal["SUBMISSIONS", "RESPONSE_RATE", "INTERVIEW_RATE"]
+    category: Literal["PERFORMANCE", "ACTIVITY"]
+    direction: Literal["IMPROVING", "DECLINING", "STABLE", "NOT_AVAILABLE"]
+    emphasis: Literal["PRIMARY", "CONTEXT"]
+
+
+class ProgressProcessHealthResponse(FollowUpCoverageResponse):
+    tone: Literal["POSITIVE", "NEUTRAL", "WATCH", "ACTION_NEEDED"]
+    summary: str
+
+
+class ProgressRecommendedFocusResponse(BaseModel):
+    title: str
+    explanation: str
+    tone: Literal["POSITIVE", "NEUTRAL", "WATCH", "ACTION_NEEDED"]
+    action: AnalyticsInsightActionResponse
+
+
+class ProgressNarrativeResponse(BaseModel):
+    state: Literal["READY", "LIMITED", "EMPTY", "ALL_TIME"]
+    tone: Literal["POSITIVE", "NEUTRAL", "WATCH", "ACTION_NEEDED"]
+    headline: str
+    explanation: str
+    primary_signal: ProgressPrimarySignalResponse | None
+    supporting_signals: list[ProgressSupportingSignalResponse]
+    process_health: ProgressProcessHealthResponse
+    recommended_focus: ProgressRecommendedFocusResponse | None
+
+
 class AnalyticsInsightResponse(BaseModel):
     code: Literal[
         "BUILD_SAMPLE",
         "FOLLOW_UP_ATTENTION",
         "STALLED_PIPELINE",
         "MOMENTUM_WITH_INTERVIEWS",
+        "VOLUME_UP_INTERVIEW_DOWN",
         "VOLUME_UP_RESPONSE_DOWN",
         "SEARCH_CONVERTING",
+        "INTERVIEW_IMPROVING",
+        "INTERVIEW_DECLINING",
         "MOMENTUM_DOWN",
         "MOMENTUM_UP",
         "RESPONSE_IMPROVING",
@@ -274,4 +328,5 @@ class AnalyticsResponse(BaseModel):
     period_comparison: PeriodComparisonResponse
     follow_up_coverage: FollowUpCoverageResponse
     insights: list[AnalyticsInsightResponse]
+    progress_narrative: ProgressNarrativeResponse
     disclaimer: str

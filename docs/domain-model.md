@@ -48,9 +48,9 @@ Creating, editing, and deleting a note appends activity without copying the note
 - Denormalized `company_name`, `job_title`, and optional application role family, synchronized transactionally when the owned
   parent labels change and refreshed from the parent when the interview itself changes.
 - `created_at`, `updated_at`, and integer `version`.
-- Private preparation notes, candidate questions, completed checklist IDs, and up to two server-ID custom preparation items. Readiness is visible checklist completion only. See [interview-preparation.md](interview-preparation.md).
+- Private preparation notes, candidate questions, completed checklist IDs, and up to two server-ID custom preparation items. Readiness is visible checklist completion only. Structured private debrief fields and their original completion timestamp remain interview-scoped and may be revised with optimistic concurrency. See [interview-preparation.md](interview-preparation.md).
 
-Only scheduled interviews are editable. They may transition to completed or canceled; both are terminal. Rescheduling and status changes append activity.
+Only scheduled interview logistics are editable. They may transition to completed or canceled; both are lifecycle-terminal. A completed interview's private reflection may still be revised without changing the original completion timestamp. Rescheduling, status changes, and workspace changes append activity.
 
 ## Workspace settings
 
