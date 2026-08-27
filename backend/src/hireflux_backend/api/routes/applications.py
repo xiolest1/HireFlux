@@ -18,12 +18,14 @@ from hireflux_backend.api.schemas import (
     DuplicateCandidateResponse,
     FollowUpCompleteRequest,
     FollowUpRescheduleRequest,
+    NextStepUpdateRequest,
 )
 from hireflux_backend.application.duplicate_candidates import DuplicateEvidence
 from hireflux_backend.application.services import (
     CompleteFollowUpCommand,
     CreateApplicationCommand,
     RescheduleFollowUpCommand,
+    SetNextStepCommand,
     TransitionApplicationCommand,
     UpdateApplicationCommand,
 )
@@ -233,6 +235,26 @@ def reschedule_application_follow_up(
         str(application_id),
         RescheduleFollowUpCommand(
             expected_version=request.expected_version,
+            follow_up_date=request.follow_up_date,
+        ),
+    )
+    return ApplicationResponse.from_domain(application)
+
+
+@router.post("/{application_id}/next-step", response_model=ApplicationResponse)
+def update_application_next_step(
+    application_id: UUID,
+    request: NextStepUpdateRequest,
+    identity: IdentityDependency,
+    service: ApplicationServiceDependency,
+) -> ApplicationResponse:
+    application = service.set_next_step(
+        identity,
+        str(application_id),
+        SetNextStepCommand(
+            expected_version=request.expected_version,
+            next_step_responsibility=request.next_step_responsibility,
+            next_step_note=request.next_step_note,
             follow_up_date=request.follow_up_date,
         ),
     )

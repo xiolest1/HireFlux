@@ -570,6 +570,138 @@ def test_follow_up_actions_are_versioned_and_append_activity(client: TestClient)
     assert activity_types[-2:] == ["FOLLOW_UP_RESCHEDULED", "FOLLOW_UP_COMPLETED"]
 
 
+def test_next_step_command_separates_responsibility_from_check_back_timing(
+    client: TestClient,
+) -> None:
+    created = client.post("/api/v1/applications", json=draft_payload()).json()
+    path = f"/api/v1/applications/{created['application_id']}"
+    active = client.post(
+        f"{path}/status",
+        json={
+            "status": "APPLIED",
+            "expected_version": created["version"],
+            "applied_date": "2026-08-10",
+        },
+    ).json()
+
+    missing_description = client.post(
+        f"{path}/next-step",
+        json={
+            "expected_version": active["version"],
+            "next_step_responsibility": "CANDIDATE",
+            "next_step_note": None,
+            "follow_up_date": None,
+        },
+    )
+    assert missing_description.status_code == 422
+
+    candidate = client.post(
+        f"{path}/next-step",
+        json={
+            "expected_version": active["version"],
+            "next_step_responsibility": "CANDIDATE",
+            "next_step_note": "Send the requested portfolio examples.",
+            "follow_up_date": "2026-08-28",
+        },
+    )
+    assert candidate.status_code == 200
+    assert candidate.json()["next_step_responsibility"] == "CANDIDATE"
+    assert candidate.json()["next_step_note"] == "Send the requested portfolio examples."
+    assert candidate.json()["follow_up_date"] == "2026-08-28"
+
+    stale = client.post(
+        f"{path}/next-step",
+        json={
+            "expected_version": active["version"],
+            "next_step_responsibility": "NONE",
+            "next_step_note": None,
+            "follow_up_date": None,
+        },
+    )
+    assert stale.status_code == 409
+
+    candidate_complete = client.post(
+        f"{path}/follow-up/complete",
+        json={"expected_version": candidate.json()["version"]},
+    )
+    assert candidate_complete.status_code == 200
+    assert candidate_complete.json()["next_step_responsibility"] == "NONE"
+    assert candidate_complete.json()["next_step_note"] is None
+    assert candidate_complete.json()["follow_up_date"] is None
+
+    employer = client.post(
+        f"{path}/next-step",
+        json={
+            "expected_version": candidate_complete.json()["version"],
+            "next_step_responsibility": "EMPLOYER",
+            "next_step_note": "Waiting for the hiring team to confirm the final round.",
+            "follow_up_date": "2026-09-02",
+        },
+    )
+    assert employer.status_code == 200
+    employer_complete = client.post(
+        f"{path}/follow-up/complete",
+        json={"expected_version": employer.json()["version"]},
+    )
+    assert employer_complete.status_code == 200
+    assert employer_complete.json()["next_step_responsibility"] == "EMPLOYER"
+    assert employer_complete.json()["next_step_note"] == employer.json()["next_step_note"]
+    assert employer_complete.json()["follow_up_date"] is None
+
+    invalid_none = client.post(
+        f"{path}/next-step",
+        json={
+            "expected_version": employer_complete.json()["version"],
+            "next_step_responsibility": "NONE",
+            "next_step_note": None,
+            "follow_up_date": "2026-09-10",
+        },
+    )
+    assert invalid_none.status_code == 422
+    activity_types = [
+        item["activity_type"] for item in client.get(f"{path}/activity").json()["items"]
+    ]
+    assert activity_types.count("NEXT_STEP_UPDATED") == 2
+
+
+def test_next_step_command_rejects_terminal_and_general_update_paths(
+    client: TestClient,
+) -> None:
+    created = client.post("/api/v1/applications", json=draft_payload()).json()
+    path = f"/api/v1/applications/{created['application_id']}"
+    active = client.post(
+        f"{path}/status",
+        json={
+            "status": "APPLIED",
+            "expected_version": created["version"],
+            "applied_date": "2026-08-10",
+        },
+    ).json()
+    terminal = client.post(
+        f"{path}/status",
+        json={"status": "REJECTED", "expected_version": active["version"]},
+    ).json()
+
+    rejected = client.post(
+        f"{path}/next-step",
+        json={
+            "expected_version": terminal["version"],
+            "next_step_responsibility": "EMPLOYER",
+            "next_step_note": "Wait for reconsideration.",
+            "follow_up_date": None,
+        },
+    )
+    assert rejected.status_code == 409
+    bypass = client.patch(
+        path,
+        json={
+            "expected_version": terminal["version"],
+            "next_step_responsibility": "NONE",
+        },
+    )
+    assert bypass.status_code == 422
+
+
 def test_application_list_search_filters_sort_and_cursor_scope(client: TestClient) -> None:
     first = draft_payload("Alpha Systems") | {
         "source": "LINKEDIN",

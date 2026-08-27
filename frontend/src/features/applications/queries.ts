@@ -17,11 +17,13 @@ import {
   rescheduleFollowUp,
   transitionApplication,
   updateApplication,
+  updateNextStep,
   type CreateApplicationRequest,
   type DuplicateCandidateRequest,
   type ApplicationListFilters,
   type TransitionApplicationRequest,
   type UpdateApplicationRequest,
+  type NextStepUpdateRequest,
 } from "../../api/applications";
 import type { ApplicationStatus } from "../../api/schemas";
 
@@ -203,6 +205,20 @@ export function useRescheduleApplicationFollowUp() {
       expectedVersion: number;
       followUpDate: string;
     }) => rescheduleFollowUp(applicationId, expectedVersion, followUpDate),
+    onSuccess: (application) => {
+      queryClient.setQueryData(applicationKeys.detail(application.application_id), application);
+      updateOpportunityCaches(queryClient, application.application_id);
+    },
+  });
+}
+
+export function useUpdateApplicationNextStep() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ applicationId, request }: {
+      applicationId: string;
+      request: NextStepUpdateRequest;
+    }) => updateNextStep(applicationId, request),
     onSuccess: (application) => {
       queryClient.setQueryData(applicationKeys.detail(application.application_id), application);
       updateOpportunityCaches(queryClient, application.application_id);

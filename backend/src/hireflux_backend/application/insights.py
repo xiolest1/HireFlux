@@ -15,7 +15,12 @@ from hireflux_backend.application.search_health import (
 )
 from hireflux_backend.application.services import utc_now
 from hireflux_backend.application.source_strategy import build_source_strategy
-from hireflux_backend.domain.enums import ApplicationSource, ApplicationStatus, WorkMode
+from hireflux_backend.domain.enums import (
+    ApplicationSource,
+    ApplicationStatus,
+    NextStepResponsibility,
+    WorkMode,
+)
 from hireflux_backend.domain.models import Application, CurrentIdentity
 
 ACTIVE_PURSUIT_STATUSES = frozenset(
@@ -169,10 +174,18 @@ class InsightsService:
             time_zone=workspace_time_zone,
         )
         follow_up_coverage = _follow_up_coverage(current_population, local_today)
+        next_step_summary = _next_step_summary(current_population)
         # Process health intentionally remains workspace-wide. Analytics filters
         # narrow performance evidence, but they must not make active follow-up
         # obligations disappear from the Home narrative.
-        workspace_process_coverage = _follow_up_coverage(all_applications, local_today)
+        workspace_follow_up_coverage = _follow_up_coverage(all_applications, local_today)
+        workspace_next_steps = _next_step_summary(all_applications)
+        workspace_process_coverage = {
+            **workspace_follow_up_coverage,
+            "scheduled_count": workspace_next_steps["accounted_for_count"],
+            "coverage_rate": workspace_next_steps["coverage_rate"],
+            "missing_count": workspace_next_steps["unresolved_count"],
+        }
         source_performance, source_summary, source_signal = build_source_strategy(
             submitted,
             recent_applications=recent_sources,
@@ -226,6 +239,7 @@ class InsightsService:
             "no_response_count": sum(item.first_response_at is None for item in submitted),
             "period_comparison": period_comparison,
             "follow_up_coverage": follow_up_coverage,
+            "next_step_summary": next_step_summary,
             "insights": insights,
             "progress_narrative": progress_narrative,
             "disclaimer": (
@@ -460,6 +474,31 @@ def _follow_up_coverage(
     }
 
 
+def _next_step_summary(applications: tuple[Application, ...]) -> dict[str, int | float]:
+    active = tuple(item for item in applications if item.status in ACTIVE_PURSUIT_STATUSES)
+    unresolved = tuple(
+        item
+        for item in active
+        if item.next_step_responsibility is None and item.follow_up_date is None
+    )
+    accounted_for = len(active) - len(unresolved)
+    return {
+        "active_count": len(active),
+        "accounted_for_count": accounted_for,
+        "coverage_rate": round(accounted_for / len(active), 4) if active else 0.0,
+        "unresolved_count": len(unresolved),
+        "candidate_action_count": sum(
+            item.next_step_responsibility is NextStepResponsibility.CANDIDATE for item in active
+        ),
+        "employer_wait_count": sum(
+            item.next_step_responsibility is NextStepResponsibility.EMPLOYER for item in active
+        ),
+        "no_action_count": sum(
+            item.next_step_responsibility is NextStepResponsibility.NONE for item in active
+        ),
+    }
+
+
 def _summary_from_counts(counts: dict[ApplicationStatus, int]) -> dict[str, int]:
     return {
         "total_tracked": sum(counts.values()),
@@ -534,12 +573,29 @@ def _actions(
                     "due_date": application.follow_up_date,
                     "due_at": None,
                     "priority": "HIGH" if overdue else "MEDIUM",
-                    "label": "Complete overdue follow-up" if overdue else "Follow up today",
+                    "label": _follow_up_action_label(application, overdue=overdue),
                 }
             )
     for application in applications:
         if application.status is ApplicationStatus.ARCHIVED:
             continue
+        if (
+            application.status in ACTIVE_PURSUIT_STATUSES
+            and application.next_step_responsibility is NextStepResponsibility.CANDIDATE
+            and application.follow_up_date is None
+        ):
+            actions.append(
+                {
+                    "kind": "FOLLOW_UP_TODAY",
+                    "application_id": application.application_id,
+                    "company_name": application.company_name,
+                    "job_title": application.job_title,
+                    "due_date": local_today,
+                    "due_at": None,
+                    "priority": "MEDIUM",
+                    "label": application.next_step_note or "Complete candidate next step",
+                }
+            )
         if (
             application.status in {ApplicationStatus.APPLIED, ApplicationStatus.SCREENING}
             and application.stage_entered_at is not None
@@ -558,6 +614,16 @@ def _actions(
                 }
             )
     return sorted(actions, key=_action_sort_key)
+
+
+def _follow_up_action_label(application: Application, *, overdue: bool) -> str:
+    if application.next_step_responsibility is NextStepResponsibility.CANDIDATE:
+        return application.next_step_note or (
+            "Complete overdue candidate action" if overdue else "Complete candidate action"
+        )
+    if application.next_step_responsibility is NextStepResponsibility.EMPLOYER:
+        return "Check back with the employer"
+    return "Review overdue check-back" if overdue else "Review check-back today"
 
 
 def _action_sort_key(item: dict[str, object]) -> tuple[int, str]:

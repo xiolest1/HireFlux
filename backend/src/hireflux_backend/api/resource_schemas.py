@@ -4,9 +4,15 @@ from typing import Annotated, Literal
 from pydantic import AwareDatetime, BaseModel, Field, HttpUrl
 
 from hireflux_backend.api.schemas import RequestModel
-from hireflux_backend.domain.enums import ApplicationStatus, RoleFamily
+from hireflux_backend.domain.enums import (
+    ApplicationStatus,
+    NextStepResponsibility,
+    RoleFamily,
+)
 from hireflux_backend.domain.interview_guidance import (
     InterviewGuidance,
+    PreparationCategory,
+    PreparationOutcome,
     PreparationPhase,
     PreparationSource,
     guidance_for,
@@ -139,6 +145,8 @@ class InterviewWorkspaceUpdateRequest(RequestModel):
     debrief_improve: str | None = Field(min_length=1, max_length=2_000)
     debrief_signals: str | None = Field(min_length=1, max_length=2_000)
     debrief_next_step: str | None = Field(min_length=1, max_length=500)
+    debrief_primary_reflection: str | None = Field(default=None, min_length=1, max_length=2_000)
+    debrief_carry_forward: str | None = Field(default=None, min_length=1, max_length=2_000)
     debrief_complete: bool
 
 
@@ -149,7 +157,10 @@ class InterviewChecklistItemResponse(BaseModel):
     phase: PreparationPhase
     source: PreparationSource
     source_label: str
+    category: PreparationCategory
+    outcome_id: PreparationOutcome | None
     removable: bool
+    completed: bool
 
 
 class CuratedTextResponse(BaseModel):
@@ -172,11 +183,28 @@ class PreparationRoleContextResponse(BaseModel):
     explanation: str
 
 
-class InterviewReadinessResponse(BaseModel):
-    completed_steps: int
-    total_steps: int
-    ready_for_interview: bool
-    missing_actions: list[str]
+class EssentialPreparationOutcomeResponse(BaseModel):
+    outcome_id: PreparationOutcome
+    label: str
+    description: str
+    completed: bool
+    action_item_id: str
+
+
+class PreparationProgressGroupResponse(BaseModel):
+    completed: int
+    total: int
+
+
+class EssentialPreparationProgressResponse(PreparationProgressGroupResponse):
+    complete: bool
+    remaining_actions: list[str]
+
+
+class PreparationProgressResponse(BaseModel):
+    essentials: EssentialPreparationProgressResponse
+    additional: PreparationProgressGroupResponse
+    candidate: PreparationProgressGroupResponse
 
 
 class InterviewGuidanceResponse(BaseModel):
@@ -185,7 +213,8 @@ class InterviewGuidanceResponse(BaseModel):
     focus_prompts: list[CuratedTextResponse]
     suggested_questions: list[CuratedTextResponse]
     tips: list[PreparationTipResponse]
-    readiness: InterviewReadinessResponse
+    essential_outcomes: list[EssentialPreparationOutcomeResponse]
+    progress: PreparationProgressResponse
 
     @classmethod
     def from_domain(cls, guidance: InterviewGuidance) -> "InterviewGuidanceResponse":
@@ -204,7 +233,10 @@ class InterviewGuidanceResponse(BaseModel):
                     phase=item.phase,
                     source=item.source,
                     source_label=item.source_label,
+                    category=item.category,
+                    outcome_id=item.outcome_id,
                     removable=item.removable,
+                    completed=item.completed,
                 )
                 for item in guidance.checklist_items
             ],
@@ -229,11 +261,31 @@ class InterviewGuidanceResponse(BaseModel):
                 )
                 for item in guidance.tips
             ],
-            readiness=InterviewReadinessResponse(
-                completed_steps=guidance.completed_steps,
-                total_steps=guidance.total_steps,
-                ready_for_interview=guidance.ready_for_interview,
-                missing_actions=list(guidance.missing_actions),
+            essential_outcomes=[
+                EssentialPreparationOutcomeResponse(
+                    outcome_id=item.outcome_id,
+                    label=item.label,
+                    description=item.description,
+                    completed=item.completed,
+                    action_item_id=item.action_item_id,
+                )
+                for item in guidance.essential_outcomes
+            ],
+            progress=PreparationProgressResponse(
+                essentials=EssentialPreparationProgressResponse(
+                    completed=guidance.progress.essentials.completed,
+                    total=guidance.progress.essentials.total,
+                    complete=guidance.progress.essentials.complete,
+                    remaining_actions=list(guidance.progress.essentials.remaining_actions),
+                ),
+                additional=PreparationProgressGroupResponse(
+                    completed=guidance.progress.additional.completed,
+                    total=guidance.progress.additional.total,
+                ),
+                candidate=PreparationProgressGroupResponse(
+                    completed=guidance.progress.candidate.completed,
+                    total=guidance.progress.candidate.total,
+                ),
             ),
         )
 
@@ -258,6 +310,8 @@ class InterviewResponse(BaseModel):
     debrief_improve: str | None
     debrief_signals: str | None
     debrief_next_step: str | None
+    debrief_primary_reflection: str | None
+    debrief_carry_forward: str | None
     debrief_completed_at: datetime | None
     guidance: InterviewGuidanceResponse
     created_at: datetime
@@ -292,6 +346,8 @@ class InterviewResponse(BaseModel):
             debrief_improve=interview.debrief_improve,
             debrief_signals=interview.debrief_signals,
             debrief_next_step=interview.debrief_next_step,
+            debrief_primary_reflection=interview.debrief_primary_reflection,
+            debrief_carry_forward=interview.debrief_carry_forward,
             debrief_completed_at=interview.debrief_completed_at,
             guidance=guidance,
             created_at=interview.created_at,
@@ -334,6 +390,9 @@ class InterviewWorkspaceContextResponse(BaseModel):
         "REVIEW_DEBRIEF",
         "OPEN_APPLICATION",
     ]
+    next_step_responsibility: NextStepResponsibility | None
+    next_step_note: str | None
+    has_later_scheduled_interview: bool
 
 
 class WorkspaceInterviewResponse(InterviewResponse):
@@ -366,6 +425,9 @@ class WorkspaceInterviewResponse(InterviewResponse):
             "REVIEW_DEBRIEF",
             "OPEN_APPLICATION",
         ],
+        next_step_responsibility: NextStepResponsibility | None,
+        next_step_note: str | None,
+        has_later_scheduled_interview: bool,
     ) -> "WorkspaceInterviewResponse":
         base = InterviewResponse.from_domain(interview).model_dump()
         return cls(
@@ -376,6 +438,9 @@ class WorkspaceInterviewResponse(InterviewResponse):
                 follow_up_state=follow_up_state,
                 workflow_state=workflow_state,
                 next_action=next_action,
+                next_step_responsibility=next_step_responsibility,
+                next_step_note=next_step_note,
+                has_later_scheduled_interview=has_later_scheduled_interview,
             ),
         )
 

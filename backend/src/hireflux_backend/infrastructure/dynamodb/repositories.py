@@ -15,6 +15,7 @@ from hireflux_backend.domain.enums import (
     ApplicationSource,
     ApplicationStatus,
     FollowUpFilter,
+    NextStepResponsibility,
     WorkMode,
 )
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity, UserProfile
@@ -507,8 +508,13 @@ class DynamoApplicationRepository:
             )
         except ClientError as error:
             raise PersistenceError("Unable to list due workspace follow-ups.") from error
-        return tuple(
+        applications = tuple(
             application_from_item(deserialize_item(item)) for item in response.get("Items", [])
+        )
+        return tuple(
+            application
+            for application in applications
+            if application.status in ACTIVE_APPLICATION_STATUSES
         )
 
     def _read_counters(self, owner_user_id: str) -> dict[str, dict[str, Any]]:
@@ -909,9 +915,14 @@ def _append_follow_up_filter(
 ) -> None:
     if follow_up is FollowUpFilter.NEEDS_ATTENTION and today is not None:
         filters.append(
-            "(attribute_not_exists(follow_up_date) OR follow_up_date <= :follow_up_today)"
+            "(follow_up_date <= :follow_up_today "
+            "OR (attribute_not_exists(follow_up_date) AND "
+            "attribute_not_exists(next_step_responsibility)) "
+            "OR (attribute_not_exists(follow_up_date) AND "
+            "next_step_responsibility = :candidate_responsibility))"
         )
         values[":follow_up_today"] = today.isoformat()
+        values[":candidate_responsibility"] = NextStepResponsibility.CANDIDATE.value
 
 
 def _error_code(error: ClientError) -> str:

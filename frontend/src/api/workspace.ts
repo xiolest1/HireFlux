@@ -235,6 +235,15 @@ export const analyticsSchema = z.object({
     due_today_count: z.number().int().nonnegative(),
     missing_count: z.number().int().nonnegative(),
   }),
+  next_step_summary: z.object({
+    active_count: z.number().int().nonnegative(),
+    accounted_for_count: z.number().int().nonnegative(),
+    coverage_rate: z.number().min(0).max(1),
+    unresolved_count: z.number().int().nonnegative(),
+    candidate_action_count: z.number().int().nonnegative(),
+    employer_wait_count: z.number().int().nonnegative(),
+    no_action_count: z.number().int().nonnegative(),
+  }),
   progress_narrative: z.object({
     state: z.enum(["READY", "LIMITED", "EMPTY", "ALL_TIME"]),
     tone: z.enum(["POSITIVE", "NEUTRAL", "WATCH", "ACTION_NEEDED"]),

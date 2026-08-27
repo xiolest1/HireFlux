@@ -218,6 +218,16 @@ class FollowUpCoverageResponse(BaseModel):
     missing_count: int
 
 
+class NextStepSummaryResponse(BaseModel):
+    active_count: int
+    accounted_for_count: int
+    coverage_rate: float
+    unresolved_count: int
+    candidate_action_count: int
+    employer_wait_count: int
+    no_action_count: int
+
+
 class AnalyticsInsightActionResponse(BaseModel):
     kind: Literal["VIEW_APPLICATIONS", "ADD_APPLICATION"]
     label: str
@@ -327,6 +337,7 @@ class AnalyticsResponse(BaseModel):
     no_response_count: int
     period_comparison: PeriodComparisonResponse
     follow_up_coverage: FollowUpCoverageResponse
+    next_step_summary: NextStepSummaryResponse
     insights: list[AnalyticsInsightResponse]
     progress_narrative: ProgressNarrativeResponse
     disclaimer: str

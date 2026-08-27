@@ -9,7 +9,7 @@ describe("selectApplicationWorkspace", () => {
 
   it.each([
     ["DRAFT", "Mark as applied"],
-    ["APPLIED", "Schedule follow-up"],
+    ["APPLIED", "Review next step"],
     ["SCREENING", "Schedule interview"],
     ["INTERVIEW", "Schedule another interview"],
     ["OFFER", "Update decision"],

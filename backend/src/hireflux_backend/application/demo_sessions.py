@@ -15,12 +15,14 @@ from hireflux_backend.application.resource_services import (
 from hireflux_backend.application.services import (
     ApplicationService,
     CreateApplicationCommand,
+    SetNextStepCommand,
     TransitionApplicationCommand,
     UserService,
 )
 from hireflux_backend.domain.enums import (
     ApplicationSource,
     ApplicationStatus,
+    NextStepResponsibility,
     RoleFamily,
     UserRole,
     WorkMode,
@@ -502,7 +504,11 @@ class DemoSessionService:
             earlier_round.interview_id,
             UpdateInterviewWorkspaceCommand(
                 expected_version=earlier_round.version,
-                completed_checklist_items=(),
+                completed_checklist_items=(
+                    "research_company",
+                    "prepare_examples",
+                    "prepare_questions",
+                ),
                 preparation_notes="Prepared a concise cloud migration example.",
                 candidate_questions=(
                     "How will success be measured in the first 90 days?",
@@ -514,6 +520,12 @@ class DemoSessionService:
                 debrief_improve="Use a shorter example and state the measurable result earlier.",
                 debrief_signals="The next round will focus on incident response and tradeoffs.",
                 debrief_next_step="Prepare one reliability story for the technical round.",
+                debrief_primary_reflection=(
+                    "The team needs someone who can explain reliability tradeoffs clearly."
+                ),
+                debrief_carry_forward=(
+                    "Lead with the incident-response result, then explain the tradeoff."
+                ),
                 debrief_complete=True,
             ),
         )
@@ -525,6 +537,30 @@ class DemoSessionService:
                 scheduled_at=now + timedelta(days=2),
                 duration_minutes=60,
                 meeting_url="https://example.com/demo-interview",
+            ),
+        )
+        orbit_application = self._application_service.get(identity, applications[7].application_id)
+        self._application_service.set_next_step(
+            identity,
+            orbit_application.application_id,
+            SetNextStepCommand(
+                expected_version=orbit_application.version,
+                next_step_responsibility=NextStepResponsibility.NONE,
+                next_step_note=None,
+                follow_up_date=None,
+            ),
+        )
+        waiting_application = self._application_service.get(
+            identity, applications[5].application_id
+        )
+        self._application_service.set_next_step(
+            identity,
+            waiting_application.application_id,
+            SetNextStepCommand(
+                expected_version=waiting_application.version,
+                next_step_responsibility=NextStepResponsibility.EMPLOYER,
+                next_step_note="Waiting for the recruiter to confirm the next conversation.",
+                follow_up_date=waiting_application.follow_up_date,
             ),
         )
         self._resource_service.create_interview(

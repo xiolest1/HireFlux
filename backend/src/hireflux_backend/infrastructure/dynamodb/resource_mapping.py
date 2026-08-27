@@ -152,6 +152,8 @@ def interview_to_item(interview: Interview) -> dict[str, Any]:
         "debrief_improve": interview.debrief_improve,
         "debrief_signals": interview.debrief_signals,
         "debrief_next_step": interview.debrief_next_step,
+        "debrief_primary_reflection": interview.debrief_primary_reflection,
+        "debrief_carry_forward": interview.debrief_carry_forward,
         "debrief_completed_at": (
             format_timestamp(interview.debrief_completed_at)
             if interview.debrief_completed_at is not None
@@ -209,6 +211,8 @@ def interview_from_item(item: dict[str, Any]) -> Interview:
         updated_at=parse_timestamp(str(item["updated_at"])),
         version=int(item["version"]),
         expires_at=int(item["expires_at"]) if item.get("expires_at") is not None else None,
+        debrief_primary_reflection=_optional_string(item, "debrief_primary_reflection"),
+        debrief_carry_forward=_optional_string(item, "debrief_carry_forward"),
     )
 
 

@@ -44,12 +44,21 @@ function stageAgeLabel(days: number | null) {
 }
 
 function followUpLabel(card: PipelineCard) {
-  if (card.follow_up_state === "NONE") return "No follow-up scheduled";
+  const responsibility = card.application.next_step_responsibility;
+  if (card.follow_up_state === "NONE") {
+    if (responsibility === "CANDIDATE") {
+      return card.application.next_step_note ?? "Candidate action";
+    }
+    if (responsibility === "EMPLOYER") return "Waiting for employer";
+    if (responsibility === "NONE") return "No current action";
+    return "Next step not reviewed";
+  }
+  const subject = responsibility === "CANDIDATE" ? "Candidate action" : "Check-back";
   const prefix = card.follow_up_state === "OVERDUE"
-    ? "Follow-up overdue"
+    ? `${subject} overdue`
     : card.follow_up_state === "TODAY"
-      ? "Follow-up today"
-      : "Follow-up";
+      ? `${subject} due today`
+      : subject;
   return `${prefix}: ${formatDateOnly(card.application.follow_up_date)}`;
 }
 

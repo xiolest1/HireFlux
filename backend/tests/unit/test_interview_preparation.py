@@ -4,7 +4,11 @@ from datetime import UTC, datetime
 import pytest
 
 from hireflux_backend.domain.enums import RoleFamily
-from hireflux_backend.domain.interview_guidance import guidance_for
+from hireflux_backend.domain.interview_guidance import (
+    PreparationCategory,
+    PreparationOutcome,
+    guidance_for,
+)
 from hireflux_backend.domain.resources import (
     CustomPreparationItem,
     Interview,
@@ -91,7 +95,9 @@ def test_ambiguous_titles_use_universal_fallback(title: str) -> None:
     assert guidance.role_context.role_family is RoleFamily.GENERAL
     assert guidance.role_context.source is RoleFamilySource.UNIVERSAL_FALLBACK
     assert "technical" not in rendered
-    assert len(guidance.checklist_items) == 5
+    assert len(guidance.checklist_items) == 3
+    assert all(item.category is PreparationCategory.ESSENTIAL for item in guidance.checklist_items)
+    assert guidance.progress.essentials.total == 3
 
 
 def test_candidate_override_is_authoritative_including_general() -> None:
@@ -111,12 +117,22 @@ def test_role_and_interview_type_combine_deterministically() -> None:
     skills = guidance_for(interview("Cloud Engineer", InterviewType.TECHNICAL_SCREEN))
 
     assert recruiter.focus_prompts != skills.focus_prompts
-    assert recruiter.checklist_items[4].label == "Practice your concise career summary"
-    assert skills.checklist_items[4].label == "Review the skills being assessed"
-    assert recruiter.checklist_items[5] == skills.checklist_items[5]
+    recruiter_evidence = next(
+        item
+        for item in recruiter.checklist_items
+        if item.outcome_id is PreparationOutcome.RELEVANT_EVIDENCE
+    )
+    skills_evidence = next(
+        item
+        for item in skills.checklist_items
+        if item.outcome_id is PreparationOutcome.RELEVANT_EVIDENCE
+    )
+    assert recruiter_evidence.label == "Practice your concise career summary"
+    assert skills_evidence.label == "Review the skills being assessed"
+    assert recruiter.progress.essentials.total == skills.progress.essentials.total == 3
 
 
-def test_readiness_is_only_visible_checklist_completion() -> None:
+def test_essential_completion_is_independent_of_additional_and_candidate_work() -> None:
     current = replace(
         interview("Customer Service Representative"),
         custom_preparation_items=(
@@ -126,13 +142,20 @@ def test_readiness_is_only_visible_checklist_completion() -> None:
             ),
         ),
     )
-    visible_ids = tuple(item.item_id for item in guidance_for(current).checklist_items)
-    complete = guidance_for(replace(current, completed_checklist_items=visible_ids))
+    initial = guidance_for(current)
+    essential_ids = tuple(
+        item.item_id
+        for item in initial.checklist_items
+        if item.category is PreparationCategory.ESSENTIAL
+    )
+    complete = guidance_for(replace(current, completed_checklist_items=essential_ids))
     stale = guidance_for(
-        replace(current, completed_checklist_items=(*visible_ids, "stale-hidden-id"))
+        replace(current, completed_checklist_items=(*essential_ids, "stale-hidden-id"))
     )
 
-    assert complete.total_steps == 7
-    assert complete.completed_steps == 7
-    assert complete.ready_for_interview
-    assert stale.completed_steps == 7
+    assert complete.progress.essentials.complete
+    assert complete.progress.essentials.completed == complete.progress.essentials.total == 3
+    assert complete.progress.additional.completed == 0
+    assert complete.progress.candidate.completed == 0
+    assert complete.progress.candidate.total == 1
+    assert stale.progress == complete.progress

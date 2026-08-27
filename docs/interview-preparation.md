@@ -1,33 +1,46 @@
-# Interview preparation contract
+# Interview preparation and reflection contract
 
-Interview Preparation is deterministic candidate guidance, not an interview predictor or an assessment of the candidate. The backend owns the catalog so every client receives the same checklist, prompts, questions, explanations, and readiness facts.
+HireFlux provides deterministic, candidate-private interview support. It does not score readiness, evaluate a candidate, predict an employer decision, or send preparation text to an AI service. The backend owns outcome applicability and aggregation so every client renders the same lifecycle facts.
 
-## Curation model
+## Outcome-based preparation
 
-Guidance combines a four-item universal foundation, one item for the saved interview type, and one item for the effective application role family when a reliable family exists. Candidates may add up to two interview-scoped checklist items. The final checklist therefore contains five through eight visible items.
+Preparation is organized around stable outcomes instead of counting every visible card equally:
 
-The effective role family is resolved in this order:
+- `OPPORTUNITY_UNDERSTANDING`: understand the role, employer, and conversation context;
+- `RELEVANT_EVIDENCE`: select examples that demonstrate relevant experience;
+- `CONVERSATION_PLAN`: prepare useful questions and a deliberate conversation plan;
+- `INTERVIEW_REQUIREMENTS`: confirm an assessment environment only when the interview catalog marks it applicable.
 
-1. an explicit application-level candidate selection, including `GENERAL`;
-2. one unambiguous match from the job title;
+The catalog classifies work as `ESSENTIAL`, `ADDITIONAL`, or `CANDIDATE`. Only applicable essential outcomes determine whether lifecycle preparation is complete. Role-family exercises, onsite mapping, deeper prompts, and candidate-created tasks remain useful additional work but can never reduce essential completion. Candidates may add up to two interview-scoped tasks, tracked independently.
+
+Concrete essential copy can adapt to interview type without changing the underlying outcome. Technical-screen and coding-assessment defaults remain role-neutral; software architecture, debugging, coding, and tradeoff guidance appears only for the Software / IT role family. The effective role family resolves in this order:
+
+1. an explicit application-level candidate choice, including `GENERAL`;
+2. one unambiguous, high-confidence job-title match;
 3. universal fallback.
 
-Automatic classification never reads private notes, company name, application source, or the free-form job description. Conflicting and generic titles fall back instead of producing a confident guess. Every response identifies whether the focus was chosen, inferred from the title, or universal fallback.
+Automatic classification never reads private notes, company name, source, or the free-form description. Every response identifies whether focus was selected, title-inferred, or a universal fallback.
 
-Technical-screen and skills-assessment content is role-neutral. Software architecture, debugging, coding, and technical tradeoffs appear only when the effective role family is Software / IT. Other families receive their own curated evidence themes and employer-evaluation questions.
+Company, role, schedule, interview type, access details, and prior rounds form an unscored Interview brief. Access details are exception-based: when both location and meeting access are absent, the candidate is directed to the canonical interview editor rather than given a permanent logistics checkbox.
 
-## Candidate data and readiness
+## Completion and compatibility
 
-Preparation notes, saved questions, checklist completion, and custom items remain on the owned interview record. They are not copied into Analytics or activity summaries. Candidate text is normalized, length-bounded, rendered as text, and protected by the same owner isolation and optimistic concurrency as every interview mutation.
+The backend returns `essential_outcomes`, item-level category/outcome/completion facts, and separate progress for essentials, additional work, and candidate tasks. React groups and explains those facts; it does not calculate lifecycle readiness. Candidate-facing language is factual—such as “2 essentials remaining” or “Essentials prepared”—and never presents a percentage, hidden score, or judgment.
 
-Completed interview reflections remain interview-scoped and candidate-private. A completed debrief opens read-only; editing is deliberate and keeps the original `debrief_completed_at` value. The next scheduled round may display no more than two forward-looking values from the latest earlier completed debrief for the same application. This context is referenced in place, never copied into the later round, and never added to generated guidance or Analytics.
+Existing completion IDs map conservatively to outcomes. `research_company`, `prepare_examples`, and `prepare_questions` retain their intended meaning; applicable type-specific legacy work maps through the catalog. The retired `confirm_logistics` completion is ignored and removed on the next valid save. Unknown IDs remain invalid, while stale context-owned IDs cannot inflate completion. No DynamoDB migration, index, or scan is required.
 
-Readiness is exactly the number of completed visible checklist items. There is no hidden score, confidence model, employer prediction, or AI judgment. Custom tasks enter the same visible denominator. Unknown or stale completion IDs never increase readiness.
+## Private reflection
 
-Evidence stories stay in one flexible notes field. The UI provides optional Situation, Role, Action, Result, and Reflection guidance without imposing structured STAR fields. Suggested questions remain distinct from saved candidate questions and combine universal, interview-type, and role-family context.
+Post-interview work is called Reflection in the product. The underlying legacy `debrief_*` fields remain compatible, while new records may use `debrief_primary_reflection` for “What stands out?” and `debrief_carry_forward` for an explicit next-round reminder.
 
-## Compatibility and future work
+A reflection may be completed when at least one substantive trimmed value exists in the primary reflection, went-well, improvement, signals, or carry-forward fields. The legacy `debrief_next_step` remains readable but does not qualify as reflection and is not collected by the new capture flow. Operational next steps belong to the Application, not the Interview.
 
-Role family and custom-item attributes are optional on existing DynamoDB records, require no index or table migration, and never introduce a scan. Application role changes synchronize the interview projection transactionally.
+Completed reflections open read-only, require a deliberate Edit reflection action, and preserve the original `debrief_completed_at` timestamp. A later scheduled round may reference at most the explicit carry-forward and primary takeaway from the latest earlier completed round in the same application. It never relabels improvement notes, combines rounds, copies reflection into another record, or invents a summary. If the new fields are absent, the candidate can review the full legacy reflection without a synthetic preview.
 
-Possible future additions—not implemented—include optional AI-assisted job-description context, a richer occupation taxonomy, reusable preparation templates, candidate-created templates, and preparation history.
+Preparation notes, evidence stories, saved questions, checklist state, custom tasks, and reflection text remain on the owned interview record. They are excluded from Analytics and activity summaries, normalized and length-bounded at the API, rendered as text, and protected by owner isolation and optimistic concurrency.
+
+## Focused workspace and future work
+
+Active preparation, reflection capture/review, historical preparation, and scheduling share the responsive `FocusedWorkspace` dialog shell. It provides one scroll region, a stable footer, focus containment/restoration, Escape handling, body locking, safe-area behavior, and dirty-close confirmation. Filters and short actions continue using the general Drawer.
+
+Possible future additions—not implemented—include optional AI-assisted job-description context, richer occupation taxonomies, reusable preparation templates, candidate-created templates, and preparation history.

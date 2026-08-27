@@ -9,6 +9,7 @@ import { ApiError } from "../api/client";
 import { buttonClassName } from "../components/ui/buttonStyles";
 import { ErrorPanel } from "../components/ui/Feedback";
 import { ApplicationForm } from "../features/applications/ApplicationForm";
+import { NextStepPlanner } from "../features/applications/NextStepPlanner";
 import { PageHeader } from "../components/ui/PageHeader";
 import { ChevronLeft } from "lucide-react";
 import { ApplicationFormSkeleton } from "../features/applications/ApplicationSkeletons";
@@ -35,11 +36,11 @@ export function ApplicationEditPage() {
       return;
     }
     const frame = window.requestAnimationFrame(() => {
-      const followUpField = document.getElementById("follow_up_date");
-      if (typeof followUpField?.scrollIntoView === "function") {
-        followUpField.scrollIntoView({ block: "center" });
+      const nextStepSection = document.getElementById("application-next-step");
+      if (typeof nextStepSection?.scrollIntoView === "function") {
+        nextStepSection.scrollIntoView({ block: "center" });
       }
-      followUpField?.focus({ preventScroll: true });
+      nextStepSection?.querySelector<HTMLInputElement>('input[type="radio"]')?.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [applicationQuery.isSuccess, searchParams]);
@@ -101,6 +102,18 @@ export function ApplicationEditPage() {
         title={`Edit ${application.job_title}`}
         description="Update the opportunity details here. Status changes remain in the application workspace."
       />
+
+      {["APPLIED", "SCREENING", "INTERVIEW", "OFFER"].includes(application.status) ? (
+        <section id="application-next-step" className="mb-8 rounded-2xl border border-line bg-surface p-5 shadow-panel sm:p-6">
+          <NextStepPlanner
+            application={application}
+            timeZone={settingsQuery.data?.time_zone ?? "UTC"}
+            onSaved={() => void applicationQuery.refetch()}
+            onLeaveUnclear={() => navigate(`/applications/${application.application_id}`)}
+            onConflict={() => applicationQuery.refetch()}
+          />
+        </section>
+      ) : null}
 
       <ApplicationForm
         application={application}

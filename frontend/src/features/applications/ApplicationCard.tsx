@@ -16,10 +16,27 @@ function dateInTimeZone(timeZone: string): string {
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
-function followUpPresentation(date: string | null, timeZone: string) {
+function nextStepPresentation(application: Application, timeZone: string) {
+  const date = application.follow_up_date;
   if (!date) {
+    if (application.next_step_responsibility === "CANDIDATE") {
+      return {
+        label: application.next_step_note ?? "Candidate action",
+        className: "text-warning font-semibold",
+        iconClassName: "text-warning",
+      };
+    }
+    if (application.next_step_responsibility === "EMPLOYER") {
+      return {
+        label: "Waiting for employer",
+        className: "text-ink",
+        iconClassName: "text-accent",
+      };
+    }
     return {
-      label: "No follow-up",
+      label: application.next_step_responsibility === "NONE"
+        ? "No current action"
+        : "Next step not reviewed",
       className: "text-ink-muted",
       iconClassName: "text-ink-muted",
     };
@@ -28,20 +45,20 @@ function followUpPresentation(date: string | null, timeZone: string) {
   const today = dateInTimeZone(timeZone);
   if (date < today) {
     return {
-      label: `Overdue · ${formatDateOnly(date)}`,
+      label: `${application.next_step_responsibility === "CANDIDATE" ? "Action" : "Check-back"} overdue · ${formatDateOnly(date)}`,
       className: "text-danger font-semibold",
       iconClassName: "text-danger",
     };
   }
   if (date === today) {
     return {
-      label: `Due today · ${formatDateOnly(date)}`,
+      label: `${application.next_step_responsibility === "CANDIDATE" ? "Action" : "Check-back"} due today`,
       className: "text-warning font-semibold",
       iconClassName: "text-warning",
     };
   }
   return {
-    label: formatDateOnly(date),
+    label: `${application.next_step_responsibility === "CANDIDATE" ? "Action" : "Check back"} ${formatDateOnly(date)}`,
     className: "text-ink",
     iconClassName: "text-accent",
   };
@@ -56,7 +73,7 @@ export function ApplicationCard({
   timeZone: string;
   isHighlighted?: boolean;
 }) {
-  const followUp = followUpPresentation(application.follow_up_date, timeZone);
+  const nextStep = nextStepPresentation(application, timeZone);
   const meta = [
     application.location,
     application.work_mode ? formatWorkMode(application.work_mode) : null,
@@ -104,14 +121,14 @@ export function ApplicationCard({
         </div>
         <div>
           <dt className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-            Follow-up
+            Next step
           </dt>
-          <dd className={`mt-1 flex items-start gap-1.5 ${followUp.className}`}>
+          <dd className={`mt-1 flex items-start gap-1.5 ${nextStep.className}`}>
             <CalendarClock
               aria-hidden="true"
-              className={`mt-0.5 size-4 shrink-0 ${followUp.iconClassName}`}
+              className={`mt-0.5 size-4 shrink-0 ${nextStep.iconClassName}`}
             />
-            <span>{followUp.label}</span>
+            <span className="line-clamp-2">{nextStep.label}</span>
           </dd>
         </div>
       </dl>

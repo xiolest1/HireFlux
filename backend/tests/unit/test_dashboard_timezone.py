@@ -113,7 +113,7 @@ def test_dashboard_uses_saved_zone_and_schedule_query_for_follow_up_dates() -> N
             "due_date": date(2026, 8, 11),
             "due_at": None,
             "priority": "MEDIUM",
-            "label": "Follow up today",
+            "label": "Review check-back today",
         }
     ]
     assert all(action["application_id"] != "future" for action in follow_ups)

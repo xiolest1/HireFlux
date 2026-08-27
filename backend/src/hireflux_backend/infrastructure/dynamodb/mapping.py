@@ -7,11 +7,13 @@ from hireflux_backend.domain.enums import (
     ActivityType,
     ApplicationSource,
     ApplicationStatus,
+    NextStepResponsibility,
     RoleFamily,
     UserRole,
     WorkMode,
 )
 from hireflux_backend.domain.models import Activity, Application, UserProfile
+from hireflux_backend.domain.resources import ACTIVE_APPLICATION_STATUSES
 
 _SERIALIZER = TypeSerializer()
 _DESERIALIZER = TypeDeserializer()
@@ -82,6 +84,12 @@ def application_to_item(application: Application) -> dict[str, Any]:
         "follow_up_date": (
             application.follow_up_date.isoformat() if application.follow_up_date else None
         ),
+        "next_step_responsibility": (
+            application.next_step_responsibility.value
+            if application.next_step_responsibility
+            else None
+        ),
+        "next_step_note": application.next_step_note,
         "job_url": application.job_url,
         "location": application.location,
         "work_mode": application.work_mode.value if application.work_mode else None,
@@ -142,12 +150,12 @@ def application_to_item(application: Application) -> dict[str, Any]:
         "GSI2SK": application_sort_key(updated_at, application.application_id),
         "GSI3PK": (
             owner_schedule_key(application.owner_user_id)
-            if application.follow_up_date and application.status is not ApplicationStatus.ARCHIVED
+            if application.follow_up_date and application.status in ACTIVE_APPLICATION_STATUSES
             else None
         ),
         "GSI3SK": (
             follow_up_sort_key(application.follow_up_date, application.application_id)
-            if application.follow_up_date and application.status is not ApplicationStatus.ARCHIVED
+            if application.follow_up_date and application.status in ACTIVE_APPLICATION_STATUSES
             else None
         ),
     }
@@ -166,6 +174,12 @@ def application_from_item(item: dict[str, Any]) -> Application:
         follow_up_date=date.fromisoformat(str(item["follow_up_date"]))
         if item.get("follow_up_date")
         else None,
+        next_step_responsibility=(
+            NextStepResponsibility(str(item["next_step_responsibility"]))
+            if item.get("next_step_responsibility")
+            else None
+        ),
+        next_step_note=_optional_string(item, "next_step_note"),
         job_url=_optional_string(item, "job_url"),
         location=_optional_string(item, "location"),
         work_mode=WorkMode(str(item["work_mode"])) if item.get("work_mode") else None,

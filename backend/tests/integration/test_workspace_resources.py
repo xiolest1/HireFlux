@@ -440,6 +440,9 @@ def test_workspace_interview_view_includes_history_and_server_context(client: Te
         "application_status": "DRAFT",
         "follow_up_date": None,
         "follow_up_state": "NONE",
+        "next_step_responsibility": None,
+        "next_step_note": None,
+        "has_later_scheduled_interview": False,
         "workflow_state": "PREPARE",
         "next_action": "PREPARE",
     }
@@ -447,6 +450,9 @@ def test_workspace_interview_view_includes_history_and_server_context(client: Te
         "application_status": "DRAFT",
         "follow_up_date": None,
         "follow_up_state": "NONE",
+        "next_step_responsibility": None,
+        "next_step_note": None,
+        "has_later_scheduled_interview": True,
         "workflow_state": "IMMINENT",
         "next_action": "JOIN_MEETING",
     }
@@ -473,6 +479,24 @@ def test_workspace_interview_view_includes_history_and_server_context(client: Te
     assert by_id[canceled.json()["interview_id"]]["context"]["workflow_state"] == "CANCELED"
     assert by_id[canceled.json()["interview_id"]]["context"]["next_action"] == "OPEN_APPLICATION"
 
+    invalid_operational_only = client.patch(
+        f"{completed_path}/workspace",
+        json={
+            "expected_version": 2,
+            "completed_checklist_items": [],
+            "preparation_notes": None,
+            "candidate_questions": [],
+            "debrief_primary_reflection": "   ",
+            "debrief_went_well": None,
+            "debrief_improve": None,
+            "debrief_signals": None,
+            "debrief_carry_forward": None,
+            "debrief_next_step": "Send a concise follow-up.",
+            "debrief_complete": True,
+        },
+    )
+    assert invalid_operational_only.status_code == 422
+
     debrief = client.patch(
         f"{completed_path}/workspace",
         json={
@@ -480,14 +504,22 @@ def test_workspace_interview_view_includes_history_and_server_context(client: Te
             "completed_checklist_items": [],
             "preparation_notes": None,
             "candidate_questions": [],
-            "debrief_went_well": "I explained the tradeoffs clearly.",
+            "debrief_primary_reflection": "The team values concise tradeoff decisions.",
+            "debrief_went_well": None,
             "debrief_improve": None,
             "debrief_signals": None,
-            "debrief_next_step": "Send a concise follow-up.",
+            "debrief_carry_forward": "Lead the next round with the customer impact.",
+            "debrief_next_step": None,
             "debrief_complete": True,
         },
     )
     assert debrief.status_code == 200
+    assert debrief.json()["debrief_primary_reflection"] == (
+        "The team values concise tradeoff decisions."
+    )
+    assert debrief.json()["debrief_carry_forward"] == (
+        "Lead the next round with the customer impact."
+    )
     original_completed_at = debrief.json()["debrief_completed_at"]
     revised_debrief = client.patch(
         f"{completed_path}/workspace",
@@ -496,10 +528,12 @@ def test_workspace_interview_view_includes_history_and_server_context(client: Te
             "completed_checklist_items": [],
             "preparation_notes": None,
             "candidate_questions": [],
+            "debrief_primary_reflection": "The discussion confirmed the role's priorities.",
             "debrief_went_well": "I clarified the tradeoffs with a concrete example.",
             "debrief_improve": "Lead with the result.",
             "debrief_signals": None,
-            "debrief_next_step": "Send a concise follow-up.",
+            "debrief_carry_forward": "Lead the next round with the customer impact.",
+            "debrief_next_step": None,
             "debrief_complete": True,
         },
     )

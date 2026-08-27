@@ -41,6 +41,15 @@ function makeProgressAnalytics(range: "30d" | "90d" | "all" = "30d"): Analytics 
       deltas: { submitted_count: 3, response_rate: 0.2, interview_rate: 0.05, offer_rate: 0.125, acceptance_rate: 0, average_days_to_first_response: -0.5 },
     } : { available: false, current_start: null, current_end: null, previous_start: null, previous_end: null, current: null, previous: null, deltas: null },
     follow_up_coverage: { active_count: 4, scheduled_count: 2, coverage_rate: 0.5, overdue_count: 1, due_today_count: 1, missing_count: 1 },
+    next_step_summary: {
+      active_count: 4,
+      accounted_for_count: 3,
+      coverage_rate: 0.75,
+      unresolved_count: 1,
+      candidate_action_count: 1,
+      employer_wait_count: 1,
+      no_action_count: 1,
+    },
     progress_narrative: {
       state: range === "all" ? "ALL_TIME" : "READY",
       tone: range === "all" ? "NEUTRAL" : "POSITIVE",
@@ -802,6 +811,7 @@ describe("workspace milestone features", () => {
             due_today_count: 0,
             missing_count: 1,
           },
+          next_step_summary: makeProgressAnalytics().next_step_summary,
           progress_narrative: makeProgressAnalytics().progress_narrative,
           insights: [
             {
@@ -1076,6 +1086,7 @@ describe("workspace milestone features", () => {
             due_today_count: 0,
             missing_count: 1,
           },
+          next_step_summary: makeProgressAnalytics().next_step_summary,
           progress_narrative: makeProgressAnalytics("90d").progress_narrative,
           insights: [
             {
@@ -1540,6 +1551,9 @@ describe("workspace milestone features", () => {
         application_status: "INTERVIEW",
         follow_up_date: null,
         follow_up_state: "NONE",
+        next_step_responsibility: null,
+        next_step_note: null,
+        has_later_scheduled_interview: false,
         workflow_state: "PREPARE",
         next_action: "PREPARE",
       },
@@ -1573,9 +1587,8 @@ describe("workspace milestone features", () => {
     ).toBeVisible();
     expect(screen.getByRole("heading", { name: "Preparation focus" })).toBeVisible();
     expect(screen.getByText(/Suggested from the job title/)).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Understand" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Prepare" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Confirm" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Essential preparation" })).toBeVisible();
+    expect(screen.getByText("Go deeper · optional preparation")).toBeVisible();
     expect(screen.getByRole("button", { name: /more tips/ })).toHaveAttribute(
       "aria-expanded",
       "false",
@@ -1594,7 +1607,10 @@ describe("workspace milestone features", () => {
       phase: "PREPARE" as const,
       source: "CANDIDATE" as const,
       source_label: "Added by you",
+      category: "CANDIDATE" as const,
+      outcome_id: null,
       removable: true,
+      completed: false,
     };
     server.use(
       http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
@@ -1625,13 +1641,12 @@ describe("workspace milestone features", () => {
               guidance: {
                 ...selectedRound.guidance,
                 checklist_items: [...selectedRound.guidance.checklist_items, customItem],
-                readiness: {
-                  ...selectedRound.guidance.readiness,
-                  total_steps: selectedRound.guidance.readiness.total_steps + 1,
-                  missing_actions: [
-                    ...selectedRound.guidance.readiness.missing_actions,
-                    customItem.label,
-                  ],
+                progress: {
+                  ...selectedRound.guidance.progress,
+                  candidate: {
+                    completed: 0,
+                    total: selectedRound.guidance.progress.candidate.total + 1,
+                  },
                 },
               },
             }),
@@ -1646,10 +1661,9 @@ describe("workspace milestone features", () => {
       (await screen.findAllByRole("button", { name: "Continue preparation" }))[0],
     );
     await user.selectOptions(
-      screen.getByLabelText("Role family"),
+      screen.getByLabelText("Role focus"),
       "HOSPITALITY_FOOD_SERVICE",
     );
-    await user.click(screen.getByRole("button", { name: "Apply focus" }));
     await waitFor(() =>
       expect(roleBody).toEqual({
         expected_version: 1,
@@ -1657,6 +1671,7 @@ describe("workspace milestone features", () => {
       }),
     );
 
+    await user.click(screen.getByText("Go deeper · optional preparation"));
     await user.type(screen.getByLabelText("Custom preparation item"), "Bring schedule notes");
     await user.click(screen.getByRole("button", { name: "Add item" }));
     await waitFor(() =>
@@ -1767,6 +1782,9 @@ describe("workspace milestone features", () => {
         follow_up_state: "NONE",
         workflow_state: "IMMINENT",
         next_action: "JOIN_MEETING",
+        next_step_responsibility: null,
+        next_step_note: null,
+        has_later_scheduled_interview: false,
       },
     });
     server.use(
@@ -1811,6 +1829,9 @@ describe("workspace milestone features", () => {
         follow_up_state: "UPCOMING",
         workflow_state: "HISTORY",
         next_action: "REVIEW_DEBRIEF",
+        next_step_responsibility: "EMPLOYER",
+        next_step_note: "Waiting for the hiring team.",
+        has_later_scheduled_interview: false,
       },
     });
     const canceled = makeWorkspaceInterview({
@@ -1823,6 +1844,9 @@ describe("workspace milestone features", () => {
         follow_up_state: "NONE",
         workflow_state: "CANCELED",
         next_action: "OPEN_APPLICATION",
+        next_step_responsibility: null,
+        next_step_note: null,
+        has_later_scheduled_interview: false,
       },
     });
     server.use(
@@ -1840,7 +1864,7 @@ describe("workspace milestone features", () => {
       .find(Boolean);
     expect(historySummary).not.toBeNull();
     expect(
-      screen.getByRole("button", { name: /Northstar Labs.*Completed/ }),
+      screen.getByRole("button", { name: /Northstar Labs.*Reflection saved/ }),
     ).toBeVisible();
     expect(
       screen.getByRole("button", { name: /Northstar Labs.*Canceled/ }),
@@ -1848,7 +1872,7 @@ describe("workspace milestone features", () => {
     expect(
       screen.getByRole("heading", { name: "Interview reflection" }),
     ).toBeVisible();
-    expect(screen.getByRole("button", { name: "Review debrief" })).toBeVisible();
+    expect(screen.getAllByRole("button", { name: "Review reflection" })[0]).toBeVisible();
   });
 
   it("orders the state-first queue and keeps each interview in one group", async () => {
@@ -1867,6 +1891,9 @@ describe("workspace milestone features", () => {
         follow_up_state: "NONE",
         workflow_state: "IMMINENT",
         next_action: "JOIN_MEETING",
+        next_step_responsibility: null,
+        next_step_note: null,
+        has_later_scheduled_interview: false,
       },
     });
     const upcoming = makeWorkspaceInterview({
@@ -1879,6 +1906,9 @@ describe("workspace milestone features", () => {
         follow_up_state: "NONE",
         workflow_state: "UPCOMING",
         next_action: "JOIN_MEETING",
+        next_step_responsibility: null,
+        next_step_note: null,
+        has_later_scheduled_interview: false,
       },
     });
     const items = [prepare, upcoming, imminent];
@@ -1917,6 +1947,8 @@ describe("workspace milestone features", () => {
       scheduled_at: "2026-08-10T15:00:00Z",
       debrief_completed_at: "2026-08-10T16:00:00Z",
       debrief_went_well: "I connected my experience to the role.",
+      debrief_primary_reflection: "The next round will test prioritization.",
+      debrief_carry_forward: "State the measurable result sooner.",
       debrief_improve: "State the measurable result sooner.",
       debrief_signals: "The next round will test prioritization.",
       debrief_next_step: "Prepare a second leadership example.",
@@ -1958,12 +1990,12 @@ describe("workspace milestone features", () => {
     ).not.toBeInTheDocument();
 
     await user.click(
-      screen.getByRole("button", { name: "Review Round 1 debrief" }),
+      screen.getByRole("button", { name: "Review Round 1 reflection" }),
     );
     expect(
       screen.getByRole("dialog", { name: "Interview reflection" }),
     ).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Interview debrief" })).toBeVisible();
+    expect(screen.getAllByRole("heading", { name: "Interview reflection" })[0]).toBeVisible();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.getByText("Preparation record")).toBeVisible();
 
@@ -1971,11 +2003,11 @@ describe("workspace milestone features", () => {
     expect(
       screen.getByRole("dialog", { name: "Edit interview reflection" }),
     ).toBeVisible();
-    expect(screen.getByLabelText("What went well *")).toHaveValue(
+    expect(screen.getByLabelText("What went well?")).toHaveValue(
       "I connected my experience to the role.",
     );
-    await user.clear(screen.getByLabelText("What went well *"));
-    await user.type(screen.getByLabelText("What went well *"), "Unsaved edit");
+    await user.clear(screen.getByLabelText("What went well?"));
+    await user.type(screen.getByLabelText("What went well?"), "Unsaved edit");
     await user.click(screen.getByRole("button", { name: "Cancel editing" }));
     expect(
       screen.getByRole("dialog", { name: "Interview reflection" }),
@@ -1984,9 +2016,9 @@ describe("workspace milestone features", () => {
     expect(screen.getByRole("button", { name: "Edit reflection" })).toHaveFocus();
 
     await user.click(screen.getByRole("button", { name: "Edit reflection" }));
-    await user.clear(screen.getByLabelText("What went well *"));
+    await user.clear(screen.getByLabelText("What went well?"));
     await user.type(
-      screen.getByLabelText("What went well *"),
+      screen.getByLabelText("What went well?"),
       "I gave a clearer result-first answer.",
     );
     await user.click(screen.getByRole("button", { name: "Save reflection" }));
@@ -2016,6 +2048,9 @@ describe("workspace milestone features", () => {
         follow_up_state: "NONE",
         workflow_state: "FOLLOW_UP",
         next_action: "REVIEW_FOLLOW_UP",
+        next_step_responsibility: null,
+        next_step_note: null,
+        has_later_scheduled_interview: false,
       },
     });
     server.use(
@@ -2027,11 +2062,109 @@ describe("workspace milestone features", () => {
 
     renderApp("/interviews");
     expect(await screen.findByText("You still need to decide the next step for this opportunity.")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Review follow-up" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Review next step" })).toHaveAttribute(
       "href",
       `/applications/${completed.application_id}/edit?focus=follow_up`,
     );
     expect(screen.getByRole("button", { name: "Review reflection" })).toBeVisible();
+  });
+
+  it("saves a minimum reflection before handing off a retryable application next step", async () => {
+    const completed = makeWorkspaceInterview({
+      status: "COMPLETED",
+      allowed_statuses: [],
+      context: {
+        application_status: "INTERVIEW",
+        follow_up_date: null,
+        follow_up_state: "NONE",
+        workflow_state: "CAPTURE",
+        next_action: "CAPTURE_NOTES",
+        next_step_responsibility: null,
+        next_step_note: null,
+        has_later_scheduled_interview: false,
+      },
+    });
+    let applicationVersion = 4;
+    const workspaceBodies: Array<Record<string, unknown>> = [];
+    const nextStepBodies: Array<Record<string, unknown>> = [];
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
+        HttpResponse.json(makeApplication({ status: "INTERVIEW", version: applicationVersion })),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/interviews`, () =>
+        HttpResponse.json({ items: [completed], next_cursor: null }),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+        HttpResponse.json({ items: [completed], next_cursor: null }),
+      ),
+      http.patch(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/interviews/:interviewId/workspace`,
+        async ({ request }) => {
+          workspaceBodies.push((await request.json()) as Record<string, unknown>);
+          return HttpResponse.json(makeInterview({
+            ...completed,
+            version: 2,
+            status: "COMPLETED",
+            debrief_primary_reflection: "The role is more customer-facing than the posting suggested.",
+            debrief_completed_at: "2026-08-14T18:00:00Z",
+          }));
+        },
+      ),
+      http.post(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/next-step`,
+        async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          nextStepBodies.push(body);
+          if (nextStepBodies.length === 1) {
+            applicationVersion = 5;
+            return HttpResponse.json(
+              { error: { code: "VERSION_CONFLICT", message: "Opportunity changed.", request_id: "test" } },
+              { status: 409 },
+            );
+          }
+          return HttpResponse.json(makeApplication({
+            status: "INTERVIEW",
+            version: 6,
+            next_step_responsibility: "EMPLOYER",
+            next_step_note: "Waiting for the team to confirm timing.",
+            follow_up_date: "2026-08-28",
+          }));
+        },
+      ),
+    );
+
+    const { user } = renderApp("/interviews");
+    await user.click((await screen.findAllByRole("button", { name: "Capture interview notes" }))[0]);
+    await user.type(
+      screen.getByLabelText("What stands out from this interview?"),
+      "The role is more customer-facing than the posting suggested.",
+    );
+    await user.click(screen.getByRole("button", { name: "Complete reflection" }));
+    expect(await screen.findByRole("heading", { name: "What happens next?" })).toBeVisible();
+    expect(workspaceBodies).toHaveLength(1);
+    expect(workspaceBodies[0]).toMatchObject({
+      debrief_complete: true,
+      debrief_primary_reflection: "The role is more customer-facing than the posting suggested.",
+    });
+
+    await user.click(screen.getByRole("radio", { name: "I’m waiting on them" }));
+    await user.type(
+      screen.getByLabelText("What are you waiting for?"),
+      "Waiting for the team to confirm timing.",
+    );
+    await user.type(
+      screen.getByLabelText(/Check back if you have not heard by/),
+      "2026-08-28",
+    );
+    await user.click(screen.getByRole("button", { name: "Save next step" }));
+    expect(await screen.findByText("Opportunity changed")).toBeVisible();
+    expect(screen.getByLabelText("What are you waiting for?")).toHaveValue(
+      "Waiting for the team to confirm timing.",
+    );
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(nextStepBodies).toHaveLength(2));
+    expect(nextStepBodies.map((body) => body.expected_version)).toEqual([4, 5]);
+    expect(workspaceBodies).toHaveLength(1);
   });
 
   it("manages application notes and schedules interviews without client-owned fields", async () => {

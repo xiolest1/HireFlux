@@ -12,7 +12,11 @@ from hireflux_backend.application.resource_ports import (
     ResourcePage,
     WorkspaceResourceRepository,
 )
-from hireflux_backend.domain.enums import ActivityType, ApplicationStatus
+from hireflux_backend.domain.enums import (
+    ActivityType,
+    ApplicationStatus,
+    NextStepResponsibility,
+)
 from hireflux_backend.domain.interview_guidance import checklist_ids_for, guidance_for
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity
 from hireflux_backend.domain.resources import (
@@ -87,6 +91,8 @@ class UpdateInterviewWorkspaceCommand:
     debrief_improve: str | None
     debrief_signals: str | None
     debrief_next_step: str | None
+    debrief_primary_reflection: str | None = None
+    debrief_carry_forward: str | None = None
     debrief_complete: bool = False
 
 
@@ -128,6 +134,9 @@ class InterviewWorkspaceContext:
     follow_up_state: InterviewFollowUpState
     workflow_state: InterviewWorkflowState
     next_action: InterviewNextAction
+    next_step_responsibility: NextStepResponsibility | None
+    next_step_note: str | None
+    has_later_scheduled_interview: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -440,10 +449,26 @@ class WorkspaceResourceService:
             cursor=cursor,
         )
         items: list[WorkspaceInterviewItem] = []
+        application_interviews: dict[str, tuple[Interview, ...]] = {}
         for interview in page.items:
             application = self._applications.get(identity.user_id, interview.application_id)
             if application is None:
                 continue
+            sibling_interviews = application_interviews.get(interview.application_id)
+            if sibling_interviews is None:
+                sibling_interviews = self._resources.list_interviews(
+                    identity.user_id,
+                    interview.application_id,
+                    limit=25,
+                    cursor=None,
+                ).items
+                application_interviews[interview.application_id] = sibling_interviews
+            has_later_scheduled_interview = any(
+                sibling.status is InterviewStatus.SCHEDULED
+                and sibling.scheduled_at > interview.scheduled_at
+                for sibling in sibling_interviews
+                if sibling.interview_id != interview.interview_id
+            )
             items.append(
                 WorkspaceInterviewItem(
                     interview=interview,
@@ -452,6 +477,7 @@ class WorkspaceResourceService:
                         application,
                         local_today=local_today,
                         now=now,
+                        has_later_scheduled_interview=has_later_scheduled_interview,
                     ),
                 )
             )
@@ -571,6 +597,16 @@ class WorkspaceResourceService:
         debrief_next_step = _optional_bounded_text(
             command.debrief_next_step, field_name="debrief_next_step", max_length=500
         )
+        debrief_primary_reflection = _optional_bounded_text(
+            command.debrief_primary_reflection,
+            field_name="debrief_primary_reflection",
+            max_length=2_000,
+        )
+        debrief_carry_forward = _optional_bounded_text(
+            command.debrief_carry_forward,
+            field_name="debrief_carry_forward",
+            max_length=2_000,
+        )
         has_debrief = any(
             value is not None
             for value in (
@@ -578,6 +614,8 @@ class WorkspaceResourceService:
                 debrief_improve,
                 debrief_signals,
                 debrief_next_step,
+                debrief_primary_reflection,
+                debrief_carry_forward,
             )
         )
         if (
@@ -586,9 +624,19 @@ class WorkspaceResourceService:
             raise ConflictError(
                 "An interview must be completed before its debrief can be recorded."
             )
-        if command.debrief_complete and (debrief_went_well is None or debrief_next_step is None):
+        meaningful_reflection = any(
+            value is not None
+            for value in (
+                debrief_primary_reflection,
+                debrief_went_well,
+                debrief_improve,
+                debrief_signals,
+                debrief_carry_forward,
+            )
+        )
+        if command.debrief_complete and not meaningful_reflection:
             raise ValidationError(
-                "A completed debrief requires what went well and a concrete next step."
+                "A completed reflection requires at least one meaningful reflection field."
             )
 
         debrief_completed_at = current.debrief_completed_at
@@ -603,6 +651,8 @@ class WorkspaceResourceService:
             debrief_improve=debrief_improve,
             debrief_signals=debrief_signals,
             debrief_next_step=debrief_next_step,
+            debrief_primary_reflection=debrief_primary_reflection,
+            debrief_carry_forward=debrief_carry_forward,
             debrief_completed_at=debrief_completed_at,
         )
         if updated == current:
@@ -624,8 +674,8 @@ class WorkspaceResourceService:
             ),
             {
                 "interview_id": interview_id,
-                "completed_steps": str(guidance.completed_steps),
-                "total_steps": str(guidance.total_steps),
+                "completed_essentials": str(guidance.progress.essentials.completed),
+                "total_essentials": str(guidance.progress.essentials.total),
             },
         )
         self._resources.replace_interview(
@@ -835,9 +885,10 @@ def _interview_context(
     *,
     local_today: date,
     now: datetime,
+    has_later_scheduled_interview: bool = False,
 ) -> InterviewWorkspaceContext:
     follow_up_state = _follow_up_state(application.follow_up_date, local_today=local_today)
-    readiness = guidance_for(interview).ready_for_interview
+    essentials_complete = guidance_for(interview).progress.essentials.complete
     if interview.status is InterviewStatus.CANCELED:
         workflow_state: InterviewWorkflowState = "CANCELED"
         next_action: InterviewNextAction = "OPEN_APPLICATION"
@@ -851,11 +902,11 @@ def _interview_context(
         workflow_state = "IMMINENT"
         if interview.meeting_url:
             next_action = "JOIN_MEETING"
-        elif not readiness:
+        elif not essentials_complete:
             next_action = "PREPARE"
         else:
             next_action = "OPEN_APPLICATION"
-    elif interview.status is InterviewStatus.SCHEDULED and not readiness:
+    elif interview.status is InterviewStatus.SCHEDULED and not essentials_complete:
         workflow_state = "PREPARE"
         next_action = "PREPARE"
     elif interview.status is InterviewStatus.SCHEDULED:
@@ -864,11 +915,11 @@ def _interview_context(
     elif interview.status is InterviewStatus.COMPLETED and interview.debrief_completed_at is None:
         workflow_state = "CAPTURE"
         next_action = "CAPTURE_NOTES"
-    elif application.status in ACTIVE_APPLICATION_STATUSES and follow_up_state in {
-        "NONE",
-        "TODAY",
-        "OVERDUE",
-    }:
+    elif application.status in ACTIVE_APPLICATION_STATUSES and _next_step_needs_attention(
+        application,
+        follow_up_state=follow_up_state,
+        has_later_scheduled_interview=has_later_scheduled_interview,
+    ):
         workflow_state = "FOLLOW_UP"
         next_action = "REVIEW_FOLLOW_UP"
     else:
@@ -880,7 +931,28 @@ def _interview_context(
         follow_up_state=follow_up_state,
         workflow_state=workflow_state,
         next_action=next_action,
+        next_step_responsibility=application.next_step_responsibility,
+        next_step_note=application.next_step_note,
+        has_later_scheduled_interview=has_later_scheduled_interview,
     )
+
+
+def _next_step_needs_attention(
+    application: Application,
+    *,
+    follow_up_state: InterviewFollowUpState,
+    has_later_scheduled_interview: bool,
+) -> bool:
+    responsibility = application.next_step_responsibility
+    if responsibility is NextStepResponsibility.NONE:
+        return False
+    if responsibility is NextStepResponsibility.CANDIDATE:
+        return follow_up_state in {"NONE", "TODAY", "OVERDUE"}
+    if responsibility is NextStepResponsibility.EMPLOYER:
+        return follow_up_state in {"TODAY", "OVERDUE"}
+    if has_later_scheduled_interview and follow_up_state == "NONE":
+        return False
+    return follow_up_state in {"NONE", "TODAY", "OVERDUE"}
 
 
 def _require_content(value: str) -> str:

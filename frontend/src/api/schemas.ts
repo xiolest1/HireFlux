@@ -104,6 +104,8 @@ export const applicationSchema = z.object({
   status: applicationStatusSchema,
   applied_date: dateOnlySchema.nullable(),
   follow_up_date: dateOnlySchema.nullable(),
+  next_step_responsibility: z.enum(["CANDIDATE", "EMPLOYER", "NONE"]).nullable(),
+  next_step_note: z.string().nullable(),
   job_url: httpUrlSchema.nullable(),
   location: z.string().nullable(),
   work_mode: workModeSchema.nullable(),
@@ -211,7 +213,15 @@ const interviewChecklistItemSchema = z.object({
   phase: z.enum(["UNDERSTAND", "PREPARE", "CONFIRM"]),
   source: z.enum(["UNIVERSAL", "INTERVIEW_TYPE", "ROLE_FAMILY", "CANDIDATE"]),
   source_label: z.string().min(1),
+  category: z.enum(["ESSENTIAL", "ADDITIONAL", "CANDIDATE"]),
+  outcome_id: z.enum([
+    "OPPORTUNITY_UNDERSTANDING",
+    "RELEVANT_EVIDENCE",
+    "CONVERSATION_PLAN",
+    "INTERVIEW_REQUIREMENTS",
+  ]).nullable(),
   removable: z.boolean(),
+  completed: z.boolean(),
 });
 
 const curatedTextSchema = z.object({
@@ -238,11 +248,33 @@ const interviewGuidanceSchema = z.object({
       source_label: z.string().min(1),
     }),
   ).max(3),
-  readiness: z.object({
-    completed_steps: z.number().int().nonnegative(),
-    total_steps: z.number().int().positive(),
-    ready_for_interview: z.boolean(),
-    missing_actions: z.array(z.string().min(1)),
+  essential_outcomes: z.array(z.object({
+    outcome_id: z.enum([
+      "OPPORTUNITY_UNDERSTANDING",
+      "RELEVANT_EVIDENCE",
+      "CONVERSATION_PLAN",
+      "INTERVIEW_REQUIREMENTS",
+    ]),
+    label: z.string().min(1),
+    description: z.string().min(1),
+    completed: z.boolean(),
+    action_item_id: z.string().min(1),
+  })),
+  progress: z.object({
+    essentials: z.object({
+      completed: z.number().int().nonnegative(),
+      total: z.number().int().positive(),
+      complete: z.boolean(),
+      remaining_actions: z.array(z.string().min(1)),
+    }),
+    additional: z.object({
+      completed: z.number().int().nonnegative(),
+      total: z.number().int().nonnegative(),
+    }),
+    candidate: z.object({
+      completed: z.number().int().nonnegative(),
+      total: z.number().int().nonnegative(),
+    }),
   }),
 });
 
@@ -266,6 +298,8 @@ export const interviewSchema = z.object({
   debrief_improve: z.string().nullable(),
   debrief_signals: z.string().nullable(),
   debrief_next_step: z.string().nullable(),
+  debrief_primary_reflection: z.string().nullable(),
+  debrief_carry_forward: z.string().nullable(),
   debrief_completed_at: timestampSchema.nullable(),
   guidance: interviewGuidanceSchema,
   created_at: timestampSchema,
@@ -307,6 +341,9 @@ const interviewWorkspaceContextSchema = z.object({
     "REVIEW_DEBRIEF",
     "OPEN_APPLICATION",
   ]),
+  next_step_responsibility: z.enum(["CANDIDATE", "EMPLOYER", "NONE"]).nullable(),
+  next_step_note: z.string().nullable(),
+  has_later_scheduled_interview: z.boolean(),
 });
 
 export const workspaceInterviewSchema = interviewSchema.extend({
@@ -361,6 +398,7 @@ export type StageAgeBucket = z.infer<typeof stageAgeBucketSchema>;
 export type FollowUpFilter = z.infer<typeof followUpFilterSchema>;
 export type User = z.infer<typeof userSchema>;
 export type Application = z.infer<typeof applicationSchema>;
+export type NextStepResponsibility = Application["next_step_responsibility"];
 export type PipelineCard = z.infer<typeof pipelineCardSchema>;
 export type PipelineLane = z.infer<typeof pipelineLaneSchema>;
 export type Pipeline = z.infer<typeof pipelineResponseSchema>;
@@ -382,6 +420,8 @@ export type InterviewWorkspace = Pick<
   | "debrief_improve"
   | "debrief_signals"
   | "debrief_next_step"
+  | "debrief_primary_reflection"
+  | "debrief_carry_forward"
 >;
 export type Settings = z.infer<typeof settingsSchema>;
 export type WorkspaceExport = z.infer<typeof workspaceExportSchema>;

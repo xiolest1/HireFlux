@@ -924,7 +924,7 @@ function ApplicationTable({
           <tr>
             <th scope="col" className="px-4 py-3 font-semibold">Opportunity</th>
             <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-            <th scope="col" className="px-4 py-3 font-semibold">Follow-up</th>
+            <th scope="col" className="px-4 py-3 font-semibold">Next step</th>
             <th scope="col" className="px-4 py-3 font-semibold">Applied</th>
             <th scope="col" className="px-4 py-3 font-semibold">Updated</th>
             <th scope="col" className="px-4 py-3"><span className="sr-only">Actions</span></th>
@@ -949,7 +949,17 @@ function ApplicationTable({
                 ) : null}
               </th>
               <td className="whitespace-nowrap px-4 py-4"><StatusBadge status={application.status} /></td>
-              <td className="whitespace-nowrap px-4 py-4 text-ink">{formatDateOnly(application.follow_up_date)}</td>
+              <td className="max-w-56 px-4 py-4 text-ink">{application.next_step_responsibility === "CANDIDATE"
+                ? application.next_step_note ?? "Candidate action"
+                : application.next_step_responsibility === "EMPLOYER"
+                  ? application.follow_up_date
+                    ? `Waiting · check back ${formatDateOnly(application.follow_up_date)}`
+                    : "Waiting for employer"
+                  : application.next_step_responsibility === "NONE"
+                    ? "No current action"
+                    : application.follow_up_date
+                      ? `Check back ${formatDateOnly(application.follow_up_date)}`
+                      : "Not reviewed"}</td>
               <td className="whitespace-nowrap px-4 py-4 text-ink-muted">{formatDateOnly(application.applied_date)}</td>
               <td className="whitespace-nowrap px-4 py-4 text-ink-muted">{formatTimestamp(application.updated_at, timeZone)}</td>
               <td className="px-4 py-4 text-right">

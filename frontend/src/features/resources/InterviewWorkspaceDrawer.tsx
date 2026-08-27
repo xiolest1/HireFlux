@@ -24,7 +24,7 @@ import {
   type RoleFamily,
 } from "../../api/schemas";
 import { Button } from "../../components/ui/Button";
-import { Drawer } from "../../components/ui/Drawer";
+import { FocusedWorkspace } from "../../components/ui/FocusedWorkspace";
 import { ErrorPanel } from "../../components/ui/Feedback";
 import { useToast } from "../../components/ui/toastContext";
 import {
@@ -35,6 +35,7 @@ import {
   useApplication,
   useUpdateApplication,
 } from "../applications/queries";
+import { NextStepPlanner } from "../applications/NextStepPlanner";
 import {
   useCreatePreparationItem,
   useDeletePreparationItem,
@@ -45,15 +46,11 @@ interface WorkspaceDraft extends InterviewWorkspace {
   candidate_questions: string[];
 }
 
-const phaseLabels = {
-  UNDERSTAND: "Understand",
-  PREPARE: "Prepare",
-  CONFIRM: "Confirm",
-} as const;
-
 function draftFrom(interview: Interview): WorkspaceDraft {
   return {
-    completed_checklist_items: [...interview.completed_checklist_items],
+    completed_checklist_items: interview.guidance.checklist_items
+      .filter((item) => item.completed)
+      .map((item) => item.item_id),
     preparation_notes: interview.preparation_notes,
     candidate_questions:
       interview.candidate_questions.length > 0
@@ -63,6 +60,8 @@ function draftFrom(interview: Interview): WorkspaceDraft {
     debrief_improve: interview.debrief_improve,
     debrief_signals: interview.debrief_signals,
     debrief_next_step: interview.debrief_next_step,
+    debrief_primary_reflection: interview.debrief_primary_reflection,
+    debrief_carry_forward: interview.debrief_carry_forward,
   };
 }
 
@@ -71,27 +70,30 @@ const textAreaClassName =
 const focusClassName =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
-type DrawerMode = "PREPARE" | "CAPTURE" | "REVIEW" | "EDIT";
+type DrawerMode = "PREPARE" | "CAPTURE" | "REVIEW" | "EDIT" | "HANDOFF";
 
 function modeFor(interview: Interview): DrawerMode {
   if (interview.status !== "COMPLETED") return "PREPARE";
   return interview.debrief_completed_at ? "REVIEW" : "CAPTURE";
 }
 
-export function InterviewWorkspaceDrawer({
+export function InterviewFocusedWorkspace({
   applicationId,
   interview,
   timeZone,
   onClose,
+  onEditSchedule,
 }: {
   applicationId: string;
   interview: Interview;
   timeZone: string;
   onClose: () => void;
+  onEditSchedule?: () => void;
 }) {
   const [currentInterview, setCurrentInterview] = useState(interview);
   const [mode, setMode] = useState<DrawerMode>(() => modeFor(interview));
   const [draft, setDraft] = useState<WorkspaceDraft>(() => draftFrom(interview));
+  const [savedDraft, setSavedDraft] = useState<WorkspaceDraft>(() => draftFrom(interview));
   const [roleChoice, setRoleChoice] = useState<RoleFamily | "AUTO">(
     interview.guidance.role_context.source === "USER_SELECTED"
       ? interview.guidance.role_context.role_family
@@ -130,17 +132,18 @@ export function InterviewWorkspaceDrawer({
 
   const guidance = currentInterview.guidance;
   const completed = new Set(draft.completed_checklist_items);
-  const completedCount = guidance.checklist_items.filter((item) =>
-    completed.has(item.item_id),
-  ).length;
-  const nextStep = guidance.checklist_items.find((item) => !completed.has(item.item_id));
   const normalizedQuestions = useMemo(
     () => draft.candidate_questions.map((question) => question.trim()).filter(Boolean),
     [draft.candidate_questions],
   );
   const canCompleteDebrief = Boolean(
-    draft.debrief_went_well?.trim() && draft.debrief_next_step?.trim(),
+    draft.debrief_primary_reflection?.trim() ||
+      draft.debrief_went_well?.trim() ||
+      draft.debrief_improve?.trim() ||
+      draft.debrief_signals?.trim() ||
+      draft.debrief_carry_forward?.trim(),
   );
+  const dirty = mode !== "REVIEW" && mode !== "HANDOFF" && JSON.stringify(draft) !== JSON.stringify(savedDraft);
   const pending =
     workspaceMutation.isPending ||
     roleMutation.isPending ||
@@ -166,13 +169,20 @@ export function InterviewWorkspaceDrawer({
           debrief_improve: draft.debrief_improve?.trim() || null,
           debrief_signals: draft.debrief_signals?.trim() || null,
           debrief_next_step: draft.debrief_next_step?.trim() || null,
+          debrief_primary_reflection: draft.debrief_primary_reflection?.trim() || null,
+          debrief_carry_forward: draft.debrief_carry_forward?.trim() || null,
         },
       });
       showToast(
-        debriefComplete ? "Interview debrief saved." : "Interview preparation saved.",
+        debriefComplete ? "Interview reflection saved." : "Interview preparation saved.",
         { title: "Interview workspace updated", tone: "success" },
       );
-      if (returnToReview) {
+      setSavedDraft(draftFrom(updated));
+      if (debriefComplete && mode === "CAPTURE") {
+        setCurrentInterview(updated);
+        setDraft(draftFrom(updated));
+        setMode("HANDOFF");
+      } else if (returnToReview) {
         setCurrentInterview(updated);
         setDraft(draftFrom(updated));
         setMode("REVIEW");
@@ -191,7 +201,7 @@ export function InterviewWorkspaceDrawer({
     window.setTimeout(() => editReflectionRef.current?.focus(), 0);
   }
 
-  async function applyRoleFocus() {
+  async function applyRoleFocus(nextChoice: RoleFamily | "AUTO") {
     const application = applicationQuery.data;
     if (!application) return;
     try {
@@ -199,7 +209,7 @@ export function InterviewWorkspaceDrawer({
         applicationId,
         request: {
           expected_version: application.version,
-          role_family: roleChoice === "AUTO" ? null : roleChoice,
+          role_family: nextChoice === "AUTO" ? null : nextChoice,
         },
       });
       showToast("Preparation focus updated for every interview round.", {
@@ -207,6 +217,9 @@ export function InterviewWorkspaceDrawer({
         tone: "success",
       });
     } catch {
+      setRoleChoice(
+        application.role_family ?? "AUTO",
+      );
       return;
     }
   }
@@ -309,20 +322,23 @@ export function InterviewWorkspaceDrawer({
   }
 
   return (
-    <Drawer
+    <FocusedWorkspace
       open
       onClose={onClose}
+      dirty={dirty}
       title={
         mode === "PREPARE"
           ? "Interview preparation"
           : mode === "CAPTURE"
-            ? "Capture interview debrief"
+            ? "Capture interview reflection"
             : mode === "EDIT"
               ? "Edit interview reflection"
-              : "Interview reflection"
+              : mode === "HANDOFF"
+                ? "Plan what happens next"
+                : "Interview reflection"
       }
-      description={`${currentInterview.company_name} · ${currentInterview.job_title}`}
-      size="xl"
+      context={`${currentInterview.company_name} · ${currentInterview.job_title}`}
+      description="Private to your HireFlux workspace."
       footer={
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
@@ -353,10 +369,10 @@ export function InterviewWorkspaceDrawer({
                 Save draft
               </Button>
               <Button type="button" disabled={!canCompleteDebrief || pending} onClick={() => void save(true)}>
-                Complete debrief
+                Complete reflection
               </Button>
             </>
-          ) : (
+          ) : mode === "HANDOFF" ? null : (
             <Button type="button" disabled={pending} onClick={() => void save(false)}>
               {workspaceMutation.isPending ? "Saving…" : "Save preparation"}
             </Button>
@@ -367,7 +383,22 @@ export function InterviewWorkspaceDrawer({
       <div className="space-y-7">
         {mutationError ? <ErrorPanel compact title="Workspace could not be saved" error={mutationError} /> : null}
 
-        {mode === "REVIEW" ? (
+        {mode === "HANDOFF" && applicationQuery.data ? (
+          <NextStepPlanner
+            application={applicationQuery.data}
+            timeZone={timeZone}
+            hasLaterScheduledInterview={
+              "context" in interview &&
+              typeof interview.context === "object" &&
+              interview.context !== null &&
+              "has_later_scheduled_interview" in interview.context &&
+              Boolean(interview.context.has_later_scheduled_interview)
+            }
+            onSaved={onClose}
+            onLeaveUnclear={onClose}
+            onConflict={() => applicationQuery.refetch()}
+          />
+        ) : mode === "REVIEW" ? (
           <DebriefReview interview={currentInterview} timeZone={timeZone} />
         ) : mode === "CAPTURE" || mode === "EDIT" ? (
           <DebriefSection draft={draft} setDraft={setDraft} />
@@ -375,55 +406,64 @@ export function InterviewWorkspaceDrawer({
 
         {currentInterview.status !== "COMPLETED" ? (
           <>
-        <section aria-labelledby="readiness-title" className="rounded-2xl border border-accent/20 bg-accent-soft p-4">
+        <section aria-labelledby="interview-brief-title" className="rounded-2xl border border-line bg-surface-muted p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Explainable readiness</p>
-              <h3 id="readiness-title" className="mt-1 font-bold text-ink">
-                {completedCount} of {guidance.readiness.total_steps} preparation steps complete
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">Interview brief · context, not a task</p>
+              <h3 id="interview-brief-title" className="mt-1 font-bold text-ink">
+                {formatTimestamp(currentInterview.scheduled_at, timeZone)}
               </h3>
-              <p className="mt-2 text-sm text-ink-muted">
-                {nextStep ? <>Next: <strong className="text-ink">{nextStep.label}</strong></> : "Every visible step is complete."}
+              <p className="mt-2 text-sm leading-6 text-ink-muted">
+                {currentInterview.duration_minutes} minutes · {currentInterview.location || (currentInterview.meeting_url ? "Online meeting" : "Access details missing")}
               </p>
             </div>
             <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface text-accent">
               <Sparkles aria-hidden="true" className="size-5" />
             </span>
           </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface" aria-hidden="true">
-            <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${(completedCount / guidance.readiness.total_steps) * 100}%` }} />
-          </div>
-          <p className="mt-3 text-xs leading-5 text-ink-muted">This is visible checklist completion—never a hidden score or AI judgment.</p>
+          {!currentInterview.location && !currentInterview.meeting_url ? <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-warning-soft p-3"><p className="text-sm font-semibold text-warning">Access details are missing.</p>{onEditSchedule ? <Button type="button" variant="secondary" onClick={onEditSchedule}>Edit interview schedule</Button> : null}</div> : null}
+        </section>
+
+        <section aria-labelledby="essentials-summary-title" className="rounded-2xl border border-accent/20 bg-accent-soft p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Preparation essentials</p>
+          <h3 id="essentials-summary-title" className="mt-1 font-bold text-ink">
+            {guidance.progress.essentials.complete
+              ? guidance.progress.additional.total + guidance.progress.candidate.total > 0
+                ? "Essentials prepared · more preparation available"
+                : "Essentials prepared"
+              : `${guidance.progress.essentials.total - guidance.progress.essentials.completed} essentials remaining`}
+          </h3>
+          <p className="mt-2 text-xs leading-5 text-ink-muted">HireFlux tracks what you covered. It does not score whether you are objectively ready.</p>
         </section>
 
         <section aria-labelledby="preparation-focus-title" className="rounded-2xl border border-line bg-surface-muted p-4">
           <h3 id="preparation-focus-title" className="font-bold text-ink">Preparation focus</h3>
           <p className="mt-1 text-sm leading-6 text-ink-muted">{guidance.role_context.explanation}</p>
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <details className="mt-3">
+            <summary className={`min-h-11 cursor-pointer py-2 text-sm font-semibold text-accent ${focusClassName}`}>Change preparation focus</summary>
             <div className="min-w-0 flex-1">
-              <label htmlFor="preparation-role-family" className="text-xs font-bold text-ink-muted">Role family</label>
-              <select id="preparation-role-family" value={roleChoice} onChange={(event) => setRoleChoice(event.target.value as RoleFamily | "AUTO")} className="mt-1 min-h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink">
+              <label htmlFor="preparation-role-family" className="text-xs font-bold text-ink-muted">Role focus</label>
+              <select id="preparation-role-family" value={roleChoice} disabled={!applicationQuery.data || pending} onChange={(event) => { const nextChoice = event.target.value as RoleFamily | "AUTO"; setRoleChoice(nextChoice); void applyRoleFocus(nextChoice); }} className="mt-1 min-h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink">
                 <option value="AUTO">Automatic from job title</option>
                 {ROLE_FAMILIES.map((family) => <option key={family} value={family}>{formatRoleFamily(family)}</option>)}
               </select>
             </div>
-            <Button type="button" variant="secondary" disabled={!applicationQuery.data || pending} onClick={() => void applyRoleFocus()}>Apply focus</Button>
-          </div>
-          <p className="mt-2 text-xs leading-5 text-ink-muted">This choice is shared by every interview round for this application. General always uses role-neutral guidance.</p>
+            <p className="mt-2 text-xs leading-5 text-ink-muted">Changes save immediately and apply to every interview round for this application.</p>
+          </details>
         </section>
 
         <section aria-labelledby="checklist-title">
-          <h3 id="checklist-title" className="font-bold text-ink">Preparation checklist</h3>
-          {(["UNDERSTAND", "PREPARE", "CONFIRM"] as const).map((phase) => {
-            const items = guidance.checklist_items.filter((item) => item.phase === phase);
+          <h3 id="checklist-title" className="font-bold text-ink">Essential preparation</h3>
+          <p className="mt-1 text-sm text-ink-muted">The few outcomes worth covering before this interview.</p>
+          {(["ESSENTIAL"] as const).map((category) => {
+            const items = guidance.checklist_items.filter((item) => item.category === category);
             if (items.length === 0) return null;
             return (
-              <div key={phase} className="mt-4">
-                <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">{phaseLabels[phase]}</h4>
+              <div key={category} className="mt-4">
                 <div className="mt-2 space-y-2">
                   {items.map((item) => (
                     <div key={item.item_id} className="flex items-start gap-3 rounded-xl border border-line bg-surface-raised p-3">
-                      <input id={`interview-checklist-${item.item_id}`} type="checkbox" checked={completed.has(item.item_id)} onChange={() => toggleChecklist(item.item_id)} className="mt-1 size-5 shrink-0 accent-accent" />
+                      <input id={`interview-checklist-${item.item_id}`} type="checkbox" checked={completed.has(item.item_id) || item.completed} onChange={() => toggleChecklist(item.item_id)} className="mt-1 size-5 shrink-0 accent-accent" />
                       <label htmlFor={`interview-checklist-${item.item_id}`} className="min-w-0 flex-1 cursor-pointer">
                         <span className="block text-sm font-semibold text-ink">{item.label}</span>
                         <span className="mt-0.5 block text-xs leading-5 text-ink-muted">{item.description}</span>
@@ -436,6 +476,24 @@ export function InterviewWorkspaceDrawer({
               </div>
             );
           })}
+          <details className="mt-5 rounded-2xl border border-line bg-surface-muted p-4">
+            <summary className={`min-h-11 cursor-pointer py-2 font-semibold text-accent ${focusClassName}`}>
+              Go deeper · optional preparation
+            </summary>
+            <p className="mb-3 text-xs leading-5 text-ink-muted">Role-specific and candidate-created work is tracked separately and never reduces essential completion.</p>
+            <div className="space-y-2">
+              {guidance.checklist_items.filter((item) => item.category !== "ESSENTIAL").map((item) => (
+                <div key={item.item_id} className="flex items-start gap-3 rounded-xl border border-line bg-surface p-3">
+                  <input id={`interview-checklist-${item.item_id}`} type="checkbox" checked={completed.has(item.item_id) || item.completed} onChange={() => toggleChecklist(item.item_id)} className="mt-1 size-5 shrink-0 accent-accent" />
+                  <label htmlFor={`interview-checklist-${item.item_id}`} className="min-w-0 flex-1 cursor-pointer">
+                    <span className="block text-sm font-semibold text-ink">{item.label}</span>
+                    <span className="mt-0.5 block text-xs leading-5 text-ink-muted">{item.description}</span>
+                    <span className="mt-1 block text-[11px] font-semibold text-violet">{item.source_label}</span>
+                  </label>
+                  {item.removable ? <button type="button" aria-label={`Remove custom preparation item: ${item.label}`} className={`inline-flex size-11 shrink-0 items-center justify-center rounded-xl text-ink-muted hover:bg-surface-muted ${focusClassName}`} disabled={pending} onClick={() => void removeCustomItem(item.item_id)}><Trash2 aria-hidden="true" className="size-4" /></button> : null}
+                </div>
+              ))}
+            </div>
           {currentInterview.custom_preparation_items.length < 2 ? (
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <label htmlFor="custom-preparation-item" className="sr-only">Custom preparation item</label>
@@ -443,6 +501,7 @@ export function InterviewWorkspaceDrawer({
               <Button type="button" variant="secondary" disabled={!customLabel.trim() || pending} onClick={() => void addCustomItem()}><Plus aria-hidden="true" className="size-4" /> Add item</Button>
             </div>
           ) : <p className="mt-3 text-xs text-ink-muted">You have added the maximum of two custom items.</p>}
+          </details>
         </section>
 
         <section aria-labelledby="focus-prompts-title">
@@ -479,7 +538,7 @@ export function InterviewWorkspaceDrawer({
           <PreparationHistory interview={currentInterview} />
         )}
       </div>
-    </Drawer>
+    </FocusedWorkspace>
   );
 }
 
@@ -491,11 +550,13 @@ function DebriefReview({
   timeZone: string;
 }) {
   const fields = [
+    ["What stood out", interview.debrief_primary_reflection],
     ["What went well", interview.debrief_went_well],
     ["What would you improve", interview.debrief_improve],
     ["Signals you noticed", interview.debrief_signals],
-    ["Concrete next step", interview.debrief_next_step],
-  ] as const;
+    ["Carry forward", interview.debrief_carry_forward],
+    ["Legacy recorded next step", interview.debrief_next_step],
+  ].filter((field): field is [string, string] => Boolean(field[1]));
   return (
     <section
       aria-labelledby="debrief-review-title"
@@ -511,7 +572,7 @@ function DebriefReview({
             Saved private reflection
           </p>
           <h3 id="debrief-review-title" className="mt-1 font-bold text-ink">
-            Interview debrief
+            Interview reflection
           </h3>
           {interview.debrief_completed_at ? (
             <p className="mt-1 text-xs text-ink-muted">
@@ -520,12 +581,12 @@ function DebriefReview({
           ) : null}
         </div>
       </div>
-      <dl className="mt-5 grid gap-5 sm:grid-cols-2">
+      <dl className="mt-5 space-y-5">
         {fields.map(([label, value]) => (
           <div key={label}>
             <dt className="text-sm font-semibold text-ink">{label}</dt>
             <dd className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink-muted">
-              {value || "Not recorded"}
+              {value}
             </dd>
           </div>
         ))}
@@ -535,7 +596,6 @@ function DebriefReview({
 }
 
 function PreparationHistory({ interview }: { interview: Interview }) {
-  const completed = new Set(interview.completed_checklist_items);
   return (
     <details className="group rounded-2xl border border-line bg-surface-muted p-4">
       <summary
@@ -556,11 +616,11 @@ function PreparationHistory({ interview }: { interview: Interview }) {
           {interview.guidance.checklist_items.map((item) => (
             <li key={item.item_id} className="flex items-start gap-2 text-sm">
               <span className="mt-0.5 font-bold text-ink-muted" aria-hidden="true">
-                {completed.has(item.item_id) ? "✓" : "–"}
+                {item.completed ? "✓" : "–"}
               </span>
               <span className="text-ink">{item.label}</span>
               <span className="sr-only">
-                {completed.has(item.item_id) ? "Completed" : "Not completed"}
+                {item.completed ? "Completed" : "Not completed"}
               </span>
             </li>
           ))}
@@ -589,10 +649,42 @@ function PreparationHistory({ interview }: { interview: Interview }) {
 }
 
 function DebriefSection({ draft, setDraft }: { draft: WorkspaceDraft; setDraft: Dispatch<SetStateAction<WorkspaceDraft>> }) {
-  return <section aria-labelledby="debrief-title" className="rounded-2xl border border-violet/20 bg-violet-soft p-4 sm:p-5"><div className="flex items-start gap-3"><CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-violet" /><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-violet">Capture the conversation</p><h3 id="debrief-title" className="mt-1 font-bold text-ink">Post-interview debrief</h3><p className="mt-1 text-xs leading-5 text-ink-muted">Your private reflection—not employer feedback or an automated assessment.</p></div></div><div className="mt-4 grid gap-5 sm:grid-cols-2"><DebriefField label="What went well" required value={draft.debrief_went_well} onChange={(value) => setDraft({ ...draft, debrief_went_well: value })} /><DebriefField label="What would you improve" value={draft.debrief_improve} onChange={(value) => setDraft({ ...draft, debrief_improve: value })} /><DebriefField label="Signals you noticed" value={draft.debrief_signals} onChange={(value) => setDraft({ ...draft, debrief_signals: value })} /><DebriefField label="Concrete next step" required maxLength={500} value={draft.debrief_next_step} onChange={(value) => setDraft({ ...draft, debrief_next_step: value })} /></div></section>;
+  return (
+    <section aria-labelledby="reflection-title" className="space-y-5">
+      <div className="flex items-start gap-3">
+        <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-violet" />
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-violet">Capture what matters while it is fresh</p>
+          <h3 id="reflection-title" className="mt-1 font-display text-xl font-bold text-ink">Interview reflection</h3>
+          <p className="mt-1 text-sm leading-6 text-ink-muted">One meaningful reflection is enough to complete this step. Deeper prompts are optional.</p>
+        </div>
+      </div>
+      <DebriefField
+        label="What stands out from this interview?"
+        value={draft.debrief_primary_reflection}
+        rows={4}
+        onChange={(value) => setDraft({ ...draft, debrief_primary_reflection: value })}
+      />
+      <details className="rounded-2xl border border-line bg-surface-muted p-4">
+        <summary className={`min-h-11 cursor-pointer py-2 font-semibold text-accent ${focusClassName}`}>Reflect more deeply · optional</summary>
+        <div className="space-y-5 pt-3">
+          <DebriefField label="What went well?" value={draft.debrief_went_well} onChange={(value) => setDraft({ ...draft, debrief_went_well: value })} />
+          <DebriefField label="Anything you would handle differently?" value={draft.debrief_improve} onChange={(value) => setDraft({ ...draft, debrief_improve: value })} />
+          <DebriefField label="Questions, signals, or details worth remembering" value={draft.debrief_signals} onChange={(value) => setDraft({ ...draft, debrief_signals: value })} />
+        </div>
+      </details>
+      <DebriefField
+        label="What do you want to carry into the next round?"
+        value={draft.debrief_carry_forward}
+        rows={3}
+        helper="Optional. This is the only field HireFlux surfaces automatically in later-round preparation."
+        onChange={(value) => setDraft({ ...draft, debrief_carry_forward: value })}
+      />
+    </section>
+  );
 }
 
-function DebriefField({ label, value, onChange, required = false, maxLength = 2000 }: { label: string; value: string | null; onChange: (value: string) => void; required?: boolean; maxLength?: number }) {
+function DebriefField({ label, value, onChange, maxLength = 2000, rows = 5, helper }: { label: string; value: string | null; onChange: (value: string) => void; maxLength?: number; rows?: number; helper?: string }) {
   const id = `debrief-${label.toLowerCase().replaceAll(" ", "-")}`;
-  return <div><label htmlFor={id} className="text-sm font-semibold text-ink">{label}{required ? <span className="text-danger"> *</span> : null}</label><textarea id={id} rows={5} maxLength={maxLength} value={value ?? ""} onChange={(event) => onChange(event.target.value)} className={textAreaClassName} /></div>;
+  return <div><label htmlFor={id} className="text-sm font-semibold text-ink">{label}</label>{helper ? <p className="mt-1 text-xs leading-5 text-ink-muted">{helper}</p> : null}<textarea id={id} rows={rows} maxLength={maxLength} value={value ?? ""} onChange={(event) => onChange(event.target.value)} className={textAreaClassName} /></div>;
 }

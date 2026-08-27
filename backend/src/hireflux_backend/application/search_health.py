@@ -7,7 +7,11 @@ from typing import Literal, cast
 from zoneinfo import ZoneInfo
 
 from hireflux_backend.application.source_strategy import SourceSignal
-from hireflux_backend.domain.enums import ApplicationSource, ApplicationStatus
+from hireflux_backend.domain.enums import (
+    ApplicationSource,
+    ApplicationStatus,
+    NextStepResponsibility,
+)
 from hireflux_backend.domain.models import Application
 
 Category = Literal["momentum", "response", "pipeline", "follow_up", "source"]
@@ -164,13 +168,20 @@ def build_progress_signals(period_comparison: dict[str, object]) -> list[dict[st
 def _follow_up(applications: tuple[Application, ...], today: date) -> list[Candidate]:
     active = tuple(item for item in applications if item.status in ACTIVE_STATUSES)
     overdue = sum(bool(item.follow_up_date and item.follow_up_date < today) for item in active)
-    missing = sum(item.follow_up_date is None for item in active)
+    missing = sum(
+        item.follow_up_date is None and item.next_step_responsibility is None for item in active
+    )
+    undated_candidate_actions = sum(
+        item.follow_up_date is None
+        and item.next_step_responsibility is NextStepResponsibility.CANDIDATE
+        for item in active
+    )
     due_today = sum(item.follow_up_date == today for item in active)
     due_soon = sum(
         bool(item.follow_up_date and today < item.follow_up_date <= today + timedelta(days=3))
         for item in active
     )
-    if not (overdue or due_today or missing or due_soon):
+    if not (overdue or due_today or missing or due_soon or undated_candidate_actions):
         return []
     detail_parts = []
     if overdue:
@@ -181,11 +192,17 @@ def _follow_up(applications: tuple[Application, ...], today: date) -> list[Candi
         detail_parts.append(f"{due_soon} due in the next 3 days")
     if missing:
         detail_parts.append(f"{missing} without a next step scheduled")
+    if undated_candidate_actions:
+        detail_parts.append(
+            f"{undated_candidate_actions} {_plural(undated_candidate_actions, 'candidate action')} "
+            "without a check-back date"
+        )
     summary_parts = [
         f"{overdue} overdue" if overdue else "",
         f"{due_today} due today" if due_today else "",
         f"{due_soon} due soon" if due_soon else "",
         f"{missing} missing a next step" if missing else "",
+        f"{undated_candidate_actions} candidate actions" if undated_candidate_actions else "",
     ]
     evidence_summary = " · ".join(part for part in summary_parts if part)
     if overdue:
@@ -201,6 +218,15 @@ def _follow_up(applications: tuple[Application, ...], today: date) -> list[Candi
         description = _missing_follow_up_context(missing)
         tone = "ACTION_NEEDED"
         priority = 92
+    elif undated_candidate_actions:
+        title = (
+            f"{undated_candidate_actions} candidate "
+            f"{_plural(undated_candidate_actions, 'action')} "
+            f"{_verb(undated_candidate_actions, 'needs', 'need')} attention"
+        )
+        description = _missing_follow_up_context(missing)
+        tone = "ACTION_NEEDED"
+        priority = 72
     elif missing:
         title = (
             f"{missing} active {_plural(missing, 'application')} "
@@ -218,7 +244,7 @@ def _follow_up(applications: tuple[Application, ...], today: date) -> list[Candi
         priority = 36
     action = (
         _view_action("Review follow-ups", view="ACTIVE", follow_up="NEEDS_ATTENTION")
-        if overdue or due_today or missing
+        if overdue or due_today or missing or undated_candidate_actions
         else _view_action("Review active applications", view="ACTIVE")
     )
     return [

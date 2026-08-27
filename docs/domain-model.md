@@ -24,6 +24,7 @@ Cognito owns passwords, verification, resets, MFA options, sessions, and tokens.
 - Required `company_name`, `job_title`, and non-null `status`.
 - `applied_date`, nullable only for a draft or an archived former draft. It is a user-entered calendar date, is never later than the workspace's current calendar date, and is never converted into a timestamp.
 - Optional `follow_up_date`, `job_url`, `location`, `work_mode`, normalized `source`, `source_detail`, `salary_text`, `description`, and candidate-selected `role_family`. A null role family allows conservative title inference only for interview preparation; `GENERAL` explicitly requests universal guidance.
+- Optional `next_step_responsibility`: `CANDIDATE`, `EMPLOYER`, `NONE`, or null for a legacy/not-yet-reviewed active opportunity. `next_step_note` stores bounded candidate context. `follow_up_date` is independent and means the calendar date when HireFlux should surface the opportunity again if nothing changes.
 - `created_at`, `updated_at`, and integer `version` for optimistic concurrency.
 - Internal optional `archived_from_status` to make archive reversible without bypassing the transition policy.
 - Archived edits continue to satisfy the requirements of `archived_from_status`; an archived later-stage application cannot clear its required `applied_date`. A legacy archived record missing that field must supply it as part of the restore request.
@@ -48,7 +49,8 @@ Creating, editing, and deleting a note appends activity without copying the note
 - Denormalized `company_name`, `job_title`, and optional application role family, synchronized transactionally when the owned
   parent labels change and refreshed from the parent when the interview itself changes.
 - `created_at`, `updated_at`, and integer `version`.
-- Private preparation notes, candidate questions, completed checklist IDs, and up to two server-ID custom preparation items. Readiness is visible checklist completion only. Structured private debrief fields and their original completion timestamp remain interview-scoped and may be revised with optimistic concurrency. See [interview-preparation.md](interview-preparation.md).
+- Private preparation notes, candidate questions, completed checklist IDs, and up to two server-ID custom preparation items. Server-owned essential outcomes determine preparation completion; additional and candidate work cannot regress it.
+- Optional `debrief_primary_reflection` and `debrief_carry_forward`, plus the compatible structured private `debrief_*` fields and original completion timestamp. Reflection remains interview-scoped and may be revised with optimistic concurrency. See [interview-preparation.md](interview-preparation.md).
 
 Only scheduled interview logistics are editable. They may transition to completed or canceled; both are lifecycle-terminal. A completed interview's private reflection may still be revised without changing the original completion timestamp. Rescheduling, status changes, and workspace changes append activity.
 
@@ -87,4 +89,4 @@ Only metadata lives in DynamoDB. File bytes live in private S3 and are never log
 - `activity_id`, `application_id`, `owner_user_id`.
 - `activity_type`, human-readable `summary`, string-valued structured `metadata`, `created_at`.
 
-Activity types include application creation/status changes, follow-up completion/rescheduling, note mutations, and interview scheduling/updates/status changes. Ordinary application behavior can append activity but cannot edit or delete it.
+Activity types include application creation/status changes, `NEXT_STEP_UPDATED`, follow-up completion/rescheduling, note mutations, and interview scheduling/updates/status changes. Ordinary application behavior can append activity but cannot edit or delete it. Activity records never copy private preparation, reflection, note, or next-step prose.

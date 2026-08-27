@@ -23,6 +23,7 @@ from hireflux_backend.domain.enums import (
     ApplicationSource,
     ApplicationStatus,
     FollowUpFilter,
+    NextStepResponsibility,
     RoleFamily,
     StageAgeBucket,
     WorkMode,
@@ -87,6 +88,14 @@ class CompleteFollowUpCommand:
 class RescheduleFollowUpCommand:
     expected_version: int
     follow_up_date: date
+
+
+@dataclass(frozen=True, slots=True)
+class SetNextStepCommand:
+    expected_version: int
+    next_step_responsibility: NextStepResponsibility
+    next_step_note: str | None
+    follow_up_date: date | None
 
 
 class UserService:
@@ -453,23 +462,95 @@ class ApplicationService:
     ) -> Application:
         current = self.get(identity, application_id)
         self._require_version(current, command.expected_version)
-        if current.follow_up_date is None:
+        if (
+            current.follow_up_date is None
+            and current.next_step_responsibility is not NextStepResponsibility.CANDIDATE
+        ):
             return current
-        updated = replace(
-            current,
-            follow_up_date=None,
-            updated_at=self._clock(),
-            version=current.version + 1,
-        )
+        if current.next_step_responsibility is NextStepResponsibility.EMPLOYER:
+            updated = replace(
+                current,
+                follow_up_date=None,
+                updated_at=self._clock(),
+                version=current.version + 1,
+            )
+            summary = "Employer check-back completed."
+        else:
+            updated = replace(
+                current,
+                follow_up_date=None,
+                next_step_responsibility=NextStepResponsibility.NONE,
+                next_step_note=None,
+                updated_at=self._clock(),
+                version=current.version + 1,
+            )
+            summary = "Candidate next step completed."
         activity = self._follow_up_activity(
             identity,
             current,
             updated,
             activity_type=ActivityType.FOLLOW_UP_COMPLETED,
-            summary="Follow-up completed.",
+            summary=summary,
         )
         self._repository.replace_details_with_activity(
             updated, expected_version=command.expected_version, activity=activity
+        )
+        return updated
+
+    def set_next_step(
+        self,
+        identity: CurrentIdentity,
+        application_id: str,
+        command: SetNextStepCommand,
+    ) -> Application:
+        current = self.get(identity, application_id)
+        self._require_version(current, command.expected_version)
+        if current.status not in ACTIVE_APPLICATION_STATUSES:
+            raise ConflictError("Only active applications can receive a next-step plan.")
+
+        note = _optional_bounded_string(command.next_step_note, "next_step_note", 500)
+        if command.next_step_responsibility is NextStepResponsibility.CANDIDATE and note is None:
+            raise ValidationError("A candidate next step requires a description.")
+        if command.next_step_responsibility is NextStepResponsibility.NONE and (
+            note is not None or command.follow_up_date is not None
+        ):
+            raise ValidationError("No-action next steps cannot include a note or check-back date.")
+
+        if (
+            current.next_step_responsibility is command.next_step_responsibility
+            and current.next_step_note == note
+            and current.follow_up_date == command.follow_up_date
+        ):
+            return current
+
+        now = self._clock()
+        _require_aware(now)
+        updated = replace(
+            current,
+            next_step_responsibility=command.next_step_responsibility,
+            next_step_note=note,
+            follow_up_date=command.follow_up_date,
+            updated_at=now,
+            version=current.version + 1,
+        )
+        activity = Activity(
+            activity_id=self._id_factory(),
+            application_id=current.application_id,
+            owner_user_id=identity.user_id,
+            activity_type=ActivityType.NEXT_STEP_UPDATED,
+            summary=_next_step_activity_summary(command.next_step_responsibility),
+            created_at=now,
+            metadata={
+                "responsibility": command.next_step_responsibility.value,
+                "from_date": current.follow_up_date.isoformat() if current.follow_up_date else "",
+                "to_date": updated.follow_up_date.isoformat() if updated.follow_up_date else "",
+            },
+            expires_at=identity.expires_at,
+        )
+        self._repository.replace_details_with_activity(
+            updated,
+            expected_version=command.expected_version,
+            activity=activity,
         )
         return updated
 
@@ -565,6 +646,25 @@ def _required_string_change(changes: Mapping[str, object], key: str, current: st
     if not isinstance(value, str):
         raise ValidationError(f"{key} must be a string.")
     return value
+
+
+def _optional_bounded_string(value: str | None, field_name: str, max_length: int) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    if len(normalized) > max_length:
+        raise ValidationError(f"{field_name} cannot exceed {max_length} characters.")
+    return normalized
+
+
+def _next_step_activity_summary(responsibility: NextStepResponsibility) -> str:
+    if responsibility is NextStepResponsibility.CANDIDATE:
+        return "Candidate next step recorded."
+    if responsibility is NextStepResponsibility.EMPLOYER:
+        return "Employer next step recorded."
+    return "No current next step recorded."
 
 
 def _optional_string_change(

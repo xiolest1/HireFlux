@@ -78,7 +78,11 @@ export function useModalFocus({
     return () => {
       window.clearTimeout(focusTimer);
       document.removeEventListener("keydown", handleKeyDown);
-      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+      // Portal-based dialogs can make the opener inert while mounted. Restore
+      // focus after sibling cleanup has removed that temporary inert state.
+      queueMicrotask(() => {
+        if (previouslyFocused?.isConnected) previouslyFocused.focus();
+      });
     };
   }, [containerRef, initialFocusRef, isOpen]);
 }

@@ -178,7 +178,7 @@ test("interview journey selection, preparation, and deep-link refresh stay conne
   const drawer = page.getByRole("dialog", { name: "Interview preparation" });
   await expect(drawer).toBeVisible();
   await expect(
-    drawer.getByRole("button", { name: "Close panel" }),
+    drawer.getByRole("button", { name: "Close workspace" }),
   ).toBeFocused();
 
   const firstChecklistItem = drawer.getByRole("checkbox", {
@@ -208,6 +208,7 @@ test("interview journey selection, preparation, and deep-link refresh stay conne
     drawer.getByRole("textbox", { name: /Candidate question/ }),
   ).toHaveCount(2);
 
+  await drawer.getByText("Go deeper · optional preparation").click();
   await drawer
     .getByRole("textbox", { name: "Custom preparation item" })
     .fill("Review the portfolio example");
@@ -230,6 +231,10 @@ test("interview journey selection, preparation, and deep-link refresh stay conne
     drawer.getByRole("button", { name: "Show fewer tips" }),
   ).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Escape");
+  await expect(
+    drawer.getByRole("alertdialog", { name: "Discard unsaved changes?" }),
+  ).toBeVisible();
+  await drawer.getByRole("button", { name: "Discard changes" }).click();
   await expect(drawer).toBeHidden();
   await expect(prepare).toBeFocused();
 

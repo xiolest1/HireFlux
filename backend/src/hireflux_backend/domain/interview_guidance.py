@@ -1,5 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
+from typing import cast
 
 from hireflux_backend.domain.enums import RoleFamily
 from hireflux_backend.domain.interview_preparation_catalog import (
@@ -7,7 +8,7 @@ from hireflux_backend.domain.interview_preparation_catalog import (
     INTERVIEW_TYPE_PROFILES,
     ROLE_PROFILES,
 )
-from hireflux_backend.domain.resources import Interview
+from hireflux_backend.domain.resources import Interview, InterviewType
 from hireflux_backend.domain.role_context import (
     ROLE_FAMILY_LABELS,
     RoleFamilySource,
@@ -28,6 +29,19 @@ class PreparationSource(StrEnum):
     CANDIDATE = "CANDIDATE"
 
 
+class PreparationCategory(StrEnum):
+    ESSENTIAL = "ESSENTIAL"
+    ADDITIONAL = "ADDITIONAL"
+    CANDIDATE = "CANDIDATE"
+
+
+class PreparationOutcome(StrEnum):
+    OPPORTUNITY_UNDERSTANDING = "OPPORTUNITY_UNDERSTANDING"
+    RELEVANT_EVIDENCE = "RELEVANT_EVIDENCE"
+    CONVERSATION_PLAN = "CONVERSATION_PLAN"
+    INTERVIEW_REQUIREMENTS = "INTERVIEW_REQUIREMENTS"
+
+
 @dataclass(frozen=True, slots=True)
 class InterviewChecklistItem:
     item_id: str
@@ -36,7 +50,38 @@ class InterviewChecklistItem:
     phase: PreparationPhase
     source: PreparationSource
     source_label: str
+    category: PreparationCategory
+    outcome_id: PreparationOutcome | None = None
     removable: bool = False
+    completed: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class EssentialPreparationOutcome:
+    outcome_id: PreparationOutcome
+    label: str
+    description: str
+    completed: bool
+    action_item_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class PreparationProgressGroup:
+    completed: int
+    total: int
+
+
+@dataclass(frozen=True, slots=True)
+class EssentialPreparationProgress(PreparationProgressGroup):
+    complete: bool
+    remaining_actions: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PreparationProgress:
+    essentials: EssentialPreparationProgress
+    additional: PreparationProgressGroup
+    candidate: PreparationProgressGroup
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,10 +114,8 @@ class InterviewGuidance:
     focus_prompts: tuple[CuratedText, ...]
     suggested_questions: tuple[CuratedText, ...]
     tips: tuple[PreparationTip, ...]
-    completed_steps: int
-    total_steps: int
-    ready_for_interview: bool
-    missing_actions: tuple[str, ...]
+    essential_outcomes: tuple[EssentialPreparationOutcome, ...]
+    progress: PreparationProgress
 
 
 _UNIVERSAL_CHECKLIST = (
@@ -84,6 +127,8 @@ _UNIVERSAL_CHECKLIST = (
         PreparationPhase.UNDERSTAND,
         PreparationSource.UNIVERSAL,
         "Useful for every interview",
+        PreparationCategory.ESSENTIAL,
+        PreparationOutcome.OPPORTUNITY_UNDERSTANDING,
     ),
     InterviewChecklistItem(
         "prepare_examples",
@@ -93,6 +138,8 @@ _UNIVERSAL_CHECKLIST = (
         PreparationPhase.PREPARE,
         PreparationSource.UNIVERSAL,
         "Useful for every interview",
+        PreparationCategory.ESSENTIAL,
+        PreparationOutcome.RELEVANT_EVIDENCE,
     ),
     InterviewChecklistItem(
         "prepare_questions",
@@ -102,17 +149,37 @@ _UNIVERSAL_CHECKLIST = (
         PreparationPhase.PREPARE,
         PreparationSource.UNIVERSAL,
         "Useful for every interview",
-    ),
-    InterviewChecklistItem(
-        "confirm_logistics",
-        "Confirm interview logistics",
-        "Verify the date, time, time zone, format, location or link, duration, "
-        "and required materials.",
-        PreparationPhase.CONFIRM,
-        PreparationSource.UNIVERSAL,
-        "Useful for every interview",
+        PreparationCategory.ESSENTIAL,
+        PreparationOutcome.CONVERSATION_PLAN,
     ),
 )
+
+_OUTCOME_LABELS = {
+    PreparationOutcome.OPPORTUNITY_UNDERSTANDING: "Understand the opportunity",
+    PreparationOutcome.RELEVANT_EVIDENCE: "Prepare relevant evidence",
+    PreparationOutcome.CONVERSATION_PLAN: "Plan the conversation",
+    PreparationOutcome.INTERVIEW_REQUIREMENTS: "Prepare for the interview format",
+}
+
+# Interview type can adapt the concrete work for a stable outcome without
+# expanding preparation into a type-specific required checklist.
+_TYPE_OUTCOMES: dict[InterviewType, PreparationOutcome | None] = {
+    InterviewType.RECRUITER_CALL: PreparationOutcome.RELEVANT_EVIDENCE,
+    InterviewType.TECHNICAL_SCREEN: PreparationOutcome.RELEVANT_EVIDENCE,
+    InterviewType.BEHAVIORAL: PreparationOutcome.RELEVANT_EVIDENCE,
+    InterviewType.CODING_ASSESSMENT: PreparationOutcome.INTERVIEW_REQUIREMENTS,
+    InterviewType.HIRING_MANAGER: PreparationOutcome.RELEVANT_EVIDENCE,
+    InterviewType.ONSITE: None,
+    InterviewType.FINAL: PreparationOutcome.CONVERSATION_PLAN,
+    InterviewType.OTHER: PreparationOutcome.OPPORTUNITY_UNDERSTANDING,
+}
+
+_OUTCOME_ITEM_IDS = {
+    PreparationOutcome.OPPORTUNITY_UNDERSTANDING: "research_company",
+    PreparationOutcome.RELEVANT_EVIDENCE: "prepare_examples",
+    PreparationOutcome.CONVERSATION_PLAN: "prepare_questions",
+    PreparationOutcome.INTERVIEW_REQUIREMENTS: "review_interview_format",
+}
 
 _UNIVERSAL_PROMPTS = (
     "What should the interviewer understand about your interest and relevant experience?",
@@ -129,16 +196,29 @@ def checklist_items_for(interview: Interview) -> tuple[InterviewChecklistItem, .
     context = role_context_for(interview.job_title, interview.application_role_family)
     type_profile = INTERVIEW_TYPE_PROFILES[interview.interview_type]
     items: list[InterviewChecklistItem] = [*_UNIVERSAL_CHECKLIST]
-    items.append(
-        InterviewChecklistItem(
-            "review_interview_format",
-            type_profile.checklist_label,
-            type_profile.checklist_description,
-            PreparationPhase.PREPARE,
-            PreparationSource.INTERVIEW_TYPE,
-            f"Suggested for {INTERVIEW_TYPE_LABELS[interview.interview_type]}",
-        )
+    type_outcome = _TYPE_OUTCOMES[interview.interview_type]
+    type_item = InterviewChecklistItem(
+        _OUTCOME_ITEM_IDS[type_outcome] if type_outcome is not None else "review_interview_format",
+        type_profile.checklist_label,
+        type_profile.checklist_description,
+        PreparationPhase.PREPARE,
+        PreparationSource.INTERVIEW_TYPE,
+        f"Suggested for {INTERVIEW_TYPE_LABELS[interview.interview_type]}",
+        (
+            PreparationCategory.ESSENTIAL
+            if type_outcome is not None
+            else PreparationCategory.ADDITIONAL
+        ),
+        type_outcome,
     )
+    if type_outcome in {
+        PreparationOutcome.OPPORTUNITY_UNDERSTANDING,
+        PreparationOutcome.RELEVANT_EVIDENCE,
+        PreparationOutcome.CONVERSATION_PLAN,
+    }:
+        items = [type_item if item.outcome_id is type_outcome else item for item in items]
+    else:
+        items.append(type_item)
     role_profile = ROLE_PROFILES.get(context.role_family)
     if role_profile is not None:
         items.append(
@@ -149,6 +229,7 @@ def checklist_items_for(interview: Interview) -> tuple[InterviewChecklistItem, .
                 PreparationPhase.PREPARE,
                 PreparationSource.ROLE_FAMILY,
                 f"Suggested for {ROLE_FAMILY_LABELS[context.role_family]} roles",
+                PreparationCategory.ADDITIONAL,
             )
         )
     items.extend(
@@ -159,6 +240,8 @@ def checklist_items_for(interview: Interview) -> tuple[InterviewChecklistItem, .
             PreparationPhase.PREPARE,
             PreparationSource.CANDIDATE,
             "Added by you",
+            PreparationCategory.CANDIDATE,
+            None,
             True,
         )
         for custom in interview.custom_preparation_items
@@ -248,9 +331,26 @@ def guidance_for(interview: Interview) -> InterviewGuidance:
         )
 
     items = checklist_items_for(interview)
-    valid_ids = {item.item_id for item in items}
-    completed = valid_ids.intersection(interview.completed_checklist_items)
-    missing = tuple(item.label for item in items if item.item_id not in completed)
+    completed_ids = _normalized_completion_ids(interview, items)
+    items = tuple(replace(item, completed=item.item_id in completed_ids) for item in items)
+    essential_items = tuple(
+        item
+        for item in items
+        if item.category is PreparationCategory.ESSENTIAL and item.outcome_id is not None
+    )
+    outcomes = tuple(
+        EssentialPreparationOutcome(
+            outcome_id=cast(PreparationOutcome, item.outcome_id),
+            label=_OUTCOME_LABELS[cast(PreparationOutcome, item.outcome_id)],
+            description=item.description,
+            completed=item.completed,
+            action_item_id=item.item_id,
+        )
+        for item in essential_items
+    )
+    additional = tuple(item for item in items if item.category is PreparationCategory.ADDITIONAL)
+    candidate = tuple(item for item in items if item.category is PreparationCategory.CANDIDATE)
+    remaining = tuple(item.label for item in essential_items if not item.completed)
     return InterviewGuidance(
         role_context=PreparationRoleContext(
             role_family=context.role_family,
@@ -262,11 +362,36 @@ def guidance_for(interview: Interview) -> InterviewGuidance:
         focus_prompts=tuple(prompts[:4]),
         suggested_questions=tuple(_deduplicate(questions)[:6]),
         tips=tuple(tips[:3]),
-        completed_steps=len(completed),
-        total_steps=len(items),
-        ready_for_interview=len(completed) == len(items),
-        missing_actions=missing,
+        essential_outcomes=outcomes,
+        progress=PreparationProgress(
+            essentials=EssentialPreparationProgress(
+                completed=sum(item.completed for item in essential_items),
+                total=len(essential_items),
+                complete=all(item.completed for item in essential_items),
+                remaining_actions=remaining,
+            ),
+            additional=PreparationProgressGroup(
+                completed=sum(item.completed for item in additional),
+                total=len(additional),
+            ),
+            candidate=PreparationProgressGroup(
+                completed=sum(item.completed for item in candidate),
+                total=len(candidate),
+            ),
+        ),
     )
+
+
+def _normalized_completion_ids(
+    interview: Interview, items: tuple[InterviewChecklistItem, ...]
+) -> frozenset[str]:
+    current_ids = {item.item_id for item in items}
+    completed = set(interview.completed_checklist_items).intersection(current_ids)
+    if "review_interview_format" in interview.completed_checklist_items:
+        type_outcome = _TYPE_OUTCOMES[interview.interview_type]
+        if type_outcome is not None:
+            completed.add(_OUTCOME_ITEM_IDS[type_outcome])
+    return frozenset(completed)
 
 
 def _deduplicate(values: list[CuratedText]) -> list[CuratedText]:

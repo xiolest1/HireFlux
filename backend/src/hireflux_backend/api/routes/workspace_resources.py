@@ -239,6 +239,8 @@ def update_interview_workspace(
             debrief_improve=request.debrief_improve,
             debrief_signals=request.debrief_signals,
             debrief_next_step=request.debrief_next_step,
+            debrief_primary_reflection=request.debrief_primary_reflection,
+            debrief_carry_forward=request.debrief_carry_forward,
             debrief_complete=request.debrief_complete,
         ),
     )
@@ -309,6 +311,9 @@ def list_workspace_interviews(
                 follow_up_state=item.context.follow_up_state,
                 workflow_state=item.context.workflow_state,
                 next_action=item.context.next_action,
+                next_step_responsibility=item.context.next_step_responsibility,
+                next_step_note=item.context.next_step_note,
+                has_later_scheduled_interview=item.context.has_later_scheduled_interview,
             )
             for item in page.items
         ],

@@ -1,5 +1,5 @@
 import { CalendarClock, ChevronDown, ChevronLeft, Ellipsis, Pencil } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/client";
 import type { Application, ApplicationStatus, Interview } from "../api/schemas";
@@ -13,14 +13,13 @@ import { buttonClassName } from "../components/ui/buttonStyles";
 import { ActivityTimeline } from "../features/applications/ActivityTimeline";
 import { ApplicationDetails } from "../features/applications/ApplicationDetails";
 import { ApplicationDetailSkeleton } from "../features/applications/ApplicationSkeletons";
+import { NextStepPlanner } from "../features/applications/NextStepPlanner";
 import { StatusTransitionForm } from "../features/applications/StatusTransitionForm";
 import { formatDateOnly, formatStatus, formatTimestamp } from "../features/applications/format";
 import { currentDateInTimeZone } from "../features/applications/formSchema";
 import {
   useApplication,
   useApplicationActivity,
-  useCompleteApplicationFollowUp,
-  useRescheduleApplicationFollowUp,
   useTransitionApplication,
 } from "../features/applications/queries";
 import { selectApplicationWorkspace, type WorkspaceAction } from "../features/applications/workspaceModel";
@@ -114,14 +113,14 @@ export function ApplicationDetailPage() {
           <div className="flex flex-wrap items-center gap-3"><StatusBadge status={application.status} /><span className="text-sm text-ink-muted">Updated {formatTimestamp(application.updated_at, timeZone)}</span></div>
           <p className="mt-3 break-words text-sm font-bold text-accent">{application.company_name}</p>
           <h1 className="mt-1 break-words text-3xl font-bold tracking-tight text-ink sm:text-4xl">{application.job_title}</h1>
-          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-muted"><span><strong className="text-ink">Latest:</strong> {latest?.summary ?? "Opportunity created"}</span>{nextInterview ? <span><strong className="text-ink">Next interview:</strong> {formatTimestamp(nextInterview.scheduled_at, timeZone)}</span> : application.follow_up_date ? <span><strong className="text-ink">Follow-up:</strong> {formatDateOnly(application.follow_up_date)}</span> : null}</div>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-muted"><span><strong className="text-ink">Latest:</strong> {latest?.summary ?? "Opportunity created"}</span>{nextInterview ? <span><strong className="text-ink">Next interview:</strong> {formatTimestamp(nextInterview.scheduled_at, timeZone)}</span> : application.follow_up_date ? <span><strong className="text-ink">Check back:</strong> {formatDateOnly(application.follow_up_date)}</span> : null}</div>
         </div>
         <div className="flex flex-wrap gap-2">
           {model.primary ? <Button onClick={() => runAction(model.primary)}>{model.primary.label}</Button> : null}
           {model.secondary ? <Button variant="secondary" onClick={() => runAction(model.secondary)}>{model.secondary.label}</Button> : null}
           <Menu label="More opportunity actions" trigger={<span className={buttonClassName("secondary", "gap-2")}><Ellipsis aria-hidden="true" className="size-4" /> More</span>} items={[
             { label: "Edit opportunity", href: `/applications/${application.application_id}/edit`, icon: <Pencil aria-hidden="true" className="size-4" /> },
-            ...(["DRAFT", "APPLIED", "SCREENING", "INTERVIEW", "OFFER"].includes(application.status) ? [{ label: application.follow_up_date ? "Manage follow-up" : "Schedule follow-up", onSelect: () => setFollowUpOpen(true), icon: <CalendarClock aria-hidden="true" className="size-4" /> }] : []),
+            ...(["APPLIED", "SCREENING", "INTERVIEW", "OFFER"].includes(application.status) ? [{ label: "Manage next step", onSelect: () => setFollowUpOpen(true), icon: <CalendarClock aria-hidden="true" className="size-4" /> }] : []),
             ...model.moreTransitions.map((status) => ({ label: status === "ARCHIVED" ? "Archive opportunity" : status === "OFFER" && application.status === "REJECTED" ? "Correct to Offer" : `Move to ${formatStatus(status)}`, danger: status === "ARCHIVED", onSelect: () => status === "ARCHIVED" ? setArchiveOpen(true) : (setTransitionTarget(status), setTransitionOpen(true)) })),
           ]} />
         </div>
@@ -131,7 +130,7 @@ export function ApplicationDetailPage() {
     <div className="mt-4 md:hidden"><Button variant="secondary" className="w-full justify-between" aria-expanded={jumpOpen} aria-controls="mobile-section-links" onClick={() => setJumpOpen((value) => !value)}>Jump to section <ChevronDown aria-hidden="true" className={`size-4 ${jumpOpen ? "rotate-180" : ""}`} /></Button>{jumpOpen ? <nav id="mobile-section-links" aria-label="Opportunity sections" className="mt-2 grid rounded-2xl border border-line bg-surface p-2">{sections.map(([id, label]) => <button key={id} type="button" onClick={() => openSection(id)} className="min-h-11 rounded-xl px-3 text-left text-sm font-semibold text-ink-muted hover:bg-surface-muted">{label}</button>)}</nav> : null}</div>
     <section className="mt-8 rounded-3xl border border-accent/25 bg-gradient-to-br from-accent-soft to-surface p-5 sm:p-6" aria-labelledby="next-action-heading"><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">What’s next</p><h2 id="next-action-heading" className="mt-1 text-xl font-bold text-ink">{model.eyebrow}</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">{model.guidance}</p>{model.primary ? <Button className="mt-5" onClick={() => runAction(model.primary)}>{model.primary.label}</Button> : null}</section>
     <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,.75fr)]"><JourneySection application={application} interviews={interviews} timeZone={timeZone} /><ApplicationDetails application={application} /></div>
-    <section id="interviews" aria-labelledby="interviews-heading" className="mt-10 scroll-mt-24 border-t border-line pt-8"><h2 id="interviews-heading" tabIndex={-1} className="sr-only">Interview process</h2><InterviewsPanel applicationId={application.application_id} timeZone={timeZone} focusInterviewId={focusInterviewId} emptyMessage={model.interviewEmptyMessage} canSchedule={["APPLIED", "SCREENING", "INTERVIEW", "OFFER"].includes(application.status)} /></section>
+    <section id="interviews" aria-labelledby="interviews-heading" className="mt-10 scroll-mt-24 border-t border-line pt-8"><h2 id="interviews-heading" tabIndex={-1} className="sr-only">Interview process</h2><InterviewsPanel applicationId={application.application_id} companyName={application.company_name} jobTitle={application.job_title} timeZone={timeZone} focusInterviewId={focusInterviewId} emptyMessage={model.interviewEmptyMessage} canSchedule={["APPLIED", "SCREENING", "INTERVIEW", "OFFER"].includes(application.status)} /></section>
     <ApplicationNotesSection applicationId={application.application_id} timeZone={timeZone} composerRequest={noteRequest} />
     <section id="history" aria-labelledby="history-heading" className="mt-10 scroll-mt-24 border-t border-line pt-8"><h2 id="history-heading" tabIndex={-1} className="text-xl font-bold text-ink">Full activity</h2><p className="mb-5 mt-1 text-sm text-ink-muted">Newest events first, with older history available on demand.</p><ActivityTimeline applicationId={application.application_id} timeZone={timeZone} /></section>
     <Drawer open={transitionOpen} onClose={() => setTransitionOpen(false)} title={transitionTarget ? `Move to ${formatStatus(transitionTarget)}` : "Update decision"} description="Only server-approved transitions are available."><StatusTransitionForm application={application} onReload={() => void applicationQuery.refetch()} timeZone={timeZone} initialStatus={transitionTarget} onSuccess={() => setTransitionOpen(false)} embedded /></Drawer>
@@ -155,12 +154,7 @@ function JourneySection({ application, interviews, timeZone }: { application: Ap
 }
 
 function FollowUpDrawer({ application, open, onClose, timeZone, onReload }: { application: Application; open: boolean; onClose: () => void; timeZone: string; onReload: () => void }) {
-  const [date, setDate] = useState(application.follow_up_date ?? "");
-  const reschedule = useRescheduleApplicationFollowUp();
-  const complete = useCompleteApplicationFollowUp();
-  const error = reschedule.error ?? complete.error;
-  async function submit(event: FormEvent) { event.preventDefault(); if (!date) return; try { await reschedule.mutateAsync({ applicationId: application.application_id, expectedVersion: application.version, followUpDate: date }); onClose(); } catch { return; } }
-  return <Drawer open={open} onClose={onClose} title={application.follow_up_date ? "Manage follow-up" : "Schedule follow-up"} description="Follow-up dates use your workspace calendar day."><form onSubmit={submit}><label htmlFor="opportunity-follow-up" className="text-sm font-semibold text-ink">Follow-up date</label><input id="opportunity-follow-up" type="date" min={currentDateInTimeZone(timeZone)} value={date} onChange={(event) => setDate(event.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-ink" />{error ? <div className="mt-4"><ErrorPanel compact error={error} title={error instanceof ApiError && error.status === 409 ? "Opportunity changed" : "Follow-up could not be updated"} onRetry={error instanceof ApiError && error.status === 409 ? onReload : undefined} /></div> : null}<div className="mt-5 flex flex-wrap justify-end gap-2">{application.follow_up_date ? <Button variant="secondary" disabled={complete.isPending} onClick={async () => { try { await complete.mutateAsync({ applicationId: application.application_id, expectedVersion: application.version }); onClose(); } catch { return; } }}>Complete follow-up</Button> : null}<Button type="submit" disabled={!date || reschedule.isPending}>{reschedule.isPending ? "Saving…" : application.follow_up_date ? "Reschedule" : "Schedule"}</Button></div></form></Drawer>;
+  return <Drawer open={open} onClose={onClose} title="Manage next step" description="Responsibility and check-back timing are recorded separately."><NextStepPlanner application={application} timeZone={timeZone} onSaved={() => { onReload(); onClose(); }} onLeaveUnclear={onClose} onConflict={onReload} /></Drawer>;
 }
 
 function ArchiveDialog({ application, open, onClose, onReload }: { application: Application; open: boolean; onClose: () => void; onReload: () => void }) {

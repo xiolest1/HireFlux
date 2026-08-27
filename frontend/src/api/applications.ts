@@ -11,6 +11,7 @@ import {
   type ApplicationView,
   type StageAgeBucket,
   type FollowUpFilter,
+  type NextStepResponsibility,
   type RoleFamily,
   type WorkMode,
   type Activity,
@@ -65,6 +66,13 @@ export interface TransitionApplicationRequest {
   status: ApplicationStatus;
   expected_version: number;
   applied_date?: string;
+}
+
+export interface NextStepUpdateRequest {
+  expected_version: number;
+  next_step_responsibility: Exclude<NextStepResponsibility, null>;
+  next_step_note: string | null;
+  follow_up_date: string | null;
 }
 
 export interface ApplicationListFilters {
@@ -132,6 +140,17 @@ export function rescheduleFollowUp(
       method: "POST",
       json: { expected_version: expectedVersion, follow_up_date: followUpDate },
     },
+  );
+}
+
+export function updateNextStep(
+  applicationId: string,
+  request: NextStepUpdateRequest,
+): Promise<Application> {
+  return apiRequest(
+    `/api/v1/applications/${encodeURIComponent(applicationId)}/next-step`,
+    applicationSchema,
+    { method: "POST", json: request },
   );
 }
 

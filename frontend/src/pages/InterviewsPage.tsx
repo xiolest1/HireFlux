@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  CalendarPlus,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -20,6 +21,7 @@ import {
 } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { Interview, WorkspaceInterview } from "../api/schemas";
+import type { InterviewFields } from "../api/resources";
 import { buttonClassName } from "../components/ui/buttonStyles";
 import { EmptyState, ErrorPanel } from "../components/ui/Feedback";
 import { PanelSkeleton, Skeleton } from "../components/ui/Skeleton";
@@ -30,12 +32,15 @@ import {
   formatStatus,
   formatTimestamp,
 } from "../features/applications/format";
-import { useApplication } from "../features/applications/queries";
-import { InterviewWorkspaceDrawer } from "../features/resources/InterviewWorkspaceDrawer";
+import { useApplication, useApplications } from "../features/applications/queries";
+import { InterviewFocusedWorkspace } from "../features/resources/InterviewWorkspaceDrawer";
+import { InterviewScheduleWorkspace } from "../features/resources/InterviewScheduleWorkspace";
 import {
   useApplicationInterviews,
+  useCreateInterview,
   useSettings,
   useTransitionWorkspaceInterview,
+  useUpdateInterview,
   useWorkspaceInterviews,
 } from "../features/resources/queries";
 
@@ -70,7 +75,7 @@ function followUpHref(interview: WorkspaceInterview) {
 }
 
 function dateOnlyLabel(value: string | null) {
-  if (!value) return "No follow-up scheduled";
+  if (!value) return "No check-back date";
   const [year, month, day] = value.split("-").map(Number);
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -80,43 +85,33 @@ function dateOnlyLabel(value: string | null) {
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
-function followUpLabel(interview: WorkspaceInterview) {
-  if (interview.context.follow_up_state === "OVERDUE")
-    return "Follow-up overdue";
-  if (interview.context.follow_up_state === "TODAY")
-    return "Follow-up due today";
-  if (interview.context.follow_up_state === "UPCOMING") {
-    return `Follow-up ${dateOnlyLabel(interview.context.follow_up_date)}`;
-  }
-  return "Follow-up plan needed";
-}
-
-function missingPreparation(interview: WorkspaceInterview) {
-  const complete = new Set(interview.completed_checklist_items);
-  return interview.guidance.checklist_items.filter(
-    (item) => !complete.has(item.item_id),
-  );
+function nextStepLabel(interview: WorkspaceInterview) {
+  const responsibility = interview.context.next_step_responsibility;
+  if (responsibility === "CANDIDATE") return "Candidate action due";
+  if (responsibility === "EMPLOYER") return "Check-back due";
+  return "Next step needs review";
 }
 
 function stateLabel(interview: WorkspaceInterview) {
-  const missing = missingPreparation(interview).length;
   switch (interview.context.workflow_state) {
     case "IMMINENT":
       return "Starts soon";
     case "PREPARE":
-      return `${missing} preparation ${missing === 1 ? "item" : "items"} left`;
+      return "Preparation essentials remain";
     case "UPCOMING":
-      return "Ready";
+      return "Essentials prepared";
     case "MISSED":
       return "Confirm what happened";
     case "CAPTURE":
-      return "Capture your notes";
+      return "Reflection needed";
     case "FOLLOW_UP":
-      return followUpLabel(interview);
+      return nextStepLabel(interview);
     case "CANCELED":
       return "Canceled";
     default:
-      return interview.status === "COMPLETED" ? "Completed" : "Past interview";
+      return interview.status === "COMPLETED"
+        ? "Reflection saved"
+        : "Past interview";
   }
 }
 
@@ -167,7 +162,11 @@ function orientation(
     case "CAPTURE":
       return `Capture what happened in your ${company} interview while it is still fresh.`;
     case "FOLLOW_UP":
-      return `${company} needs a follow-up plan before this interview journey is closed.`;
+      return interview.context.next_step_responsibility === "CANDIDATE"
+        ? `You have an action to complete for ${company}.`
+        : interview.context.next_step_responsibility === "EMPLOYER"
+          ? `It is time to check back with ${company}.`
+          : `Review what should happen next with ${company}.`;
     case "MISSED":
       return `The scheduled time for ${company} has passed. Confirm what happened next.`;
     case "PREPARE":
@@ -189,9 +188,17 @@ export function InterviewsPage() {
   const [workspaceInterview, setWorkspaceInterview] =
     useState<Interview | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleApplicationId, setScheduleApplicationId] = useState<string | null>(null);
+  const [scheduleEditing, setScheduleEditing] = useState<Interview | null>(null);
   const detailRef = useRef<HTMLElement | null>(null);
   const transitionMutation = useTransitionWorkspaceInterview();
   const { showToast } = useToast();
+  const activeApplicationsQuery = useApplications(null, 25, { view: "ACTIVE" });
+  const activeApplications = activeApplicationsQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const scheduleApplication = activeApplications.find((application) => application.application_id === scheduleApplicationId) ?? null;
+  const createInterviewMutation = useCreateInterview(scheduleApplicationId ?? "");
+  const updateInterviewMutation = useUpdateInterview(scheduleApplicationId ?? "");
 
   const interviews = useMemo(
     () =>
@@ -277,6 +284,37 @@ export function InterviewsPage() {
     }
   }
 
+  function openSchedule(applicationId: string | null, editing: Interview | null = null) {
+    setScheduleApplicationId(applicationId);
+    setScheduleEditing(editing);
+    setScheduleOpen(true);
+  }
+
+  async function scheduleInterview(applicationId: string, fields: InterviewFields) {
+    if (applicationId !== scheduleApplicationId) return;
+    try {
+      const saved = scheduleEditing
+        ? await updateInterviewMutation.mutateAsync({
+            interviewId: scheduleEditing.interview_id,
+            version: scheduleEditing.version,
+            fields,
+          })
+        : await createInterviewMutation.mutateAsync(fields);
+      setScheduleOpen(false);
+      setScheduleApplicationId(null);
+      setScheduleEditing(null);
+      const next = new URLSearchParams(searchParams);
+      next.set("interview", saved.interview_id);
+      setSearchParams(next);
+      showToast(scheduleEditing ? "Interview updated." : "Interview scheduled.", {
+        title: scheduleEditing ? "Interview updated" : "Interview scheduled",
+        tone: "success",
+      });
+    } catch {
+      return;
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl pb-6 sm:pb-8">
       <header className="border-b border-line pb-5 sm:flex sm:items-end sm:justify-between sm:gap-6">
@@ -295,12 +333,14 @@ export function InterviewsPage() {
             Times shown in {timeZone.replaceAll("_", " ")}
           </p>
         </div>
-        <Link
-          to="/applications"
-          className={`${buttonClassName("secondary")} mt-5 sm:mt-0`}
+        <button
+          type="button"
+          className={`${buttonClassName("secondary", "gap-2")} mt-5 sm:mt-0`}
+          onClick={() => openSchedule(selected?.application_id ?? null)}
         >
-          Add or schedule interview
-        </Link>
+          <CalendarPlus aria-hidden="true" className="size-4" />
+          Schedule interview
+        </button>
       </header>
 
       <div className="mt-6">
@@ -348,20 +388,37 @@ export function InterviewsPage() {
               onCancelRequest={setCancelingId}
               onCancelKeep={() => setCancelingId(null)}
               onTransition={transition}
+              onSchedule={() => openSchedule(selected.application_id)}
+              onEditSchedule={() => openSchedule(selected.application_id, selected)}
             />
           </div>
         ) : null}
       </div>
 
       {workspaceInterview ? (
-        <InterviewWorkspaceDrawer
+        <InterviewFocusedWorkspace
           key={workspaceInterview.interview_id}
           applicationId={workspaceInterview.application_id}
           interview={workspaceInterview}
           timeZone={timeZone}
           onClose={() => setWorkspaceInterview(null)}
+          onEditSchedule={() => {
+            setWorkspaceInterview(null);
+            openSchedule(workspaceInterview.application_id, workspaceInterview);
+          }}
         />
       ) : null}
+      <InterviewScheduleWorkspace
+        open={scheduleOpen}
+        application={scheduleApplication}
+        applications={activeApplications}
+        editing={scheduleEditing}
+        isSaving={createInterviewMutation.isPending || updateInterviewMutation.isPending}
+        error={createInterviewMutation.error ?? updateInterviewMutation.error ?? activeApplicationsQuery.error}
+        onApplicationChange={setScheduleApplicationId}
+        onClose={() => { setScheduleOpen(false); setScheduleApplicationId(null); setScheduleEditing(null); createInterviewMutation.reset(); updateInterviewMutation.reset(); }}
+        onSubmit={scheduleInterview}
+      />
     </div>
   );
 }
@@ -596,6 +653,8 @@ const InterviewDetail = function InterviewDetail({
   onCancelRequest,
   onCancelKeep,
   onTransition,
+  onSchedule,
+  onEditSchedule,
 }: {
   ref: Ref<HTMLElement>;
   className?: string;
@@ -610,6 +669,8 @@ const InterviewDetail = function InterviewDetail({
     interview: WorkspaceInterview,
     status: "COMPLETED" | "CANCELED",
   ) => Promise<void>;
+  onSchedule: () => void;
+  onEditSchedule: () => void;
 }) {
   const applicationQuery = useApplication(interview.application_id);
   const roundsQuery = useApplicationInterviews(interview.application_id);
@@ -820,12 +881,13 @@ const InterviewDetail = function InterviewDetail({
                 />
               </summary>
               <div className="flex flex-wrap gap-2 pb-2 pt-2">
-                <Link
-                  to={applicationHref(interview)}
+                <button
+                  type="button"
+                  onClick={onEditSchedule}
                   className={buttonClassName("secondary")}
                 >
                   Edit or reschedule
-                </Link>
+                </button>
                 {cancelingId === interview.interview_id ? (
                   <>
                     <span className="self-center text-sm font-semibold text-danger">
@@ -870,12 +932,13 @@ const InterviewDetail = function InterviewDetail({
                 />
               </summary>
               <div className="pb-2 pt-2">
-                <Link
-                  to={applicationHref(interview)}
+                <button
+                  type="button"
+                  onClick={onSchedule}
                   className={buttonClassName("secondary", "w-full sm:w-auto")}
                 >
                   Schedule another round
-                </Link>
+                </button>
               </div>
             </details>
           ) : null}
@@ -999,19 +1062,20 @@ function ContextCommand({
       "Mark the interview complete if it happened, then capture what you learned. Otherwise, edit or reschedule it from the application.";
   }
   if (state === "CAPTURE") {
-    eyebrow = "Capture";
-    title = "Record what happened while it is fresh";
+    eyebrow = "Reflect";
+    title = "Capture what stands out while it is fresh";
     description =
-      "Save your private reflection, signals you noticed, and the concrete next step. This does not assume an outcome.";
+      "Save a private takeaway now. You can add deeper reflection and carry-forward context if it is useful.";
   }
   if (state === "FOLLOW_UP") {
-    eyebrow = "Follow up";
-    title = followUpLabel(interview);
+    eyebrow = "Act";
+    title = nextStepLabel(interview);
     description =
-      interview.context.follow_up_state === "OVERDUE"
-        ? "Your follow-up is overdue. Review the opportunity and decide what you want to do next."
-        : interview.context.follow_up_state === "TODAY"
-          ? "Follow-up is due today. Review the opportunity and record your next step."
+      interview.context.next_step_responsibility === "CANDIDATE"
+        ? interview.context.next_step_note ??
+          "You still have a candidate-owned action for this opportunity."
+        : interview.context.next_step_responsibility === "EMPLOYER"
+          ? "Your check-back is due. Review the opportunity before contacting the employer."
           : "You still need to decide the next step for this opportunity.";
   }
   if (state === "HISTORY" || state === "CANCELED") {
@@ -1086,7 +1150,7 @@ function ContextCommand({
           to={followUpHref(interview)}
           className={buttonClassName("primary")}
         >
-          Review follow-up
+          Review next step
         </Link>
       );
       break;
@@ -1097,7 +1161,7 @@ function ContextCommand({
           className={buttonClassName("primary")}
           onClick={onOpenWorkspace}
         >
-          Review debrief
+          Review reflection
         </button>
       );
       break;
@@ -1161,14 +1225,16 @@ function PreparationSnapshot({
           >
             {isDebrief
               ? "Interview reflection"
-              : `${interview.guidance.readiness.completed_steps} of ${interview.guidance.readiness.total_steps} ready`}
+              : interview.guidance.progress.essentials.complete
+                ? "Essentials prepared"
+                : `${interview.guidance.progress.essentials.total - interview.guidance.progress.essentials.completed} essentials remaining`}
           </h3>
         </div>
       </div>
       {!isDebrief ? (
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
           {interview.guidance.checklist_items.map((item) => {
-            const done = completed.has(item.item_id);
+            const done = completed.has(item.item_id) || item.completed;
             return (
               <li
                 key={item.item_id}
@@ -1232,18 +1298,26 @@ function PreparationSnapshot({
 
 function reflectionExcerpts(interview: Interview) {
   const items: Array<{ label: string; value: string }> = [];
+  if (interview.debrief_primary_reflection) {
+    items.push({
+      label: "Takeaway",
+      value: interview.debrief_primary_reflection,
+    });
+  }
   if (interview.debrief_went_well) {
     items.push({ label: "Went well", value: interview.debrief_went_well });
   }
-  const carryForward = interview.debrief_improve ?? interview.debrief_signals;
-  if (carryForward) {
-    items.push({ label: "Carry forward", value: carryForward });
-  }
-  if (interview.debrief_next_step) {
+  if (interview.debrief_carry_forward) {
     items.push({
-      label: "Recorded next step",
-      value: interview.debrief_next_step,
+      label: "Carry forward",
+      value: interview.debrief_carry_forward,
     });
+  }
+  if (interview.debrief_improve) {
+    items.push({ label: "Could improve", value: interview.debrief_improve });
+  }
+  if (interview.debrief_signals) {
+    items.push({ label: "Signals noticed", value: interview.debrief_signals });
   }
   return items.slice(0, 3);
 }
@@ -1258,16 +1332,16 @@ function PreviousRoundContext({
   onReview: () => void;
 }) {
   const signals: Array<{ label: string; value: string }> = [];
-  if (interview.debrief_improve) {
-    signals.push({ label: "Carry forward", value: interview.debrief_improve });
-  }
-  if (interview.debrief_signals) {
-    signals.push({ label: "What you noticed", value: interview.debrief_signals });
-  }
-  if (signals.length < 2 && interview.debrief_next_step) {
+  if (interview.debrief_carry_forward) {
     signals.push({
-      label: "Recorded next step",
-      value: interview.debrief_next_step,
+      label: "Carry forward",
+      value: interview.debrief_carry_forward,
+    });
+  }
+  if (interview.debrief_primary_reflection) {
+    signals.push({
+      label: "Prior round takeaway",
+      value: interview.debrief_primary_reflection,
     });
   }
   const visible = signals.slice(0, 2);
@@ -1301,7 +1375,7 @@ function PreviousRoundContext({
         className={`${buttonClassName("secondary")} mt-4`}
         onClick={onReview}
       >
-        Review Round {roundNumber} debrief
+        Review Round {roundNumber} reflection
       </button>
     </section>
   );

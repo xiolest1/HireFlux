@@ -11,6 +11,7 @@ from hireflux_backend.domain.enums import (
     ActivityType,
     ApplicationSource,
     ApplicationStatus,
+    NextStepResponsibility,
     RoleFamily,
     UserRole,
     WorkMode,
@@ -124,6 +125,13 @@ class FollowUpRescheduleRequest(RequestModel):
     follow_up_date: date
 
 
+class NextStepUpdateRequest(RequestModel):
+    expected_version: int = Field(ge=1)
+    next_step_responsibility: NextStepResponsibility
+    next_step_note: str | None = Field(default=None, min_length=1, max_length=500)
+    follow_up_date: date | None = None
+
+
 class UserResponse(BaseModel):
     user_id: str
     name: str
@@ -152,6 +160,8 @@ class ApplicationResponse(BaseModel):
     status: ApplicationStatus
     applied_date: date | None
     follow_up_date: date | None
+    next_step_responsibility: NextStepResponsibility | None
+    next_step_note: str | None
     job_url: str | None
     location: str | None
     work_mode: WorkMode | None
@@ -182,6 +192,8 @@ class ApplicationResponse(BaseModel):
             status=application.status,
             applied_date=application.applied_date,
             follow_up_date=application.follow_up_date,
+            next_step_responsibility=application.next_step_responsibility,
+            next_step_note=application.next_step_note,
             job_url=application.job_url,
             location=application.location,
             work_mode=application.work_mode,

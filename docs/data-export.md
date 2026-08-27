@@ -7,9 +7,10 @@ owner or upgrade a demo session.
 ## Application CSV
 
 `GET /api/v1/me/applications/export` returns one application per CSV row with
-the user-facing fields Company, Job Title, Status, Applied Date, Source, Source
-Detail, Location, Work Mode, Follow-up Date, Job URL, Salary, Description,
-Created At, and Updated At. Optional values are blank, and a standard CSV
+the user-facing fields Company, Job Title, Status, Preparation Role Family,
+Applied Date, Source, Source Detail, Location, Work Mode, Follow-up Date,
+Next-step Responsibility, Next-step Note, Job URL, Salary, Description, Created
+At, and Updated At. Optional values are blank, and a standard CSV
 writer escapes commas, quotes, line breaks, and Unicode safely. User-controlled
 text whose first non-whitespace character is `=`, `+`, `-`, or `@` is prefixed
 with an apostrophe before serialization so spreadsheet software treats it as
@@ -25,8 +26,11 @@ DynamoDB scan is introduced.
 
 `GET /api/v1/me/export` remains the machine-readable JSON export for backup and
 data portability. It includes the existing versioned profile, settings,
-applications, activities, notes, interviews, and counts, and retains the
-synchronous record limit and `no-store` response headers.
+applications (including role family and next-step fields), activities, notes,
+interviews (including compatible reflection fields), and counts, and retains
+the synchronous record limit and `no-store` response headers. Preparation and
+reflection remain candidate-owned private export data; they are not promoted
+into Analytics or activity summaries.
 
 Temporary demo identities receive `403 FORBIDDEN` for this endpoint. The
 frontend therefore presents sample CSV export in a demo workspace and does

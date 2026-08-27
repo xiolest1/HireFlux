@@ -68,6 +68,8 @@ export function selectApplicationWorkspace({
   );
   const followUpDue =
     application.follow_up_date !== null && application.follow_up_date <= today;
+  const candidateAction = application.next_step_responsibility === "CANDIDATE";
+  const unresolvedNextStep = application.next_step_responsibility === null;
   let primary: WorkspaceAction | null = null;
   let secondary: WorkspaceAction | null = null;
   let eyebrow = "Keep this opportunity moving";
@@ -89,12 +91,17 @@ export function selectApplicationWorkspace({
           label: "Prepare interview",
           interviewId: nextInterview.interview_id,
         };
-      } else if (followUpDue) {
-        primary = { kind: "follow-up", label: "Review follow-up" };
+      } else if (candidateAction || followUpDue || unresolvedNextStep) {
+        primary = { kind: "follow-up", label: "Review next step" };
       } else {
-        primary = { kind: "follow-up", label: "Schedule follow-up" };
+        primary = transitionAction(application, "SCREENING") ?? {
+          kind: "follow-up",
+          label: "Manage next step",
+        };
       }
-      secondary = transitionAction(application, "SCREENING");
+      secondary = primary?.kind === "transition"
+        ? { kind: "follow-up", label: "Manage next step" }
+        : transitionAction(application, "SCREENING");
       break;
     case "SCREENING":
       primary = nextInterview

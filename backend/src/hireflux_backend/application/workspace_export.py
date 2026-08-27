@@ -99,6 +99,8 @@ class WorkspaceExportService:
                 "Location",
                 "Work Mode",
                 "Follow-up Date",
+                "Next-step Responsibility",
+                "Next-step Note",
                 "Job URL",
                 "Salary",
                 "Description",
@@ -119,6 +121,12 @@ class WorkspaceExportService:
                     neutralize_spreadsheet_formula(application.location),
                     application.work_mode.value if application.work_mode else "",
                     application.follow_up_date.isoformat() if application.follow_up_date else "",
+                    (
+                        application.next_step_responsibility.value
+                        if application.next_step_responsibility
+                        else ""
+                    ),
+                    neutralize_spreadsheet_formula(application.next_step_note),
                     neutralize_spreadsheet_formula(application.job_url),
                     neutralize_spreadsheet_formula(application.salary_text),
                     neutralize_spreadsheet_formula(application.description),

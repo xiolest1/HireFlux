@@ -118,6 +118,8 @@ class Interview:
     expires_at: int | None = None
     application_role_family: RoleFamily | None = None
     custom_preparation_items: tuple[CustomPreparationItem, ...] = ()
+    debrief_primary_reflection: str | None = None
+    debrief_carry_forward: str | None = None
 
 
 def allowed_interview_statuses(interview: Interview) -> tuple[InterviewStatus, ...]:

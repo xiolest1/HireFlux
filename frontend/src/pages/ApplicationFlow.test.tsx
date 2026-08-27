@@ -424,7 +424,7 @@ describe("application critical flow", () => {
     expect(screen.getByRole("button", { name: "Save changes" })).toBeVisible();
   });
 
-  it("focuses the canonical follow-up field from an interview journey link", async () => {
+  it("focuses the canonical next-step planner from an interview journey link", async () => {
     const application = makeApplication({ status: "INTERVIEW" });
     server.use(
       http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
@@ -435,8 +435,56 @@ describe("application critical flow", () => {
     renderApp(
       `/applications/${application.application_id}/edit?focus=follow_up`,
     );
-    const followUp = await screen.findByLabelText(/Follow-up date/);
-    await waitFor(() => expect(followUp).toHaveFocus());
+    const nextStep = await screen.findByRole("radio", {
+      name: "I need to do something",
+    });
+    await waitFor(() => expect(nextStep).toHaveFocus());
+  });
+
+  it("records candidate responsibility and check-back timing through the canonical command", async () => {
+    const application = makeApplication({ status: "INTERVIEW", version: 4 });
+    let postedBody: Record<string, unknown> | null = null;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
+        HttpResponse.json(application),
+      ),
+      http.post(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/next-step`,
+        async ({ request }) => {
+          postedBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({
+            ...application,
+            version: 5,
+            next_step_responsibility: "CANDIDATE",
+            next_step_note: "Send the requested portfolio examples.",
+            follow_up_date: "2026-08-28",
+          });
+        },
+      ),
+    );
+
+    const { user } = renderApp(
+      `/applications/${application.application_id}/edit?focus=follow_up`,
+    );
+    await user.click(await screen.findByRole("radio", { name: "I need to do something" }));
+    await user.type(
+      screen.getByLabelText(/What do you need to do/),
+      "Send the requested portfolio examples.",
+    );
+    await user.type(
+      screen.getByLabelText(/When should this return to your attention/),
+      "2026-08-28",
+    );
+    await user.click(screen.getByRole("button", { name: "Save next step" }));
+
+    await waitFor(() =>
+      expect(postedBody).toEqual({
+        expected_version: 4,
+        next_step_responsibility: "CANDIDATE",
+        next_step_note: "Send the requested portfolio examples.",
+        follow_up_date: "2026-08-28",
+      }),
+    );
   });
 });
 

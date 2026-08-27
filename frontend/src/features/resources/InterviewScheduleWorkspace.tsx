@@ -1,0 +1,172 @@
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  INTERVIEW_TYPES,
+  type Application,
+  type Interview,
+  type InterviewType,
+} from "../../api/schemas";
+import type { InterviewFields } from "../../api/resources";
+import { Button } from "../../components/ui/Button";
+import { ErrorPanel } from "../../components/ui/Feedback";
+import { FocusedWorkspace } from "../../components/ui/FocusedWorkspace";
+import { formatInterviewType } from "../applications/format";
+
+interface InterviewDraft {
+  interview_type: InterviewType;
+  scheduled_at: string;
+  duration_minutes: number;
+  location: string;
+  meeting_url: string;
+  details: string;
+}
+
+const emptyDraft: InterviewDraft = {
+  interview_type: "RECRUITER_CALL",
+  scheduled_at: "",
+  duration_minutes: 60,
+  location: "",
+  meeting_url: "",
+  details: "",
+};
+
+const fieldClassName =
+  "mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20";
+
+function toLocalInput(value: string) {
+  const date = new Date(value);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function draftFor(interview: Interview | null): InterviewDraft {
+  if (!interview) return emptyDraft;
+  return {
+    interview_type: interview.interview_type,
+    scheduled_at: toLocalInput(interview.scheduled_at),
+    duration_minutes: interview.duration_minutes,
+    location: interview.location ?? "",
+    meeting_url: interview.meeting_url ?? "",
+    details: interview.details ?? "",
+  };
+}
+
+function fields(draft: InterviewDraft): InterviewFields {
+  return {
+    interview_type: draft.interview_type,
+    scheduled_at: new Date(draft.scheduled_at).toISOString(),
+    duration_minutes: draft.duration_minutes,
+    location: draft.location.trim() || null,
+    meeting_url: draft.meeting_url.trim() || null,
+    details: draft.details.trim() || null,
+  };
+}
+
+export function InterviewScheduleWorkspace({
+  open,
+  application,
+  applications = [],
+  editing = null,
+  isSaving,
+  error,
+  onApplicationChange,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  application: Pick<Application, "application_id" | "company_name" | "job_title"> | null;
+  applications?: Array<Pick<Application, "application_id" | "company_name" | "job_title">>;
+  editing?: Interview | null;
+  isSaving: boolean;
+  error?: unknown;
+  onApplicationChange?: (applicationId: string | null) => void;
+  onClose: () => void;
+  onSubmit: (applicationId: string, fields: InterviewFields) => Promise<void>;
+}) {
+  const initialDraft = useMemo(() => draftFor(editing), [editing]);
+  const [draft, setDraft] = useState(initialDraft);
+  const [query, setQuery] = useState("");
+  const dirty = JSON.stringify(draft) !== JSON.stringify(initialDraft);
+  const filteredApplications = applications.filter((item) =>
+    `${item.company_name} ${item.job_title}`.toLowerCase().includes(query.toLowerCase()),
+  );
+
+  useEffect(() => {
+    if (open) setDraft(initialDraft);
+  }, [initialDraft, open]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!application || !draft.scheduled_at || draft.duration_minutes < 15 || draft.duration_minutes > 480) return;
+    await onSubmit(application.application_id, fields(draft));
+  }
+
+  return (
+    <FocusedWorkspace
+      open={open}
+      onClose={onClose}
+      dirty={dirty}
+      title={editing ? "Edit interview" : "Schedule interview"}
+      description="Use the same interview record for timing, access details, preparation, and later reflection."
+      context={application ? <span className="inline-flex flex-wrap items-center gap-2">{application.company_name} · {application.job_title}{onApplicationChange && !editing ? <button type="button" className="font-semibold text-accent hover:underline" onClick={() => onApplicationChange(null)}>Change opportunity</button> : null}</span> : "Choose an active opportunity"}
+      footer={
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button form="interview-schedule-form" type="submit" disabled={!application || !draft.scheduled_at || isSaving}>
+            {isSaving ? "Saving…" : editing ? "Save interview" : "Schedule interview"}
+          </Button>
+        </div>
+      }
+    >
+      <form id="interview-schedule-form" onSubmit={(event) => void submit(event)} className="space-y-6">
+        {!application ? (
+          <section aria-labelledby="schedule-application-title" className="rounded-2xl border border-line bg-surface-muted p-4">
+            <h3 id="schedule-application-title" className="font-semibold text-ink">Choose the opportunity</h3>
+            <label htmlFor="schedule-application-search" className="mt-4 block text-sm font-semibold text-ink">Search active applications</label>
+            <input id="schedule-application-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Company or role" className={fieldClassName} />
+            <ul className="mt-3 max-h-56 space-y-2 overflow-y-auto">
+              {filteredApplications.map((item) => (
+                <li key={item.application_id}>
+                  <button type="button" className="flex min-h-12 w-full flex-col justify-center rounded-xl border border-line bg-surface px-3 text-left hover:border-accent hover:bg-accent-soft" onClick={() => onApplicationChange?.(item.application_id)}>
+                    <span className="text-sm font-semibold text-ink">{item.company_name}</span>
+                    <span className="text-xs text-ink-muted">{item.job_title}</span>
+                  </button>
+                </li>
+              ))}
+              {!filteredApplications.length ? <li className="py-3 text-sm text-ink-muted">No matching active applications.</li> : null}
+            </ul>
+          </section>
+        ) : null}
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label htmlFor="schedule-interview-type" className="text-sm font-semibold text-ink">Interview type</label>
+            <select id="schedule-interview-type" value={draft.interview_type} onChange={(event) => setDraft({ ...draft, interview_type: event.target.value as InterviewType })} className={`${fieldClassName} text-sm font-semibold`}>
+              {INTERVIEW_TYPES.map((type) => <option key={type} value={type}>{formatInterviewType(type)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="schedule-interview-time" className="text-sm font-semibold text-ink">Date and time <span className="text-danger">*</span></label>
+            <input id="schedule-interview-time" type="datetime-local" required value={draft.scheduled_at} onChange={(event) => setDraft({ ...draft, scheduled_at: event.target.value })} className={fieldClassName} />
+          </div>
+          <div>
+            <label htmlFor="schedule-interview-duration" className="text-sm font-semibold text-ink">Duration in minutes</label>
+            <input id="schedule-interview-duration" type="number" min={15} max={480} step={15} value={draft.duration_minutes} onChange={(event) => setDraft({ ...draft, duration_minutes: Number(event.target.value) })} className={fieldClassName} />
+          </div>
+          <div>
+            <label htmlFor="schedule-interview-location" className="text-sm font-semibold text-ink">Location <span className="font-normal text-ink-muted">(optional)</span></label>
+            <input id="schedule-interview-location" maxLength={240} value={draft.location} onChange={(event) => setDraft({ ...draft, location: event.target.value })} placeholder="Video call or office address" className={fieldClassName} />
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor="schedule-interview-url" className="text-sm font-semibold text-ink">Meeting URL <span className="font-normal text-ink-muted">(optional)</span></label>
+            <input id="schedule-interview-url" type="url" maxLength={2048} value={draft.meeting_url} onChange={(event) => setDraft({ ...draft, meeting_url: event.target.value })} placeholder="https://meet.example.com/interview" className={fieldClassName} />
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor="schedule-interview-details" className="text-sm font-semibold text-ink">Preparation details <span className="font-normal text-ink-muted">(optional)</span></label>
+            <textarea id="schedule-interview-details" rows={5} maxLength={5000} value={draft.details} onChange={(event) => setDraft({ ...draft, details: event.target.value })} className={`${fieldClassName} resize-y py-2 text-sm leading-6`} />
+          </div>
+        </div>
+        {error ? <ErrorPanel compact title="Interview could not be saved" error={error} /> : null}
+      </form>
+    </FocusedWorkspace>
+  );
+}
