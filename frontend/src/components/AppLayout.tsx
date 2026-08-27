@@ -25,6 +25,7 @@ import {
 } from "react-router-dom";
 import { useDemoSession } from "../auth/demoSessionContext";
 import { useMe } from "../features/applications/queries";
+import { applicationCreateRouteState } from "../features/applications/createNavigation";
 import {
   useAutoDetectTimeZone,
   useSettings,
@@ -138,6 +139,12 @@ function useExpiryLabel(expiresAt: string | undefined): {
 export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const addApplicationState =
+    location.pathname === "/applications"
+      ? applicationCreateRouteState("applications", location.pathname, location.search)
+      : location.pathname === "/dashboard"
+        ? applicationCreateRouteState("dashboard", location.pathname, location.search)
+        : undefined;
   const { session, status, reset, abandonReset, exit, isCreating, error } = useDemoSession();
   const identityReady = status === "active";
   const meQuery = useMe({ enabled: identityReady });
@@ -292,6 +299,7 @@ export function AppLayout() {
           <div className="flex min-h-0 flex-1 flex-col gap-5 px-3 py-5">
             <Link
               to="/applications/new"
+              state={addApplicationState}
               className={`flex min-h-11 items-center justify-center rounded-xl bg-accent px-3 text-sm font-bold text-accent-contrast shadow-sm transition-[background-color,transform] duration-200 hover:bg-accent-strong active:scale-[0.98] md:gap-0 md:px-0 ${
                 sidebarCollapsed
                   ? "lg:gap-0 lg:px-0"
@@ -383,6 +391,7 @@ export function AppLayout() {
         >
           <Link
             to="/applications/new"
+            state={addApplicationState}
             onClick={() => setTabletNavOpen(false)}
             className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-sm font-bold text-accent-contrast shadow-sm transition-[background-color,transform] duration-200 hover:bg-accent-strong active:scale-[0.98]"
           >
@@ -512,6 +521,7 @@ export function AppLayout() {
           ))}
           <NavLink
             to="/applications/new"
+            state={addApplicationState}
             aria-label="Add application"
             className="relative flex min-h-14 flex-col items-center justify-end gap-1 pb-1 text-[0.68rem] font-bold text-accent"
           >

@@ -1,5 +1,6 @@
 from typing import Any
 
+from hireflux_backend.application.opportunity_workspace import OpportunityContext
 from hireflux_backend.domain.enums import RoleFamily
 from hireflux_backend.domain.resources import (
     CustomPreparationItem,
@@ -51,6 +52,45 @@ def owner_schedule_key(owner_user_id: str) -> str:
 
 def owner_interviews_key(owner_user_id: str) -> str:
     return f"USER#{owner_user_id}#INTERVIEWS"
+
+
+def owner_opportunity_context_key(owner_user_id: str) -> str:
+    return f"USER#{owner_user_id}#OPPORTUNITY_CONTEXT"
+
+
+def opportunity_context_key(owner_user_id: str, application_id: str) -> dict[str, str]:
+    return {
+        "PK": application_partition(owner_user_id, application_id),
+        "SK": "WORKSPACE_CONTEXT",
+    }
+
+
+def opportunity_context_to_item(context: OpportunityContext) -> dict[str, Any]:
+    return {
+        **opportunity_context_key(context.owner_user_id, context.application_id),
+        "entity_type": "WORKSPACE_CONTEXT",
+        "application_id": context.application_id,
+        "owner_user_id": context.owner_user_id,
+        "next_interview_id": context.next_interview_id,
+        "scheduled_at": format_timestamp(context.scheduled_at),
+        "preparation_essentials_complete": context.preparation_essentials_complete,
+        "version": context.version,
+        "expires_at": context.expires_at,
+        "GSI1PK": owner_opportunity_context_key(context.owner_user_id),
+        "GSI1SK": context.application_id,
+    }
+
+
+def opportunity_context_from_item(item: dict[str, Any]) -> OpportunityContext:
+    return OpportunityContext(
+        application_id=str(item["application_id"]),
+        owner_user_id=str(item["owner_user_id"]),
+        next_interview_id=str(item["next_interview_id"]),
+        scheduled_at=parse_timestamp(str(item["scheduled_at"])),
+        preparation_essentials_complete=bool(item["preparation_essentials_complete"]),
+        version=int(item["version"]),
+        expires_at=int(item["expires_at"]) if item.get("expires_at") is not None else None,
+    )
 
 
 def interview_owner_sort_key(interview: Interview) -> str:

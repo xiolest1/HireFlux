@@ -12,8 +12,10 @@ import {
   getApplication,
   getDuplicateCandidates,
   getMe,
+  getOpportunityWorkspace,
   listApplicationActivity,
   listApplications,
+  listOpportunityGroup,
   rescheduleFollowUp,
   transitionApplication,
   updateApplication,
@@ -25,7 +27,7 @@ import {
   type UpdateApplicationRequest,
   type NextStepUpdateRequest,
 } from "../../api/applications";
-import type { ApplicationStatus } from "../../api/schemas";
+import type { ApplicationStatus, OpportunityGroup } from "../../api/schemas";
 
 export const applicationKeys = {
   all: ["applications"] as const,
@@ -38,9 +40,15 @@ export const applicationKeys = {
   activity: (applicationId: string, order: "asc" | "desc" = "asc", limit = 25) =>
     [...applicationKeys.detail(applicationId), "activity", { order, limit }] as const,
   duplicateCandidates: () => [...applicationKeys.all, "duplicate-candidates"] as const,
+  workspaces: () => [...applicationKeys.all, "workspace"] as const,
+  workspace: (previewLimit: number) =>
+    [...applicationKeys.workspaces(), { previewLimit }] as const,
+  workspaceGroup: (group: OpportunityGroup, limit: number) =>
+    [...applicationKeys.workspaces(), "group", { group, limit }] as const,
 };
 
 function invalidateWorkspaceInsights(queryClient: QueryClient) {
+  void queryClient.invalidateQueries({ queryKey: applicationKeys.workspaces() });
   void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   void queryClient.invalidateQueries({ queryKey: ["analytics"] });
   void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
@@ -67,6 +75,7 @@ export function useApplications(
   status: ApplicationStatus | null = null,
   limit = 20,
   filters: ApplicationListFilters = {},
+  enabled = true,
 ) {
   return useInfiniteQuery({
     queryKey: applicationKeys.list(status, limit, filters),
@@ -75,6 +84,31 @@ export function useApplications(
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.next_cursor,
     placeholderData: keepPreviousData,
+    enabled,
+  });
+}
+
+export function useOpportunityWorkspace(previewLimit: number, enabled = true) {
+  return useQuery({
+    queryKey: applicationKeys.workspace(previewLimit),
+    queryFn: ({ signal }) => getOpportunityWorkspace(previewLimit, signal),
+    enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useOpportunityGroup(
+  group: OpportunityGroup,
+  limit = 20,
+  enabled = true,
+) {
+  return useInfiniteQuery({
+    queryKey: applicationKeys.workspaceGroup(group, limit),
+    queryFn: ({ pageParam, signal }) =>
+      listOpportunityGroup(group, pageParam, signal, limit),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+    enabled,
   });
 }
 

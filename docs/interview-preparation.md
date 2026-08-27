@@ -43,4 +43,6 @@ Preparation notes, evidence stories, saved questions, checklist state, custom ta
 
 Active preparation, reflection capture/review, historical preparation, and scheduling share the responsive `FocusedWorkspace` dialog shell. It provides one scroll region, a stable footer, focus containment/restoration, Escape handling, body locking, safe-area behavior, and dirty-close confirmation. Filters and short actions continue using the general Drawer.
 
+Interview scheduling interprets `datetime-local` input in the workspace's saved IANA time zone and converts the selected wall time to UTC before submitting it. Times inside a daylight-saving gap are rejected rather than silently shifted; a repeated fall-back wall time resolves to the earlier matching instant. The global scheduling workspace searches and paginates across active applications instead of relying on a fixed client-side subset. Candidates can schedule or edit interviews only while the application is active. If an existing scheduled interview belongs to an application that later becomes terminal, it is presented as quiet history and does not generate preparation or follow-up pressure.
+
 Possible future additions—not implemented—include optional AI-assisted job-description context, richer occupation taxonomies, reusable preparation templates, candidate-created templates, and preparation history.

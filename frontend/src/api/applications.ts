@@ -2,6 +2,8 @@ import {
   activityListResponseSchema,
   applicationListResponseSchema,
   applicationSchema,
+  opportunityGroupResponseSchema,
+  opportunityWorkspaceResponseSchema,
   duplicateCandidateListResponseSchema,
   type Application,
   type ApplicationListResponse,
@@ -16,6 +18,9 @@ import {
   type WorkMode,
   type Activity,
   type DuplicateCandidate,
+  type OpportunityGroup,
+  type OpportunityGroupResponse,
+  type OpportunityWorkspace,
   userSchema,
   type User,
 } from "./schemas";
@@ -140,6 +145,32 @@ export function rescheduleFollowUp(
       method: "POST",
       json: { expected_version: expectedVersion, follow_up_date: followUpDate },
     },
+  );
+}
+
+export function getOpportunityWorkspace(
+  previewLimit: number,
+  signal?: AbortSignal,
+): Promise<OpportunityWorkspace> {
+  return apiRequest(
+    `/api/v1/applications/workspace?preview_limit=${previewLimit}`,
+    opportunityWorkspaceResponseSchema,
+    { signal },
+  );
+}
+
+export function listOpportunityGroup(
+  group: OpportunityGroup,
+  cursor: string | null,
+  signal?: AbortSignal,
+  limit = 20,
+): Promise<OpportunityGroupResponse> {
+  const search = new URLSearchParams({ limit: String(limit) });
+  if (cursor) search.set("cursor", cursor);
+  return apiRequest(
+    `/api/v1/applications/workspace/groups/${group}?${search.toString()}`,
+    opportunityGroupResponseSchema,
+    { signal },
   );
 }
 

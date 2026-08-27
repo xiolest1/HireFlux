@@ -8,7 +8,10 @@ from hireflux_backend.infrastructure.dynamodb.mapping import (
     deserialize_item,
     serialize_item,
 )
-from hireflux_backend.infrastructure.dynamodb.resource_mapping import interview_key
+from hireflux_backend.infrastructure.dynamodb.resource_mapping import (
+    interview_key,
+    opportunity_context_key,
+)
 
 
 def _create_application(client: TestClient) -> dict[str, Any]:
@@ -17,6 +20,20 @@ def _create_application(client: TestClient) -> dict[str, Any]:
         json={
             "company_name": "Browser QA Labs",
             "job_title": "Cloud Engineer",
+        },
+    )
+    assert response.status_code == 201
+    return dict(response.json())
+
+
+def _create_active_application(client: TestClient) -> dict[str, Any]:
+    response = client.post(
+        "/api/v1/applications",
+        json={
+            "company_name": "Browser QA Labs",
+            "job_title": "Cloud Engineer",
+            "status": "APPLIED",
+            "applied_date": datetime.now(UTC).date().isoformat(),
         },
     )
     assert response.status_code == 201
@@ -125,7 +142,7 @@ def test_notes_are_owned_versioned_and_append_activity(client: TestClient) -> No
 
 
 def test_role_family_projects_to_interview_guidance(client: TestClient) -> None:
-    application = _create_application(client)
+    application = _create_active_application(client)
     path = f"/api/v1/applications/{application['application_id']}"
     created = client.post(
         f"{path}/interviews",
@@ -162,7 +179,7 @@ def test_role_family_projects_to_interview_guidance(client: TestClient) -> None:
 
 
 def test_custom_preparation_items_are_owned_versioned_and_bounded(client: TestClient) -> None:
-    application = _create_application(client)
+    application = _create_active_application(client)
     path = f"/api/v1/applications/{application['application_id']}"
     interview = client.post(
         f"{path}/interviews",
@@ -261,7 +278,7 @@ def test_activity_descending_order_and_cursor_scope(client: TestClient) -> None:
 def test_interviews_project_to_workspace_and_remain_as_history(
     client: TestClient, dynamodb_client: Any
 ) -> None:
-    application = _create_application(client)
+    application = _create_active_application(client)
     path = f"/api/v1/applications/{application['application_id']}"
     scheduled_at = (datetime.now(UTC) + timedelta(days=8)).replace(microsecond=0)
     rescheduled_at = scheduled_at + timedelta(days=1)
@@ -305,6 +322,25 @@ def test_interviews_project_to_workspace_and_remain_as_history(
     item = deserialize_item(stored["Item"])
     assert item["GSI1PK"].endswith("#INTERVIEWS")
     assert item["GSI3PK"].endswith("#SCHEDULE")
+    context_item = dynamodb_client.get_item(
+        TableName="HireFluxTest",
+        Key=serialize_item(
+            opportunity_context_key(application["owner_user_id"], application["application_id"])
+        ),
+        ConsistentRead=True,
+    )
+    context = deserialize_item(context_item["Item"])
+    assert context["next_interview_id"] == interview["interview_id"]
+    assert context["preparation_essentials_complete"] is False
+    assert context["version"] == 1
+
+    opportunity_workspace = client.get("/api/v1/applications/workspace")
+    assert opportunity_workspace.status_code == 200
+    needs_action = opportunity_workspace.json()["groups"]["needs_action"]
+    assert needs_action["total_count"] == 1
+    assert needs_action["items"][0]["classification"]["reason_code"] == (
+        "INTERVIEW_PREPARATION_UPCOMING"
+    )
 
     nested = client.get(f"{path}/interviews")
     assert nested.status_code == 200
@@ -352,6 +388,13 @@ def test_interviews_project_to_workspace_and_remain_as_history(
     item = deserialize_item(stored["Item"])
     assert "GSI3PK" not in item
     assert "GSI3SK" not in item
+    assert "Item" not in dynamodb_client.get_item(
+        TableName="HireFluxTest",
+        Key=serialize_item(
+            opportunity_context_key(application["owner_user_id"], application["application_id"])
+        ),
+        ConsistentRead=True,
+    )
     assert client.get("/api/v1/interviews").json() == {"items": [], "next_cursor": None}
 
     terminal_edit = client.patch(
@@ -370,8 +413,17 @@ def test_interviews_project_to_workspace_and_remain_as_history(
 
 
 def test_workspace_interview_view_includes_history_and_server_context(client: TestClient) -> None:
-    application = _create_application(client)
+    application = _create_active_application(client)
     path = f"/api/v1/applications/{application['application_id']}"
+    application = client.post(
+        f"{path}/next-step",
+        json={
+            "expected_version": application["version"],
+            "next_step_responsibility": "NONE",
+            "next_step_note": None,
+            "follow_up_date": None,
+        },
+    ).json()
     now = datetime.now(UTC).replace(microsecond=0)
 
     future = client.post(
@@ -437,20 +489,20 @@ def test_workspace_interview_view_includes_history_and_server_context(client: Te
     }
     upcoming_by_id = {item["interview_id"]: item for item in upcoming.json()["items"]}
     assert upcoming_by_id[future.json()["interview_id"]]["context"] == {
-        "application_status": "DRAFT",
+        "application_status": "APPLIED",
         "follow_up_date": None,
         "follow_up_state": "NONE",
-        "next_step_responsibility": None,
+        "next_step_responsibility": "NONE",
         "next_step_note": None,
         "has_later_scheduled_interview": False,
         "workflow_state": "PREPARE",
         "next_action": "PREPARE",
     }
     assert upcoming_by_id[imminent.json()["interview_id"]]["context"] == {
-        "application_status": "DRAFT",
+        "application_status": "APPLIED",
         "follow_up_date": None,
         "follow_up_state": "NONE",
-        "next_step_responsibility": None,
+        "next_step_responsibility": "NONE",
         "next_step_note": None,
         "has_later_scheduled_interview": True,
         "workflow_state": "IMMINENT",
@@ -549,14 +601,14 @@ def test_workspace_interview_view_includes_history_and_server_context(client: Te
         == "REVIEW_DEBRIEF"
     )
 
-    dated = client.patch(
-        path,
-        json={"expected_version": application["version"], "applied_date": now.date().isoformat()},
-    )
-    assert dated.status_code == 200
     active = client.post(
-        f"{path}/status",
-        json={"status": "APPLIED", "expected_version": dated.json()["version"]},
+        f"{path}/next-step",
+        json={
+            "expected_version": application["version"],
+            "next_step_responsibility": "CANDIDATE",
+            "next_step_note": "Decide the next action.",
+            "follow_up_date": None,
+        },
     )
     assert active.status_code == 200
     active_context = client.get("/api/v1/interviews", params={"view": "ALL"}).json()["items"]
@@ -586,7 +638,7 @@ def test_workspace_interview_view_includes_history_and_server_context(client: Te
 
 
 def test_global_interviews_continue_past_the_default_page(client: TestClient) -> None:
-    application = _create_application(client)
+    application = _create_active_application(client)
     path = f"/api/v1/applications/{application['application_id']}"
     now = datetime.now(UTC).replace(microsecond=0)
     created_ids: set[str] = set()
@@ -627,8 +679,58 @@ def test_global_interviews_continue_past_the_default_page(client: TestClient) ->
     assert mismatched_view.status_code == 400
 
 
+def test_interview_scheduling_requires_an_active_application_and_quiets_terminal_records(
+    client: TestClient,
+) -> None:
+    draft = _create_application(client)
+    payload = {
+        "interview_type": "FINAL",
+        "scheduled_at": (datetime.now(UTC) + timedelta(days=5)).isoformat(),
+        "duration_minutes": 60,
+    }
+    draft_create = client.post(
+        f"/api/v1/applications/{draft['application_id']}/interviews",
+        json=payload,
+    )
+    assert draft_create.status_code == 409
+
+    application = client.post(
+        "/api/v1/applications",
+        json={
+            "company_name": "Offer Stage Labs",
+            "job_title": "Operations Lead",
+            "status": "INTERVIEW",
+            "applied_date": datetime.now(UTC).date().isoformat(),
+        },
+    ).json()
+    path = f"/api/v1/applications/{application['application_id']}"
+    offer = client.post(
+        f"{path}/status",
+        json={"status": "OFFER", "expected_version": application["version"]},
+    )
+    assert offer.status_code == 200
+    scheduled = client.post(f"{path}/interviews", json=payload)
+    assert scheduled.status_code == 201
+
+    accepted = client.post(
+        f"{path}/status",
+        json={"status": "ACCEPTED", "expected_version": offer.json()["version"]},
+    )
+    assert accepted.status_code == 200
+    assert client.post(f"{path}/interviews", json=payload).status_code == 409
+
+    workspace = client.get("/api/v1/interviews", params={"view": "ALL"}).json()["items"]
+    context = next(
+        item["context"]
+        for item in workspace
+        if item["interview_id"] == scheduled.json()["interview_id"]
+    )
+    assert context["workflow_state"] == "HISTORY"
+    assert context["next_action"] == "OPEN_APPLICATION"
+
+
 def test_application_rename_updates_all_interview_projections(client: TestClient) -> None:
-    application = _create_application(client)
+    application = _create_active_application(client)
     path = f"/api/v1/applications/{application['application_id']}"
     now = datetime.now(UTC).replace(microsecond=0)
     interview_versions: dict[str, int] = {}
@@ -715,7 +817,7 @@ def test_foreign_or_missing_interview_and_note_are_not_found(client: TestClient)
 
 
 def test_resource_pages_reject_tampering_and_enforce_quotas(limited_client: TestClient) -> None:
-    application = _create_application(limited_client)
+    application = _create_active_application(limited_client)
     path = f"/api/v1/applications/{application['application_id']}"
 
     notes = []

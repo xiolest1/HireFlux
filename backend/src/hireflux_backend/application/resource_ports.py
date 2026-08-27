@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol, TypeVar
 
+from hireflux_backend.application.opportunity_workspace import OpportunityContext
 from hireflux_backend.domain.models import Activity
 from hireflux_backend.domain.resources import Interview, Note, WorkspaceSettings
 
@@ -78,3 +79,5 @@ class WorkspaceResourceRepository(Protocol):
     def replace_interview(
         self, interview: Interview, *, expected_version: int, activity: Activity
     ) -> None: ...
+
+    def list_opportunity_contexts(self, owner_user_id: str) -> tuple[OpportunityContext, ...]: ...

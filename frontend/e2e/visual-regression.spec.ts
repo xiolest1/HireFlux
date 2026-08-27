@@ -445,24 +445,15 @@ test("unified workspace links, staged filters, and drawer focus work with the ke
   await expect(page.getByRole("heading", { name: "Interview process" })).toBeAttached();
 });
 
-test("application layouts, transition drawer, and progressive form disclosure stay usable", async ({
+test("application retrieval rows, transition drawer, and progressive form disclosure stay usable", async ({
   page,
 }) => {
-  await page.goto("/applications");
-  const viewportWidth = page.viewportSize()?.width ?? 1280;
-  if (viewportWidth >= 768) {
-    await page.getByRole("button", { name: "List view" }).click();
-    await expect(page).toHaveURL(/layout=list/);
-    await expect(
-      page.getByRole("table", { name: "Applications in compact list view" }),
-    ).toBeVisible();
-  } else {
-    await page.goto("/applications?layout=list");
-    await expect(page.getByRole("article").first()).toBeVisible();
-    await expect(
-      page.getByRole("table", { name: "Applications in compact list view" }),
-    ).toBeHidden();
-  }
+  await page.goto("/applications?view=ALL&layout=list");
+  await expect(page).toHaveURL(/view=ALL/);
+  await expect(page).not.toHaveURL(/layout=/);
+  await expect(page.getByRole("article").first()).toBeVisible();
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "List view" })).toHaveCount(0);
 
   await page.goto(`/applications/${applicationId}`);
   const statusTrigger = page.getByRole("button", { name: "Move to Screening" });
@@ -675,9 +666,9 @@ test("application loading, empty, failure, and retry states are explicit", async
   let releaseResponse: (() => void) | undefined;
 
   await page.route(
-    "http://localhost:8000/api/v1/applications*",
+    "http://localhost:8000/api/v1/applications/workspace*",
     async (route) => {
-      if (new URL(route.request().url()).pathname !== "/api/v1/applications") {
+      if (new URL(route.request().url()).pathname !== "/api/v1/applications/workspace") {
         await route.fallback();
         return;
       }
@@ -702,7 +693,14 @@ test("application loading, empty, failure, and retry states are explicit", async
         return;
       }
 
-      await fulfillJson(route, { items: [], next_cursor: null });
+      await fulfillJson(route, {
+        generated_at: "2026-08-27T14:00:00Z",
+        groups: {
+          needs_action: { total_count: 0, items: [], next_cursor: null },
+          moving_forward: { total_count: 0, items: [], next_cursor: null },
+          waiting: { total_count: 0, items: [], next_cursor: null },
+        },
+      });
     },
   );
 
@@ -714,14 +712,14 @@ test("application loading, empty, failure, and retry states are explicit", async
   mode = "empty";
   releaseResponse?.();
   await expect(
-    page.getByRole("heading", { name: "No applications yet" }),
+    page.getByRole("heading", { name: "No active applications" }),
   ).toBeVisible();
   await expectNoHorizontalPageOverflow(page);
 
   mode = "failure";
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "Applications could not be loaded" }),
+    page.getByRole("heading", { name: "Opportunity workspace could not be loaded" }),
   ).toBeVisible();
   await expect(
     page.getByText("Applications are temporarily unavailable."),
@@ -731,7 +729,7 @@ test("application loading, empty, failure, and retry states are explicit", async
   mode = "empty";
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(
-    page.getByRole("heading", { name: "No applications yet" }),
+    page.getByRole("heading", { name: "No active applications" }),
   ).toBeVisible();
 });
 
@@ -745,6 +743,32 @@ test("long application content stays contained", async ({ page }) => {
     description: `A deliberately long application description ${"accessible-product-platform".repeat(32)}`,
   };
 
+  await page.route(
+    "http://localhost:8000/api/v1/applications/workspace*",
+    (route) => fulfillJson(route, {
+      generated_at: "2026-08-27T14:00:00Z",
+      groups: {
+        needs_action: { total_count: 0, items: [], next_cursor: null },
+        moving_forward: { total_count: 0, items: [], next_cursor: null },
+        waiting: {
+          total_count: 1,
+          items: [{
+            application: longApplication,
+            classification: {
+              group: "waiting",
+              reason_code: "RECENTLY_APPLIED",
+              relevant_date: null,
+              relevant_at: null,
+              action_type: "OPEN_OPPORTUNITY",
+              interview_id: null,
+              next_interview: null,
+            },
+          }],
+          next_cursor: null,
+        },
+      },
+    }),
+  );
   await page.route(
     "http://localhost:8000/api/v1/applications*",
     async (route) => {

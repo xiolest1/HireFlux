@@ -19,7 +19,7 @@ interface FocusedWorkspaceProps {
   description?: ReactNode;
   context?: ReactNode;
   children: ReactNode;
-  footer?: ReactNode;
+  footer?: ReactNode | ((requestClose: () => void) => ReactNode);
   dirty?: boolean;
   initialFocusRef?: RefObject<HTMLElement | null>;
   closeLabel?: string;
@@ -42,10 +42,14 @@ export function FocusedWorkspace({
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const keepEditingRef = useRef<HTMLButtonElement>(null);
+  const discardRef = useRef<HTMLDivElement>(null);
+  const discardTriggerRef = useRef<HTMLElement | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   function requestClose() {
     if (dirty) {
+      discardTriggerRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : closeRef.current;
       setConfirmDiscard(true);
       return;
     }
@@ -101,6 +105,52 @@ export function FocusedWorkspace({
     if (confirmDiscard) keepEditingRef.current?.focus();
   }, [confirmDiscard]);
 
+  function keepEditing() {
+    setConfirmDiscard(false);
+    window.setTimeout(() => {
+      const target = discardTriggerRef.current;
+      if (target?.isConnected) target.focus();
+      else closeRef.current?.focus();
+    }, 0);
+  }
+
+  useEffect(() => {
+    if (!confirmDiscard) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    function handleDiscardKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        setConfirmDiscard(false);
+        window.setTimeout(() => {
+          const target = discardTriggerRef.current;
+          if (target?.isConnected) target.focus();
+          else closeRef.current?.focus();
+        }, 0);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(
+        discardRef.current?.querySelectorAll<HTMLElement>(
+          "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
+        ) ?? [],
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    panel.addEventListener("keydown", handleDiscardKeyDown);
+    return () => panel.removeEventListener("keydown", handleDiscardKeyDown);
+  }, [confirmDiscard]);
+
   if (!open) return null;
 
   return createPortal(
@@ -120,7 +170,7 @@ export function FocusedWorkspace({
         aria-describedby={description ? descriptionId : undefined}
         className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-surface-raised shadow-float md:h-auto md:max-h-[calc(100dvh-2.5rem)] md:max-w-4xl md:rounded-3xl md:border md:border-line lg:max-w-5xl"
       >
-        <header className="shrink-0 border-b border-line bg-surface-raised px-5 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-7 md:pt-6">
+        <header inert={confirmDiscard} className="shrink-0 border-b border-line bg-surface-raised px-5 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-7 md:pt-6">
           <div className="flex items-start gap-4">
             <div className="min-w-0 flex-1">
               {context ? <div className="mb-2 text-sm text-ink-muted">{context}</div> : null}
@@ -139,14 +189,17 @@ export function FocusedWorkspace({
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 md:py-7">
+        <div inert={confirmDiscard} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 md:py-7">
           <div className="mx-auto w-full max-w-3xl">{children}</div>
         </div>
 
         {confirmDiscard ? (
           <div
+            ref={discardRef}
             role="alertdialog"
+            aria-modal="true"
             aria-labelledby={`${titleId}-discard`}
+            aria-describedby={`${titleId}-discard-description`}
             className="shrink-0 border-t border-warning/30 bg-warning-soft px-5 py-4 sm:px-7"
           >
             <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -154,10 +207,10 @@ export function FocusedWorkspace({
                 <p id={`${titleId}-discard`} className="font-semibold text-ink">
                   Discard unsaved changes?
                 </p>
-                <p className="mt-1 text-sm text-ink-muted">Your last saved version will remain unchanged.</p>
+                <p id={`${titleId}-discard-description`} className="mt-1 text-sm text-ink-muted">Your last saved version will remain unchanged.</p>
               </div>
               <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                <Button ref={keepEditingRef} variant="secondary" onClick={() => setConfirmDiscard(false)}>
+                <Button ref={keepEditingRef} variant="secondary" onClick={keepEditing}>
                   Keep editing
                 </Button>
                 <Button variant="danger" onClick={onClose}>Discard changes</Button>
@@ -166,7 +219,9 @@ export function FocusedWorkspace({
           </div>
         ) : footer ? (
           <footer className="shrink-0 border-t border-line bg-surface px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-7">
-            <div className="mx-auto w-full max-w-3xl">{footer}</div>
+            <div className="mx-auto w-full max-w-3xl">
+              {typeof footer === "function" ? footer(requestClose) : footer}
+            </div>
           </footer>
         ) : null}
       </section>

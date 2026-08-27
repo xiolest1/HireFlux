@@ -5,9 +5,11 @@ from typing import Any
 from botocore.exceptions import ClientError
 
 from hireflux_backend.application.errors import ConflictError, InvalidCursorError, PersistenceError
+from hireflux_backend.application.opportunity_workspace import OpportunityContext
 from hireflux_backend.application.resource_ports import NotePreview, ResourcePage
+from hireflux_backend.domain.interview_guidance import guidance_for
 from hireflux_backend.domain.models import Activity
-from hireflux_backend.domain.resources import Interview, Note, WorkspaceSettings
+from hireflux_backend.domain.resources import Interview, InterviewStatus, Note, WorkspaceSettings
 from hireflux_backend.infrastructure.dynamodb.cursor import CursorCodec
 from hireflux_backend.infrastructure.dynamodb.mapping import (
     activity_to_item,
@@ -23,7 +25,11 @@ from hireflux_backend.infrastructure.dynamodb.resource_mapping import (
     note_from_item,
     note_key,
     note_to_item,
+    opportunity_context_from_item,
+    opportunity_context_key,
+    opportunity_context_to_item,
     owner_interviews_key,
+    owner_opportunity_context_key,
     owner_schedule_key,
     settings_from_item,
     settings_key,
@@ -338,6 +344,33 @@ class DynamoWorkspaceResourceRepository:
             next_cursor=next_cursor,
         )
 
+    def list_opportunity_contexts(self, owner_user_id: str) -> tuple[OpportunityContext, ...]:
+        items: list[OpportunityContext] = []
+        exclusive_start_key: dict[str, Any] | None = None
+        try:
+            while True:
+                arguments: dict[str, Any] = {
+                    "TableName": self._table_name,
+                    "IndexName": GSI1_NAME,
+                    "KeyConditionExpression": "GSI1PK = :partition",
+                    "ExpressionAttributeValues": serialize_item(
+                        {":partition": owner_opportunity_context_key(owner_user_id)}
+                    ),
+                }
+                if exclusive_start_key is not None:
+                    arguments["ExclusiveStartKey"] = exclusive_start_key
+                response = self._client.query(**arguments)
+                items.extend(
+                    opportunity_context_from_item(deserialize_item(item))
+                    for item in response.get("Items", [])
+                )
+                exclusive_start_key = response.get("LastEvaluatedKey")
+                if not exclusive_start_key:
+                    break
+        except ClientError as error:
+            raise PersistenceError("Unable to load opportunity context.") from error
+        return tuple(items)
+
     def replace_interview(
         self, interview: Interview, *, expected_version: int, activity: Activity
     ) -> None:
@@ -358,43 +391,46 @@ class DynamoWorkspaceResourceRepository:
         resource_name: str,
     ) -> None:
         try:
-            self._client.transact_write_items(
-                TransactItems=[
-                    {
-                        "ConditionCheck": {
-                            "TableName": self._table_name,
-                            "Key": serialize_item(
-                                {
-                                    "PK": application_partition(owner_user_id, application_id),
-                                    "SK": "METADATA",
-                                }
-                            ),
-                            "ConditionExpression": "attribute_exists(PK)",
-                        }
-                    },
-                    {
-                        "Put": {
-                            "TableName": self._table_name,
-                            "Item": serialize_item(item),
-                            "ConditionExpression": (
-                                "attribute_not_exists(PK) AND attribute_not_exists(SK)"
-                            ),
-                        }
-                    },
-                    resource_quota_update(
-                        self._table_name,
-                        owner_user_id=owner_user_id,
-                        application_id=application_id,
-                        expires_at=item.get("expires_at"),
-                        max_activity=self._max_activity,
-                        note_limit=self._max_notes if resource_name == "note" else None,
-                        interview_limit=(
-                            self._max_interviews if resource_name == "interview" else None
+            transaction_items: list[dict[str, Any]] = [
+                {
+                    "ConditionCheck": {
+                        "TableName": self._table_name,
+                        "Key": serialize_item(
+                            {
+                                "PK": application_partition(owner_user_id, application_id),
+                                "SK": "METADATA",
+                            }
                         ),
+                        "ConditionExpression": "attribute_exists(PK)",
+                    }
+                },
+                {
+                    "Put": {
+                        "TableName": self._table_name,
+                        "Item": serialize_item(item),
+                        "ConditionExpression": (
+                            "attribute_not_exists(PK) AND attribute_not_exists(SK)"
+                        ),
+                    }
+                },
+                resource_quota_update(
+                    self._table_name,
+                    owner_user_id=owner_user_id,
+                    application_id=application_id,
+                    expires_at=item.get("expires_at"),
+                    max_activity=self._max_activity,
+                    note_limit=self._max_notes if resource_name == "note" else None,
+                    interview_limit=(
+                        self._max_interviews if resource_name == "interview" else None
                     ),
-                    self._activity_put(activity),
-                ]
-            )
+                ),
+                self._activity_put(activity),
+            ]
+            if resource_name == "interview":
+                transaction_items.append(
+                    self._opportunity_context_write(interview_from_item(item), replacing=False)
+                )
+            self._client.transact_write_items(TransactItems=transaction_items)
         except ClientError as error:
             if _error_code(error) == "TransactionCanceledException":
                 raise ConflictError(
@@ -411,33 +447,36 @@ class DynamoWorkspaceResourceRepository:
         resource_name: str,
     ) -> None:
         try:
-            self._client.transact_write_items(
-                TransactItems=[
-                    {
-                        "Put": {
-                            "TableName": self._table_name,
-                            "Item": serialize_item(item),
-                            "ConditionExpression": (
-                                "attribute_exists(PK) AND #version = :expected_version"
-                            ),
-                            "ExpressionAttributeNames": {"#version": "version"},
-                            "ExpressionAttributeValues": serialize_item(
-                                {":expected_version": expected_version}
-                            ),
-                        }
-                    },
-                    resource_quota_update(
-                        self._table_name,
-                        owner_user_id=str(item["owner_user_id"]),
-                        application_id=str(item["application_id"]),
-                        expires_at=(
-                            int(item["expires_at"]) if item.get("expires_at") is not None else None
+            transaction_items: list[dict[str, Any]] = [
+                {
+                    "Put": {
+                        "TableName": self._table_name,
+                        "Item": serialize_item(item),
+                        "ConditionExpression": (
+                            "attribute_exists(PK) AND #version = :expected_version"
                         ),
-                        max_activity=self._max_activity,
+                        "ExpressionAttributeNames": {"#version": "version"},
+                        "ExpressionAttributeValues": serialize_item(
+                            {":expected_version": expected_version}
+                        ),
+                    }
+                },
+                resource_quota_update(
+                    self._table_name,
+                    owner_user_id=str(item["owner_user_id"]),
+                    application_id=str(item["application_id"]),
+                    expires_at=(
+                        int(item["expires_at"]) if item.get("expires_at") is not None else None
                     ),
-                    self._activity_put(activity),
-                ]
-            )
+                    max_activity=self._max_activity,
+                ),
+                self._activity_put(activity),
+            ]
+            if resource_name == "interview":
+                transaction_items.append(
+                    self._opportunity_context_write(interview_from_item(item), replacing=True)
+                )
+            self._client.transact_write_items(TransactItems=transaction_items)
         except ClientError as error:
             if _error_code(error) == "TransactionCanceledException":
                 raise ConflictError(
@@ -514,6 +553,105 @@ class DynamoWorkspaceResourceRepository:
                 "ConditionExpression": "attribute_not_exists(PK) AND attribute_not_exists(SK)",
             }
         }
+
+    def _opportunity_context_write(self, proposed: Interview, *, replacing: bool) -> dict[str, Any]:
+        interviews: list[Interview] = []
+        exclusive_start_key: dict[str, Any] | None = None
+        while len(interviews) < self._max_interviews:
+            arguments: dict[str, Any] = {
+                "TableName": self._table_name,
+                "KeyConditionExpression": "PK = :partition AND begins_with(SK, :prefix)",
+                "ExpressionAttributeValues": serialize_item(
+                    {
+                        ":partition": application_partition(
+                            proposed.owner_user_id, proposed.application_id
+                        ),
+                        ":prefix": "INTERVIEW#",
+                    }
+                ),
+                "Limit": min(100, self._max_interviews - len(interviews)),
+            }
+            if exclusive_start_key is not None:
+                arguments["ExclusiveStartKey"] = exclusive_start_key
+            response = self._client.query(**arguments)
+            interviews.extend(
+                interview_from_item(deserialize_item(item)) for item in response.get("Items", [])
+            )
+            exclusive_start_key = response.get("LastEvaluatedKey")
+            if not exclusive_start_key:
+                break
+        if replacing:
+            interviews = [
+                interview
+                for interview in interviews
+                if interview.interview_id != proposed.interview_id
+            ]
+        interviews.append(proposed)
+
+        key = opportunity_context_key(proposed.owner_user_id, proposed.application_id)
+        current_response = self._client.get_item(
+            TableName=self._table_name,
+            Key=serialize_item(key),
+            ConsistentRead=True,
+        )
+        current_item = current_response.get("Item")
+        current = (
+            opportunity_context_from_item(deserialize_item(current_item)) if current_item else None
+        )
+        scheduled = sorted(
+            (
+                interview
+                for interview in interviews
+                if interview.status is InterviewStatus.SCHEDULED
+            ),
+            key=lambda interview: (interview.scheduled_at, interview.interview_id),
+        )
+        if not scheduled:
+            delete: dict[str, Any] = {
+                "TableName": self._table_name,
+                "Key": serialize_item(key),
+            }
+            if current is not None:
+                delete.update(
+                    {
+                        "ConditionExpression": "#version = :expected_projection_version",
+                        "ExpressionAttributeNames": {"#version": "version"},
+                        "ExpressionAttributeValues": serialize_item(
+                            {":expected_projection_version": current.version}
+                        ),
+                    }
+                )
+            return {"Delete": delete}
+
+        next_interview = scheduled[0]
+        context = OpportunityContext(
+            application_id=proposed.application_id,
+            owner_user_id=proposed.owner_user_id,
+            next_interview_id=next_interview.interview_id,
+            scheduled_at=next_interview.scheduled_at,
+            preparation_essentials_complete=guidance_for(
+                next_interview
+            ).progress.essentials.complete,
+            version=(current.version + 1 if current else 1),
+            expires_at=proposed.expires_at,
+        )
+        put: dict[str, Any] = {
+            "TableName": self._table_name,
+            "Item": serialize_item(opportunity_context_to_item(context)),
+        }
+        if current is None:
+            put["ConditionExpression"] = "attribute_not_exists(PK) AND attribute_not_exists(SK)"
+        else:
+            put.update(
+                {
+                    "ConditionExpression": "#version = :expected_projection_version",
+                    "ExpressionAttributeNames": {"#version": "version"},
+                    "ExpressionAttributeValues": serialize_item(
+                        {":expected_projection_version": current.version}
+                    ),
+                }
+            )
+        return {"Put": put}
 
 
 def _error_code(error: ClientError) -> str:

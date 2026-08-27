@@ -255,6 +255,12 @@ export function InterviewFocusedWorkspace({
           (value) => value !== itemId,
         ),
       }));
+      setSavedDraft((current) => ({
+        ...current,
+        completed_checklist_items: current.completed_checklist_items.filter(
+          (value) => value !== itemId,
+        ),
+      }));
     } catch {
       return;
     }
@@ -339,9 +345,9 @@ export function InterviewFocusedWorkspace({
       }
       context={`${currentInterview.company_name} · ${currentInterview.job_title}`}
       description="Private to your HireFlux workspace."
-      footer={
+      footer={(requestClose) =>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
+          <Button type="button" variant="secondary" onClick={requestClose}>Close</Button>
           {mode === "REVIEW" ? (
             <Button
               ref={editReflectionRef}
@@ -601,7 +607,7 @@ function PreparationHistory({ interview }: { interview: Interview }) {
       <summary
         className={`flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-semibold text-ink marker:hidden ${focusClassName}`}
       >
-        <span>Preparation record</span>
+        <span>Historical preparation</span>
         <ChevronDown
           aria-hidden="true"
           className="size-4 text-ink-muted transition-transform group-open:rotate-180"
@@ -612,19 +618,37 @@ function PreparationHistory({ interview }: { interview: Interview }) {
           Preparation is preserved as a read-only historical record after the
           interview is completed.
         </p>
-        <ul className="space-y-2">
-          {interview.guidance.checklist_items.map((item) => (
-            <li key={item.item_id} className="flex items-start gap-2 text-sm">
-              <span className="mt-0.5 font-bold text-ink-muted" aria-hidden="true">
-                {item.completed ? "✓" : "–"}
-              </span>
-              <span className="text-ink">{item.label}</span>
-              <span className="sr-only">
-                {item.completed ? "Completed" : "Not completed"}
-              </span>
-            </li>
-          ))}
-        </ul>
+        {(["ESSENTIAL", "ADDITIONAL", "CANDIDATE"] as const).map((category) => {
+          const items = interview.guidance.checklist_items.filter(
+            (item) => item.category === category,
+          );
+          if (!items.length) return null;
+          const label = category === "ESSENTIAL"
+            ? "Essentials"
+            : category === "ADDITIONAL"
+              ? "Additional preparation"
+              : "Personal preparation";
+          return (
+            <section key={category} aria-label={label}>
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-ink-muted">
+                {label}
+              </h4>
+              <ul className="space-y-2">
+                {items.map((item) => (
+                  <li key={item.item_id} className="flex items-start gap-2 text-sm">
+                    <span className="mt-0.5 font-bold text-ink-muted" aria-hidden="true">
+                      {item.completed ? "✓" : "–"}
+                    </span>
+                    <span className="text-ink">{item.label}</span>
+                    <span className="sr-only">
+                      {item.completed ? "Completed" : "Not completed"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
         {interview.preparation_notes ? (
           <div>
             <h4 className="text-sm font-semibold text-ink">Preparation notes</h4>

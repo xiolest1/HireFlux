@@ -67,6 +67,7 @@ class CreateInterviewCommand:
     location: str | None = None
     meeting_url: str | None = None
     details: str | None = None
+    trusted_seed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -368,6 +369,8 @@ class WorkspaceResourceService:
         command: CreateInterviewCommand,
     ) -> Interview:
         application = self._require_application(identity, application_id)
+        if application.status not in ACTIVE_APPLICATION_STATUSES and not command.trusted_seed:
+            raise ConflictError("Interviews can only be scheduled for active applications.")
         scheduled_at = _aware_utc(command.scheduled_at)
         now = self._aware_utc_now()
         interview = Interview(
@@ -892,6 +895,12 @@ def _interview_context(
     if interview.status is InterviewStatus.CANCELED:
         workflow_state: InterviewWorkflowState = "CANCELED"
         next_action: InterviewNextAction = "OPEN_APPLICATION"
+    elif (
+        interview.status is InterviewStatus.SCHEDULED
+        and application.status not in ACTIVE_APPLICATION_STATUSES
+    ):
+        workflow_state = "HISTORY"
+        next_action = "OPEN_APPLICATION"
     elif interview.status is InterviewStatus.SCHEDULED and interview.scheduled_at < now:
         workflow_state = "MISSED"
         next_action = "MARK_COMPLETE"

@@ -1,11 +1,6 @@
 import {
-  ArrowUpRight,
   Check,
   ChevronDown,
-  CircleAlert,
-  LayoutGrid,
-  List,
-  MapPin,
   Search,
   SlidersHorizontal,
   X,
@@ -35,26 +30,26 @@ import {
   ErrorPanel,
   SuccessBanner,
 } from "../components/ui/Feedback";
-import { StatusBadge } from "../components/ui/StatusBadge";
 import { Drawer } from "../components/ui/Drawer";
-import { ApplicationCard } from "../features/applications/ApplicationCard";
 import { ApplicationListSkeleton } from "../features/applications/ApplicationSkeletons";
 import {
-  applicationCreateRouteState,
   readApplicationCreatedRouteState,
 } from "../features/applications/createNavigation";
 import {
-  formatDateOnly,
   formatStageAge,
   formatSource,
   formatStatus,
-  formatTimestamp,
   formatWorkMode,
 } from "../features/applications/format";
-import { useApplications } from "../features/applications/queries";
+import {
+  FlatOpportunityRow,
+  OpportunityWorkspace,
+} from "../features/applications/OpportunityWorkspace";
+import {
+  useApplications,
+  useOpportunityWorkspace,
+} from "../features/applications/queries";
 import { useSettings } from "../features/resources/queries";
-
-type ApplicationLayout = "cards" | "list";
 
 interface FilterDraft {
   status: string;
@@ -130,8 +125,6 @@ export function ApplicationListPage() {
     (status ? viewForStatus(status) : undefined) ??
     settingsQuery.data?.default_application_view ??
     "ACTIVE";
-  const layout: ApplicationLayout =
-    searchParams.get("layout") === "list" ? "list" : "cards";
   const q = (searchParams.get("q") ?? "").slice(0, 120);
   const source = optionFromSearchParam(
     searchParams.get("source"),
@@ -154,6 +147,15 @@ export function ApplicationListPage() {
   const sort =
     optionFromSearchParam(searchParams.get("sort"), APPLICATION_SORTS) ??
     "updated_desc";
+  const groupedActiveMode =
+    applicationView === "ACTIVE" &&
+    !q &&
+    !status &&
+    !source &&
+    !workMode &&
+    !stageAge &&
+    !followUp &&
+    !searchParams.has("sort");
   const [searchDraft, setSearchDraft] = useState(q);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterDraft, setFilterDraft] = useState<FilterDraft>({
@@ -167,6 +169,23 @@ export function ApplicationListPage() {
   const [activeFiltersExpanded, setActiveFiltersExpanded] = useState(false);
 
   useEffect(() => setSearchDraft(q), [q]);
+  useEffect(() => {
+    if (!searchParams.has("layout")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("layout");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+  useEffect(() => {
+    const value = searchDraft.trim();
+    if (value === q) return;
+    const timer = window.setTimeout(() => {
+      const next = new URLSearchParams(searchParams);
+      if (value) next.set("q", value);
+      else next.delete("q");
+      setSearchParams(next, { replace: true });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [q, searchDraft, searchParams, setSearchParams]);
   useEffect(() => {
     if ((!requestedStageAge && !requestedFollowUp) || applicationView === "ACTIVE") return;
     const next = new URLSearchParams(searchParams);
@@ -183,7 +202,8 @@ export function ApplicationListPage() {
     followUp,
     sort,
     view: applicationView,
-  });
+  }, !groupedActiveMode);
+  const workspaceQuery = useOpportunityWorkspace(4, groupedActiveMode);
   const applications = deduplicateApplications(
     applicationsQuery.data?.pages.flatMap((page) => page.items) ?? [],
   );
@@ -203,7 +223,13 @@ export function ApplicationListPage() {
 
   useEffect(() => {
     if (location.state) {
-      void navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+      const normalized = new URLSearchParams(location.search);
+      normalized.delete("layout");
+      const normalizedSearch = normalized.toString();
+      void navigate(
+        `${location.pathname}${normalizedSearch ? `?${normalizedSearch}` : ""}`,
+        { replace: true, state: null },
+      );
     }
     if (!highlightedApplicationId) return;
     const timer = window.setTimeout(() => setHighlightedApplicationId(undefined), 5_000);
@@ -227,13 +253,6 @@ export function ApplicationListPage() {
         next.delete("stage_age");
         next.delete("follow_up");
       }
-    });
-  }
-
-  function setLayout(value: ApplicationLayout) {
-    updateSearchParams((next) => {
-      if (value === "cards") next.delete("layout");
-      else next.set("layout", value);
     });
   }
 
@@ -326,8 +345,8 @@ export function ApplicationListPage() {
 
   function submitSearch(event: FormEvent) {
     event.preventDefault();
+    const value = searchDraft.trim();
     updateSearchParams((next) => {
-      const value = searchDraft.trim();
       if (value) next.set("q", value);
       else next.delete("q");
     });
@@ -371,7 +390,7 @@ export function ApplicationListPage() {
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div>
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.16em] text-accent">
             Opportunity workspace
@@ -383,13 +402,6 @@ export function ApplicationListPage() {
             Find the next action quickly, then keep every opportunity moving.
           </p>
         </div>
-        <Link
-          to="/applications/new"
-          state={applicationCreateRouteState("applications", location.pathname, location.search)}
-          className={buttonClassName("primary")}
-        >
-          New application
-        </Link>
       </div>
 
       <nav
@@ -425,7 +437,7 @@ export function ApplicationListPage() {
         </h2>
         <div className="flex flex-col gap-3 md:flex-row md:items-end">
           <form
-            className="flex min-w-0 flex-1 gap-2"
+            className="min-w-0 flex-1"
             onSubmit={submitSearch}
             role="search"
           >
@@ -452,30 +464,9 @@ export function ApplicationListPage() {
                 />
               </div>
             </div>
-            <button
-              type="submit"
-              className="min-h-11 self-end rounded-xl bg-accent-strong px-4 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent"
-            >
-              Search
-            </button>
           </form>
 
           <div className="flex flex-wrap gap-2">
-            {applicationView === "ACTIVE" ? (
-              <button
-                type="button"
-                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  followUp === "NEEDS_ATTENTION"
-                    ? "border-accent bg-accent-soft text-accent"
-                    : "border-line-strong bg-surface-raised text-ink hover:border-accent/50 hover:text-accent"
-                }`}
-                aria-pressed={followUp === "NEEDS_ATTENTION"}
-                onClick={() => openFilters({ followUp: "NEEDS_ATTENTION" })}
-              >
-                <CircleAlert aria-hidden="true" className="size-4" />
-                Needs attention
-              </button>
-            ) : null}
             <button
               type="button"
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface-raised px-4 text-sm font-semibold text-ink transition-colors hover:border-accent/50 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -532,14 +523,43 @@ export function ApplicationListPage() {
       </section>
 
       <div className="mt-6">
-        {applicationsQuery.isPending ? (
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          {groupedActiveMode
+            ? workspaceQuery.isFetching && workspaceQuery.data
+              ? "Updating opportunities."
+              : workspaceQuery.data
+                ? `${Object.values(workspaceQuery.data.groups).reduce((total, group) => total + group.total_count, 0)} active opportunities loaded.`
+                : ""
+            : applicationsQuery.isFetching && applications.length
+              ? "Updating application results."
+              : `${applications.length} application results loaded.`}
+        </p>
+        {groupedActiveMode && workspaceQuery.isPending ? (
+          <ApplicationListSkeleton />
+        ) : groupedActiveMode && workspaceQuery.isError ? (
+          <ErrorPanel
+            error={workspaceQuery.error}
+            title="Opportunity workspace could not be loaded"
+            onRetry={() => void workspaceQuery.refetch()}
+          />
+        ) : groupedActiveMode && workspaceQuery.data ? (
+          Object.values(workspaceQuery.data.groups).every((group) => group.total_count === 0) ? (
+            <EmptyState
+              title="No active applications"
+              description="Add an application from the main navigation, or review your complete application history."
+              action={<button type="button" className={buttonClassName("secondary")} onClick={() => setApplicationView("ALL")}>View all applications</button>}
+            />
+          ) : (
+            <OpportunityWorkspace
+              workspace={workspaceQuery.data}
+              timeZone={timeZone}
+              highlightedApplicationId={highlightedApplicationId}
+            />
+          )
+        ) : applicationsQuery.isPending ? (
           <ApplicationListSkeleton />
         ) : applicationsQuery.isError && applications.length === 0 ? (
-          <ErrorPanel
-            error={applicationsQuery.error}
-            title="Applications could not be loaded"
-            onRetry={() => void applicationsQuery.refetch()}
-          />
+          <ErrorPanel error={applicationsQuery.error} title="Applications could not be loaded" onRetry={() => void applicationsQuery.refetch()} />
         ) : applications.length === 0 ? (
           <EmptyState
             title={hasFilters ? "No applications match these filters" : "No applications yet"}
@@ -550,8 +570,7 @@ export function ApplicationListPage() {
                   ? "Archived opportunities will stay safely available here."
                   : "Add your first opportunity to start building a clear application history."
             }
-            action={
-              hasFilters ? (
+            action={hasFilters ? (
                 <button
                   type="button"
                   className={buttonClassName("secondary")}
@@ -559,21 +578,12 @@ export function ApplicationListPage() {
                 >
                   Clear filters
                 </button>
-              ) : (
-                <Link
-                  to="/applications/new"
-                  state={applicationCreateRouteState("applications", location.pathname, location.search)}
-                  className={buttonClassName("primary")}
-                >
-                  Create your first application
-                </Link>
-              )
-            }
+              ) : undefined}
           />
         ) : (
           <>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-ink-muted" aria-live="polite">
+              <p className="text-sm text-ink-muted">
                 <span className="font-semibold text-ink">{applications.length}</span>{" "}
                 {applications.length === 1 ? "application" : "applications"} loaded
                 {applicationsQuery.isFetching &&
@@ -581,57 +591,21 @@ export function ApplicationListPage() {
                   <span className="ml-2 text-accent">Refreshing…</span>
                 ) : null}
               </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="hidden items-center gap-2 lg:flex">
+              <div className="hidden items-center gap-2 lg:flex">
                   <span aria-hidden="true" className="text-xs font-bold uppercase tracking-wide text-ink-muted">
                     Sort by
                   </span>
                   <SortSelect id="desktop-application-sort" value={sort} onChange={setSort} />
-                </div>
-                <div
-                  className="hidden items-center rounded-xl border border-line bg-surface-muted p-1 md:flex"
-                  role="group"
-                  aria-label="Application layout"
-                >
-                  <LayoutButton
-                    selected={layout === "cards"}
-                    label="Card view"
-                    onClick={() => setLayout("cards")}
-                  >
-                    <LayoutGrid aria-hidden="true" className="size-4" />
-                  </LayoutButton>
-                  <LayoutButton
-                    selected={layout === "list"}
-                    label="List view"
-                    onClick={() => setLayout("list")}
-                  >
-                    <List aria-hidden="true" className="size-4" />
-                  </LayoutButton>
-                </div>
               </div>
             </div>
 
-            <div className={layout === "list" ? "md:hidden" : ""}>
-              <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="rounded-2xl border border-line bg-surface px-4 shadow-sm sm:px-5">
+              <ul>
                 {applications.map((application) => (
-                  <li className="min-w-0" key={application.application_id}>
-                    <ApplicationCard
-                      application={application}
-                      timeZone={timeZone}
-                      isHighlighted={application.application_id === highlightedApplicationId}
-                    />
-                  </li>
+                  <FlatOpportunityRow key={application.application_id} application={application} highlighted={application.application_id === highlightedApplicationId} />
                 ))}
               </ul>
             </div>
-
-            {layout === "list" ? (
-              <ApplicationTable
-                applications={applications}
-                timeZone={timeZone}
-                highlightedApplicationId={highlightedApplicationId}
-              />
-            ) : null}
 
             {applicationsQuery.isFetchNextPageError ? (
               <div className="mt-5">
@@ -683,35 +657,6 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
     >
       <span className="truncate">{label}</span>
       <X aria-hidden="true" className="size-3.5 shrink-0" />
-    </button>
-  );
-}
-
-function LayoutButton({
-  selected,
-  label,
-  onClick,
-  children,
-}: {
-  selected: boolean;
-  label: string;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      aria-label={label}
-      className={`inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors ${
-        selected
-          ? "bg-surface-raised text-accent shadow-sm"
-          : "text-ink-muted hover:text-ink"
-      }`}
-      onClick={onClick}
-    >
-      {children}
-      <span>{label.replace(" view", "")}</span>
     </button>
   );
 }
@@ -904,78 +849,6 @@ function SortSelect({
       <option value="updated_desc">Recently updated</option>
       <option value="updated_asc">Least recently updated</option>
     </select>
-  );
-}
-
-function ApplicationTable({
-  applications,
-  timeZone,
-  highlightedApplicationId,
-}: {
-  applications: Application[];
-  timeZone: string;
-  highlightedApplicationId?: string;
-}) {
-  return (
-    <div className="hidden overflow-x-auto rounded-2xl border border-line bg-surface shadow-panel md:block">
-      <table className="w-full border-collapse text-left text-sm">
-        <caption className="sr-only">Applications in compact list view</caption>
-        <thead className="bg-surface-muted text-xs uppercase tracking-wide text-ink-muted">
-          <tr>
-            <th scope="col" className="px-4 py-3 font-semibold">Opportunity</th>
-            <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-            <th scope="col" className="px-4 py-3 font-semibold">Next step</th>
-            <th scope="col" className="px-4 py-3 font-semibold">Applied</th>
-            <th scope="col" className="px-4 py-3 font-semibold">Updated</th>
-            <th scope="col" className="px-4 py-3"><span className="sr-only">Actions</span></th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-line">
-          {applications.map((application) => (
-            <tr key={application.application_id} className={`transition-colors hover:bg-surface-muted focus-within:bg-surface-muted ${application.application_id === highlightedApplicationId ? "bg-accent-soft ring-1 ring-inset ring-accent/30" : ""}`}>
-              <th scope="row" className="min-w-56 px-4 py-4 font-normal">
-                <Link
-                  to={`/applications/${application.application_id}`}
-                  className="font-semibold text-ink hover:text-accent hover:underline"
-                >
-                  {application.job_title}
-                </Link>
-                <p className="mt-1 text-ink-muted">{application.company_name}</p>
-                {application.location || application.work_mode ? (
-                  <p className="mt-1 flex items-center gap-1 text-xs text-ink-muted">
-                    <MapPin aria-hidden="true" className="size-3.5" />
-                    {[application.location, application.work_mode ? formatWorkMode(application.work_mode) : null].filter(Boolean).join(" · ")}
-                  </p>
-                ) : null}
-              </th>
-              <td className="whitespace-nowrap px-4 py-4"><StatusBadge status={application.status} /></td>
-              <td className="max-w-56 px-4 py-4 text-ink">{application.next_step_responsibility === "CANDIDATE"
-                ? application.next_step_note ?? "Candidate action"
-                : application.next_step_responsibility === "EMPLOYER"
-                  ? application.follow_up_date
-                    ? `Waiting · check back ${formatDateOnly(application.follow_up_date)}`
-                    : "Waiting for employer"
-                  : application.next_step_responsibility === "NONE"
-                    ? "No current action"
-                    : application.follow_up_date
-                      ? `Check back ${formatDateOnly(application.follow_up_date)}`
-                      : "Not reviewed"}</td>
-              <td className="whitespace-nowrap px-4 py-4 text-ink-muted">{formatDateOnly(application.applied_date)}</td>
-              <td className="whitespace-nowrap px-4 py-4 text-ink-muted">{formatTimestamp(application.updated_at, timeZone)}</td>
-              <td className="px-4 py-4 text-right">
-                <Link
-                  to={`/applications/${application.application_id}`}
-                  aria-label={`Manage ${application.job_title} application`}
-                  className="inline-flex min-h-10 items-center gap-1 rounded-lg px-3 font-semibold text-accent hover:bg-accent-soft"
-                >
-                  Manage <ArrowUpRight aria-hidden="true" className="size-4" />
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 

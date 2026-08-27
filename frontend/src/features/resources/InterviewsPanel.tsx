@@ -250,7 +250,7 @@ export function InterviewsPanel({
                       className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-violet-soft px-3 text-sm font-semibold text-violet hover:bg-violet/15"
                     >
                       <Sparkles aria-hidden="true" className="size-3.5" />
-                      {interview.status === "COMPLETED" ? "Debrief" : "Prepare"}
+                      {interview.status === "COMPLETED" ? "Reflection" : "Prepare"}
                     </Link>
                     {interview.status === "SCHEDULED" ? <>
                     <button
@@ -376,6 +376,7 @@ export function InterviewsPanel({
           open
           application={{ application_id: applicationId, company_name: companyName, job_title: jobTitle }}
           editing={editing}
+          timeZone={timeZone}
           isSaving={createMutation.isPending || updateMutation.isPending}
           error={createMutation.error ?? updateMutation.error}
           onClose={closeForm}

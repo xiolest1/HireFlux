@@ -1497,6 +1497,88 @@ describe("workspace milestone features", () => {
     );
   });
 
+  it("resolves a requested interview beyond the first workspace page without selecting another record", async () => {
+    const requested = makeWorkspaceInterview({
+      interview_id: "99999999-9999-4999-8999-999999999999",
+      company_name: "Deep Link Company",
+    });
+    const cursors: Array<string | null> = [];
+    server.use(
+      ...interviewContextHandlers([makeWorkspaceInterview(), requested]),
+      http.get(`${API_ORIGIN}/api/v1/interviews`, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("cursor");
+        cursors.push(cursor);
+        return cursor
+          ? HttpResponse.json({ items: [requested], next_cursor: null })
+          : HttpResponse.json({
+              items: [makeWorkspaceInterview()],
+              next_cursor: "next-interview-page",
+            });
+      }),
+    );
+
+    renderApp(`/interviews?interview=${requested.interview_id}`);
+    expect(await screen.findByText("Finding the requested interview…")).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { name: "Deep Link Company" }),
+    ).toBeVisible();
+    expect(cursors).toEqual([null, "next-interview-page"]);
+    expect(
+      screen.getByRole("button", { name: /Deep Link Company/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("shows an explicit not-found state instead of replacing an invalid deep link", async () => {
+    server.use(
+      ...interviewContextHandlers(),
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+        HttpResponse.json({ items: [makeWorkspaceInterview()], next_cursor: null }),
+      ),
+    );
+
+    renderApp("/interviews?interview=99999999-9999-4999-8999-999999999998");
+    expect(
+      await screen.findByRole("heading", { name: "Interview not found" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "Northstar Labs" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open current interview" }),
+    ).toBeVisible();
+  });
+
+  it("discovers active scheduling applications beyond the first chooser page", async () => {
+    const first = makeApplication({ company_name: "First Page Company" });
+    const later = makeApplication({
+      application_id: "88888888-8888-4888-8888-888888888888",
+      company_name: "Beyond Page Twenty Five",
+      job_title: "Operations Manager",
+    });
+    const cursors: Array<string | null> = [];
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+        HttpResponse.json({ items: [], next_cursor: null }),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("cursor");
+        cursors.push(cursor);
+        return cursor
+          ? HttpResponse.json({ items: [later], next_cursor: null })
+          : HttpResponse.json({ items: [first], next_cursor: "next-application-page" });
+      }),
+    );
+
+    const { user } = renderApp("/interviews");
+    await user.click(await screen.findByRole("button", { name: "Schedule interview" }));
+    expect(screen.queryByText("Beyond Page Twenty Five")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Load more applications" }));
+    expect(await screen.findByText("Beyond Page Twenty Five")).toBeVisible();
+    expect(cursors).toEqual([null, "next-application-page"]);
+    await user.click(screen.getByRole("button", { name: /Beyond Page Twenty Five/ }));
+    expect(screen.getByText(/Beyond Page Twenty Five · Operations Manager/)).toBeVisible();
+  });
+
   it("groups interviews by lifecycle state and switches the selected workspace", async () => {
     const today = new Date();
     today.setUTCHours(15, 0, 0, 0);
@@ -1574,6 +1656,11 @@ describe("workspace milestone features", () => {
     expect(
       screen.getAllByRole("button", { name: "Continue preparation" })[0],
     ).toBeVisible();
+    expect(screen.getByText("Research the company and role")).toBeVisible();
+    expect(screen.getByText("Review technical evidence")).not.toBeVisible();
+    await user.click(screen.getByText("More preparation"));
+    expect(screen.getByRole("region", { name: "Additional preparation" })).toBeVisible();
+    expect(screen.getByText("Review technical evidence")).toBeVisible();
     expect(await screen.findByText("Round 2 of 2")).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "Interview process" }),
@@ -1685,6 +1772,146 @@ describe("workspace milestone features", () => {
     ).toBeVisible();
   });
 
+  it("rebases a persisted custom-task deletion without creating a false dirty state", async () => {
+    const itemId = "77777777-7777-4777-8777-777777777777";
+    const customItem = {
+      item_id: itemId,
+      label: "Bring schedule notes",
+      description: "Added by you for this interview.",
+      phase: "PREPARE" as const,
+      source: "CANDIDATE" as const,
+      source_label: "Added by you",
+      category: "CANDIDATE" as const,
+      outcome_id: null,
+      removable: true,
+      completed: true,
+    };
+    const selectedRound = makeWorkspaceInterview({
+      completed_checklist_items: [itemId],
+      custom_preparation_items: [customItem],
+      guidance: {
+        ...makeInterview().guidance,
+        checklist_items: [...makeInterview().guidance.checklist_items, customItem],
+        progress: {
+          ...makeInterview().guidance.progress,
+          candidate: { completed: 1, total: 1 },
+        },
+      },
+    });
+    server.use(
+      ...interviewContextHandlers([selectedRound]),
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+        HttpResponse.json({ items: [selectedRound], next_cursor: null }),
+      ),
+      http.delete(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/interviews/:interviewId/preparation-items/:itemId`,
+        () => HttpResponse.json(makeInterview({
+          ...selectedRound,
+          version: 2,
+          completed_checklist_items: [],
+          custom_preparation_items: [],
+          guidance: {
+            ...selectedRound.guidance,
+            checklist_items: selectedRound.guidance.checklist_items.filter(
+              (item) => item.item_id !== itemId,
+            ),
+            progress: {
+              ...selectedRound.guidance.progress,
+              candidate: { completed: 0, total: 0 },
+            },
+          },
+        })),
+      ),
+    );
+
+    const { user } = renderApp("/interviews");
+    await user.click((await screen.findAllByRole("button", { name: "Continue preparation" }))[0]);
+    await user.click(screen.getByText("Go deeper · optional preparation"));
+    await user.click(screen.getByRole("button", {
+      name: "Remove custom preparation item: Bring schedule notes",
+    }));
+    const preparationDialog = screen.getByRole("dialog", { name: "Interview preparation" });
+    await waitFor(() => expect(within(preparationDialog).queryByRole("button", {
+      name: "Remove custom preparation item: Bring schedule notes",
+    })).not.toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Close workspace" }));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Interview preparation" })).not.toBeInTheDocument();
+  });
+
+  it("keeps unrelated preparation edits dirty after a custom-task deletion saves", async () => {
+    const itemId = "77777777-7777-4777-8777-777777777777";
+    const customItem = {
+      item_id: itemId,
+      label: "Bring schedule notes",
+      description: "Added by you for this interview.",
+      phase: "PREPARE" as const,
+      source: "CANDIDATE" as const,
+      source_label: "Added by you",
+      category: "CANDIDATE" as const,
+      outcome_id: null,
+      removable: true,
+      completed: false,
+    };
+    const selectedRound = makeWorkspaceInterview({
+      custom_preparation_items: [customItem],
+      guidance: {
+        ...makeInterview().guidance,
+        checklist_items: [...makeInterview().guidance.checklist_items, customItem],
+        progress: {
+          ...makeInterview().guidance.progress,
+          candidate: { completed: 0, total: 1 },
+        },
+      },
+    });
+    server.use(
+      ...interviewContextHandlers([selectedRound]),
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+        HttpResponse.json({ items: [selectedRound], next_cursor: null }),
+      ),
+      http.delete(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/interviews/:interviewId/preparation-items/:itemId`,
+        () => HttpResponse.json(makeInterview({
+          ...selectedRound,
+          version: 2,
+          custom_preparation_items: [],
+          guidance: {
+            ...selectedRound.guidance,
+            checklist_items: selectedRound.guidance.checklist_items.filter(
+              (item) => item.item_id !== itemId,
+            ),
+            progress: {
+              ...selectedRound.guidance.progress,
+              candidate: { completed: 0, total: 0 },
+            },
+          },
+        })),
+      ),
+    );
+
+    const { user } = renderApp("/interviews");
+    await user.click((await screen.findAllByRole("button", { name: "Continue preparation" }))[0]);
+    await user.type(
+      screen.getByRole("textbox", { name: "Evidence stories and preparation notes" }),
+      "Unsaved evidence note",
+    );
+    await user.click(screen.getByText("Go deeper · optional preparation"));
+    await user.click(screen.getByRole("button", {
+      name: "Remove custom preparation item: Bring schedule notes",
+    }));
+    const preparationDialog = screen.getByRole("dialog", { name: "Interview preparation" });
+    await waitFor(() => expect(within(preparationDialog).queryByRole("button", {
+      name: "Remove custom preparation item: Bring schedule notes",
+    })).not.toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Close workspace" }));
+    const confirmation = screen.getByRole("alertdialog", { name: "Discard unsaved changes?" });
+    expect(confirmation).toHaveAttribute("aria-modal", "true");
+    expect(screen.getByRole("button", { name: "Keep editing" })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close workspace" })).toHaveFocus();
+  });
+
   it("invalidates every dependent interview view after preparation changes", async () => {
     const selectedRound = makeWorkspaceInterview();
     let updateBody: Record<string, unknown> | null = null;
@@ -1772,6 +1999,52 @@ describe("workspace milestone features", () => {
     expect(
       screen.getByRole("heading", { name: "Northstar Labs" }),
     ).toBeVisible();
+  });
+
+  it("keeps a newly scheduled interview selected while workspace queries refetch", async () => {
+    const existing = makeWorkspaceInterview();
+    const newId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const scheduledAt = "2026-09-01T14:00:00.000Z";
+    const created = makeInterview({
+      interview_id: newId,
+      interview_type: "FINAL",
+      scheduled_at: scheduledAt,
+    });
+    const createdWorkspace = makeWorkspaceInterview({
+      ...created,
+      context: {
+        ...existing.context,
+        workflow_state: "PREPARE",
+        next_action: "PREPARE",
+      },
+    });
+    let workspaceRequests = 0;
+    server.use(
+      ...interviewContextHandlers([existing, created]),
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () => {
+        workspaceRequests += 1;
+        return HttpResponse.json({
+          items: workspaceRequests === 1 ? [existing] : [createdWorkspace, existing],
+          next_cursor: null,
+        });
+      }),
+      http.post(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/interviews`,
+        () => HttpResponse.json(created, { status: 201 }),
+      ),
+    );
+
+    const { user } = renderApp("/interviews");
+    await screen.findByRole("heading", { name: "Northstar Labs" });
+    await user.click(screen.getByRole("button", { name: "Schedule interview" }));
+    await user.selectOptions(screen.getByLabelText("Interview type"), "FINAL");
+    fireEvent.change(screen.getByLabelText(/Date and time/), {
+      target: { value: "2026-09-01T14:00" },
+    });
+    await user.click(screen.getByRole("button", { name: "Schedule interview" }));
+    const createdButton = await screen.findByRole("button", { name: /Northstar Labs, Final/ });
+    await waitFor(() => expect(createdButton).toHaveAttribute("aria-pressed", "true"));
+    expect(workspaceRequests).toBeGreaterThan(1);
   });
 
   it("adapts imminent and destructive actions without hiding safe cancellation", async () => {
@@ -1923,6 +2196,7 @@ describe("workspace milestone features", () => {
     const attentionHeading = await screen.findByRole("heading", {
       name: /Needs attention/,
     });
+    expect(screen.getByText("2 interviews need attention. Select one to continue.")).toBeVisible();
     const attention = attentionHeading.closest("section");
     const upcomingSection = screen
       .getByRole("heading", { name: /Upcoming/ })
@@ -1997,7 +2271,9 @@ describe("workspace milestone features", () => {
     ).toBeVisible();
     expect(screen.getAllByRole("heading", { name: "Interview reflection" })[0]).toBeVisible();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-    expect(screen.getByText("Preparation record")).toBeVisible();
+    await user.click(screen.getByText("Historical preparation"));
+    expect(screen.getByRole("region", { name: "Essentials" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Additional preparation" })).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Edit reflection" }));
     expect(
@@ -2134,7 +2410,7 @@ describe("workspace milestone features", () => {
     );
 
     const { user } = renderApp("/interviews");
-    await user.click((await screen.findAllByRole("button", { name: "Capture interview notes" }))[0]);
+    await user.click((await screen.findAllByRole("button", { name: "Capture reflection" }))[0]);
     await user.type(
       screen.getByLabelText("What stands out from this interview?"),
       "The role is more customer-facing than the posting suggested.",
@@ -2246,10 +2522,54 @@ describe("workspace milestone features", () => {
     expect(await screen.findByText("Interview scheduled.")).toBeVisible();
     expect(interviewBody).toMatchObject({
       interview_type: "FINAL",
+      scheduled_at: "2026-08-20T10:00:00.000Z",
       duration_minutes: 60,
       location: "Video call",
     });
     expect(interviewBody).not.toHaveProperty("owner_user_id");
     expect(interviewBody).not.toHaveProperty("status");
+  });
+
+  it("edits interview wall time in the saved workspace time zone", async () => {
+    const application = makeApplication({ status: "INTERVIEW" });
+    const interview = makeInterview({ scheduled_at: "2026-08-27T18:00:00Z" });
+    let updateBody: Record<string, unknown> | null = null;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/settings`, () =>
+        HttpResponse.json({ ...testSettings, time_zone: "America/New_York" }),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
+        HttpResponse.json(application),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId/interviews`, () =>
+        HttpResponse.json({ items: [interview], next_cursor: null }),
+      ),
+      http.patch(
+        `${API_ORIGIN}/api/v1/applications/:applicationId/interviews/:interviewId`,
+        async ({ request }) => {
+          updateBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(makeInterview({
+            ...interview,
+            version: 2,
+            scheduled_at: String(updateBody.scheduled_at),
+          }));
+        },
+      ),
+    );
+
+    const { user } = renderApp(`/applications/${application.application_id}`);
+    const interviewSection = (await screen.findByRole("heading", { name: "Interviews" })).closest("section");
+    expect(interviewSection).not.toBeNull();
+    await user.click(within(interviewSection!).getByRole("button", { name: "Edit" }));
+    expect(screen.getByLabelText(/Date and time/)).toHaveValue("2026-08-27T14:00");
+    fireEvent.change(screen.getByLabelText(/Date and time/), {
+      target: { value: "2026-08-27T15:00" },
+    });
+    await user.click(screen.getByRole("button", { name: "Save interview" }));
+    await waitFor(() => expect(updateBody).not.toBeNull());
+    expect(updateBody).toMatchObject({
+      expected_version: 1,
+      scheduled_at: "2026-08-27T19:00:00.000Z",
+    });
   });
 });

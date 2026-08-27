@@ -1,6 +1,45 @@
 # HireFlux development log
 
+## 2026-08-27 — Applications opportunity workspace
+
+Replaced the unfiltered Active Applications card collection with three exclusive,
+server-classified groups: Needs your attention, Moving forward, and Waiting. Search,
+filters, All, Archived, and explicit sorting now use one compact flat-row retrieval
+presentation. Removed the collection-level Search button, attention shortcut,
+Card/List preference, universal Manage action, generic Updated prominence, local New
+application CTA, desktop table duplication, and the retired `ApplicationCard`.
+
+Added pure deterministic opportunity classification, signed group pagination, and a
+bounded `WORKSPACE_CONTEXT` next-interview projection. Workspace reads use four GSI2
+status queries plus one GSI1 context query with no Scan, activity query, or interview
+N+1. Interview transactions maintain the projection with independent optimistic
+concurrency, and explicit local reconciliation rebuilds it for existing demo data.
+Centralized frontend reason/action copy and kept all mutations in the authoritative
+Application or Interviews workspace. Legacy layout URLs now normalize safely while
+preserving other parameters and post-create return context.
+
+Final validation passed Ruff lint and formatting, Mypy across 58 backend source
+files, all 259 backend tests, ESLint, TypeScript type checking, all 145 frontend
+tests, the production build, and `git diff --check`. The complete Playwright matrix
+finished with 84 passes and 12 intentional viewport-specific skips, including Axe,
+keyboard, direct-route, search, pagination, overflow, and visual-regression checks.
+Live browser QA covered 320, 390, 768, 1024, and 1280 pixels. Pure 500-record
+classification measured 1.21 ms p95 and the bounded response stayed near 13 KiB;
+the Moto-backed 500-record endpoint measured 950 ms p95, so AWS staging must repeat
+the latency measurement against real DynamoDB before maximum-bound performance is
+qualified.
+
 This log records the engineering work, decisions, problems, and validation completed for HireFlux. It is written so the project can be discussed clearly in portfolio reviews and technical interviews.
+
+## 2026-08-27 - Interviews stabilization and hardening
+
+Hardened interview scheduling around the saved workspace time zone. Create and edit flows now interpret browser `datetime-local` values as wall time in the validated IANA zone, submit UTC instants, reject daylight-saving gaps, and resolve repeated fall-back times deterministically. The application chooser now uses the existing server-side active-application search and pagination path, so records beyond an arbitrary first page remain schedulable without adding a scan or index.
+
+Made URL-backed interview selection authoritative across pagination and refetch races. Deep links continue loading until the requested interview is found or the result set is exhausted, invalid IDs receive a deliberate not-found state, and newly scheduled selections survive query invalidation. Terminal applications reject candidate scheduling and no longer create preparation or follow-up pressure; the deterministic demo retains one trusted historical canceled fixture without exposing a route-level bypass.
+
+Separated Essentials, Additional preparation, and Personal preparation in active and historical views, and limited custom-task deletion rebasing to persisted checklist state so unrelated unsaved notes and questions remain dirty. Centralized candidate-facing lifecycle copy, standardized Reflection terminology, corrected count pluralization, removed a redundant selected status badge, and strengthened the focused workspace's discard alert dialog, focus containment, Escape behavior, and return focus.
+
+Final validation passed Ruff lint and formatting, Mypy across 57 backend source files, all 236 backend tests, ESLint, TypeScript type checking, all 145 frontend tests, the production build, and `git diff --check`. The complete 96-case Playwright matrix finished with 84 passes and 12 intentional viewport-specific skips across 1280, 768, 390, and 320 pixels, including axe WCAG A/AA scans, keyboard flows, deep-link refresh, overflow checks, and visual regression. Only the intentional dark and light Interviews baselines changed.
 
 ## 2026-08-27 - Coherent interview journey and application-owned next steps
 

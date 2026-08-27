@@ -20,6 +20,7 @@ from hireflux_backend.api.routes import (
 )
 from hireflux_backend.application.demo_sessions import DemoSessionService
 from hireflux_backend.application.insights import InsightsService
+from hireflux_backend.application.opportunity_workspace import OpportunityWorkspaceService
 from hireflux_backend.application.pipeline import PipelineService
 from hireflux_backend.application.resource_services import WorkspaceResourceService
 from hireflux_backend.application.services import ApplicationService, UserService
@@ -68,16 +69,16 @@ def create_app(
         max_applications=configured.max_applications_per_workspace,
         max_activity_per_application=configured.max_activity_per_application,
     )
+    workspace_resource_repository = DynamoWorkspaceResourceRepository(
+        client,
+        configured.dynamodb_table_name,
+        cursor_codec,
+        max_notes_per_application=configured.max_notes_per_application,
+        max_interviews_per_application=configured.max_interviews_per_application,
+        max_activity_per_application=configured.max_activity_per_application,
+    )
     workspace_resource_service = WorkspaceResourceService(
-        application_repository,
-        DynamoWorkspaceResourceRepository(
-            client,
-            configured.dynamodb_table_name,
-            cursor_codec,
-            max_notes_per_application=configured.max_notes_per_application,
-            max_interviews_per_application=configured.max_interviews_per_application,
-            max_activity_per_application=configured.max_activity_per_application,
-        ),
+        application_repository, workspace_resource_repository
     )
     application_service = ApplicationService(
         application_repository,
@@ -91,6 +92,14 @@ def create_app(
     )
     app.state.user_service = user_service
     app.state.application_service = application_service
+    app.state.opportunity_workspace_service = OpportunityWorkspaceService(
+        application_repository,
+        workspace_resource_repository,
+        cursor_codec,
+        workspace_time_zone=lambda identity: (
+            workspace_resource_service.get_settings(identity).time_zone
+        ),
+    )
     app.state.insights_service = InsightsService(
         application_repository, resource_service=workspace_resource_service
     )

@@ -1,11 +1,52 @@
 import { delay, http, HttpResponse } from "msw";
 import { screen, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { API_ORIGIN, server } from "../test/server";
 import { makeApplication, testSettings } from "../test/fixtures";
 import { renderApp } from "../test/renderApp";
 
+function workspaceResponse(application = makeApplication()) {
+  return {
+    generated_at: "2026-08-27T14:00:00Z",
+    groups: {
+      needs_action: { total_count: 0, items: [], next_cursor: null },
+      moving_forward: { total_count: 0, items: [], next_cursor: null },
+      waiting: {
+        total_count: 1,
+        items: [
+          {
+            application,
+            classification: {
+              group: "waiting",
+              reason_code: "RECENTLY_APPLIED",
+              relevant_date: null,
+              relevant_at: null,
+              action_type: "OPEN_OPPORTUNITY",
+              interview_id: null,
+              next_interview: null,
+            },
+          },
+        ],
+        next_cursor: null,
+      },
+    },
+  };
+}
+
+function emptyWorkspaceResponse() {
+  const response = workspaceResponse();
+  response.groups.waiting = { total_count: 0, items: [], next_cursor: null };
+  return response;
+}
+
 describe("ApplicationListPage", () => {
+  beforeEach(() => {
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/workspace`, () =>
+        HttpResponse.json(workspaceResponse()),
+      ),
+    );
+  });
   it("preserves the Search Health follow-up deep link in requests and filter controls", async () => {
     let requestedFollowUp: string | null = null;
     server.use(
@@ -29,36 +70,12 @@ describe("ApplicationListPage", () => {
     expect(screen.getByLabelText("Follow-up planning")).toHaveValue("NEEDS_ATTENTION");
   });
 
-  it("stages Needs attention from the Active toolbar until filters are applied", async () => {
-    let requestCount = 0;
-    let requestedFollowUp: string | null = null;
-    server.use(
-      http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
-        requestCount += 1;
-        requestedFollowUp = new URL(request.url).searchParams.get("follow_up");
-        return HttpResponse.json({ items: [makeApplication()], next_cursor: null });
-      }),
-    );
-
-    const { user, router } = renderApp("/applications?view=ACTIVE");
-    expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
-    const requestsBeforeOpen = requestCount;
-    const shortcut = screen.getByRole("button", { name: "Needs attention" });
-    expect(shortcut).toHaveAttribute("aria-pressed", "false");
-
-    await user.click(shortcut);
-    expect(await screen.findByRole("dialog", { name: "Application filters" })).toBeVisible();
-    expect(screen.getByLabelText("Follow-up planning")).toHaveValue("NEEDS_ATTENTION");
-    expect(requestCount).toBe(requestsBeforeOpen);
-    expect(requestedFollowUp).toBeNull();
-
-    await user.click(screen.getByRole("button", { name: "Apply filters" }));
-    await waitFor(() => {
-      expect(router.state.location.search).toContain("follow_up=NEEDS_ATTENTION");
-      expect(requestedFollowUp).toBe("NEEDS_ATTENTION");
-    });
-    expect(shortcut).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Remove Follow-up: Needs attention filter" })).toBeVisible();
+  it("uses grouped Active mode without the former standalone attention shortcut", async () => {
+    renderApp("/applications?view=ACTIVE");
+    expect(await screen.findByRole("heading", { name: "Needs your attention" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Waiting" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Needs attention" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
   });
 
   it("keeps active filter chips compact and exposes the overflow accessibly", async () => {
@@ -102,7 +119,10 @@ describe("ApplicationListPage", () => {
 
     const { user, router } = renderApp("/applications?view=ACTIVE");
     expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
-    await user.selectOptions(screen.getByLabelText("Sort applications"), "updated_asc");
+    expect(screen.queryByLabelText("Sort applications")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Filters" }));
+    await user.selectOptions(screen.getByLabelText("Sort by"), "updated_asc");
+    await user.click(screen.getByRole("button", { name: "Apply filters" }));
     await waitFor(() => {
       expect(requestedSort).toBe("updated_asc");
       expect(router.state.location.search).toContain("sort=updated_asc");
@@ -143,11 +163,11 @@ describe("ApplicationListPage", () => {
     expect(followUp).toBeEnabled();
   });
 
-  it("uses an accessible card-shaped skeleton for the initial load", async () => {
+  it("uses an accessible grouped skeleton for the initial load", async () => {
     server.use(
-      http.get(`${API_ORIGIN}/api/v1/applications`, async () => {
+      http.get(`${API_ORIGIN}/api/v1/applications/workspace`, async () => {
         await delay(300);
-        return HttpResponse.json({ items: [makeApplication()], next_cursor: null });
+        return HttpResponse.json(workspaceResponse());
       }),
     );
 
@@ -159,7 +179,7 @@ describe("ApplicationListPage", () => {
     expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
   });
 
-  it("provides a direct manage action on each application card", async () => {
+  it("uses the role as the single collection navigation link without Manage", async () => {
     const application = makeApplication();
     server.use(
       http.get(`${API_ORIGIN}/api/v1/applications`, () =>
@@ -169,20 +189,19 @@ describe("ApplicationListPage", () => {
 
     renderApp();
 
-    const manageLink = await screen.findByRole("link", {
-      name: "Manage Frontend Engineer application",
-    });
-    expect(manageLink).toHaveAttribute(
+    const roleLink = await screen.findByRole("link", { name: "Frontend Engineer" });
+    expect(roleLink).toHaveAttribute(
       "href",
       `/applications/${application.application_id}`,
     );
+    expect(screen.queryByText("Manage")).not.toBeInTheDocument();
   });
 
-  it("shows card update timestamps in the saved workspace time zone", async () => {
+  it("does not promote generic update timestamps in grouped rows", async () => {
     const application = makeApplication({ updated_at: "2026-08-14T01:00:00Z" });
     server.use(
-      http.get(`${API_ORIGIN}/api/v1/applications`, () =>
-        HttpResponse.json({ items: [application], next_cursor: null }),
+      http.get(`${API_ORIGIN}/api/v1/applications/workspace`, () =>
+        HttpResponse.json(workspaceResponse(application)),
       ),
       http.get(`${API_ORIGIN}/api/v1/settings`, () =>
         HttpResponse.json({ ...testSettings, time_zone: "America/Los_Angeles" }),
@@ -191,15 +210,17 @@ describe("ApplicationListPage", () => {
 
     renderApp();
 
-    expect(
-      await screen.findByText("Updated Aug 13, 2026, 6:00 PM"),
-    ).toBeVisible();
+    expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
+    expect(screen.queryByText(/Updated Aug 13/)).not.toBeInTheDocument();
   });
 
   it("binds requests to the selected status, including Archived", async () => {
     let requestedStatus: string | null = null;
     let requestedView: string | null = null;
     server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/workspace`, () =>
+        HttpResponse.json(emptyWorkspaceResponse()),
+      ),
       http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
         const search = new URL(request.url).searchParams;
         requestedStatus = search.get("status");
@@ -221,7 +242,7 @@ describe("ApplicationListPage", () => {
     );
 
     const { user } = renderApp();
-    expect(await screen.findByText("No applications yet")).toBeVisible();
+    expect(await screen.findByText("No active applications")).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Filters" }));
     await user.selectOptions(screen.getByLabelText("Status"), "ARCHIVED");
@@ -270,6 +291,9 @@ describe("ApplicationListPage", () => {
     let requestedStageAge: string | null = null;
     let requestedView: string | null = null;
     server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/workspace`, () =>
+        HttpResponse.json(emptyWorkspaceResponse()),
+      ),
       http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
         const search = new URL(request.url).searchParams;
         requestedStageAge = search.get("stage_age");
@@ -279,7 +303,7 @@ describe("ApplicationListPage", () => {
     );
 
     const { user } = renderApp("/applications?view=ACTIVE");
-    expect(await screen.findByText("No applications yet")).toBeVisible();
+    expect(await screen.findByText("No active applications")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Filters" }));
     await user.selectOptions(screen.getByLabelText("Time in current stage"), "31+");
     await user.click(screen.getByRole("button", { name: "Apply filters" }));
@@ -313,6 +337,9 @@ describe("ApplicationListPage", () => {
       allowed_transitions: ["APPLIED"],
     });
     server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/workspace`, () =>
+        HttpResponse.json(emptyWorkspaceResponse()),
+      ),
       http.get(`${API_ORIGIN}/api/v1/applications`, ({ request }) => {
         requestedView = new URL(request.url).searchParams.get("view");
         return HttpResponse.json({
@@ -323,7 +350,7 @@ describe("ApplicationListPage", () => {
     );
 
     const { user } = renderApp();
-    expect(await screen.findByText("No applications yet")).toBeVisible();
+    expect(await screen.findByText("No active applications")).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "All" }));
 
@@ -355,7 +382,7 @@ describe("ApplicationListPage", () => {
       }),
     );
 
-    const { user } = renderApp();
+    const { user } = renderApp("/applications?view=ALL");
     expect(await screen.findByRole("link", { name: "Original title" })).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Load more" }));
@@ -368,20 +395,18 @@ describe("ApplicationListPage", () => {
     ).toBeVisible();
   });
 
-  it("keeps layout choice in the URL and exposes a semantic desktop table", async () => {
+  it("normalizes legacy layout URLs while preserving unrelated parameters", async () => {
     server.use(
       http.get(`${API_ORIGIN}/api/v1/applications`, () =>
         HttpResponse.json({ items: [makeApplication()], next_cursor: null }),
       ),
     );
 
-    const { user, router } = renderApp();
+    const { router } = renderApp("/applications?view=ALL&layout=list&source=REFERRAL");
     expect(await screen.findByRole("link", { name: "Frontend Engineer" })).toBeVisible();
-
-    await user.click(screen.getByRole("button", { name: "List view" }));
-
-    expect(router.state.location.search).toContain("layout=list");
-    expect(screen.getByRole("table", { name: "Applications in compact list view" })).toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.search).toBe("?view=ALL&source=REFERRAL"));
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "List view" })).not.toBeInTheDocument();
   });
 
   it("traps filter focus and restores it after Escape", async () => {

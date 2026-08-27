@@ -7,6 +7,7 @@ from hireflux_backend.application.errors import (
     AuthenticationUnavailableError,
     DemoSessionRequiredError,
 )
+from hireflux_backend.application.opportunity_workspace import OpportunityWorkspaceService
 from hireflux_backend.application.resource_services import WorkspaceResourceService
 from hireflux_backend.application.services import ApplicationService, UserService
 from hireflux_backend.application.workspace_export import WorkspaceExportService
@@ -46,6 +47,10 @@ def get_application_service(request: Request) -> ApplicationService:
     return request.app.state.application_service
 
 
+def get_opportunity_workspace_service(request: Request) -> OpportunityWorkspaceService:
+    return request.app.state.opportunity_workspace_service
+
+
 def get_demo_session_service(request: Request) -> DemoSessionService:
     return request.app.state.demo_session_service
 
@@ -61,6 +66,9 @@ def get_workspace_export_service(request: Request) -> WorkspaceExportService:
 IdentityDependency = Annotated[CurrentIdentity, Depends(get_current_identity)]
 UserServiceDependency = Annotated[UserService, Depends(get_user_service)]
 ApplicationServiceDependency = Annotated[ApplicationService, Depends(get_application_service)]
+OpportunityWorkspaceServiceDependency = Annotated[
+    OpportunityWorkspaceService, Depends(get_opportunity_workspace_service)
+]
 DemoSessionServiceDependency = Annotated[DemoSessionService, Depends(get_demo_session_service)]
 SettingsDependency = Annotated[Settings, Depends(get_settings)]
 WorkspaceResourceServiceDependency = Annotated[

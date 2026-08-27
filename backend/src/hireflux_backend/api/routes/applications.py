@@ -4,7 +4,11 @@ from uuid import UUID
 from fastapi import APIRouter, Query
 from fastapi import status as http_status
 
-from hireflux_backend.api.dependencies import ApplicationServiceDependency, IdentityDependency
+from hireflux_backend.api.dependencies import (
+    ApplicationServiceDependency,
+    IdentityDependency,
+    OpportunityWorkspaceServiceDependency,
+)
 from hireflux_backend.api.schemas import (
     ActivityListResponse,
     ActivityResponse,
@@ -19,8 +23,11 @@ from hireflux_backend.api.schemas import (
     FollowUpCompleteRequest,
     FollowUpRescheduleRequest,
     NextStepUpdateRequest,
+    OpportunityGroupResponse,
+    OpportunityWorkspaceResponse,
 )
 from hireflux_backend.application.duplicate_candidates import DuplicateEvidence
+from hireflux_backend.application.opportunity_workspace import OpportunityGroup
 from hireflux_backend.application.services import (
     CompleteFollowUpCommand,
     CreateApplicationCommand,
@@ -87,6 +94,30 @@ def duplicate_candidates(
     )
     return DuplicateCandidateListResponse(
         candidates=[DuplicateCandidateResponse.from_domain(item) for item in candidates]
+    )
+
+
+@router.get("/workspace", response_model=OpportunityWorkspaceResponse)
+def get_opportunity_workspace(
+    identity: IdentityDependency,
+    service: OpportunityWorkspaceServiceDependency,
+    preview_limit: Annotated[int, Query(ge=1, le=10)] = 4,
+) -> OpportunityWorkspaceResponse:
+    return OpportunityWorkspaceResponse.from_domain(
+        service.get(identity, preview_limit=preview_limit)
+    )
+
+
+@router.get("/workspace/groups/{group}", response_model=OpportunityGroupResponse)
+def get_opportunity_workspace_group(
+    group: OpportunityGroup,
+    identity: IdentityDependency,
+    service: OpportunityWorkspaceServiceDependency,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    cursor: str | None = None,
+) -> OpportunityGroupResponse:
+    return OpportunityGroupResponse.from_domain(
+        service.get_group(identity, group, limit=limit, cursor=cursor)
     )
 
 

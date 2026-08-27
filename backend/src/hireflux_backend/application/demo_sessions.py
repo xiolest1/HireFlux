@@ -597,6 +597,8 @@ class DemoSessionService:
                 interview_type=InterviewType.BEHAVIORAL,
                 scheduled_at=now - timedelta(days=18),
                 duration_minutes=45,
+                # Deterministic history is trusted seed data, not candidate scheduling.
+                trusted_seed=True,
             ),
         )
         self._resource_service.transition_interview(

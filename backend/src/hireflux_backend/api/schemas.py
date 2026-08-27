@@ -7,6 +7,14 @@ from hireflux_backend.application.duplicate_candidates import (
     DuplicateConfidence,
     DuplicateSignal,
 )
+from hireflux_backend.application.opportunity_workspace import (
+    OpportunityClassification,
+    OpportunityContext,
+    OpportunityGroup,
+    OpportunityGroupPage,
+    OpportunityWorkspace,
+    OpportunityWorkspaceItem,
+)
 from hireflux_backend.domain.enums import (
     ActivityType,
     ApplicationSource,
@@ -219,6 +227,102 @@ class ApplicationResponse(BaseModel):
 class ApplicationListResponse(BaseModel):
     items: list[ApplicationResponse]
     next_cursor: str | None
+
+
+class OpportunityInterviewResponse(BaseModel):
+    interview_id: str
+    scheduled_at: datetime
+    preparation_essentials_complete: bool
+
+    @classmethod
+    def from_domain(cls, context: OpportunityContext) -> "OpportunityInterviewResponse":
+        return cls(
+            interview_id=context.next_interview_id,
+            scheduled_at=context.scheduled_at,
+            preparation_essentials_complete=context.preparation_essentials_complete,
+        )
+
+
+class OpportunityClassificationResponse(BaseModel):
+    group: str
+    reason_code: str
+    relevant_date: date | None
+    relevant_at: datetime | None
+    action_type: str
+    interview_id: str | None
+    next_interview: OpportunityInterviewResponse | None
+
+    @classmethod
+    def from_domain(
+        cls, classification: OpportunityClassification
+    ) -> "OpportunityClassificationResponse":
+        return cls(
+            group=classification.group.value,
+            reason_code=classification.reason_code.value,
+            relevant_date=classification.relevant_date,
+            relevant_at=classification.relevant_at,
+            action_type=classification.action_type.value,
+            interview_id=classification.interview_id,
+            next_interview=(
+                OpportunityInterviewResponse.from_domain(classification.next_interview)
+                if classification.next_interview
+                else None
+            ),
+        )
+
+
+class OpportunityWorkspaceItemResponse(BaseModel):
+    application: ApplicationResponse
+    classification: OpportunityClassificationResponse
+
+    @classmethod
+    def from_domain(cls, item: OpportunityWorkspaceItem) -> "OpportunityWorkspaceItemResponse":
+        return cls(
+            application=ApplicationResponse.from_domain(item.application),
+            classification=OpportunityClassificationResponse.from_domain(item.classification),
+        )
+
+
+class OpportunityGroupResponse(BaseModel):
+    total_count: int
+    items: list[OpportunityWorkspaceItemResponse]
+    next_cursor: str | None
+
+    @classmethod
+    def from_domain(cls, page: OpportunityGroupPage) -> "OpportunityGroupResponse":
+        return cls(
+            total_count=page.total_count,
+            items=[OpportunityWorkspaceItemResponse.from_domain(item) for item in page.items],
+            next_cursor=page.next_cursor,
+        )
+
+
+class OpportunityWorkspaceGroupsResponse(BaseModel):
+    needs_action: OpportunityGroupResponse
+    moving_forward: OpportunityGroupResponse
+    waiting: OpportunityGroupResponse
+
+
+class OpportunityWorkspaceResponse(BaseModel):
+    generated_at: datetime
+    groups: OpportunityWorkspaceGroupsResponse
+
+    @classmethod
+    def from_domain(cls, workspace: OpportunityWorkspace) -> "OpportunityWorkspaceResponse":
+        return cls(
+            generated_at=workspace.generated_at,
+            groups=OpportunityWorkspaceGroupsResponse(
+                needs_action=OpportunityGroupResponse.from_domain(
+                    workspace.groups[OpportunityGroup.NEEDS_ACTION]
+                ),
+                moving_forward=OpportunityGroupResponse.from_domain(
+                    workspace.groups[OpportunityGroup.MOVING_FORWARD]
+                ),
+                waiting=OpportunityGroupResponse.from_domain(
+                    workspace.groups[OpportunityGroup.WAITING]
+                ),
+            ),
+        )
 
 
 class ActivityResponse(BaseModel):

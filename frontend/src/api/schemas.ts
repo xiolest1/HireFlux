@@ -132,6 +132,65 @@ export const applicationListResponseSchema = z.object({
   next_cursor: z.string().min(1).nullable(),
 });
 
+export const opportunityGroupSchema = z.enum([
+  "needs_action",
+  "moving_forward",
+  "waiting",
+]);
+export const opportunityReasonSchema = z.enum([
+  "MISSED_INTERVIEW",
+  "FOLLOW_UP_OVERDUE",
+  "FOLLOW_UP_DUE_TODAY",
+  "INTERVIEW_PREPARATION_DUE",
+  "OFFER_DECISION",
+  "CANDIDATE_ACTION_UPCOMING",
+  "INTERVIEW_PREPARATION_UPCOMING",
+  "CANDIDATE_ACTION_UNSCHEDULED",
+  "INTERVIEW_SCHEDULED",
+  "PROCESS_PROGRESSING",
+  "CANDIDATE_ACTION_PLANNED",
+  "WAITING_FOR_EMPLOYER",
+  "RECENTLY_APPLIED",
+]);
+export const opportunityActionSchema = z.enum([
+  "RESOLVE_INTERVIEW",
+  "REVIEW_FOLLOW_UP",
+  "PREPARE_INTERVIEW",
+  "REVIEW_OFFER",
+  "OPEN_OPPORTUNITY",
+]);
+export const opportunityInterviewSchema = z.object({
+  interview_id: z.string().uuid(),
+  scheduled_at: timestampSchema,
+  preparation_essentials_complete: z.boolean(),
+});
+export const opportunityClassificationSchema = z.object({
+  group: opportunityGroupSchema,
+  reason_code: opportunityReasonSchema,
+  relevant_date: dateOnlySchema.nullable(),
+  relevant_at: timestampSchema.nullable(),
+  action_type: opportunityActionSchema,
+  interview_id: z.string().uuid().nullable(),
+  next_interview: opportunityInterviewSchema.nullable(),
+});
+export const opportunityWorkspaceItemSchema = z.object({
+  application: applicationSchema,
+  classification: opportunityClassificationSchema,
+});
+export const opportunityGroupResponseSchema = z.object({
+  total_count: z.number().int().nonnegative(),
+  items: z.array(opportunityWorkspaceItemSchema),
+  next_cursor: z.string().min(1).nullable(),
+});
+export const opportunityWorkspaceResponseSchema = z.object({
+  generated_at: timestampSchema,
+  groups: z.object({
+    needs_action: opportunityGroupResponseSchema,
+    moving_forward: opportunityGroupResponseSchema,
+    waiting: opportunityGroupResponseSchema,
+  }),
+});
+
 export const duplicateConfidenceSchema = z.enum(["HIGH", "MEDIUM"]);
 export const duplicateSignalSchema = z.enum([
   "JOB_URL",
@@ -423,5 +482,11 @@ export type InterviewWorkspace = Pick<
   | "debrief_primary_reflection"
   | "debrief_carry_forward"
 >;
+export type OpportunityGroup = z.infer<typeof opportunityGroupSchema>;
+export type OpportunityReason = z.infer<typeof opportunityReasonSchema>;
+export type OpportunityAction = z.infer<typeof opportunityActionSchema>;
+export type OpportunityWorkspaceItem = z.infer<typeof opportunityWorkspaceItemSchema>;
+export type OpportunityGroupResponse = z.infer<typeof opportunityGroupResponseSchema>;
+export type OpportunityWorkspace = z.infer<typeof opportunityWorkspaceResponseSchema>;
 export type Settings = z.infer<typeof settingsSchema>;
 export type WorkspaceExport = z.infer<typeof workspaceExportSchema>;

@@ -210,6 +210,7 @@ export function useWorkspaceInterviews() {
 function useInterviewInvalidation(applicationId: string) {
   const client = useQueryClient();
   return () => {
+    void client.invalidateQueries({ queryKey: applicationKeys.workspaces() });
     void client.invalidateQueries({ queryKey: resourceKeys.applicationInterviews(applicationId) });
     void client.invalidateQueries({ queryKey: resourceKeys.upcomingInterviews });
     void client.invalidateQueries({ queryKey: resourceKeys.workspaceInterviews });
@@ -224,6 +225,7 @@ function invalidateInterviewQueries(
   client: ReturnType<typeof useQueryClient>,
   applicationId: string,
 ) {
+  void client.invalidateQueries({ queryKey: applicationKeys.workspaces() });
   void client.invalidateQueries({ queryKey: resourceKeys.applicationInterviews(applicationId) });
   void client.invalidateQueries({ queryKey: resourceKeys.upcomingInterviews });
   void client.invalidateQueries({ queryKey: resourceKeys.workspaceInterviews });

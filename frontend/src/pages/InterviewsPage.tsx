@@ -20,7 +20,7 @@ import {
   type Ref,
 } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import type { Interview, WorkspaceInterview } from "../api/schemas";
+import type { Application, Interview, WorkspaceInterview } from "../api/schemas";
 import type { InterviewFields } from "../api/resources";
 import { buttonClassName } from "../components/ui/buttonStyles";
 import { EmptyState, ErrorPanel } from "../components/ui/Feedback";
@@ -32,7 +32,7 @@ import {
   formatStatus,
   formatTimestamp,
 } from "../features/applications/format";
-import { useApplication, useApplications } from "../features/applications/queries";
+import { useApplication } from "../features/applications/queries";
 import { InterviewFocusedWorkspace } from "../features/resources/InterviewWorkspaceDrawer";
 import { InterviewScheduleWorkspace } from "../features/resources/InterviewScheduleWorkspace";
 import {
@@ -93,6 +93,12 @@ function nextStepLabel(interview: WorkspaceInterview) {
 }
 
 function stateLabel(interview: WorkspaceInterview) {
+  if (
+    interview.status === "SCHEDULED" &&
+    interview.context.workflow_state === "HISTORY"
+  ) {
+    return "Opportunity no longer active";
+  }
   switch (interview.context.workflow_state) {
     case "IMMINENT":
       return "Starts soon";
@@ -112,23 +118,6 @@ function stateLabel(interview: WorkspaceInterview) {
       return interview.status === "COMPLETED"
         ? "Reflection saved"
         : "Past interview";
-  }
-}
-
-function stateTone(interview: WorkspaceInterview) {
-  switch (interview.context.workflow_state) {
-    case "IMMINENT":
-      return "bg-accent text-accent-contrast";
-    case "PREPARE":
-    case "MISSED":
-    case "FOLLOW_UP":
-      return "bg-warning-soft text-warning";
-    case "CAPTURE":
-      return "bg-violet-soft text-violet";
-    case "UPCOMING":
-      return "bg-success-soft text-success";
-    default:
-      return "bg-surface-muted text-ink-muted";
   }
 }
 
@@ -189,16 +178,17 @@ export function InterviewsPage() {
     useState<Interview | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [scheduleApplicationId, setScheduleApplicationId] = useState<string | null>(null);
+  const [scheduleApplication, setScheduleApplication] = useState<Pick<
+    Application,
+    "application_id" | "company_name" | "job_title"
+  > | null>(null);
   const [scheduleEditing, setScheduleEditing] = useState<Interview | null>(null);
   const detailRef = useRef<HTMLElement | null>(null);
   const transitionMutation = useTransitionWorkspaceInterview();
   const { showToast } = useToast();
-  const activeApplicationsQuery = useApplications(null, 25, { view: "ACTIVE" });
-  const activeApplications = activeApplicationsQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  const scheduleApplication = activeApplications.find((application) => application.application_id === scheduleApplicationId) ?? null;
-  const createInterviewMutation = useCreateInterview(scheduleApplicationId ?? "");
-  const updateInterviewMutation = useUpdateInterview(scheduleApplicationId ?? "");
+  const scheduleApplicationId = scheduleApplication?.application_id ?? "";
+  const createInterviewMutation = useCreateInterview(scheduleApplicationId);
+  const updateInterviewMutation = useUpdateInterview(scheduleApplicationId);
 
   const interviews = useMemo(
     () =>
@@ -229,12 +219,46 @@ export function InterviewsPage() {
     .sort((left, right) => right.scheduled_at.localeCompare(left.scheduled_at));
   const activeCount = needsAttention.length + upcoming.length;
   const requestedId = searchParams.get("interview");
-  const selected =
-    interviews.find((interview) => interview.interview_id === requestedId) ??
-    preferredInterview(interviews);
+  const requestedInterview = requestedId
+    ? interviews.find((interview) => interview.interview_id === requestedId) ?? null
+    : null;
+  const selected = requestedId ? requestedInterview : preferredInterview(interviews);
+  const resolvingRequestedInterview = Boolean(
+    requestedId &&
+      !requestedInterview &&
+      (interviewsQuery.isPending ||
+        interviewsQuery.isFetching ||
+        interviewsQuery.isFetchingNextPage ||
+        interviewsQuery.hasNextPage),
+  );
+  const requestedInterviewMissing = Boolean(
+    requestedId &&
+      !requestedInterview &&
+      interviewsQuery.isSuccess &&
+      !interviewsQuery.isFetching &&
+      !interviewsQuery.isFetchingNextPage &&
+      !interviewsQuery.hasNextPage,
+  );
 
   useEffect(() => {
-    if (!selected || requestedId === selected.interview_id) return;
+    if (
+      !requestedId ||
+      requestedInterview ||
+      !interviewsQuery.hasNextPage ||
+      interviewsQuery.isFetching ||
+      interviewsQuery.isFetchingNextPage
+    ) {
+      return;
+    }
+    void interviewsQuery.fetchNextPage();
+  }, [
+    interviewsQuery,
+    requestedId,
+    requestedInterview,
+  ]);
+
+  useEffect(() => {
+    if (requestedId || !selected) return;
     const next = new URLSearchParams(searchParams);
     next.set("interview", selected.interview_id);
     setSearchParams(next, { replace: true });
@@ -284,8 +308,11 @@ export function InterviewsPage() {
     }
   }
 
-  function openSchedule(applicationId: string | null, editing: Interview | null = null) {
-    setScheduleApplicationId(applicationId);
+  function openSchedule(
+    application: Pick<Application, "application_id" | "company_name" | "job_title"> | null,
+    editing: Interview | null = null,
+  ) {
+    setScheduleApplication(application);
     setScheduleEditing(editing);
     setScheduleOpen(true);
   }
@@ -301,7 +328,7 @@ export function InterviewsPage() {
           })
         : await createInterviewMutation.mutateAsync(fields);
       setScheduleOpen(false);
-      setScheduleApplicationId(null);
+      setScheduleApplication(null);
       setScheduleEditing(null);
       const next = new URLSearchParams(searchParams);
       next.set("interview", saved.interview_id);
@@ -336,7 +363,7 @@ export function InterviewsPage() {
         <button
           type="button"
           className={`${buttonClassName("secondary", "gap-2")} mt-5 sm:mt-0`}
-          onClick={() => openSchedule(selected?.application_id ?? null)}
+          onClick={() => openSchedule(selected)}
         >
           <CalendarPlus aria-hidden="true" className="size-4" />
           Schedule interview
@@ -352,7 +379,7 @@ export function InterviewsPage() {
             onRetry={() => void interviewsQuery.refetch()}
           />
         ) : null}
-        {interviewsQuery.isSuccess && interviews.length === 0 ? (
+        {interviewsQuery.isSuccess && interviews.length === 0 && !requestedId ? (
           <EmptyState
             title="No interviews yet"
             description="When an application reaches the interview stage, you can manage scheduling, preparation, reflection, and follow-up here."
@@ -361,6 +388,33 @@ export function InterviewsPage() {
                 View applications
               </Link>
             }
+          />
+        ) : null}
+        {resolvingRequestedInterview ? (
+          <div role="status" aria-live="polite" className="rounded-2xl border border-line bg-surface p-6 shadow-panel">
+            <p className="font-semibold text-ink">Finding the requested interview…</p>
+            <p className="mt-1 text-sm text-ink-muted">Checking the rest of your interview history.</p>
+          </div>
+        ) : null}
+        {requestedInterviewMissing ? (
+          <EmptyState
+            title="Interview not found"
+            description="This interview is not available in the current demo workspace. It may have expired or the link may be incorrect."
+            action={preferredInterview(interviews) ? (
+              <button
+                type="button"
+                className={buttonClassName("primary")}
+                onClick={() => {
+                  const preferred = preferredInterview(interviews);
+                  if (!preferred) return;
+                  const next = new URLSearchParams(searchParams);
+                  next.set("interview", preferred.interview_id);
+                  setSearchParams(next, { replace: true });
+                }}
+              >
+                Open current interview
+              </button>
+            ) : undefined}
           />
         ) : null}
         {selected ? (
@@ -388,8 +442,8 @@ export function InterviewsPage() {
               onCancelRequest={setCancelingId}
               onCancelKeep={() => setCancelingId(null)}
               onTransition={transition}
-              onSchedule={() => openSchedule(selected.application_id)}
-              onEditSchedule={() => openSchedule(selected.application_id, selected)}
+              onSchedule={() => openSchedule(selected)}
+              onEditSchedule={() => openSchedule(selected, selected)}
             />
           </div>
         ) : null}
@@ -404,19 +458,19 @@ export function InterviewsPage() {
           onClose={() => setWorkspaceInterview(null)}
           onEditSchedule={() => {
             setWorkspaceInterview(null);
-            openSchedule(workspaceInterview.application_id, workspaceInterview);
+            openSchedule(workspaceInterview, workspaceInterview);
           }}
         />
       ) : null}
       <InterviewScheduleWorkspace
         open={scheduleOpen}
         application={scheduleApplication}
-        applications={activeApplications}
         editing={scheduleEditing}
+        timeZone={timeZone}
         isSaving={createInterviewMutation.isPending || updateInterviewMutation.isPending}
-        error={createInterviewMutation.error ?? updateInterviewMutation.error ?? activeApplicationsQuery.error}
-        onApplicationChange={setScheduleApplicationId}
-        onClose={() => { setScheduleOpen(false); setScheduleApplicationId(null); setScheduleEditing(null); createInterviewMutation.reset(); updateInterviewMutation.reset(); }}
+        error={createInterviewMutation.error ?? updateInterviewMutation.error}
+        onApplicationChange={setScheduleApplication}
+        onClose={() => { setScheduleOpen(false); setScheduleApplication(null); setScheduleEditing(null); createInterviewMutation.reset(); updateInterviewMutation.reset(); }}
         onSubmit={scheduleInterview}
       />
     </div>
@@ -461,7 +515,7 @@ function SchedulePane({
           </h2>
           <p className="mt-1 text-sm leading-6 text-ink-muted">
             {needsAttention.length
-              ? `${needsAttention.length} interview ${needsAttention.length === 1 ? "needs" : "need"} attention. Select one to continue.`
+              ? `${needsAttention.length} interview${needsAttention.length === 1 ? "" : "s"} ${needsAttention.length === 1 ? "needs" : "need"} attention. Select one to continue.`
               : upcoming.length
                 ? `${upcoming.length} prepared interview ${upcoming.length === 1 ? "is" : "are"} coming up.`
               : "Nothing needs action right now."}
@@ -721,16 +775,9 @@ const InterviewDetail = function InterviewDetail({
     >
       <div className="overflow-hidden rounded-[1.75rem] border border-line bg-surface shadow-panel">
         <div className="border-b border-line px-5 py-5 sm:px-7 sm:py-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs font-bold uppercase tracking-[0.17em] text-accent">
-              Selected interview
-            </p>
-            <span
-              className={`rounded-full px-3 py-1.5 text-xs font-bold ${stateTone(interview)}`}
-            >
-              {stateLabel(interview)}
-            </span>
-          </div>
+          <p className="text-xs font-bold uppercase tracking-[0.17em] text-accent">
+            Selected interview
+          </p>
           <h2
             id="selected-interview-title"
             className="mt-4 text-2xl font-bold tracking-tight text-ink sm:text-3xl"
@@ -970,6 +1017,17 @@ function LifecycleIndicator({ interview }: { interview: WorkspaceInterview }) {
       </section>
     );
   }
+  if (state === "HISTORY" && interview.status === "SCHEDULED") {
+    return (
+      <section className="rounded-2xl border border-line bg-surface-muted p-4" aria-labelledby="interview-lifecycle-title">
+        <p id="interview-lifecycle-title" className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted">
+          Interview lifecycle
+        </p>
+        <p className="mt-2 font-semibold text-ink">Opportunity no longer active</p>
+        <p className="mt-1 text-sm text-ink-muted">This scheduled record remains available without creating new preparation or follow-up pressure.</p>
+      </section>
+    );
+  }
   const currentIndex =
     state === "PREPARE"
       ? 0
@@ -1083,10 +1141,14 @@ function ContextCommand({
     title =
       state === "CANCELED"
         ? "This interview was canceled"
+        : interview.status === "SCHEDULED"
+          ? "This opportunity is no longer active"
         : "This round is complete";
     description =
       state === "CANCELED"
         ? "Open the application to review the record or schedule a replacement round."
+        : interview.status === "SCHEDULED"
+          ? "The scheduled record remains available in history. Open the application if the opportunity status needs correction."
         : "Your reflection is saved and available whenever you want to revisit this round.";
   }
   switch (interview.context.next_action) {
@@ -1140,7 +1202,7 @@ function ContextCommand({
           className={buttonClassName("primary")}
           onClick={onOpenWorkspace}
         >
-          Capture interview notes
+          Capture reflection
         </button>
       );
       break;
@@ -1208,6 +1270,10 @@ function PreparationSnapshot({
   onOpenWorkspace: () => void;
 }) {
   if (interview.status === "CANCELED") return null;
+  if (
+    interview.status === "SCHEDULED" &&
+    interview.context.workflow_state === "HISTORY"
+  ) return null;
   const completed = new Set(interview.completed_checklist_items);
   const isDebrief = interview.status === "COMPLETED";
   if (isDebrief && !interview.debrief_completed_at) return null;
@@ -1232,36 +1298,40 @@ function PreparationSnapshot({
         </div>
       </div>
       {!isDebrief ? (
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-          {interview.guidance.checklist_items.map((item) => {
-            const done = completed.has(item.item_id) || item.completed;
-            return (
-              <li
-                key={item.item_id}
-                className="flex items-start gap-2 rounded-xl border border-line bg-surface-raised px-3 py-2.5 text-sm"
-              >
-                <span
-                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full ${done ? "bg-success-soft text-success" : "bg-surface-muted text-ink-muted"}`}
-                >
-                  {done ? (
-                    <Check aria-hidden="true" className="size-3.5" />
-                  ) : (
-                    <Circle aria-hidden="true" className="size-3" />
-                  )}
-                </span>
-                <span
-                  className={
-                    done
-                      ? "text-ink-muted line-through"
-                      : "font-semibold text-ink"
-                  }
-                >
-                  {item.label}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="mt-4 space-y-4">
+          <PreparationItemList
+            items={interview.guidance.checklist_items.filter(
+              (item) => item.category === "ESSENTIAL",
+            )}
+            completed={completed}
+          />
+          {interview.guidance.checklist_items.some(
+            (item) => item.category !== "ESSENTIAL",
+          ) ? (
+            <details className="group rounded-xl border border-line bg-surface-muted px-3 py-2">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-ink marker:hidden">
+                <span>More preparation</span>
+                <ChevronDown aria-hidden="true" className="size-4 text-ink-muted transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="space-y-4 border-t border-line pb-1 pt-3">
+                {(["ADDITIONAL", "CANDIDATE"] as const).map((category) => {
+                  const items = interview.guidance.checklist_items.filter(
+                    (item) => item.category === category,
+                  );
+                  if (!items.length) return null;
+                  return (
+                    <section key={category} aria-label={category === "ADDITIONAL" ? "Additional preparation" : "Personal preparation"}>
+                      <h4 className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-ink-muted">
+                        {category === "ADDITIONAL" ? "Additional preparation" : "Personal preparation"}
+                      </h4>
+                      <PreparationItemList items={items} completed={completed} />
+                    </section>
+                  );
+                })}
+              </div>
+            </details>
+          ) : null}
+        </div>
       ) : (
         <div className="mt-3">
           <p className="inline-flex items-center gap-2 text-sm font-semibold text-success">
@@ -1293,6 +1363,41 @@ function PreparationSnapshot({
         </div>
       )}
     </section>
+  );
+}
+
+function PreparationItemList({
+  items,
+  completed,
+}: {
+  items: WorkspaceInterview["guidance"]["checklist_items"];
+  completed: Set<string>;
+}) {
+  return (
+    <ul className="grid gap-2 sm:grid-cols-2">
+      {items.map((item) => {
+        const done = completed.has(item.item_id) || item.completed;
+        return (
+          <li
+            key={item.item_id}
+            className="flex items-start gap-2 rounded-xl border border-line bg-surface-raised px-3 py-2.5 text-sm"
+          >
+            <span
+              className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full ${done ? "bg-success-soft text-success" : "bg-surface-muted text-ink-muted"}`}
+            >
+              {done ? (
+                <Check aria-hidden="true" className="size-3.5" />
+              ) : (
+                <Circle aria-hidden="true" className="size-3" />
+              )}
+            </span>
+            <span className={done ? "text-ink-muted line-through" : "font-semibold text-ink"}>
+              {item.label}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

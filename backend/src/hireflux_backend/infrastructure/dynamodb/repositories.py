@@ -218,6 +218,34 @@ class DynamoApplicationRepository:
         item = response.get("Item")
         return application_from_item(deserialize_item(item)) if item else None
 
+    def list_active_for_workspace(self, owner_user_id: str) -> tuple[Application, ...]:
+        applications: list[Application] = []
+        try:
+            for status in ACTIVE_APPLICATION_STATUSES:
+                exclusive_start_key: dict[str, Any] | None = None
+                while True:
+                    arguments: dict[str, Any] = {
+                        "TableName": self._table_name,
+                        "IndexName": GSI2_NAME,
+                        "KeyConditionExpression": "GSI2PK = :partition",
+                        "ExpressionAttributeValues": serialize_item(
+                            {":partition": owner_status_key(owner_user_id, status)}
+                        ),
+                    }
+                    if exclusive_start_key is not None:
+                        arguments["ExclusiveStartKey"] = exclusive_start_key
+                    response = self._client.query(**arguments)
+                    applications.extend(
+                        application_from_item(deserialize_item(item))
+                        for item in response.get("Items", [])
+                    )
+                    exclusive_start_key = response.get("LastEvaluatedKey")
+                    if not exclusive_start_key:
+                        break
+        except ClientError as error:
+            raise PersistenceError("Unable to load the opportunity workspace.") from error
+        return tuple(applications)
+
     def list(
         self,
         owner_user_id: str,

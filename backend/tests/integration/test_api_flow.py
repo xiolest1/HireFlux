@@ -62,6 +62,14 @@ def test_health_profile_and_request_ids(client: TestClient) -> None:
 def test_workspace_export_is_owner_scoped_and_contains_resources(client: TestClient) -> None:
     application = client.post("/api/v1/applications", json=draft_payload("Export Labs")).json()
     application_id = application["application_id"]
+    application = client.post(
+        f"/api/v1/applications/{application_id}/status",
+        json={
+            "status": "APPLIED",
+            "expected_version": application["version"],
+            "applied_date": datetime.now(UTC).date().isoformat(),
+        },
+    ).json()
     note = client.post(
         f"/api/v1/applications/{application_id}/notes", json={"content": "Export this note."}
     )
@@ -191,6 +199,14 @@ def test_workspace_export_aggregates_only_the_authenticated_workspace(
         application_a = client.post(
             "/api/v1/applications", json=draft_payload("Export Owner A")
         ).json()
+        application_a = client.post(
+            f"/api/v1/applications/{application_a['application_id']}/status",
+            json={
+                "status": "APPLIED",
+                "expected_version": application_a["version"],
+                "applied_date": datetime.now(UTC).date().isoformat(),
+            },
+        ).json()
         note_a = client.post(
             f"/api/v1/applications/{application_a['application_id']}/notes",
             json={"content": "Owner A note"},
@@ -206,6 +222,14 @@ def test_workspace_export_aggregates_only_the_authenticated_workspace(
         _use_identity(app, identity_b)
         application_b = client.post(
             "/api/v1/applications", json=draft_payload("Export Owner B")
+        ).json()
+        application_b = client.post(
+            f"/api/v1/applications/{application_b['application_id']}/status",
+            json={
+                "status": "APPLIED",
+                "expected_version": application_b["version"],
+                "applied_date": datetime.now(UTC).date().isoformat(),
+            },
         ).json()
         note_b = client.post(
             f"/api/v1/applications/{application_b['application_id']}/notes",

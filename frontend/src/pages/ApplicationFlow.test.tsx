@@ -121,6 +121,16 @@ describe("application critical flow", () => {
         `${API_ORIGIN}/api/v1/applications/:applicationId/activity`,
         () => HttpResponse.json({ items: [makeActivity()], next_cursor: null }),
       ),
+      http.get(`${API_ORIGIN}/api/v1/applications/workspace`, () =>
+        HttpResponse.json({
+          generated_at: "2026-08-27T14:00:00Z",
+          groups: {
+            needs_action: { total_count: 0, items: [], next_cursor: null },
+            moving_forward: { total_count: 0, items: [], next_cursor: null },
+            waiting: { total_count: 0, items: [], next_cursor: null },
+          },
+        }),
+      ),
     );
 
     const { user, queryClient } = renderApp();
@@ -128,7 +138,7 @@ describe("application critical flow", () => {
     queryClient.setQueryData(analyticsKey, { seeded: true });
     expect(await screen.findByRole("heading", { name: "Applications" })).toBeVisible();
 
-    await user.click(screen.getByRole("link", { name: "New application" }));
+    await user.click(screen.getAllByRole("link", { name: "Add application" })[0]);
     await user.click(await screen.findByRole("button", { name: "Add application" }));
 
     expect(await screen.findByText("Company name is required.")).toBeVisible();
@@ -293,7 +303,7 @@ describe("application critical flow", () => {
         HttpResponse.json({ items: [created], next_cursor: null }),
       ),
     );
-    const returnTo = "/applications?view=active&layout=list&status=INTERVIEW";
+    const returnTo = "/applications?view=active&status=INTERVIEW";
     const { user, router } = renderApp({
       pathname: "/applications/new",
       state: applicationCreateRouteState(
@@ -312,9 +322,8 @@ describe("application critical flow", () => {
       "href",
       `/applications/${created.application_id}`,
     );
-    expect(await screen.findByRole("row", { name: /Context Engineer/ })).toHaveClass(
-      "bg-accent-soft",
-    );
+    const contextLink = await screen.findByRole("link", { name: "Context Engineer" });
+    expect(contextLink.closest("li")).toHaveClass("bg-accent-soft");
   });
 
   it("returns a Dashboard-origin creation to Dashboard with a View link", async () => {
