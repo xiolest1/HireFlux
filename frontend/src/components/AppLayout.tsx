@@ -41,6 +41,7 @@ import { ToastProvider } from "./ui/Toast";
 import {
   applyTheme,
   setColorThemePreference,
+  systemTheme,
   storedThemePreference,
 } from "./ui/themePreference";
 
@@ -166,11 +167,13 @@ export function AppLayout() {
 
   useEffect(() => {
     if (!settingsQuery.data) return;
-    if (
-      settingsQuery.data.theme === "SYSTEM" &&
-      storedThemePreference() === null
-    ) {
-      applyTheme("dark");
+    if (settingsQuery.data.theme === "SYSTEM") {
+      const stored = storedThemePreference();
+      if (stored === "light" || stored === "dark") {
+        applyTheme(stored);
+      } else {
+        applyTheme(systemTheme());
+      }
       return;
     }
     setColorThemePreference(settingsQuery.data.theme);

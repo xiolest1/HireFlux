@@ -60,6 +60,27 @@ describe("demo workspace flow", () => {
     expect(getDemoSession()?.access_token).toBe(issuedSession.access_token);
   });
 
+  it("preserves the landing-page theme when entering a SYSTEM-preference demo", async () => {
+    server.use(
+      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, () =>
+        HttpResponse.json(issuedSession, { status: 201 }),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/settings`, () =>
+        HttpResponse.json({ ...testSettings, theme: "SYSTEM" }),
+      ),
+    );
+
+    const { user } = renderApp("/", { withSession: false });
+    await user.click(
+      screen.getByRole("button", { name: "Switch to light mode" }),
+    );
+    expect(document.documentElement).not.toHaveClass("dark");
+
+    await user.click(screen.getByRole("button", { name: "Explore the Demo" }));
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    await waitFor(() => expect(document.documentElement).not.toHaveClass("dark"));
+  });
+
   it("confirms reset and replaces the current workspace", async () => {
     const idempotencyKeys: string[] = [];
     server.use(
