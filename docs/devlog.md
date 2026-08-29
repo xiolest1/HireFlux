@@ -1,5 +1,77 @@
 # HireFlux development log
 
+## 2026-08-29 — Phase B Flux Rail visual proof
+
+Implemented the approved Phase B landing-page proof as commit `e36350d`
+(`Implemented flux Rail, React and GSAP confined to lazy landing`). This was a
+landing-only presentation change: the authenticated workspace, backend/API
+contracts, demo identity behavior, persistence, and body proof section were
+left unchanged.
+
+### Process and implementation
+
+Started from the Phase A landing architecture and kept React as the semantic
+state authority. The landing story now has a centralized seven-stage narrative
+model, a four-control visible milestone sequence, and a deterministic controller
+whose normal autoplay runs Capture → Progress → Prepare once and settles. Act
+remains manually selectable as the static Phase A presentation; reduced-motion
+users start at Act, can explore the static stages, and never receive autoplay.
+
+Added the exact `gsap@3.15.0` dependency only to the lazy landing dependency
+graph. `FluxStoryVisual` owns one paused, labeled GSAP timeline inside a scoped
+context, while `FluxRail` supplies stable responsive SVG geometry and testable
+animation targets. The persistent Northstar Labs opportunity, application
+identity, interview node, branch, marker, and preparation tray now make the
+causal sequence legible: Capture → application progress → interview →
+preparation. Retargeting kills only the prior targeting tween, and unmount or
+reduced-motion cleanup kills the timeline and reverts scoped inline styles.
+
+The implementation deliberately uses bounded transforms, opacity, SVG dash
+offsets, clipping, and progress width. It does not add ScrollTrigger, pinned
+scrolling, path morphing, MotionPath, observers, a second animation authority,
+or continuous chart/page motion. Act remains the explicit stopping point for
+the static fallback until a later phase is approved.
+
+Live in-app-browser QA was used to inspect Capture, Progress, Prepare, reduced
+motion, and narrow layouts. The first mobile pass exposed clipping in the
+Prepare tray; the bounded artboard height and continuity-panel offsets were
+adjusted, then rechecked at the supported 320, 390, 768, 1024, and 1280 pixel
+widths. Six focused Flux Rail baselines were added for dark desktop 1280 and
+light mobile 390; existing landing baselines were refreshed only for the
+intentional hero change.
+
+### Validation and bundle evidence
+
+The focused landing unit suite passed 21 tests, including story-model ordering,
+controller boundaries, persistent semantic nodes, tween retargeting, reduced
+motion, Strict Mode cleanup, and static Act fallback. The full frontend suite
+passed 187 tests. ESLint, TypeScript checking, the production build, the full
+Playwright/accessibility matrix (135 cases: 112 passed and 23 intentional
+skips), hosting-header tests, and `git diff --check` also passed. Browser checks
+covered keyboard/ARIA controls, overflow, themes, reduced motion, route-away
+cleanup, and authenticated chunk isolation.
+
+The recorded Phase A baseline was main JS 282.83 kB raw / 84.74 kB gzip,
+landing JS 23.12 kB / 6.84 kB gzip, and CSS 99.75 kB / 16.56 kB gzip. Phase B
+measured main JS at 282.83 kB / 84.74 kB gzip, the lazy `LandingPage` chunk at
+105.75 kB / 36.77 kB gzip, and CSS at 105.38 kB / 17.31 kB gzip.
+
+Phase A had no dedicated landing chunk before the split; Phase B emits the
+lazy `LandingPage` chunk and no separate GSAP chunk because GSAP is folded into
+that lazy feature chunk. Production-browser network assertions confirmed the
+authenticated dashboard does not request either landing or GSAP assets, while
+the public root requests the landing chunk.
+
+### Review outcome
+
+The rail is materially stronger than the prior keyed card swap because the
+application remains spatially present while the marker, branch, interview, and
+preparation tray establish a readable chain of causality. The Progress →
+Prepare handoff is strong enough to continue the concept, subject to product
+review before adding the later Context, Resolve, Act choreography, or any
+scroll-driven/pinned behavior. The deliberate open limitation is that Act is
+still static and the proof section remains manually driven.
+
 ## 2026-08-29 — Applied-to-Draft correction
 
 Added one controlled backward correction to the server-owned application
