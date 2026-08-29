@@ -480,6 +480,27 @@ def test_status_workflow_archive_restore_and_filter(client: TestClient) -> None:
         path,
         json={"status": "APPLIED", "expected_version": 1, "applied_date": "2026-08-10"},
     ).json()
+    corrected = client.post(path, json={"status": "DRAFT", "expected_version": applied["version"]})
+    assert corrected.status_code == 200
+    corrected_body = corrected.json()
+    assert corrected_body["status"] == "DRAFT"
+    assert corrected_body["applied_date"] is None
+    assert corrected_body["submitted_at"] == applied["submitted_at"]
+    assert "DRAFT" not in corrected_body["allowed_transitions"]
+    reapplied_missing_date = client.post(
+        path, json={"status": "APPLIED", "expected_version": corrected_body["version"]}
+    )
+    assert reapplied_missing_date.status_code == 409
+    reapplied = client.post(
+        path,
+        json={
+            "status": "APPLIED",
+            "expected_version": corrected_body["version"],
+            "applied_date": "2026-08-11",
+        },
+    )
+    assert reapplied.status_code == 200
+    applied = reapplied.json()
     interview = client.post(
         path, json={"status": "INTERVIEW", "expected_version": applied["version"]}
     ).json()
@@ -516,7 +537,7 @@ def test_status_workflow_archive_restore_and_filter(client: TestClient) -> None:
         created["application_id"]
     ]
     activity = client.get(f"/api/v1/applications/{created['application_id']}/activity").json()
-    assert len(activity["items"]) == 7
+    assert len(activity["items"]) == 9
     assert activity["items"][-1]["metadata"]["to_status"] == "REJECTED"
 
 

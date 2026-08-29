@@ -13,7 +13,7 @@ Status is never null. Creation may start in `DRAFT`, `APPLIED`, or `INTERVIEW` s
 | From / To | DRAFT | APPLIED | SCREENING | INTERVIEW | OFFER | ACCEPTED | REJECTED | WITHDRAWN | ARCHIVED |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | DRAFT | No-op | Allowed | Forbidden | Forbidden | Forbidden | Forbidden | Forbidden | Forbidden | Allowed |
-| APPLIED | Forbidden | No-op | Allowed | Allowed | Allowed | Forbidden | Allowed | Allowed | Allowed |
+| APPLIED | **Allowed (correction)** | No-op | Allowed | Allowed | Allowed | Forbidden | Allowed | Allowed | Allowed |
 | SCREENING | Forbidden | Forbidden | No-op | Allowed | Allowed | Forbidden | Allowed | Allowed | Allowed |
 | INTERVIEW | Forbidden | Forbidden | Forbidden | No-op | Allowed | Forbidden | Allowed | Allowed | Allowed |
 | OFFER | Forbidden | Forbidden | Forbidden | Forbidden | No-op | Allowed | Allowed | Allowed | Allowed |
@@ -30,7 +30,7 @@ Status is never null. Creation may start in `DRAFT`, `APPLIED`, or `INTERVIEW` s
 - `WITHDRAWN` records a candidate ending the process. `REJECTED` remains an employer outcome, and `ACCEPTED` remains a successful terminal outcome.
 - `OFFER -> REJECTED` represents a rescinded offer; a candidate declining or leaving the process uses `WITHDRAWN`.
 - `REJECTED -> OFFER` is an explicit correction path for an application that was marked rejected by mistake or later resulted in an offer. It does not permit `REJECTED -> INTERVIEW`.
-- Backward movement such as `INTERVIEW -> APPLIED` is forbidden. A correction can use a future explicit administrative repair workflow rather than weakening ordinary transitions.
+- `APPLIED -> DRAFT` is the one supported backward correction. It clears the current `applied_date` so the record is truthful as a saved, pre-submission opportunity, preserves the server-owned submission and milestone history, resets `stage_entered_at`, and appends correction-aware activity. Re-applying later requires a new applied date. Other backward movement such as `INTERVIEW -> APPLIED` remains forbidden.
 - Moving a draft to `APPLIED` requires an `applied_date` in the transition request if the record does not already have one. The server does not silently invent the date.
 - `APPLIED` and `INTERVIEW` creation require `applied_date`. `DRAFT` creation rejects an applied date so persisted state cannot contradict its lifecycle stage.
 - Each successful change, including archive and restore, appends a human-readable activity item. The service produces its meaning; the repository handles atomic persistence.

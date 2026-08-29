@@ -15,6 +15,7 @@ from hireflux_backend.domain.status_policy import (
 ALLOWED = {
     ApplicationStatus.DRAFT: {ApplicationStatus.APPLIED, ApplicationStatus.ARCHIVED},
     ApplicationStatus.APPLIED: {
+        ApplicationStatus.DRAFT,
         ApplicationStatus.SCREENING,
         ApplicationStatus.INTERVIEW,
         ApplicationStatus.OFFER,
@@ -83,7 +84,11 @@ def test_complete_transition_matrix(source: ApplicationStatus, target: Applicati
     )
 
     if should_allow:
-        decision = decide_transition(current, target, date(2026, 8, 1))
+        decision = decide_transition(
+            current,
+            target,
+            None if target is ApplicationStatus.DRAFT else date(2026, 8, 1),
+        )
         assert decision.changed is (source is not target)
         assert decision.status is target
     else:
@@ -101,6 +106,21 @@ def test_rejected_can_be_corrected_to_offer() -> None:
 
     assert decision.changed is True
     assert decision.status is ApplicationStatus.OFFER
+
+
+def test_applied_can_be_corrected_to_draft_and_clears_applied_date() -> None:
+    decision = decide_transition(application(ApplicationStatus.APPLIED), ApplicationStatus.DRAFT)
+
+    assert decision.changed is True
+    assert decision.status is ApplicationStatus.DRAFT
+    assert decision.applied_date is None
+
+
+def test_correction_to_draft_rejects_an_applied_date() -> None:
+    with pytest.raises(StatusPolicyError, match="must be empty"):
+        decide_transition(
+            application(ApplicationStatus.APPLIED), ApplicationStatus.DRAFT, date(2026, 8, 1)
+        )
 
 
 def test_draft_to_applied_requires_a_date() -> None:

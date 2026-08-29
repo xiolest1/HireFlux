@@ -7,6 +7,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useModalFocus } from "./useModalFocus";
+import { usePresence } from "./motionHooks";
 
 interface DialogProps {
   open: boolean;
@@ -32,6 +33,7 @@ export function Dialog({
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLElement>(null);
+  const presence = usePresence(open);
 
   useModalFocus({
     isOpen: open,
@@ -49,14 +51,17 @@ export function Dialog({
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!presence.mounted) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm"
+      data-state={presence.state}
+      aria-hidden={!open || undefined}
+      inert={!open}
+      className="hf-overlay-backdrop fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (open && event.target === event.currentTarget) onClose();
       }}
     >
       <section
@@ -66,7 +71,8 @@ export function Dialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className={`w-full max-w-md rounded-3xl border border-line bg-surface-raised p-6 shadow-float ${className}`}
+        data-state={presence.state}
+        className={`hf-dialog-panel w-full max-w-md rounded-3xl border border-line bg-surface-raised p-6 shadow-float ${className}`}
       >
         <h2 id={titleId} className="font-display text-xl font-bold text-ink">
           {title}

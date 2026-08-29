@@ -27,6 +27,7 @@ import {
 import { Button } from "../components/ui/Button";
 import { Drawer } from "../components/ui/Drawer";
 import { ErrorPanel, SuccessBanner } from "../components/ui/Feedback";
+import { CollapsibleRegion, PendingIndicator } from "../components/ui/Motion";
 import { Skeleton } from "../components/ui/Skeleton";
 import { setColorThemePreference } from "../components/ui/themePreference";
 import { WorkspaceFrame, WorkspaceIntro } from "../components/ui/WorkspaceComposition";
@@ -267,7 +268,7 @@ export function SettingsPage() {
             <div className="space-y-4 border-t border-line-subtle pt-5">
               {updateMutation.error ? <ErrorPanel compact title="Preferences could not be saved" error={updateMutation.error} /> : null}
               {saved ? <SuccessBanner>Preferences saved for this demo workspace.</SuccessBanner> : null}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-ink-tertiary">{dirty ? "You have unsaved preference changes." : "Preferences are up to date."}</p><Button type="submit" disabled={!dirty || updateMutation.isPending || draft.default_follow_up_days < 1 || draft.default_follow_up_days > 30}>{updateMutation.isPending ? "Saving…" : "Save preferences"}</Button></div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-ink-tertiary">{dirty ? "You have unsaved preference changes." : "Preferences are up to date."}</p><Button type="submit" disabled={!dirty || updateMutation.isPending || draft.default_follow_up_days < 1 || draft.default_follow_up_days > 30}>{updateMutation.isPending ? <PendingIndicator label="Saving…" /> : "Save preferences"}</Button></div>
             </div>
           </form>
         ) : null}
@@ -349,7 +350,7 @@ function DataPrivacySection({ isDemo }: { isDemo: boolean }) {
             <p className="text-sm text-ink-muted">CSV format · One row per application.</p>
           </div>
           <Button onClick={() => void downloadApplicationsCsv()} disabled={applicationsCsvMutation.isPending}>
-            {applicationsCsvMutation.isPending ? "Preparing…" : "Export CSV"}
+            {applicationsCsvMutation.isPending ? <PendingIndicator label="Preparing…" /> : "Export CSV"}
           </Button>
         </div>
         {!isDemo ? (
@@ -359,7 +360,7 @@ function DataPrivacySection({ isDemo }: { isDemo: boolean }) {
               <p className="text-sm text-ink-muted">JSON format · Account backup and portability.</p>
             </div>
             <Button onClick={() => void downloadExport()} disabled={exportMutation.isPending}>
-              {exportMutation.isPending ? "Preparing…" : "Export JSON"}
+              {exportMutation.isPending ? <PendingIndicator label="Preparing…" /> : "Export JSON"}
             </Button>
           </div>
         ) : (
@@ -469,11 +470,12 @@ function CandidateAccountPreview({
           aria-label={previewExpanded ? "Collapse personal account preview" : "Expand personal account preview"}
           onClick={() => setPreviewExpanded((value) => !value)}
         >
-          <ChevronDown aria-hidden="true" className={`size-5 transition-transform ${previewExpanded ? "rotate-180" : ""}`} />
+          <ChevronDown aria-hidden="true" className={`size-5 transition-transform duration-[var(--motion-ui)] ${previewExpanded ? "rotate-180" : ""}`} />
         </button>
       </div>
 
-      <div id="personal-account-preview-content" hidden={!previewExpanded} className="space-y-6 border-t border-line p-4 sm:p-6">
+      <CollapsibleRegion id="personal-account-preview-content" open={previewExpanded} className="border-t border-line">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
           <div className="grid gap-px bg-line md:grid-cols-3">
           {capabilities.map(({ key, icon: Icon, title, description }) => (
@@ -682,7 +684,6 @@ function CandidateAccountPreview({
           )}
         </section>
       </div>
-
       <div className="rounded-2xl border border-warning/30 bg-warning-soft p-5 text-sm leading-6 text-warning sm:p-6">
         <strong>Demo boundary:</strong> passwords, MFA enrollment, email notification delivery,
         permanent account deletion, conversion to a persistent account, and persistent login are
@@ -690,6 +691,7 @@ function CandidateAccountPreview({
         safe simulations only.
       </div>
       </div>
+      </CollapsibleRegion>
 
       <Drawer
         id="account-preview-drawer"

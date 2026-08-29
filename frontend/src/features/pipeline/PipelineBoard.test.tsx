@@ -43,7 +43,7 @@ describe("Pipeline board", () => {
   it("moves an application only after a keyboard-accessible confirmation", async () => {
     const application = makeApplication({
       version: 4,
-      allowed_transitions: ["SCREENING", "INTERVIEW", "ARCHIVED"],
+      allowed_transitions: ["DRAFT", "SCREENING", "INTERVIEW", "ARCHIVED"],
     });
     let body: unknown;
     server.use(
@@ -90,5 +90,38 @@ describe("Pipeline board", () => {
       target: { value: "2026-08-24" },
     });
     expect(screen.getByRole("button", { name: "Move to Applied" })).toBeEnabled();
+  });
+
+  it("supports an explicit applied-to-draft correction without sending an applied date", async () => {
+    const application = makeApplication({
+      status: "APPLIED",
+      version: 6,
+      allowed_transitions: ["DRAFT", "SCREENING", "ARCHIVED"],
+    });
+    let body: unknown;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/pipeline`, () => HttpResponse.json(pipelineWithCard(application))),
+      http.post(`${API_ORIGIN}/api/v1/applications/${application.application_id}/status`, async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({
+          ...application,
+          status: "DRAFT",
+          applied_date: null,
+          version: 7,
+          allowed_transitions: ["APPLIED", "ARCHIVED"],
+        });
+      }),
+    );
+
+    const { user } = renderApp("/analytics?section=pipeline");
+    await screen.findAllByText(application.company_name);
+    await user.click(screen.getAllByRole("button", { name: "Move…" })[0]);
+    await user.selectOptions(screen.getByLabelText("New stage"), "DRAFT");
+    expect(await screen.findByRole("dialog", { name: "Confirm correction" })).toBeVisible();
+    expect(screen.getByText(/clears the applied date and returns the opportunity to Draft/i)).toBeVisible();
+    expect(screen.queryByLabelText(/Applied date/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Correct to Draft" }));
+    expect(await screen.findByText("Application corrected to Draft.")).toBeVisible();
+    expect(body).toEqual({ status: "DRAFT", expected_version: 6 });
   });
 });

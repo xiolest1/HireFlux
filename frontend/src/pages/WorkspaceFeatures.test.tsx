@@ -201,9 +201,8 @@ describe("workspace milestone features", () => {
     expect(
       screen.getByText("2 actions · 1 overdue · 0 today · 1 upcoming"),
     ).toBeVisible();
-    expect(document.getElementById("action-center-content")).toHaveAttribute(
-      "hidden",
-    );
+    expect(document.getElementById("action-center-content")).toHaveAttribute("aria-hidden", "true");
+    expect(document.getElementById("action-center-content")).toHaveAttribute("inert");
     expect(
       screen.queryByRole("button", { name: "Complete" }),
     ).not.toBeInTheDocument();
@@ -619,9 +618,8 @@ describe("workspace milestone features", () => {
     await firstRender.user.click(
       screen.getByRole("button", { name: "Collapse action center" }),
     );
-    expect(document.getElementById("action-center-content")).toHaveAttribute(
-      "hidden",
-    );
+    expect(document.getElementById("action-center-content")).toHaveAttribute("aria-hidden", "true");
+    expect(document.getElementById("action-center-content")).toHaveAttribute("inert");
     expect(screen.getByLabelText("New follow-up date")).toHaveValue(
       "2026-08-20",
     );

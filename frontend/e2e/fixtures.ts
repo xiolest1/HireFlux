@@ -25,6 +25,7 @@ export const application = {
   updated_at: "2026-08-12T16:30:00Z",
   version: 3,
   allowed_transitions: [
+    "DRAFT",
     "SCREENING",
     "INTERVIEW",
     "OFFER",
@@ -651,6 +652,47 @@ export async function installDeterministicApi(page: Page) {
       request.method() === "DELETE"
     ) {
       await json(route, { ...interview, version: 3 });
+      return;
+    }
+    if (path === "/api/v1/applications/workspace") {
+      await json(route, {
+        generated_at: "2026-08-27T14:00:00Z",
+        groups: {
+          needs_action: { total_count: 0, items: [], next_cursor: null },
+          moving_forward: {
+            total_count: 1,
+            items: [{
+              application: secondApplication,
+              classification: {
+                group: "moving_forward",
+                reason_code: "INTERVIEW_SCHEDULED",
+                relevant_date: null,
+                relevant_at: interview.scheduled_at,
+                action_type: "PREPARE_INTERVIEW",
+                interview_id: interview.interview_id,
+                next_interview: interview,
+              },
+            }],
+            next_cursor: null,
+          },
+          waiting: {
+            total_count: 1,
+            items: [{
+              application,
+              classification: {
+                group: "waiting",
+                reason_code: "RECENTLY_APPLIED",
+                relevant_date: null,
+                relevant_at: null,
+                action_type: "OPEN_OPPORTUNITY",
+                interview_id: null,
+                next_interview: null,
+              },
+            }],
+            next_cursor: null,
+          },
+        },
+      });
       return;
     }
     if (path === `/api/v1/applications/${applicationId}`) {

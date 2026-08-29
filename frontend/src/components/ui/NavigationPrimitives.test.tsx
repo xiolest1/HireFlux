@@ -96,7 +96,8 @@ describe("navigation primitives", () => {
     expect(screen.getByRole("button", { name: "Apply filters" })).toHaveFocus();
 
     await user.keyboard("{Escape}");
-    expect(drawer).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+    expect(drawer).toHaveAttribute("data-state", "closed");
+    await waitFor(() => expect(drawer).not.toBeInTheDocument());
   });
 });

@@ -27,6 +27,7 @@ export default defineConfig({
     { name: "narrow-320", use: { viewport: { width: 320, height: 720 } } },
     { name: "mobile-390", use: { viewport: { width: 390, height: 844 } } },
     { name: "tablet-768", use: { viewport: { width: 768, height: 1024 } } },
+    { name: "desktop-1024", use: { viewport: { width: 1024, height: 768 } } },
     { name: "desktop-1280", use: { viewport: { width: 1280, height: 900 } } },
   ],
   webServer: {

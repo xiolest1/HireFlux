@@ -41,6 +41,7 @@ class ApplicationRepositoryStub:
         activity: Activity,
     ) -> None:
         self.application = application
+        self.activity = activity
 
     def list_all(self, owner_user_id: str) -> tuple[Application, ...]:
         return (self.application,) if self.application is not None else ()
@@ -159,6 +160,44 @@ def test_draft_to_applied_captures_transition_instant() -> None:
     )
 
     assert applied.submitted_at == submitted_at
+
+
+def test_applied_to_draft_correction_clears_date_and_preserves_history() -> None:
+    applied_at = datetime(2026, 8, 20, 8, 30, tzinfo=UTC)
+    corrected_at = datetime(2026, 8, 22, 9, 45, tzinfo=UTC)
+    repository = ApplicationRepositoryStub()
+    clock = [applied_at]
+    service = ApplicationService(repository, clock=lambda: clock[0])
+
+    applied = service.create(
+        identity(),
+        CreateApplicationCommand(
+            company_name="Correction Co",
+            job_title="Engineer",
+            status=ApplicationStatus.APPLIED,
+            applied_date=applied_at.date(),
+        ),
+    )
+    clock[0] = corrected_at
+
+    corrected = service.transition(
+        identity(),
+        applied.application_id,
+        TransitionApplicationCommand(
+            status=ApplicationStatus.DRAFT,
+            expected_version=applied.version,
+        ),
+    )
+
+    assert corrected.status is ApplicationStatus.DRAFT
+    assert corrected.applied_date is None
+    assert corrected.version == applied.version + 1
+    assert corrected.submitted_at == applied.submitted_at
+    assert corrected.stage_entered_at == corrected_at
+    assert corrected.first_response_at == applied.first_response_at
+    assert repository.activity is not None
+    assert repository.activity.summary == "Status corrected from APPLIED to DRAFT."
+    assert repository.activity.metadata["correction"] == "APPLIED_TO_DRAFT"
 
 
 def test_analytics_uses_applied_date_for_both_submission_paths() -> None:

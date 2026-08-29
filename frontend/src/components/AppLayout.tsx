@@ -511,7 +511,9 @@ export function AppLayout() {
             {status === "replacing" ? (
               <LoadingState label="Preparing a fresh demo workspace..." />
             ) : (
-              <Outlet />
+              <div key={location.pathname} className="hf-route-enter">
+                <Outlet />
+              </div>
             )}
           </main>
         </div>

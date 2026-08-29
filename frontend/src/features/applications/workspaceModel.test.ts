@@ -52,4 +52,18 @@ describe("selectApplicationWorkspace", () => {
     expect(model.secondary).toBeNull();
     expect(model.moreTransitions).toEqual(["ARCHIVED"]);
   });
+
+  it("labels the server-approved applied-to-draft path as a correction", () => {
+    const model = selectApplicationWorkspace({
+      application: makeApplication({
+        status: "APPLIED",
+        allowed_transitions: ["DRAFT", "ARCHIVED"],
+      }),
+      interviews: [],
+      today,
+      now,
+    });
+
+    expect(model.moreTransitions).toEqual(["DRAFT", "ARCHIVED"]);
+  });
 });

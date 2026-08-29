@@ -28,6 +28,8 @@ import type { Analytics, Dashboard } from "../api/workspace";
 import { buttonClassName } from "../components/ui/buttonStyles";
 import { ErrorPanel, SuccessBanner } from "../components/ui/Feedback";
 import { PanelSkeleton, Skeleton } from "../components/ui/Skeleton";
+import { CollapsibleRegion, PendingIndicator } from "../components/ui/Motion";
+import { useReducedMotion } from "../components/ui/motionHooks";
 import { useToast } from "../components/ui/toastContext";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { WorkspaceFrame } from "../components/ui/WorkspaceComposition";
@@ -185,6 +187,10 @@ export function DashboardPage() {
   const settingsQuery = useSettings();
   const { showToast } = useToast();
   const [rescheduling, setRescheduling] = useState<string | null>(null);
+  const [resolvingActionId, setResolvingActionId] = useState<string | null>(null);
+  const [departingAction, setDepartingAction] = useState<DashboardAction | null>(null);
+  const [recentlyRescheduledId, setRecentlyRescheduledId] = useState<string | null>(null);
+  const reducedMotion = useReducedMotion();
   const [followUpDate, setFollowUpDate] = useState("");
   const [tour, setTour] = useState<SearchTourState>(readSearchTour);
   const [notice, setNotice] = useState<string | null>(() => {
@@ -247,9 +253,12 @@ export function DashboardPage() {
   const dashboard = dashboardQuery.data;
   const progressAnalytics = analyticsQuery.data?.range === range ? analyticsQuery.data : undefined;
   const timeZone = settingsQuery.data?.time_zone ?? "UTC";
+  const displayedActions = departingAction && !dashboard.actions.some((action) =>
+    action.application_id === departingAction.application_id && action.kind === departingAction.kind
+  ) ? [...dashboard.actions, departingAction] : dashboard.actions;
   const groupedActions = (["Overdue", "Today", "Upcoming"] as const).map((name) => ({
     name,
-    items: dashboard.actions.filter((action) => attentionGroup(action) === name),
+    items: displayedActions.filter((action) => attentionGroup(action) === name),
   }));
   const actionSummary = [
     `${dashboard.actions.length} ${dashboard.actions.length === 1 ? "action" : "actions"}`,
@@ -307,11 +316,18 @@ export function DashboardPage() {
     });
   }
 
-  async function complete(applicationId: string) {
+  async function complete(action: DashboardAction) {
+    setResolvingActionId(action.application_id);
     try {
-      await completeMutation.mutateAsync(applicationId);
+      await completeMutation.mutateAsync(action.application_id);
+      setDepartingAction(action);
       showToast("Follow-up completed.", { title: "Follow-up updated" });
+      window.setTimeout(() => {
+        setDepartingAction(null);
+        setResolvingActionId(null);
+      }, reducedMotion ? 0 : 360);
     } catch {
+      setResolvingActionId(null);
       return;
     }
   }
@@ -322,7 +338,9 @@ export function DashboardPage() {
       await rescheduleMutation.mutateAsync({ applicationId, followUpDate });
       setRescheduling(null);
       setFollowUpDate("");
+      setRecentlyRescheduledId(applicationId);
       showToast("Follow-up rescheduled.", { title: "Follow-up updated" });
+      window.setTimeout(() => setRecentlyRescheduledId(null), reducedMotion ? 0 : 1000);
     } catch {
       return;
     }
@@ -409,8 +427,8 @@ export function DashboardPage() {
             </div>
           </div>
         </div>
-        <div id="action-center-content" hidden={actionCenterIsCollapsed && dashboard.actions.length > 0}>
-          {dashboard.actions.length === 0 ? (
+        <CollapsibleRegion id="action-center-content" open={!actionCenterIsCollapsed || dashboard.actions.length === 0}>
+          {displayedActions.length === 0 ? (
             <div className="m-5 flex items-start gap-3 rounded-2xl border border-success/25 bg-success-soft p-5 text-success sm:m-6">
               <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
               <div><p className="font-semibold">You are caught up.</p><p className="mt-1 text-sm">There are no urgent actions in this workspace.</p></div>
@@ -443,7 +461,10 @@ export function DashboardPage() {
                         {visibleItems.map((action) => {
                           const isFollowUp = action.kind.startsWith("FOLLOW_UP");
                           return (
-                            <li key={`${action.kind}-${action.application_id}-${actionDueKey(action)}`} className="rounded-2xl border border-line-subtle bg-surface p-4">
+                            <li
+                              key={`${action.kind}-${action.application_id}-${actionDueKey(action)}`}
+                              className={`rounded-2xl border border-line-subtle bg-surface p-4 transition-[opacity,transform] duration-[var(--motion-state)] ${departingAction?.application_id === action.application_id ? "hf-action-resolve" : ""} ${recentlyRescheduledId === action.application_id ? "hf-state-emphasis" : ""}`}
+                            >
                               <div className="flex items-center justify-between gap-3">
                                 <span className="text-xs font-bold uppercase tracking-wide text-accent-strong">{action.priority} priority</span>
                                 <time className="text-xs font-semibold text-ink-tertiary" dateTime={actionDueKey(action)}>{actionDueLabel(action, timeZone)}</time>
@@ -454,8 +475,12 @@ export function DashboardPage() {
                               <span className="sr-only">{action.label} · {actionDueLabel(action, timeZone)}</span>
                               {isFollowUp ? (
                                 <div className="mt-3 flex flex-wrap gap-2">
-                                  <button type="button" className={buttonClassName("secondary", "min-h-10 px-3 py-1.5")} disabled={completeMutation.isPending} onClick={() => void complete(action.application_id)}>Complete</button>
-                                  <button type="button" className="min-h-10 rounded-lg px-3 text-sm font-semibold text-accent hover:bg-surface-hover active:bg-surface-pressed" onClick={() => { setRescheduling(action.application_id); setFollowUpDate(""); }}>Reschedule</button>
+                                  {departingAction?.application_id === action.application_id ? (
+                                    <span className="inline-flex min-h-10 items-center gap-2 px-3 text-sm font-bold text-success" role="status"><Check aria-hidden="true" className="size-4" />Completed</span>
+                                  ) : (
+                                    <button type="button" className={buttonClassName("secondary", "min-h-10 px-3 py-1.5")} disabled={resolvingActionId === action.application_id} onClick={() => void complete(action)}>{resolvingActionId === action.application_id ? <PendingIndicator label="Completing…" /> : "Complete"}</button>
+                                  )}
+                                  <button type="button" disabled={resolvingActionId === action.application_id} className="min-h-10 rounded-lg px-3 text-sm font-semibold text-accent hover:bg-surface-hover active:bg-surface-pressed disabled:cursor-not-allowed disabled:opacity-50" onClick={() => { setRescheduling(action.application_id); setFollowUpDate(""); }}>Reschedule</button>
                                 </div>
                               ) : null}
                               {rescheduling === action.application_id ? (
@@ -488,7 +513,7 @@ export function DashboardPage() {
               })}
             </div>
           )}
-        </div>
+        </CollapsibleRegion>
       </section>
 
       <ProgressStory
@@ -616,14 +641,12 @@ function ProgressStory({
               <ChevronDown aria-hidden="true" className={`size-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
             </button>
 
-            <div id="progress-story-details" hidden={!open} className="border-t border-current/10 bg-surface-raised/45">
-              {open ? (
-                <div className="p-5 sm:p-6 lg:p-7">
-                  {isPending ? <ProgressStorySkeleton /> : null}
-                  {analytics ? <ExpandedProgressStory analytics={analytics} createState={createState} /> : null}
-                </div>
-              ) : null}
-            </div>
+            <CollapsibleRegion id="progress-story-details" open={open} className="border-t border-current/10 bg-surface-raised/45">
+              {open ? <div className="p-5 sm:p-6 lg:p-7">
+                {isPending ? <ProgressStorySkeleton /> : null}
+                {analytics ? <ExpandedProgressStory analytics={analytics} createState={createState} /> : null}
+              </div> : null}
+            </CollapsibleRegion>
           </>
         )}
       </div>

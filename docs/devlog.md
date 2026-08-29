@@ -1,5 +1,19 @@
 # HireFlux development log
 
+## 2026-08-29 — Applied-to-Draft correction
+
+Added one controlled backward correction to the server-owned application
+workflow: an `APPLIED` opportunity can now return to `DRAFT` when it was marked
+applied by mistake. The correction clears the current `applied_date`, preserves
+the immutable submission and milestone history, resets the current stage clock,
+increments the version, and records correction-aware activity metadata.
+
+Pipeline drag-and-drop, keyboard/touch `Move…`, and application-detail status
+controls all consume the same backend-provided transition. The confirmation UI
+explains the correction and does not request a replacement applied date. Other
+backward moves remain forbidden, and re-applying still requires a new valid
+applied date.
+
 ## 2026-08-27 — Applications opportunity workspace
 
 Replaced the unfiltered Active Applications card collection with three exclusive,

@@ -460,6 +460,7 @@ export function InterviewsPage() {
               compactOpen={interviewSwitcherOpen}
               onCompactToggle={() => setInterviewSwitcherOpen((value) => !value)}
             />
+            <div key={selected.interview_id} className="hf-content-enter min-w-0">
             <InterviewDetail
               ref={detailRef}
               interview={selected}
@@ -475,6 +476,7 @@ export function InterviewsPage() {
               applicationRouteState={applicationRouteState}
               primaryActionRef={automaticPreparationTriggerRef}
             />
+            </div>
           </div>
         ) : null}
       </div>
@@ -578,12 +580,12 @@ function SchedulePane({
             </span>
             <span className="inline-flex shrink-0 items-center gap-1 text-sm font-bold text-accent">
               Switch
-              <ChevronDown aria-hidden="true" className={`size-4 transition-transform ${compactOpen ? "rotate-180" : ""}`} />
+              <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-[var(--motion-ui)] ${compactOpen ? "rotate-180" : ""}`} />
             </span>
           </button>
         </div>
 
-        <div id={compactRegionId} className={`${compactOpen ? "block" : "hidden"} divide-y divide-line lg:block`}>
+        <div id={compactRegionId} className={`${compactOpen ? "hf-content-enter block" : "hidden"} divide-y divide-line lg:block`}>
           <QueueGroup
             id="needs-attention"
             title="Needs attention"

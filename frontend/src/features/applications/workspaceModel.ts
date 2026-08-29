@@ -31,6 +31,7 @@ interface WorkspaceModelInput {
 }
 
 const transitionLabels: Partial<Record<ApplicationStatus, string>> = {
+  DRAFT: "Correct to Draft",
   APPLIED: "Mark as applied",
   SCREENING: "Move to Screening",
   INTERVIEW: "Move to Interview",

@@ -3,6 +3,7 @@ import { Button } from "../../components/ui/Button";
 import { ResourcePanelSkeleton } from "./ApplicationSkeletons";
 import { formatTimestamp } from "./format";
 import { useApplicationActivity } from "./queries";
+import { useEffect, useId, useRef, useState } from "react";
 
 function formatActivityType(value: string): string {
   return value
@@ -23,7 +24,20 @@ export function ActivityTimeline({
   const disclosureId = useId();
   const activityQuery = useApplicationActivity(applicationId, { order: "desc", limit: 8 });
   const activities = activityQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const firstActivityId = activities[0]?.activity_id;
+  const previousFirstActivityId = useRef<string | undefined>(undefined);
+  const [highlightedActivityId, setHighlightedActivityId] = useState<string | null>(null);
   const visibleActivities = expanded ? activities : activities.slice(0, 3);
+
+  useEffect(() => {
+    if (previousFirstActivityId.current && firstActivityId && previousFirstActivityId.current !== firstActivityId) {
+      setHighlightedActivityId(firstActivityId);
+      const timer = window.setTimeout(() => setHighlightedActivityId(null), 1000);
+      previousFirstActivityId.current = firstActivityId;
+      return () => window.clearTimeout(timer);
+    }
+    previousFirstActivityId.current = firstActivityId;
+  }, [firstActivityId]);
 
   if (activityQuery.isPending) {
     return <ResourcePanelSkeleton label="Loading activity…" />;
@@ -53,7 +67,7 @@ export function ActivityTimeline({
     <div>
       <ol id={disclosureId} className="relative ml-2 border-l border-line pl-6">
         {visibleActivities.map((activity) => (
-        <li key={activity.activity_id} className="relative pb-6 last:pb-0">
+        <li key={activity.activity_id} className={`relative pb-6 last:pb-0 ${highlightedActivityId === activity.activity_id ? "hf-state-emphasis rounded-xl" : ""}`}>
           <span
             aria-hidden="true"
             className="absolute -left-[1.81rem] top-1.5 size-3 rounded-full border-2 border-surface bg-accent ring-1 ring-accent/30"
@@ -96,4 +110,3 @@ export function ActivityTimeline({
     </div>
   );
 }
-import { useId, useState } from "react";

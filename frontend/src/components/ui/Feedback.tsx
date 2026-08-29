@@ -38,7 +38,7 @@ export function ErrorPanel({
 
   return (
     <div
-      className={`rounded-2xl border border-danger/30 bg-danger-soft text-danger ${compact ? "p-4" : "p-6"}`}
+      className={`hf-content-enter rounded-2xl border border-danger/30 bg-danger-soft text-danger ${compact ? "p-4" : "p-6"}`}
       role="alert"
     >
       <h2 className="font-semibold">{title}</h2>
@@ -63,7 +63,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
-    <section className="rounded-2xl border border-dashed border-line bg-surface px-6 py-14 text-center">
+    <section className="hf-content-enter rounded-2xl border border-dashed border-line bg-surface px-6 py-14 text-center">
       <div
         aria-hidden="true"
         className="mx-auto flex size-12 items-center justify-center rounded-xl bg-accent-soft text-lg font-bold text-accent"
@@ -82,7 +82,7 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
 export function SuccessBanner({ children }: { children: ReactNode }) {
   return (
     <div
-      className="rounded-xl border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success"
+      className="hf-content-enter rounded-xl border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success"
       role="status"
     >
       {children}

@@ -510,7 +510,10 @@ export function ApplicationListPage() {
         ) : null}
       </section>
 
-      <div className="mt-6">
+      <div
+        className={`mt-6 ${((groupedActiveMode && workspaceQuery.isFetching && workspaceQuery.data) || (!groupedActiveMode && applicationsQuery.isFetching && applications.length > 0)) ? "hf-updating" : ""}`}
+        aria-busy={(groupedActiveMode ? workspaceQuery.isFetching : applicationsQuery.isFetching) || undefined}
+      >
         <p className="sr-only" aria-live="polite" aria-atomic="true">
           {groupedActiveMode
             ? workspaceQuery.isFetching && workspaceQuery.data

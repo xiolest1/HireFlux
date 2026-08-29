@@ -25,6 +25,7 @@ _ALLOWED: dict[ApplicationStatus, frozenset[ApplicationStatus]] = {
     ApplicationStatus.DRAFT: frozenset({ApplicationStatus.APPLIED, ApplicationStatus.ARCHIVED}),
     ApplicationStatus.APPLIED: frozenset(
         {
+            ApplicationStatus.DRAFT,
             ApplicationStatus.SCREENING,
             ApplicationStatus.INTERVIEW,
             ApplicationStatus.OFFER,
@@ -128,9 +129,14 @@ def decide_transition(
             )
         archived_from_status = current if target is ApplicationStatus.ARCHIVED else None
 
-    applied_date = application.applied_date or supplied_applied_date
-    if target in ACTIVE_STATUSES_REQUIRING_APPLIED_DATE and applied_date is None:
-        raise StatusPolicyError("applied_date is required before entering this status.")
+    if target is ApplicationStatus.DRAFT:
+        if supplied_applied_date is not None:
+            raise StatusPolicyError("applied_date must be empty when correcting to DRAFT.")
+        applied_date = None
+    else:
+        applied_date = application.applied_date or supplied_applied_date
+        if target in ACTIVE_STATUSES_REQUIRING_APPLIED_DATE and applied_date is None:
+            raise StatusPolicyError("applied_date is required before entering this status.")
 
     return TransitionDecision(
         changed=True,

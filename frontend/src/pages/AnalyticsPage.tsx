@@ -138,7 +138,7 @@ export function AnalyticsPage() {
         {analyticsQuery.isFetching && analyticsQuery.data ? <p className="text-xs font-semibold text-ink-tertiary" role="status">Refreshing analytics…</p> : null}
         {analyticsQuery.isPending ? <AnalyticsSkeleton /> : null}
         {analyticsQuery.isError && !analyticsQuery.data ? <ErrorPanel title="Analytics could not be loaded" error={analyticsQuery.error} onRetry={() => void analyticsQuery.refetch()} /> : null}
-        {analyticsQuery.data ? <AnalyticsResults analytics={analyticsQuery.data} section={section} /> : null}
+        {analyticsQuery.data ? <div key={`${range}-${status ?? "all"}-${source ?? "all"}-${workMode ?? "all"}-${section}`} className={`hf-content-enter ${analyticsQuery.isFetching ? "hf-updating" : ""}`} aria-busy={analyticsQuery.isFetching || undefined}><AnalyticsResults analytics={analyticsQuery.data} section={section} /></div> : null}
       </>}
 
       <Drawer
@@ -197,7 +197,7 @@ function Pipeline({ analytics }: { analytics: Analytics }) {
   const stageAges = new Map(analytics.stage_aging.map((item) => [item.bucket, item.count]));
   return <>
     <NarrativeSection title="Where opportunities are now" description="The current shape of your pipeline, from early pursuit through decisions." id="status-distribution-title">
-      <ul className="grid gap-x-10 gap-y-5 sm:grid-cols-2">{analytics.status_breakdown.map((item) => <li key={item.status}><div className="flex justify-between gap-3 text-sm"><span className="font-semibold text-ink">{formatStatus(item.status)}</span><span className="text-lg font-black text-ink">{item.count}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-muted"><div className="h-full rounded-full bg-accent" style={{ width: `${(item.count / maxStatus) * 100}%` }} /></div></li>)}</ul>
+      <ul className="grid gap-x-10 gap-y-5 sm:grid-cols-2">{analytics.status_breakdown.map((item) => <li key={item.status}><div className="flex justify-between gap-3 text-sm"><span className="font-semibold text-ink">{formatStatus(item.status)}</span><span className="text-lg font-black text-ink">{item.count}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-muted"><div className="h-full rounded-full bg-accent transition-[width] duration-[var(--motion-state)] ease-[var(--ease-standard)]" style={{ width: `${(item.count / maxStatus) * 100}%` }} /></div></li>)}</ul>
     </NarrativeSection>
     <div className="grid gap-10 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] lg:gap-14">
       <NarrativeSection title="Milestones reached" description="Historical progress each submitted application has reached at least once." id="funnel-title">

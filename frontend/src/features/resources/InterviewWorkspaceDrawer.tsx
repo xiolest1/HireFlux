@@ -26,6 +26,7 @@ import {
 import { Button } from "../../components/ui/Button";
 import { FocusedWorkspace } from "../../components/ui/FocusedWorkspace";
 import { ErrorPanel } from "../../components/ui/Feedback";
+import { PendingIndicator } from "../../components/ui/Motion";
 import { useToast } from "../../components/ui/toastContext";
 import {
   formatTimestamp,
@@ -102,6 +103,7 @@ export function InterviewFocusedWorkspace({
   const [customLabel, setCustomLabel] = useState("");
   const [showMoreTips, setShowMoreTips] = useState(false);
   const [showMoreSuggestions, setShowMoreSuggestions] = useState(false);
+  const [recentChecklistId, setRecentChecklistId] = useState<string | null>(null);
   const questionRefs = useRef<Array<HTMLInputElement | null>>([]);
   const addQuestionRef = useRef<HTMLButtonElement>(null);
   const editReflectionRef = useRef<HTMLButtonElement>(null);
@@ -273,6 +275,8 @@ export function InterviewFocusedWorkspace({
         ? current.completed_checklist_items.filter((value) => value !== itemId)
         : [...current.completed_checklist_items, itemId],
     }));
+    setRecentChecklistId(itemId);
+    window.setTimeout(() => setRecentChecklistId(null), 500);
   }
 
   function addQuestion(value = "") {
@@ -366,7 +370,7 @@ export function InterviewFocusedWorkspace({
                 disabled={!canCompleteDebrief || pending}
                 onClick={() => void save(true, true)}
               >
-                {workspaceMutation.isPending ? "Saving…" : "Save reflection"}
+                {workspaceMutation.isPending ? <PendingIndicator label="Saving…" /> : "Save reflection"}
               </Button>
             </>
           ) : mode === "CAPTURE" ? (
@@ -380,13 +384,13 @@ export function InterviewFocusedWorkspace({
             </>
           ) : mode === "HANDOFF" ? null : (
             <Button type="button" disabled={pending} onClick={() => void save(false)}>
-              {workspaceMutation.isPending ? "Saving…" : "Save preparation"}
+              {workspaceMutation.isPending ? <PendingIndicator label="Saving…" /> : "Save preparation"}
             </Button>
           )}
         </div>
       }
     >
-      <div className="space-y-7">
+      <div key={mode} className="hf-content-enter space-y-7">
         {mutationError ? <ErrorPanel compact title="Workspace could not be saved" error={mutationError} /> : null}
 
         {mode === "HANDOFF" && applicationQuery.data ? (
@@ -468,7 +472,7 @@ export function InterviewFocusedWorkspace({
               <div key={category} className="mt-4">
                 <div className="mt-2 space-y-2">
                   {items.map((item) => (
-                    <div key={item.item_id} className="flex items-start gap-3 rounded-xl border border-line bg-surface-raised p-3">
+                    <div key={item.item_id} className={`flex items-start gap-3 rounded-xl border border-line bg-surface-raised p-3 transition-colors duration-[var(--motion-feedback)] ${recentChecklistId === item.item_id ? "hf-state-emphasis" : ""}`}>
                       <input id={`interview-checklist-${item.item_id}`} type="checkbox" checked={completed.has(item.item_id) || item.completed} onChange={() => toggleChecklist(item.item_id)} className="mt-1 size-5 shrink-0 accent-accent" />
                       <label htmlFor={`interview-checklist-${item.item_id}`} className="min-w-0 flex-1 cursor-pointer">
                         <span className="block text-sm font-semibold text-ink">{item.label}</span>
@@ -489,7 +493,7 @@ export function InterviewFocusedWorkspace({
             <p className="mb-3 text-xs leading-5 text-ink-muted">Role-specific and candidate-created work is tracked separately and never reduces essential completion.</p>
             <div className="space-y-2">
               {guidance.checklist_items.filter((item) => item.category !== "ESSENTIAL").map((item) => (
-                <div key={item.item_id} className="flex items-start gap-3 rounded-xl border border-line bg-surface p-3">
+                <div key={item.item_id} className={`hf-content-enter flex items-start gap-3 rounded-xl border border-line bg-surface p-3 transition-colors duration-[var(--motion-feedback)] ${recentChecklistId === item.item_id ? "hf-state-emphasis" : ""}`}>
                   <input id={`interview-checklist-${item.item_id}`} type="checkbox" checked={completed.has(item.item_id) || item.completed} onChange={() => toggleChecklist(item.item_id)} className="mt-1 size-5 shrink-0 accent-accent" />
                   <label htmlFor={`interview-checklist-${item.item_id}`} className="min-w-0 flex-1 cursor-pointer">
                     <span className="block text-sm font-semibold text-ink">{item.label}</span>

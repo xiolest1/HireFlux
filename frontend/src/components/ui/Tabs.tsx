@@ -72,7 +72,7 @@ export function Tabs<T extends string>({
           tabIndex: isSelected ? 0 : -1,
           onKeyDown: (event: KeyboardEvent<HTMLAnchorElement | HTMLButtonElement>) =>
             handleKeyDown(event, index),
-          className: `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-[color,background-color,box-shadow] duration-200 ${stretch ? "min-w-0 flex-1 px-2" : "shrink-0 px-3"} ${
+          className: `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-[color,background-color,box-shadow,transform] duration-[var(--motion-ui)] ease-[var(--ease-standard)] active:scale-[0.98] ${stretch ? "min-w-0 flex-1 px-2" : "shrink-0 px-3"} ${
             isSelected
               ? "bg-surface-raised text-ink shadow-sm"
               : "text-ink-muted hover:bg-surface-hover hover:text-ink active:bg-surface-pressed"

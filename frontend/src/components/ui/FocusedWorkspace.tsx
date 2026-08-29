@@ -11,6 +11,7 @@ import { X } from "lucide-react";
 import { Button } from "./Button";
 import { IconButton } from "./IconButton";
 import { useModalFocus } from "./useModalFocus";
+import { usePresence } from "./motionHooks";
 
 interface FocusedWorkspaceProps {
   open: boolean;
@@ -45,6 +46,7 @@ export function FocusedWorkspace({
   const discardRef = useRef<HTMLDivElement>(null);
   const discardTriggerRef = useRef<HTMLElement | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const presence = usePresence(open);
 
   function requestClose() {
     if (dirty) {
@@ -151,14 +153,17 @@ export function FocusedWorkspace({
     return () => panel.removeEventListener("keydown", handleDiscardKeyDown);
   }, [confirmDiscard]);
 
-  if (!open) return null;
+  if (!presence.mounted) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-overlay backdrop-blur-sm md:items-center md:p-5 lg:p-8"
+      data-state={presence.state}
+      aria-hidden={!open || undefined}
+      inert={!open}
+      className="hf-overlay-backdrop fixed inset-0 z-50 flex items-stretch justify-center bg-overlay backdrop-blur-sm md:items-center md:p-5 lg:p-8"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) requestClose();
+        if (open && event.target === event.currentTarget) requestClose();
       }}
     >
       <section
@@ -168,7 +173,8 @@ export function FocusedWorkspace({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-surface-raised shadow-float md:h-auto md:max-h-[calc(100dvh-2.5rem)] md:max-w-4xl md:rounded-3xl md:border md:border-line lg:max-w-5xl"
+        data-state={presence.state}
+        className="hf-workspace-panel relative flex h-[100dvh] w-full flex-col overflow-hidden bg-surface-raised shadow-float md:h-auto md:max-h-[calc(100dvh-2.5rem)] md:max-w-4xl md:rounded-3xl md:border md:border-line lg:max-w-5xl"
       >
         <header inert={confirmDiscard} className="shrink-0 border-b border-line bg-surface-raised px-5 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-7 md:pt-6">
           <div className="flex items-start gap-4">

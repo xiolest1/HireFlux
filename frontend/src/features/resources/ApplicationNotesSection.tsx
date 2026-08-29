@@ -2,6 +2,7 @@ import { ChevronDown, Plus } from "lucide-react";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Button } from "../../components/ui/Button";
 import { ErrorPanel } from "../../components/ui/Feedback";
+import { CollapsibleRegion, PendingIndicator } from "../../components/ui/Motion";
 import { formatTimestamp } from "../applications/format";
 import { NotesPanel } from "./NotesPanel";
 import { useCreateNote, useNotePreview } from "./queries";
@@ -21,6 +22,7 @@ export function ApplicationNotesSection({
   const [composerOpen, setComposerOpen] = useState(false);
   const [content, setContent] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [newNoteId, setNewNoteId] = useState<string | null>(null);
   const fullNotesId = useId();
   const preview = useNotePreview(applicationId, nearViewport);
   const createMutation = useCreateNote(applicationId);
@@ -53,7 +55,9 @@ export function ApplicationNotesSection({
     event.preventDefault();
     if (!content.trim()) return;
     try {
-      await createMutation.mutateAsync(content.trim());
+      const created = await createMutation.mutateAsync(content.trim());
+      setNewNoteId(created.note_id);
+      window.setTimeout(() => setNewNoteId(null), 1000);
       setContent("");
       setComposerOpen(false);
     } catch {
@@ -79,7 +83,7 @@ export function ApplicationNotesSection({
         </Button>
       </div>
 
-      {composerOpen ? (
+      <CollapsibleRegion open={composerOpen}>
         <form className="mt-5 rounded-2xl border border-accent/30 bg-accent-soft p-4" onSubmit={submit}>
           <label htmlFor="quick-opportunity-note" className="font-semibold text-ink">New note</label>
           <textarea
@@ -95,11 +99,11 @@ export function ApplicationNotesSection({
           <div className="mt-3 flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setComposerOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={!content.trim() || createMutation.isPending}>
-              {createMutation.isPending ? "Saving…" : "Save note"}
+              {createMutation.isPending ? <PendingIndicator label="Saving…" /> : "Save note"}
             </Button>
           </div>
         </form>
-      ) : null}
+      </CollapsibleRegion>
 
       {preview.isError ? (
         <div className="mt-5"><ErrorPanel compact error={preview.error} title="Recent notes could not be loaded" onRetry={() => void preview.refetch()} /></div>
@@ -107,7 +111,7 @@ export function ApplicationNotesSection({
       {preview.data?.items.length ? (
         <ol className="mt-5 grid gap-3 sm:grid-cols-2">
           {preview.data.items.map((note) => (
-            <li key={note.note_id} className="rounded-2xl border border-line bg-surface-raised p-4">
+            <li key={note.note_id} className={`rounded-2xl border border-line bg-surface-raised p-4 ${newNoteId === note.note_id ? "hf-state-emphasis" : ""}`}>
               <p className="line-clamp-4 whitespace-pre-wrap text-sm leading-6 text-ink">{note.content}</p>
               <p className="mt-3 text-xs text-ink-muted">Updated {formatTimestamp(note.updated_at, timeZone)}</p>
             </li>

@@ -436,14 +436,26 @@ class ApplicationService:
             first_offer_at=milestones[5],
             first_acceptance_at=milestones[6],
         )
+        is_correction = (
+            current.status is ApplicationStatus.APPLIED
+            and updated.status is ApplicationStatus.DRAFT
+        )
         activity = Activity(
             activity_id=self._id_factory(),
             application_id=current.application_id,
             owner_user_id=identity.user_id,
             activity_type=ActivityType.STATUS_CHANGED,
-            summary=f"Status changed from {current.status.value} to {updated.status.value}.",
+            summary=(
+                f"Status corrected from {current.status.value} to {updated.status.value}."
+                if is_correction
+                else f"Status changed from {current.status.value} to {updated.status.value}."
+            ),
             created_at=now,
-            metadata={"from_status": current.status.value, "to_status": updated.status.value},
+            metadata={
+                "from_status": current.status.value,
+                "to_status": updated.status.value,
+                **({"correction": "APPLIED_TO_DRAFT"} if is_correction else {}),
+            },
             expires_at=identity.expires_at,
         )
         self._repository.replace_with_activity(

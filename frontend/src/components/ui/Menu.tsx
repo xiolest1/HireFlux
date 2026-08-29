@@ -1,5 +1,6 @@
 import { type KeyboardEvent as ReactKeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { usePresence } from "./motionHooks";
 
 export interface MenuItem {
   label: ReactNode;
@@ -23,6 +24,7 @@ export function Menu({ label, trigger, items, align = "end" }: MenuProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const presence = usePresence(open, 100);
 
   useEffect(() => {
     if (!open) return;
@@ -76,15 +78,18 @@ export function Menu({ label, trigger, items, align = "end" }: MenuProps) {
       >
         {trigger}
       </button>
-      {open ? (
+      {presence.mounted ? (
         <div
           ref={menuRef}
           id={menuId}
           role="menu"
           tabIndex={-1}
           aria-label={label}
+          aria-hidden={!open || undefined}
+          inert={!open}
+          data-state={presence.state}
           onKeyDown={handleMenuKeyDown}
-          className={`absolute top-full z-30 mt-2 min-w-52 rounded-xl border border-line bg-surface-raised p-1.5 shadow-float ${align === "end" ? "right-0" : "left-0"}`}
+          className={`hf-menu absolute top-full z-30 mt-2 min-w-52 rounded-xl border border-line bg-surface-raised p-1.5 shadow-float ${align === "end" ? "right-0" : "left-0"}`}
         >
           {items.map((item, index) => {
             const classes = `flex min-h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${

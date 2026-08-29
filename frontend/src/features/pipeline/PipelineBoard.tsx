@@ -1,6 +1,7 @@
 import {
   DragDropProvider,
   type DragEndEvent,
+  type DragStartEvent,
   useDraggable,
   useDroppable,
 } from "@dnd-kit/react";
@@ -11,6 +12,7 @@ import type { ApplicationStatus, PipelineCard, PipelineLane } from "../../api/sc
 import { Drawer } from "../../components/ui/Drawer";
 import { ErrorPanel, LoadingState } from "../../components/ui/Feedback";
 import { buttonClassName } from "../../components/ui/buttonStyles";
+import { PendingIndicator } from "../../components/ui/Motion";
 import { useToast } from "../../components/ui/toastContext";
 import { formatDateOnly, formatStatus } from "../applications/format";
 import { useTransitionApplication } from "../applications/queries";
@@ -80,6 +82,15 @@ export function PipelineBoard() {
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>("APPLIED");
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const [appliedDate, setAppliedDate] = useState("");
+  const [dragTargets, setDragTargets] = useState<ApplicationStatus[] | null>(null);
+  const [recentMove, setRecentMove] = useState<{ applicationId: string; status: ApplicationStatus } | null>(null);
+
+  function onDragStart(event: DragStartEvent) {
+    const transitions = event.operation.source?.data.allowedTransitions;
+    setDragTargets(Array.isArray(transitions) ? transitions.filter((status): status is ApplicationStatus =>
+      typeof status === "string" && pipelineStatuses.has(status as ApplicationStatus)
+    ) : []);
+  }
 
   function beginMove(card: PipelineCard, targetStatus: ApplicationStatus | null = null) {
     transitionMutation.reset();
@@ -88,6 +99,7 @@ export function PipelineBoard() {
   }
 
   function onDragEnd(event: DragEndEvent) {
+    setDragTargets(null);
     if (event.canceled) return;
     const sourceData = event.operation.source?.data;
     const targetData = event.operation.target?.data;
@@ -117,10 +129,13 @@ export function PipelineBoard() {
           ...(needsAppliedDate ? { applied_date: appliedDate } : {}),
         },
       });
-      showToast(`Status changed to ${formatStatus(updated.status)}.`, {
-        title: "Application updated",
+      const isDraftCorrection = card.application.status === "APPLIED" && updated.status === "DRAFT";
+      showToast(isDraftCorrection ? "Application corrected to Draft." : `Status changed to ${formatStatus(updated.status)}.`, {
+        title: isDraftCorrection ? "Application corrected" : "Application updated",
         tone: "success",
       });
+      setRecentMove({ applicationId: updated.application_id, status: updated.status });
+      window.setTimeout(() => setRecentMove(null), 1000);
       setPendingMove(null);
     } catch {
       // The mutation error panel keeps the server response available for recovery.
@@ -153,13 +168,13 @@ export function PipelineBoard() {
         <select id="pipeline-stage" value={selectedLane.status} onChange={(event) => setSelectedStatus(event.target.value as ApplicationStatus)} className="mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface-raised px-3 text-sm font-semibold text-ink">
           {pipelineQuery.data.lanes.map((lane) => <option key={lane.status} value={lane.status}>{formatStatus(lane.status)} ({lane.count})</option>)}
         </select>
-        <div className="mt-4"><PipelineLane lane={selectedLane} onMove={beginMove} dragEnabled={false} /></div>
+        <div key={selectedLane.status} className="hf-content-enter mt-4"><PipelineLane lane={selectedLane} onMove={beginMove} dragEnabled={false} pendingApplicationId={transitionMutation.isPending ? pendingMove?.card.application.application_id : undefined} recentMove={recentMove} /></div>
       </div>
 
       <div className="hidden overflow-x-auto pb-2 lg:block" aria-label="Pipeline board">
-        <DragDropProvider onDragEnd={onDragEnd}>
+        <DragDropProvider onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div className="grid min-w-[132rem] grid-cols-8 gap-4">
-            {pipelineQuery.data.lanes.map((lane) => <PipelineLane key={lane.status} lane={lane} onMove={beginMove} dragEnabled />)}
+            {pipelineQuery.data.lanes.map((lane) => <PipelineLane key={lane.status} lane={lane} onMove={beginMove} dragEnabled dragTargets={dragTargets} pendingApplicationId={transitionMutation.isPending ? pendingMove?.card.application.application_id : undefined} recentMove={recentMove} />)}
           </div>
         </DragDropProvider>
       </div>
@@ -178,7 +193,7 @@ export function PipelineBoard() {
   );
 }
 
-function PipelineLane({ lane, onMove, dragEnabled }: { lane: PipelineLane; onMove: (card: PipelineCard, targetStatus?: ApplicationStatus | null) => void; dragEnabled: boolean }) {
+function PipelineLane({ lane, onMove, dragEnabled, dragTargets = null, pendingApplicationId, recentMove }: { lane: PipelineLane; onMove: (card: PipelineCard, targetStatus?: ApplicationStatus | null) => void; dragEnabled: boolean; dragTargets?: ApplicationStatus[] | null; pendingApplicationId?: string; recentMove: { applicationId: string; status: ApplicationStatus } | null }) {
   const { ref, isDropTarget } = useDroppable({
     id: `pipeline-lane-${lane.status}`,
     data: { status: lane.status },
@@ -188,9 +203,11 @@ function PipelineLane({ lane, onMove, dragEnabled }: { lane: PipelineLane; onMov
     },
   });
   const terminal = ["ACCEPTED", "REJECTED", "WITHDRAWN"].includes(lane.status);
+  const dragActive = dragTargets !== null;
+  const validTarget = dragTargets?.includes(lane.status);
 
   return (
-    <section ref={ref} aria-labelledby={`pipeline-lane-${lane.status}`} className={`min-h-56 rounded-2xl border p-3 ${terminal ? "border-line bg-surface-muted/70" : "border-line bg-surface"} ${isDropTarget ? "ring-2 ring-accent ring-offset-2" : ""}`}>
+    <section ref={ref} aria-labelledby={`pipeline-lane-${lane.status}`} className={`min-h-56 rounded-2xl border p-3 transition-[opacity,background-color,box-shadow] duration-[var(--motion-feedback)] ${terminal ? "border-line bg-surface-muted/70" : "border-line bg-surface"} ${dragActive && validTarget ? "bg-accent-soft/45 ring-1 ring-accent/35" : ""} ${dragActive && !validTarget ? "opacity-45" : ""} ${isDropTarget ? "!opacity-100 ring-2 ring-accent ring-offset-2" : ""}`}>
       <header className="flex items-start justify-between gap-3 border-b border-line pb-3">
         <div>
           <h3 id={`pipeline-lane-${lane.status}`} className="font-bold text-ink">{formatStatus(lane.status)}</h3>
@@ -198,12 +215,12 @@ function PipelineLane({ lane, onMove, dragEnabled }: { lane: PipelineLane; onMov
         </div>
         {lane.count > lane.cards.length || lane.has_more ? <Link to={applicationHref(lane.status)} className="text-xs font-bold text-accent hover:underline">View all</Link> : null}
       </header>
-      {lane.cards.length ? <ul className="mt-3 space-y-3">{lane.cards.map((card) => <li key={card.application.application_id}><PipelineCardItem card={card} onMove={onMove} dragEnabled={dragEnabled} /></li>)}</ul> : <p className="py-8 text-center text-sm leading-6 text-ink-muted">No applications in this stage.</p>}
+      {lane.cards.length ? <ul className="mt-3 space-y-3">{lane.cards.map((card) => <li key={card.application.application_id}><PipelineCardItem card={card} onMove={onMove} dragEnabled={dragEnabled} pending={pendingApplicationId === card.application.application_id} highlighted={recentMove?.applicationId === card.application.application_id && recentMove.status === lane.status} /></li>)}</ul> : <p className="py-8 text-center text-sm leading-6 text-ink-muted">No applications in this stage.</p>}
     </section>
   );
 }
 
-function PipelineCardItem({ card, onMove, dragEnabled }: { card: PipelineCard; onMove: (card: PipelineCard, targetStatus?: ApplicationStatus | null) => void; dragEnabled: boolean }) {
+function PipelineCardItem({ card, onMove, dragEnabled, pending, highlighted }: { card: PipelineCard; onMove: (card: PipelineCard, targetStatus?: ApplicationStatus | null) => void; dragEnabled: boolean; pending: boolean; highlighted: boolean }) {
   const { handleRef, isDragging, ref } = useDraggable({
     id: `pipeline-card-${card.application.application_id}`,
     data: { applicationId: card.application.application_id, allowedTransitions: allowedPipelineTargets(card) },
@@ -213,7 +230,7 @@ function PipelineCardItem({ card, onMove, dragEnabled }: { card: PipelineCard; o
   const ageLabel = stageAgeLabel(card.stage_age_days);
 
   return (
-    <article ref={ref} className={`rounded-xl border border-line bg-surface-raised p-3 shadow-sm ${isDragging ? "opacity-45" : ""}`}>
+    <article ref={ref} aria-busy={pending || undefined} className={`rounded-xl border border-line bg-surface-raised p-3 shadow-sm transition-[opacity,transform,box-shadow] duration-[var(--motion-feedback)] ${isDragging ? "scale-[1.015] opacity-60 shadow-float" : ""} ${pending ? "opacity-65" : ""} ${highlighted ? "hf-state-emphasis" : ""}`}>
       <div className="flex gap-2">
         <button ref={handleRef} type="button" className="hidden min-h-11 w-8 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-hover active:bg-surface-pressed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus lg:inline-flex" aria-label={`Drag ${card.application.company_name} to another allowed stage`} title="Drag to an allowed stage"><GripVertical aria-hidden="true" className="size-4" /></button>
         <div className="min-w-0 flex-1">
@@ -238,11 +255,13 @@ function MoveConfirmation({ pendingMove, onClose, appliedDate, onAppliedDateChan
   const targetStatus = pendingMove?.targetStatus;
   const targets = card ? allowedPipelineTargets(card) : [];
   const needsAppliedDate = card?.application.status === "DRAFT" && targetStatus === "APPLIED" && !card.application.applied_date;
+  const isDraftCorrection = card?.application.status === "APPLIED" && targetStatus === "DRAFT";
   const ready = Boolean(targetStatus && (!needsAppliedDate || appliedDate));
-  return <Drawer open={Boolean(pendingMove)} onClose={onClose} title={targetStatus ? "Confirm status move" : "Move application"} description={card ? `${card.application.company_name} · ${card.application.job_title}` : undefined} size="sm" footer={<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" className={buttonClassName("ghost")} onClick={onClose} disabled={isPending}>Cancel</button><button type="button" className={buttonClassName("primary")} onClick={onConfirm} disabled={!ready || isPending}>{isPending ? "Moving…" : targetStatus ? `Move to ${formatStatus(targetStatus)}` : "Choose a stage"}</button></div>}>
+  return <Drawer open={Boolean(pendingMove)} onClose={onClose} title={isDraftCorrection ? "Confirm correction" : targetStatus ? "Confirm status move" : "Move application"} description={card ? `${card.application.company_name} · ${card.application.job_title}` : undefined} size="sm" footer={<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" className={buttonClassName("ghost")} onClick={onClose} disabled={isPending}>Cancel</button><button type="button" className={buttonClassName("primary")} onClick={onConfirm} disabled={!ready || isPending}>{isPending ? <PendingIndicator label="Moving…" /> : isDraftCorrection ? "Correct to Draft" : targetStatus ? `Move to ${formatStatus(targetStatus)}` : "Choose a stage"}</button></div>}>
     {card ? <div className="space-y-5">
       <div><label htmlFor="pipeline-target-status" className="text-sm font-semibold text-ink">New stage</label><select id="pipeline-target-status" value={targetStatus ?? ""} onChange={(event) => onTargetChange(event.target.value as ApplicationStatus)} className="mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface-raised px-3 text-sm font-semibold text-ink"><option value="">Choose a stage</option>{targets.map((status) => <option key={status} value={status}>{formatStatus(status)}</option>)}</select></div>
       {targetStatus ? <div className="rounded-xl border border-line bg-surface-muted p-4 text-sm leading-6 text-ink"><p><span className="font-semibold">Current:</span> {formatStatus(card.application.status)}</p><p><span className="font-semibold">New:</span> {formatStatus(targetStatus)}</p><p className="mt-2 text-ink-muted">The change is saved only after you confirm and the server validates the workflow.</p></div> : null}
+      {isDraftCorrection ? <p className="rounded-xl border border-warning/30 bg-warning-soft p-4 text-sm leading-6 text-ink">This clears the applied date and returns the opportunity to Draft. Submission and activity history remain available.</p> : null}
       {needsAppliedDate ? <div><label htmlFor="pipeline-applied-date" className="text-sm font-semibold text-ink">Applied date <span className="text-danger">*</span></label><input id="pipeline-applied-date" type="date" value={appliedDate} onChange={(event) => onAppliedDateChange(event.target.value)} required className="mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface-raised px-3 text-ink" /><p className="mt-2 text-xs leading-5 text-ink-muted">An application needs an applied date before it can enter the active workflow.</p></div> : null}
       {error ? <ErrorPanel compact title="Status could not be changed" error={error} /> : null}
     </div> : null}

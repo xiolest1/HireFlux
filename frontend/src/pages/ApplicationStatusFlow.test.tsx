@@ -54,6 +54,37 @@ describe("adaptive application opportunity workspace", () => {
     expect(requestBody).toEqual({ status: "OFFER", expected_version: 4 });
   });
 
+  it("offers applied-to-draft as a correction and preserves the transition contract", async () => {
+    const initial = makeApplication({
+      status: "APPLIED",
+      version: 4,
+      allowed_transitions: ["DRAFT", "SCREENING", "ARCHIVED"],
+    });
+    let requestBody: Record<string, unknown> | null = null;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () => HttpResponse.json(initial)),
+      http.post(`${API_ORIGIN}/api/v1/applications/:applicationId/status`, async ({ request }) => {
+        requestBody = await request.json() as Record<string, unknown>;
+        return HttpResponse.json(makeApplication({
+          status: "DRAFT",
+          applied_date: null,
+          version: 5,
+          allowed_transitions: ["APPLIED", "ARCHIVED"],
+        }));
+      }),
+    );
+    const { user } = renderApp(`/applications/${initial.application_id}`);
+    await screen.findByRole("heading", { name: initial.job_title });
+    await user.click(screen.getByRole("button", { name: "More opportunity actions" }));
+    await user.click(screen.getByRole("menuitem", { name: "Correct to Draft" }));
+    expect(screen.getByRole("dialog", { name: "Correct application to Draft" })).toBeVisible();
+    expect(screen.getByText(/clears the applied date and returns the opportunity to Draft/i)).toBeVisible();
+    expect(screen.queryByLabelText(/Applied date/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Correct to Draft" }));
+    expect(await screen.findByText("Application corrected to Draft.")).toBeVisible();
+    expect(requestBody).toEqual({ status: "DRAFT", expected_version: 4 });
+  });
+
   it("confirms archive and restores only to the backend-provided status", async () => {
     const initial = makeApplication({ status: "APPLIED", version: 1, allowed_transitions: ["SCREENING", "ARCHIVED"] });
     const requests: Array<Record<string, unknown>> = [];

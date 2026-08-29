@@ -181,7 +181,7 @@ function PriorityOpportunity({ item, timeZone, returnPath, highlighted }: RowPro
   const destination = actionDestination(item);
   const state = actionRouteState(item, returnPath);
   return (
-    <article className={`min-w-0 border-l-4 px-5 py-6 sm:px-7 ${highlighted ? "border-accent bg-surface-selected ring-2 ring-focus/20" : "border-accent bg-accent-soft/55"}`}>
+    <article className={`min-w-0 border-l-4 px-5 py-6 sm:px-7 ${highlighted ? "hf-state-emphasis border-accent bg-surface-selected ring-2 ring-focus/20" : "border-accent bg-accent-soft/55"}`}>
       <div className="flex items-start gap-3">
         <span className="mt-0.5 p-1 text-accent"><Icon aria-hidden="true" className="size-6" /></span>
         <div className="min-w-0 flex-1">
@@ -207,7 +207,7 @@ function PriorityOpportunity({ item, timeZone, returnPath, highlighted }: RowPro
 function AttentionOpportunity({ item, timeZone, returnPath, highlighted }: RowProps) {
   const presentation = opportunityReasonPresentation[item.classification.reason_code];
   return (
-    <article className={`flex min-w-0 flex-col gap-3 border-b border-line-subtle py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between ${highlighted ? "rounded-xl bg-surface-selected px-3" : ""}`}>
+    <article className={`flex min-w-0 flex-col gap-3 border-b border-line-subtle py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between ${highlighted ? "hf-state-emphasis rounded-xl bg-surface-selected px-3" : ""}`}>
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-ink-muted">{item.application.company_name}</p>
         <Link to={`/applications/${item.application.application_id}`} state={applicationsRouteState("/applications", returnPath.slice("/applications".length))} className="inline-flex min-h-11 max-w-full items-center [overflow-wrap:anywhere] font-bold text-ink hover:text-accent hover:underline">
@@ -226,7 +226,7 @@ function AttentionOpportunity({ item, timeZone, returnPath, highlighted }: RowPr
 function CompactOpportunity({ item, timeZone, returnPath, highlighted }: RowProps) {
   const presentation = opportunityReasonPresentation[item.classification.reason_code];
   return (
-    <article className={`grid min-w-0 gap-3 px-1 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(15rem,0.8fr)] sm:items-center sm:px-2 ${highlighted ? "rounded-xl bg-surface-selected !px-3" : ""}`}>
+    <article className={`grid min-w-0 gap-3 px-1 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(15rem,0.8fr)] sm:items-center sm:px-2 ${highlighted ? "hf-state-emphasis rounded-xl bg-surface-selected !px-3" : ""}`}>
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-ink-muted">{item.application.company_name}</p>
         <Link to={`/applications/${item.application.application_id}`} state={applicationsRouteState("/applications", returnPath.slice("/applications".length))} className="inline-flex min-h-11 max-w-full items-center [overflow-wrap:anywhere] font-bold text-ink hover:text-accent hover:underline">
@@ -297,7 +297,7 @@ export function FlatOpportunityRow({
 }) {
   const supporting = flatOpportunitySupportingText(application);
   return (
-    <li className={`border-b border-line-subtle py-4 last:border-b-0 ${highlighted ? "rounded-xl bg-surface-selected px-3" : ""}`}>
+    <li className={`border-b border-line-subtle py-4 last:border-b-0 ${highlighted ? "hf-state-emphasis rounded-xl bg-surface-selected px-3" : ""}`}>
       <article className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink-muted">{application.company_name}</p>

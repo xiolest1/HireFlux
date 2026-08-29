@@ -46,6 +46,7 @@ export function StatusTransitionForm({
     ].includes(targetStatus) && !application.applied_date;
   const isArchiving = targetStatus === "ARCHIVED";
   const isRestoring = application.status === "ARCHIVED" && targetStatus !== "";
+  const isDraftCorrection = application.status === "APPLIED" && targetStatus === "DRAFT";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,10 +78,15 @@ export function StatusTransitionForm({
           ...(needsAppliedDate ? { applied_date: appliedDate } : {}),
         },
       });
-      showToast(`Status changed to ${formatStatus(updated.status)}.`, {
-        title: "Application updated",
+      showToast(
+        isDraftCorrection
+          ? "Application corrected to Draft."
+          : `Status changed to ${formatStatus(updated.status)}.`,
+        {
+        title: isDraftCorrection ? "Application corrected" : "Application updated",
         tone: "success",
-      });
+        },
+      );
       setTargetStatus("");
       updateSearchTour("status");
       onSuccess?.();
@@ -111,9 +117,14 @@ export function StatusTransitionForm({
           {formatStatus(application.status)}
         </span>
       </div>
-      <p className="text-sm leading-6 text-ink-muted">
-        Only transitions allowed by the application policy are shown.
-      </p>
+        <p className="text-sm leading-6 text-ink-muted">
+          Only transitions allowed by the application policy are shown.
+        </p>
+      {isDraftCorrection ? (
+        <p className="mt-4 rounded-xl border border-warning/30 bg-warning-soft px-3 py-3 text-sm leading-6 text-ink">
+          This correction clears the applied date and returns the opportunity to Draft. Its submission and activity history remain available.
+        </p>
+      ) : null}
 
       <form className="mt-5 space-y-4" onSubmit={submit} noValidate>
         <div>
@@ -191,6 +202,8 @@ export function StatusTransitionForm({
             ? "Updating…"
             : isArchiving
               ? "Archive application"
+              : isDraftCorrection
+                ? "Correct to Draft"
               : isRestoring
                 ? `Restore to ${formatStatus(targetStatus as ApplicationStatus)}`
                 : targetStatus

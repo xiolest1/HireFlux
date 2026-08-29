@@ -15,5 +15,5 @@ export function buttonClassName(
   variant: ButtonVariant = "primary",
   className = "",
 ): string {
-  return `inline-flex min-h-11 items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition-[color,background-color,border-color,transform] duration-200 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus active:scale-[0.98] disabled:cursor-not-allowed disabled:border-line-subtle disabled:bg-surface-muted disabled:text-ink-disabled disabled:shadow-none disabled:active:scale-100 ${variantClasses[variant]} ${className}`;
+  return `inline-flex min-h-11 items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition-[color,background-color,border-color,transform,opacity] duration-[var(--motion-ui)] ease-[var(--ease-standard)] focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus active:scale-[0.98] disabled:cursor-not-allowed disabled:border-line-subtle disabled:bg-surface-muted disabled:text-ink-disabled disabled:shadow-none disabled:active:scale-100 ${variantClasses[variant]} ${className}`;
 }

@@ -55,7 +55,7 @@ export function makePipeline(overrides: Partial<Pipeline> = {}): Pipeline {
       count: status === "APPLIED" ? 1 : 0,
       has_more: false,
       cards: status === "APPLIED" ? [{
-        application: makeApplication({ allowed_transitions: ["SCREENING", "INTERVIEW", "OFFER", "REJECTED", "WITHDRAWN", "ARCHIVED"] }),
+        application: makeApplication({ allowed_transitions: ["DRAFT", "SCREENING", "INTERVIEW", "OFFER", "REJECTED", "WITHDRAWN", "ARCHIVED"] }),
         stage_age_days: 4,
         follow_up_state: "UPCOMING",
       }] : [],

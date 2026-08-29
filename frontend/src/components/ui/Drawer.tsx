@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { IconButton } from "./IconButton";
 import { useModalFocus } from "./useModalFocus";
+import { usePresence } from "./motionHooks";
 
 interface DrawerProps {
   open: boolean;
@@ -57,6 +58,7 @@ export function Drawer({
   const descriptionId = useId();
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const presence = usePresence(open);
 
   useModalFocus({
     isOpen: open,
@@ -74,7 +76,7 @@ export function Drawer({
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!presence.mounted) return null;
 
   const isMediumSideDrawer = sideBreakpoint === "md";
   const sideClasses = isMediumSideDrawer
@@ -95,14 +97,18 @@ export function Drawer({
 
   return createPortal(
     <div
+      data-state={presence.state}
+      aria-hidden={!open || undefined}
+      inert={!open}
       className={`fixed inset-0 z-50 flex items-end justify-end ${
         isMediumSideDrawer ? "md:items-stretch" : "lg:items-stretch"
       } ${sideClasses.container}`}
     >
       <div
-        className="absolute inset-0 cursor-default bg-overlay backdrop-blur-sm"
+        data-state={presence.state}
+        className="hf-overlay-backdrop absolute inset-0 cursor-default bg-overlay backdrop-blur-sm"
         aria-hidden="true"
-        onMouseDown={onClose}
+        onMouseDown={() => open && onClose()}
       />
       <section
         ref={panelRef}
@@ -113,7 +119,9 @@ export function Drawer({
         aria-label={ariaLabel}
         aria-labelledby={ariaLabel ? undefined : titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className={`relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-line bg-surface-raised shadow-float ${sideClasses.panel} ${sideClasses.corner} ${sideClasses.size}`}
+        data-state={presence.state}
+        data-placement={placement}
+        className={`hf-drawer-panel relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-line bg-surface-raised shadow-float ${sideClasses.panel} ${sideClasses.corner} ${sideClasses.size}`}
       >
         <div className={`mx-auto mt-2 h-1 w-10 rounded-full bg-line-strong ${sideClasses.handle}`} />
         <div className="flex items-start gap-4 border-b border-line px-5 py-5 sm:px-6">
