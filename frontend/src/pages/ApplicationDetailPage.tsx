@@ -10,6 +10,7 @@ import { ErrorPanel, SuccessBanner } from "../components/ui/Feedback";
 import { Menu } from "../components/ui/Menu";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { buttonClassName } from "../components/ui/buttonStyles";
+import { ContextRail, TonalChapter, WorkspaceFrame } from "../components/ui/WorkspaceComposition";
 import { ActivityTimeline } from "../features/applications/ActivityTimeline";
 import { ApplicationDetails } from "../features/applications/ApplicationDetails";
 import { ApplicationDetailSkeleton } from "../features/applications/ApplicationSkeletons";
@@ -161,15 +162,15 @@ export function ApplicationDetailPage() {
   const nextInterview = [...interviews].filter((item) => item.status === "SCHEDULED" && new Date(item.scheduled_at).getTime() >= Date.now()).sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))[0];
   const focusInterviewId = searchParams.get("interview");
 
-  return <div className="mx-auto max-w-6xl pb-8">
+  return <WorkspaceFrame width="wide" className="pb-8">
     <Link to={backToApplications} className="inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-semibold text-accent hover:underline"><ChevronLeft aria-hidden="true" className="size-4" /> Back to applications</Link>
     {notice ? <div className="mt-3"><SuccessBanner>{notice}</SuccessBanner></div> : null}
-    <header className="mt-4 border-b border-line pb-7">
+    <header className="mt-4 border-b border-line pb-8">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3"><StatusBadge status={application.status} /><span className="text-sm text-ink-muted">Updated {formatTimestamp(application.updated_at, timeZone)}</span></div>
-          <p className="mt-3 break-words text-sm font-bold text-accent">{application.company_name}</p>
-          <h1 className="mt-1 break-words text-3xl font-bold tracking-tight text-ink sm:text-4xl">{application.job_title}</h1>
+          <p className="mt-4 break-words text-base font-semibold text-ink-muted">{application.company_name}</p>
+          <h1 className="mt-1 break-words font-display text-4xl font-bold tracking-[-0.03em] text-ink sm:text-5xl">{application.job_title}</h1>
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-muted"><span><strong className="text-ink">Latest:</strong> {latest?.summary ?? "Opportunity created"}</span>{nextInterview ? <span><strong className="text-ink">Next interview:</strong> {formatTimestamp(nextInterview.scheduled_at, timeZone)}</span> : application.follow_up_date ? <span><strong className="text-ink">Check back:</strong> {formatDateOnly(application.follow_up_date)}</span> : null}</div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -181,9 +182,14 @@ export function ApplicationDetailPage() {
         </div>
       </div>
     </header>
-    <nav aria-label="Opportunity sections" className="sticky top-16 z-20 mt-4 hidden rounded-2xl border border-line-subtle bg-surface/95 p-2 backdrop-blur md:block"><div className="flex flex-wrap gap-1">{sections.map(([id, label]) => <button key={id} type="button" onClick={() => openSection(id)} className="min-h-11 rounded-xl px-3 text-sm font-semibold text-ink-muted hover:bg-surface-hover hover:text-ink active:bg-surface-pressed">{label}</button>)}</div></nav>
-    <section className="mt-8 rounded-3xl border border-accent/25 bg-gradient-to-br from-accent-soft to-surface p-5 sm:p-6" aria-labelledby="next-action-heading"><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">What’s next</p><h2 id="next-action-heading" className="mt-1 text-xl font-bold text-ink">{model.eyebrow}</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">{model.guidance}</p>{model.primary || model.secondary ? <div className="mt-5 flex flex-wrap gap-2">{model.primary ? <Button ref={primaryActionRef} onClick={() => runAction(model.primary)}>{model.primary.label}</Button> : null}{model.secondary ? <Button variant="secondary" onClick={() => runAction(model.secondary)}>{model.secondary.label}</Button> : null}</div> : null}</section>
-    <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,.75fr)]"><JourneySection application={application} interviews={interviews} timeZone={timeZone} /><ApplicationDetails application={application} /></div>
+    <nav aria-label="Opportunity sections" className="sticky top-16 z-20 mt-4 hidden border-y border-line bg-canvas/95 py-2 backdrop-blur md:block"><div className="flex flex-wrap gap-1">{sections.map(([id, label]) => <button key={id} type="button" onClick={() => openSection(id)} className="min-h-11 rounded-xl px-3 text-sm font-semibold text-ink-muted hover:bg-surface-hover hover:text-ink active:bg-surface-pressed">{label}</button>)}</div></nav>
+    <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,.55fr)]">
+      <div className="min-w-0"><JourneySection application={application} interviews={interviews} timeZone={timeZone} /></div>
+      <ContextRail className="space-y-8">
+        <TonalChapter tone="brand" className="p-5 sm:p-6" aria-labelledby="next-action-heading"><p className="text-sm font-semibold text-accent">What comes next</p><h2 id="next-action-heading" className="mt-2 text-2xl font-bold text-ink">{model.eyebrow}</h2><p className="mt-2 text-sm leading-6 text-ink-muted">{model.guidance}</p>{model.primary || model.secondary ? <div className="mt-5 flex flex-wrap gap-2">{model.primary ? <Button ref={primaryActionRef} onClick={() => runAction(model.primary)}>{model.primary.label}</Button> : null}{model.secondary ? <Button variant="secondary" onClick={() => runAction(model.secondary)}>{model.secondary.label}</Button> : null}</div> : null}</TonalChapter>
+        <ApplicationDetails application={application} />
+      </ContextRail>
+    </div>
     <div className="mt-8 border-t border-line-subtle pt-5 md:hidden"><Button variant="ghost" className="w-full justify-between" aria-expanded={jumpOpen} aria-controls="mobile-section-links" onClick={() => setJumpOpen((value) => !value)}>Jump to supporting sections <ChevronDown aria-hidden="true" className={`size-4 ${jumpOpen ? "rotate-180" : ""}`} /></Button>{jumpOpen ? <nav id="mobile-section-links" aria-label="Opportunity sections" className="mt-2 grid rounded-2xl border border-line-subtle bg-surface p-2">{sections.map(([id, label]) => <button key={id} type="button" onClick={() => openSection(id)} className="min-h-11 rounded-xl px-3 text-left text-sm font-semibold text-ink-muted hover:bg-surface-hover active:bg-surface-pressed">{label}</button>)}</nav> : null}</div>
     <section id="interviews" aria-labelledby="interviews-heading" className="mt-10 scroll-mt-24 border-t border-line pt-8"><h2 id="interviews-heading" tabIndex={-1} className="sr-only">Interview process</h2><InterviewsPanel applicationId={application.application_id} companyName={application.company_name} jobTitle={application.job_title} timeZone={timeZone} focusInterviewId={focusInterviewId} emptyMessage={model.interviewEmptyMessage} canSchedule={["APPLIED", "SCREENING", "INTERVIEW", "OFFER"].includes(application.status)} /></section>
     <ApplicationNotesSection applicationId={application.application_id} timeZone={timeZone} composerRequest={noteRequest} />
@@ -191,7 +197,7 @@ export function ApplicationDetailPage() {
     <Drawer open={transitionOpen} onClose={() => setTransitionOpen(false)} title={transitionTarget ? `Move to ${formatStatus(transitionTarget)}` : "Update decision"} description="Only server-approved transitions are available."><StatusTransitionForm application={application} onReload={() => void applicationQuery.refetch()} timeZone={timeZone} initialStatus={transitionTarget} onSuccess={() => setTransitionOpen(false)} embedded /></Drawer>
     <FollowUpDrawer application={application} open={followUpOpen} onClose={() => setFollowUpOpen(false)} timeZone={timeZone} onReload={() => void applicationQuery.refetch()} />
     <ArchiveDialog application={application} open={archiveOpen} onClose={() => setArchiveOpen(false)} onReload={() => void applicationQuery.refetch()} />
-  </div>;
+  </WorkspaceFrame>;
 }
 
 function JourneySection({ application, interviews, timeZone }: { application: Application; interviews: Interview[]; timeZone: string }) {
@@ -205,7 +211,7 @@ function JourneySection({ application, interviews, timeZone }: { application: Ap
     application.first_offer_at ? { label: "Offer", date: application.first_offer_at } : null,
     application.first_acceptance_at ? { label: "Accepted", date: application.first_acceptance_at } : null,
   ].filter((event): event is { label: string; date: string } => event !== null).sort((a, b) => a.date.localeCompare(b.date));
-  return <section id="journey" aria-labelledby="journey-heading" className="scroll-mt-24"><p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">Opportunity progress</p><h2 id="journey-heading" tabIndex={-1} className="mt-1 text-xl font-bold text-ink">Journey</h2><ol className="mt-5 border-l border-line pl-6">{events.map((event, index) => <li key={`${event.label}-${event.date}-${index}`} className="relative pb-5 last:pb-0"><span aria-hidden="true" className="absolute -left-[1.8rem] top-1 size-3 rounded-full bg-accent ring-4 ring-surface" /><p className="font-semibold capitalize text-ink">{event.label}</p><time dateTime={event.date} className="mt-1 block text-sm text-ink-muted">{formatTimestamp(event.date, timeZone)}</time></li>)}</ol></section>;
+  return <section id="journey" aria-labelledby="journey-heading" className="scroll-mt-24"><p className="text-sm font-semibold text-ink-muted">Opportunity progression</p><h2 id="journey-heading" tabIndex={-1} className="mt-2 font-display text-3xl font-bold text-ink">One opportunity, unfolding over time</h2><ol className="mt-8 border-l-2 border-line pl-7 sm:pl-9">{events.map((event, index) => { const current = index === events.length - 1; return <li key={`${event.label}-${event.date}-${index}`} className={`relative pb-8 last:pb-0 ${current ? "pt-1" : ""}`}><span aria-hidden="true" className={`absolute -left-[2.15rem] top-1.5 rounded-full ring-4 ring-canvas sm:-left-[2.65rem] ${current ? "size-4 bg-accent" : "size-3 bg-ink-tertiary"}`} /><p className={`${current ? "text-xl" : "text-base"} font-bold capitalize text-ink`}>{event.label}</p><time dateTime={event.date} className="mt-1 block text-sm text-ink-muted">{formatTimestamp(event.date, timeZone)}</time>{current ? <p className="mt-2 text-sm font-semibold text-accent">Current journey point</p> : null}</li>; })}</ol></section>;
 }
 
 function FollowUpDrawer({ application, open, onClose, timeZone, onReload }: { application: Application; open: boolean; onClose: () => void; timeZone: string; onReload: () => void }) {

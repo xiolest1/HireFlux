@@ -27,6 +27,7 @@ import { buttonClassName } from "../components/ui/buttonStyles";
 import { EmptyState, ErrorPanel } from "../components/ui/Feedback";
 import { PanelSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { useToast } from "../components/ui/toastContext";
+import { WorkspaceFrame, WorkspaceIntro } from "../components/ui/WorkspaceComposition";
 import {
   formatInterviewType,
   formatSource,
@@ -384,7 +385,7 @@ export function InterviewsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl pb-6 sm:pb-8">
+    <WorkspaceFrame width="wide" className="pb-6 sm:pb-8">
       {applicationsOrigin ? (
         <Link
           to={applicationsOrigin.returnTo}
@@ -394,31 +395,7 @@ export function InterviewsPage() {
           Back to applications
         </Link>
       ) : null}
-      <header className="border-b border-line pb-5 sm:flex sm:items-end sm:justify-between sm:gap-6">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
-            Interview journey
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
-            Interviews
-          </h1>
-          <p className="mt-2 max-w-3xl text-base leading-7 text-ink-muted">
-            {orientation(selected, activeCount)}
-          </p>
-          <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
-            <Clock3 aria-hidden="true" className="size-3.5" />
-            Times shown in {timeZone.replaceAll("_", " ")}
-          </p>
-        </div>
-        <button
-          type="button"
-          className={`${buttonClassName("secondary", "gap-2")} mt-5 sm:mt-0`}
-          onClick={() => openSchedule(selected)}
-        >
-          <CalendarPlus aria-hidden="true" className="size-4" />
-          Schedule interview
-        </button>
-      </header>
+      <WorkspaceIntro title="Interviews" lead={orientation(selected, activeCount)} context={<span className="inline-flex items-center gap-1.5"><Clock3 aria-hidden="true" className="size-3.5" />Times shown in {timeZone.replaceAll("_", " ")}</span>} actions={<button type="button" className={buttonClassName("secondary", "gap-2")} onClick={() => openSchedule(selected)}><CalendarPlus aria-hidden="true" className="size-4" />Schedule interview</button>} />
 
       <div className="mt-6">
         {interviewsQuery.isPending ? <InterviewsSkeleton /> : null}
@@ -468,7 +445,7 @@ export function InterviewsPage() {
           />
         ) : null}
         {selected ? (
-          <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(18rem,0.78fr)_minmax(0,1.35fr)]">
+          <div className="grid min-w-0 items-start gap-8 lg:grid-cols-[minmax(17rem,0.58fr)_minmax(0,1.42fr)]">
             <SchedulePane
               className="lg:sticky lg:top-24"
               needsAttention={needsAttention}
@@ -526,7 +503,7 @@ export function InterviewsPage() {
         onClose={() => { setScheduleOpen(false); setScheduleApplication(null); setScheduleEditing(null); createInterviewMutation.reset(); updateInterviewMutation.reset(); }}
         onSubmit={scheduleInterview}
       />
-    </div>
+    </WorkspaceFrame>
   );
 }
 
@@ -563,7 +540,7 @@ function SchedulePane({
       className={`${className ?? ""} min-w-0`}
       aria-labelledby="schedule-title"
     >
-      <div className="overflow-hidden rounded-2xl border border-line-subtle bg-surface">
+      <div className="border-y border-line bg-surface-muted/30 lg:border-y-0 lg:border-r lg:bg-transparent">
         <div className="border-b border-line px-4 py-4 sm:px-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted">
             Your next steps
@@ -861,7 +838,7 @@ const InterviewDetail = function InterviewDetail({
       className={`${className ?? ""} min-w-0 scroll-mt-24 focus:outline-none`}
       aria-labelledby="selected-interview-title"
     >
-      <div className="overflow-hidden rounded-[1.75rem] border border-line-subtle bg-surface">
+      <div className="overflow-hidden">
         <div className="border-b border-line px-5 py-5 sm:px-7 sm:py-6">
           <p className="text-xs font-bold uppercase tracking-[0.17em] text-accent">
             Selected interview
@@ -1145,7 +1122,7 @@ function LifecycleIndicator({ interview }: { interview: WorkspaceInterview }) {
         </div>
         <span className="text-xs font-semibold text-ink-muted">{currentIndex >= 0 ? `${currentIndex + 1} of ${steps.length}` : "4 steps complete"}</span>
       </div>
-      <ol className="mt-3 hidden grid-cols-5 gap-2 sm:grid">
+      <ol className="relative mt-5 hidden grid-cols-5 gap-3 before:absolute before:left-[10%] before:right-[10%] before:top-3 before:h-px before:bg-line sm:grid">
         {steps.map((step, index) => {
           const isComplete = index <= completedThrough;
           const isCurrent = index === currentIndex;
@@ -1153,8 +1130,9 @@ function LifecycleIndicator({ interview }: { interview: WorkspaceInterview }) {
             <li
               key={step}
               aria-current={isCurrent ? "step" : undefined}
-              className={`rounded-xl border px-3 py-2 text-xs font-semibold ${isCurrent ? "border-accent bg-accent-soft text-accent" : isComplete ? "border-success/20 bg-success-soft text-success" : "border-line bg-surface-muted text-ink-muted"}`}
+              className={`relative z-10 text-center text-xs font-semibold ${isCurrent ? "text-accent" : isComplete ? "text-success" : "text-ink-muted"}`}
             >
+              <span aria-hidden="true" className={`mx-auto mb-2 block size-6 rounded-full border-4 border-canvas ${isCurrent ? "bg-accent" : isComplete ? "bg-success" : "bg-line"}`} />
               <span className="block text-[0.65rem] uppercase tracking-wide">
                 {isComplete
                   ? "Complete"

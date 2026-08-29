@@ -29,6 +29,7 @@ import { Drawer } from "../components/ui/Drawer";
 import { ErrorPanel, SuccessBanner } from "../components/ui/Feedback";
 import { Skeleton } from "../components/ui/Skeleton";
 import { setColorThemePreference } from "../components/ui/themePreference";
+import { WorkspaceFrame, WorkspaceIntro } from "../components/ui/WorkspaceComposition";
 import { formatTimestamp } from "../features/applications/format";
 import { useMe } from "../features/applications/queries";
 import {
@@ -215,15 +216,11 @@ export function SettingsPage() {
   const profileName = profileNameOverride ?? identityName;
 
   return (
-    <div className="space-y-7">
-      <header>
-        <p className="text-sm font-bold uppercase tracking-[0.16em] text-accent">Workspace controls</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink sm:text-4xl">Settings & profile</h1>
-        <p className="mt-2 max-w-3xl text-base leading-7 text-ink-muted">Manage your profile, workspace preferences, data, and optional account previews.</p>
-      </header>
+    <WorkspaceFrame width="narrow" className="space-y-10">
+      <WorkspaceIntro title="Settings & profile" lead="Configure how HireFlux works for this candidate workspace." context="Profile, preferences, exports, and optional account simulations stay together in one quiet utility flow." />
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
-        <section className="rounded-3xl border border-line-subtle bg-surface-raised p-5 sm:p-6 dark:border-line dark:shadow-panel" aria-labelledby="profile-title">
+      <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,.52fr)]">
+        <section className="border-b border-line pb-10" aria-labelledby="profile-title">
           <div className="flex items-start gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info"><UserRound aria-hidden="true" className="size-5" /></span>
             <div><h2 id="profile-title" className="text-xl font-bold text-ink">Profile</h2><p className="mt-1 text-sm leading-6 text-ink-muted">Try a profile update in this local preview. The signed-in demo identity remains server-owned.</p></div>
@@ -251,23 +248,23 @@ export function SettingsPage() {
           {meQuery.data ? <dl className="mt-6 grid gap-5 border-t border-line-subtle pt-5 sm:grid-cols-2"><ProfileItem label="Account type" value="Demo workspace" /><ProfileItem label="Workspace focus" value="Candidate job search" /></dl> : null}
         </section>
 
-        <section className="rounded-3xl border border-line bg-surface-raised p-5 sm:p-6 dark:shadow-panel" aria-labelledby="workspace-lifecycle-title"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info"><Clock3 aria-hidden="true" className="size-5" /></span><div><h2 id="workspace-lifecycle-title" className="text-xl font-bold text-ink">Demo workspace</h2><p className="mt-1 text-sm leading-6 text-ink-muted">Private fictional data for this browser session. The workspace expires automatically after 24 hours.</p></div></div><dl className="mt-5 grid gap-4 border-t border-line-subtle pt-5 sm:grid-cols-2 lg:grid-cols-1"><ProfileItem label="Workspace expires" value={session ? formatTimestamp(session.expires_at, settingsQuery.data?.time_zone ?? "UTC") : "Not available"} /><ProfileItem label="Persistence" value="This browser session only" /></dl></section>
+        <aside className="border-l-2 border-line pl-5" aria-labelledby="workspace-lifecycle-title"><div className="flex items-start gap-3"><Clock3 aria-hidden="true" className="mt-1 size-5 shrink-0 text-ink-muted" /><div><h2 id="workspace-lifecycle-title" className="text-lg font-bold text-ink">Demo workspace</h2><p className="mt-1 text-sm leading-6 text-ink-muted">Private fictional data for this browser session. It expires automatically after 24 hours.</p></div></div><dl className="mt-5 grid gap-4 border-t border-line-subtle pt-5"><ProfileItem label="Workspace expires" value={session ? formatTimestamp(session.expires_at, settingsQuery.data?.time_zone ?? "UTC") : "Not available"} /><ProfileItem label="Persistence" value="This browser session only" /></dl></aside>
       </div>
 
-      <section className="rounded-3xl border border-line-subtle bg-surface-raised dark:border-line dark:shadow-panel" aria-labelledby="preferences-title">
-        <div className="border-b border-line-subtle p-5 sm:p-6"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-ink-muted"><Palette aria-hidden="true" className="size-5" /></span><div><h2 id="preferences-title" className="text-xl font-bold text-ink">Preferences</h2><p className="mt-1 text-sm leading-6 text-ink-muted">These settings persist only for this isolated 24-hour workspace. New workspaces start with this browser&apos;s detected time zone; selecting a different zone creates a manual override.</p></div></div></div>
+      <section className="border-b border-line pb-10" aria-labelledby="preferences-title">
+        <div className="pb-5"><div className="flex items-start gap-3"><Palette aria-hidden="true" className="mt-1 size-5 shrink-0 text-ink-muted" /><div><h2 id="preferences-title" className="font-display text-2xl font-bold text-ink">Preferences</h2><p className="mt-1 text-sm leading-6 text-ink-muted">These settings persist only for this isolated 24-hour workspace. New workspaces start with this browser&apos;s detected time zone; selecting a different zone creates a manual override.</p></div></div></div>
         {settingsQuery.isPending || (!draft && !settingsQuery.isError) ? <SettingsSkeleton /> : null}
         {settingsQuery.isError ? <div className="p-5 sm:p-6"><ErrorPanel compact error={settingsQuery.error} onRetry={() => void settingsQuery.refetch()} /></div> : null}
         {draft && settingsQuery.data ? (
           <form onSubmit={submit}>
-            <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+            <div className="grid gap-5 py-5 sm:grid-cols-2">
               <SettingSelect label="Time zone" value={draft.time_zone} onChange={(value) => change({ ...draft, time_zone: value })}>{availableTimeZones.map((zone) => <option key={zone} value={zone}>{zone.replaceAll("_", " ")}{!manualTimeZone && zone === browserTimeZone ? " (automatic)" : ""}</option>)}</SettingSelect>
               <div><label htmlFor="follow-up-days" className="text-sm font-semibold text-ink">Default follow-up interval</label><div className="relative mt-2"><input id="follow-up-days" type="number" min={1} max={30} value={draft.default_follow_up_days} onChange={(event) => change({ ...draft, default_follow_up_days: Number(event.target.value) })} className="hf-field px-3 pr-14" /><span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-ink-tertiary">days</span></div></div>
               <SettingSelect label="Default application view" value={draft.default_application_view} onChange={(value) => change({ ...draft, default_application_view: value as SettingsDraft["default_application_view"] })}><option value="ACTIVE">Active pursuits</option><option value="ALL">All applications</option><option value="ARCHIVED">Archived</option></SettingSelect>
               <SettingSelect label="Default dashboard range" value={draft.default_dashboard_range} onChange={(value) => change({ ...draft, default_dashboard_range: value as DashboardRange })}><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="all">All time</option></SettingSelect>
               <SettingSelect label="Color theme" value={draft.theme} onChange={(value) => change({ ...draft, theme: value as ColorTheme })}><option value="SYSTEM">Use system preference</option><option value="LIGHT">Light</option><option value="DARK">Dark</option></SettingSelect>
             </div>
-            <div className="space-y-4 border-t border-line-subtle bg-surface-muted p-5 sm:p-6">
+            <div className="space-y-4 border-t border-line-subtle pt-5">
               {updateMutation.error ? <ErrorPanel compact title="Preferences could not be saved" error={updateMutation.error} /> : null}
               {saved ? <SuccessBanner>Preferences saved for this demo workspace.</SuccessBanner> : null}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-ink-tertiary">{dirty ? "You have unsaved preference changes." : "Preferences are up to date."}</p><Button type="submit" disabled={!dirty || updateMutation.isPending || draft.default_follow_up_days < 1 || draft.default_follow_up_days > 30}>{updateMutation.isPending ? "Saving…" : "Save preferences"}</Button></div>
@@ -281,7 +278,7 @@ export function SettingsPage() {
       <CandidateAccountPreview
         workspaceToken={session?.access_token}
       />
-    </div>
+    </WorkspaceFrame>
   );
 }
 
@@ -328,7 +325,7 @@ function DataPrivacySection({ isDemo }: { isDemo: boolean }) {
   }
 
   return (
-    <section className="rounded-3xl border border-line bg-surface-raised p-5 sm:p-6 dark:shadow-panel" aria-labelledby="account-data-title">
+    <section className="border-b border-line pb-10" aria-labelledby="account-data-title">
       <div className="flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success">
           <Download aria-hidden="true" className="size-5" />

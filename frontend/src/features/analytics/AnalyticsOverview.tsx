@@ -15,6 +15,7 @@ import { APPLICATION_SOURCES, APPLICATION_STATUSES, type ApplicationSource, type
 import type { Analytics } from "../../api/workspace";
 import { formatDateOnly, formatWorkMode } from "../applications/format";
 import { percent, percentagePointDelta } from "./format";
+import { ContextRail, NarrativeSection, TonalChapter } from "../../components/ui/WorkspaceComposition";
 
 type SearchHealthInsight = Analytics["insights"][number];
 type OverviewDetail = "outcomes" | "activity" | "follow-up" | "work-mode";
@@ -94,21 +95,18 @@ export function AnalyticsOverview({ analytics }: { analytics: Analytics }) {
 
   return (
     <div className="space-y-10">
-      <section
-        aria-labelledby="overview-story-title"
-        className="overflow-hidden rounded-[1.75rem] border border-line bg-surface-raised shadow-panel"
-      >
-        <div className="grid lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.7fr)]">
-          <div className="p-5 sm:p-7 lg:p-8">
+      <section aria-labelledby="overview-story-title" className="border-b border-line pb-10">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.65fr)_minmax(17rem,0.55fr)] lg:items-start">
+          <div className="min-w-0 lg:py-5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-accent">
+              <span className="inline-flex items-center gap-2 text-sm font-bold text-accent">
                 <Lightbulb aria-hidden="true" className="size-4" />
                 Your search story
               </span>
               {hasSmallSample ? <span className="rounded-full bg-warning-soft px-2.5 py-1 text-xs font-bold text-warning">Small sample</span> : null}
             </div>
-            <h2 id="overview-story-title" className="mt-3 text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-              Your search at a glance
+            <h2 id="overview-story-title" className="mt-4 max-w-3xl font-display text-3xl font-bold tracking-[-0.025em] text-ink sm:text-4xl lg:text-5xl lg:leading-[1.05]">
+              Your search story
             </h2>
 
             <div className="mt-6">
@@ -119,7 +117,7 @@ export function AnalyticsOverview({ analytics }: { analytics: Analytics }) {
             </div>
 
             {remainingInsights.length ? (
-              <div className="mt-6 border-t border-line pt-2">
+              <div className="mt-8 border-t border-line pt-3">
                 <button
                   type="button"
                   aria-expanded={allInsightsOpen}
@@ -137,28 +135,22 @@ export function AnalyticsOverview({ analytics }: { analytics: Analytics }) {
             ) : null}
           </div>
 
-          <aside className="border-t border-line bg-surface-muted/60 p-5 sm:p-7 lg:border-l lg:border-t-0 lg:p-8" aria-label="Current search pulse">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">Current pulse</p>
+          <ContextRail className="lg:mt-4" aria-label="Current search pulse">
+            <p className="text-sm font-bold text-ink">Current pulse</p>
             <dl className="mt-4 divide-y divide-line">
               <PulseMetric label="Active pursuits" value={String(analytics.summary.active_pursuits)} detail="Applied through offer" />
               <PulseMetric label="Response rate" value={percent(analytics.rates.response_rate)} detail={`${analytics.rates.response_count} of ${analytics.rates.submitted_count} submitted`} />
               <PulseMetric label="Interview rate" value={percent(analytics.rates.interview_rate)} detail={`${analytics.rates.interview_count} of ${analytics.rates.submitted_count} submitted`} />
             </dl>
-          </aside>
+          </ContextRail>
         </div>
-        <p className="border-t border-line px-5 py-4 text-sm leading-6 text-ink-muted sm:px-7 lg:px-8">
+        <p className="mt-8 max-w-4xl border-l-2 border-line pl-4 text-sm leading-6 text-ink-muted">
           <span className="font-semibold text-ink">Compared with your last period:</span> {periodSummary(analytics)}
         </p>
       </section>
 
-      <section aria-labelledby="explore-analytics-title">
-        <div className="max-w-3xl">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Explore when you need more</p>
-          <h2 id="explore-analytics-title" className="mt-2 text-2xl font-bold text-ink">Explore your analytics</h2>
-          <p className="mt-2 text-sm leading-6 text-ink-muted">Open only the part of your search you want to understand. These details use the same filters and date range as the summary above.</p>
-        </div>
-
-        <div className="mt-5 divide-y divide-line border-y border-line">
+      <NarrativeSection title="Explore the evidence" description="Move from outcomes to activity, follow-up readiness, and work preferences. Every chapter uses the same filters and date range.">
+        <TonalChapter tone="quiet" className="divide-y divide-line px-4 sm:px-6">
           <DisclosureSection
             id="analytics-outcomes"
             title="Outcomes and conversion"
@@ -195,8 +187,8 @@ export function AnalyticsOverview({ analytics }: { analytics: Analytics }) {
           >
             <WorkModeDetail analytics={analytics} />
           </DisclosureSection>
-        </div>
-      </section>
+        </TonalChapter>
+      </NarrativeSection>
     </div>
   );
 }

@@ -860,7 +860,7 @@ describe("workspace milestone features", () => {
 
     const { user } = renderApp("/analytics?range=30d&source=REFERRAL");
     expect(
-      await screen.findByRole("heading", { name: "Your search at a glance" }),
+      await screen.findByRole("heading", { name: "Your search story" }),
     ).toBeVisible();
     expect(screen.getByText("Action needed")).toBeVisible();
     expect(
@@ -1114,7 +1114,7 @@ describe("workspace milestone features", () => {
     );
     const { user, router } = renderApp("/analytics?range=90d");
     expect(
-      await screen.findByRole("heading", { name: "Your search at a glance" }),
+      await screen.findByRole("heading", { name: "Your search story" }),
     ).toBeVisible();
 
     await user.click(screen.getByRole("tab", { name: "Sources" }));

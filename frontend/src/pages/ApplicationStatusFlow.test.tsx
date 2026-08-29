@@ -15,7 +15,9 @@ describe("adaptive application opportunity workspace", () => {
     renderApp(`/applications/${application.application_id}`);
     expect(await screen.findByRole("status", { name: "Loading application…" })).toBeVisible();
     expect(await screen.findByRole("heading", { name: application.job_title })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Journey" })).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "One opportunity, unfolding over time" }),
+    ).toBeVisible();
     expect(screen.getByRole("heading", { name: "Notes" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Opportunity details" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Full activity" })).toBeVisible();

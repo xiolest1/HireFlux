@@ -30,6 +30,7 @@ import { ErrorPanel, SuccessBanner } from "../components/ui/Feedback";
 import { PanelSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { useToast } from "../components/ui/toastContext";
 import { StatusBadge } from "../components/ui/StatusBadge";
+import { WorkspaceFrame } from "../components/ui/WorkspaceComposition";
 import { formatDateOnly, formatTimestamp } from "../features/applications/format";
 import {
   applicationCreateRouteState,
@@ -332,8 +333,8 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="space-y-10">
-      <header className="overflow-hidden rounded-3xl border border-line bg-surface-raised shadow-panel dark:bg-gradient-to-br dark:from-surface-raised dark:via-surface-raised dark:to-accent-soft">
+    <WorkspaceFrame width="standard" className="space-y-12">
+      <header className="overflow-hidden rounded-[2.25rem] bg-surface-raised shadow-panel ring-1 ring-line dark:bg-gradient-to-br dark:from-surface-raised dark:via-surface-raised dark:to-accent-soft">
         <div className="p-5 sm:p-7 lg:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 max-w-3xl">
@@ -501,7 +502,7 @@ export function DashboardPage() {
         isError={analyticsQuery.isError}
         onRetry={() => void analyticsQuery.refetch()}
       />
-    </div>
+    </WorkspaceFrame>
   );
 }
 
@@ -936,10 +937,10 @@ function SearchTour({ tour, onDismiss }: { tour: SearchTourState; onDismiss: () 
   const completed = steps.filter(([key]) => tour[key]).length;
   const nextStep = steps.find(([key]) => !tour[key]);
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-line bg-surface p-4 sm:p-5 dark:bg-surface-raised dark:shadow-panel" aria-labelledby="search-tour-title">
+    <section className="relative overflow-hidden border-y border-line py-4 sm:py-5" aria-labelledby="search-tour-title">
       <Sparkles aria-hidden="true" className="absolute -right-5 -top-5 size-24 text-accent opacity-10" />
       <div className="relative flex items-start justify-between gap-4">
-        <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Search tour · {completed}/3</p><h2 id="search-tour-title" className="mt-1 text-lg font-bold text-ink">Three ways to explore HireFlux</h2><p className="mt-1 text-sm text-ink-muted">{nextStep ? `Next: ${nextStep[1]}.` : "The hands-on tour is complete."}</p></div>
+        <div className="min-w-0"><p className="text-sm font-semibold text-accent">Search tour · {completed}/3</p><h2 id="search-tour-title" className="mt-1 text-xl font-bold text-ink">Three ways to explore HireFlux</h2><p className="mt-1 text-sm text-ink-muted">{nextStep ? `Next: ${nextStep[1]}.` : "The hands-on tour is complete."}</p></div>
         <button type="button" className="flex size-10 shrink-0 items-center justify-center rounded-xl text-ink-muted hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" onClick={onDismiss} aria-label="Dismiss search tour"><X aria-hidden="true" className="size-4" /></button>
       </div>
       <details className="relative mt-3 border-t border-line-subtle pt-3"><summary className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm font-bold text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">View tour details<ChevronDown aria-hidden="true" className="size-4" /></summary><ol className="mt-3 grid gap-3 lg:grid-cols-3">{steps.map(([key, title, description, href]) => <li key={key} className="rounded-xl bg-surface-muted p-4"><div className="flex gap-3">{tour[key] ? <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success-soft text-success"><Check aria-hidden="true" className="size-4" /></span> : <Circle aria-hidden="true" className="size-7 shrink-0 text-ink-tertiary" />}<div className="min-w-0"><p className="font-bold text-ink">{title}</p><p className="mt-1 text-sm leading-5 text-ink-muted">{description}</p>{!tour[key] ? <Link to={href} className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:underline">Try it<ArrowRight aria-hidden="true" className="size-3.5" /></Link> : <p className="mt-3 text-sm font-semibold text-success">Completed</p>}</div></div></li>)}</ol></details>

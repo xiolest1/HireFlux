@@ -271,7 +271,7 @@ test("analytics overview progressively discloses supporting detail", async ({
 }, testInfo) => {
   await page.goto("/analytics");
   await expect(
-    page.getByRole("heading", { name: "Your search at a glance" }),
+    page.getByRole("heading", { name: "Your search story" }),
   ).toBeVisible();
 
   const outcomes = page.getByRole("button", {
@@ -327,7 +327,7 @@ test("analytics overview stays clear in the light theme", async ({
 
   await page.goto("/analytics");
   await expect(
-    page.getByRole("heading", { name: "Your search at a glance" }),
+    page.getByRole("heading", { name: "Your search story" }),
   ).toBeVisible();
   await expect(page.locator("html")).not.toHaveClass(/dark/);
   await expectNoHorizontalPageOverflow(page);
@@ -677,7 +677,9 @@ test("application opportunity workspace has a stable visual baseline", async ({
   );
   await page.goto(`/applications/${applicationId}`);
 
-  await expect(page.getByRole("heading", { name: "Journey" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "One opportunity, unfolding over time" }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Notes" })).toBeVisible();
   await expect(page).toHaveScreenshot("application-detail-workspace.png", { fullPage: true });
 });

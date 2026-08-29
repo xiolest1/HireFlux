@@ -13,6 +13,7 @@ import { useSettings } from "../features/resources/queries";
 import { PageHeader } from "../components/ui/PageHeader";
 import { ChevronLeft } from "lucide-react";
 import { ApplicationFormSkeleton } from "../features/applications/ApplicationSkeletons";
+import { WorkspaceFrame } from "../components/ui/WorkspaceComposition";
 
 export function ApplicationCreatePage() {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ export function ApplicationCreatePage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <WorkspaceFrame width="narrow">
       <Link
         to={routeState?.returnTo ?? "/applications"}
         className="inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-semibold text-accent underline-offset-4 hover:underline"
@@ -76,7 +77,6 @@ export function ApplicationCreatePage() {
       </Link>
       <PageHeader
         className="mb-7 mt-3"
-        eyebrow="Quick capture"
         title="Add an application"
         description="Tell HireFlux what job you’re tracking. We’ll help you manage what comes next."
       />
@@ -105,6 +105,6 @@ export function ApplicationCreatePage() {
         serverError={createMutation.error}
         onSubmit={submit}
       />
-    </div>
+    </WorkspaceFrame>
   );
 }

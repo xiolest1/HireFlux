@@ -73,7 +73,7 @@ describe("ApplicationDetailPage opportunity handoff", () => {
     expect(screen.getByRole("button", { name: "More opportunity actions" })).toBeVisible();
   });
 
-  it("places the opportunity action and journey before mobile section navigation", async () => {
+  it("places the opportunity journey and attached action before mobile section navigation", async () => {
     const application = makeApplication();
     server.use(
       http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
@@ -85,16 +85,18 @@ describe("ApplicationDetailPage opportunity handoff", () => {
     const nextAction = await screen.findByRole("heading", {
       name: "Keep this opportunity moving",
     });
-    const journey = screen.getByRole("heading", { name: "Journey" });
+    const journey = screen.getByRole("heading", {
+      name: "One opportunity, unfolding over time",
+    });
     const jump = screen.getByRole("button", {
       name: "Jump to supporting sections",
     });
 
     expect(
-      nextAction.compareDocumentPosition(journey) & Node.DOCUMENT_POSITION_FOLLOWING,
+      journey.compareDocumentPosition(nextAction) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      journey.compareDocumentPosition(jump) & Node.DOCUMENT_POSITION_FOLLOWING,
+      nextAction.compareDocumentPosition(jump) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(jump).toHaveAttribute("aria-expanded", "false");
     await user.click(jump);

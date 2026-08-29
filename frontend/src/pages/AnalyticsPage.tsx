@@ -17,6 +17,7 @@ import { Drawer } from "../components/ui/Drawer";
 import { ErrorPanel } from "../components/ui/Feedback";
 import { PanelSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { Tabs } from "../components/ui/Tabs";
+import { NarrativeSection, TonalChapter, WorkspaceFrame, WorkspaceIntro } from "../components/ui/WorkspaceComposition";
 import { AnalyticsOverview } from "../features/analytics/AnalyticsOverview";
 import { percent, percentagePointDelta } from "../features/analytics/format";
 import { PipelineBoard } from "../features/pipeline/PipelineBoard";
@@ -111,14 +112,8 @@ export function AnalyticsPage() {
   });
 
   return (
-    <div className="space-y-7">
-      <header>
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.16em] text-accent">Search insights</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink sm:text-4xl">Analytics</h1>
-          <p className="mt-2 max-w-3xl text-base leading-7 text-ink-muted">Understand what is moving, what needs attention, and where to explore next.</p>
-        </div>
-      </header>
+    <WorkspaceFrame width="data" className="space-y-7">
+      <WorkspaceIntro title="Analytics" lead="What does my search currently say?" context="Read the signal first, then explore the evidence behind outcomes, momentum, pipeline, and sources." />
 
       <div className={`flex flex-col gap-4 border-b border-line pb-5 sm:flex-row sm:items-center ${isPipeline ? "" : "sm:justify-between"}`}>
         <Tabs items={analyticsTabs} value={section} ariaLabel="Analytics sections" stretch className="sm:w-auto" />
@@ -159,7 +154,7 @@ export function AnalyticsPage() {
           <FilterSelect label="Work mode" value={draft.workMode ?? ""} onChange={(value) => setDraft({ ...draft, workMode: allowed(value, WORK_MODES) })}><option value="">All work modes</option>{WORK_MODES.map((value) => <option key={value} value={value}>{formatWorkMode(value)}</option>)}</FilterSelect>
         </div>
       </Drawer>
-    </div>
+    </WorkspaceFrame>
   );
 }
 
@@ -201,8 +196,15 @@ function Pipeline({ analytics }: { analytics: Analytics }) {
   const maxStatus = Math.max(1, ...analytics.status_breakdown.map((item) => item.count));
   const stageAges = new Map(analytics.stage_aging.map((item) => [item.bucket, item.count]));
   return <>
-    <section className="rounded-2xl border border-line-subtle bg-surface p-5 sm:p-6" aria-labelledby="status-distribution-title"><h2 id="status-distribution-title" className="text-xl font-bold text-ink">Current status distribution</h2><p className="mt-1 text-sm text-ink-muted">Where opportunities sit right now.</p><ul className="mt-5 grid gap-4 sm:grid-cols-2">{analytics.status_breakdown.map((item) => <li key={item.status}><div className="flex justify-between gap-3 text-sm"><span className="font-semibold text-ink">{formatStatus(item.status)}</span><span className="text-ink-muted">{item.count}</span></div><div className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-muted"><div className="h-full rounded-full bg-accent" style={{ width: `${(item.count / maxStatus) * 100}%` }} /></div></li>)}</ul></section>
-    <div className="grid gap-6 lg:grid-cols-2"><section className="rounded-2xl border border-line-subtle bg-surface p-5" aria-labelledby="funnel-title"><h2 id="funnel-title" className="text-lg font-bold text-ink">Historical funnel</h2><p className="mt-1 text-sm text-ink-muted">Applications that reached each milestone at least once.</p><ol className="mt-5 space-y-3">{analytics.funnel.map((stage) => <li key={stage.stage} className="flex items-center justify-between rounded-xl bg-surface-muted px-4 py-3"><div><p className="font-semibold text-ink">{stage.stage.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase())}</p><p className="text-xs text-ink-tertiary">{percent(stage.rate)} of submitted</p></div><span className="text-xl font-black text-ink">{stage.count}</span></li>)}</ol></section><section className="rounded-2xl border border-line-subtle bg-surface p-5" aria-labelledby="aging-title"><h2 id="aging-title" className="text-lg font-bold text-ink">Applications by time in their current stage</h2><p className="mt-2 text-sm leading-6 text-ink-muted">These are active applications in Applied, Screening, Interview, or Offer. The timer resets whenever an application moves to a new stage.</p><p className="mt-3 rounded-xl bg-surface-muted p-3 text-xs leading-5 text-ink-muted">Use these ranges to decide what to review next. They are descriptive signals, not predictions about an application&apos;s outcome.</p><ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">{STAGE_AGE_BUCKETS.map((bucket) => { const count = stageAges.get(bucket) ?? 0; const guidance = stageAgeGuidance[bucket]; const countLabel = count === 0 ? "No applications in this range" : count === 1 ? "1 application" : `${count} applications`; const content = <><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold text-ink">{formatStageAge(bucket)}</p><p className="mt-1 text-xs leading-5 text-ink-muted">{guidance.description}</p></div><span className="text-sm font-bold text-ink">{countLabel}</span></div>{count > 0 ? <span className="mt-3 inline-flex min-h-10 items-center font-bold text-accent">View applications<ArrowRight aria-hidden="true" className="ml-1.5 size-4" /></span> : null}</>; return <li key={bucket} className={`rounded-xl border bg-surface-raised p-4 ${guidance.tone}`}>{count > 0 ? <Link to={stageAgeHref(bucket)} aria-label={`View applications aged ${formatStageAge(bucket)} (${countLabel})`} className="block rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">{content}</Link> : <div>{content}</div>}</li>; })}</ul></section></div>
+    <NarrativeSection title="Where opportunities are now" description="The current shape of your pipeline, from early pursuit through decisions." id="status-distribution-title">
+      <ul className="grid gap-x-10 gap-y-5 sm:grid-cols-2">{analytics.status_breakdown.map((item) => <li key={item.status}><div className="flex justify-between gap-3 text-sm"><span className="font-semibold text-ink">{formatStatus(item.status)}</span><span className="text-lg font-black text-ink">{item.count}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-muted"><div className="h-full rounded-full bg-accent" style={{ width: `${(item.count / maxStatus) * 100}%` }} /></div></li>)}</ul>
+    </NarrativeSection>
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] lg:gap-14">
+      <NarrativeSection title="Milestones reached" description="Historical progress each submitted application has reached at least once." id="funnel-title">
+        <ol className="divide-y divide-line">{analytics.funnel.map((stage) => <li key={stage.stage} className="flex items-end justify-between gap-4 py-4 first:pt-0"><div><p className="font-semibold text-ink">{stage.stage.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase())}</p><p className="text-xs text-ink-tertiary">{percent(stage.rate)} of submitted</p></div><span className="text-3xl font-black tracking-tight text-ink">{stage.count}</span></li>)}</ol>
+      </NarrativeSection>
+      <TonalChapter tone="quiet" className="p-5 sm:p-7" aria-labelledby="aging-title"><h2 id="aging-title" className="text-2xl font-bold tracking-tight text-ink">Applications by time in their current stage</h2><p className="mt-2 text-sm leading-6 text-ink-muted">Active applications in Applied, Screening, Interview, or Offer. The timer resets whenever an application moves to a new stage.</p><p className="mt-3 max-w-2xl text-xs leading-5 text-ink-tertiary">Use these ranges to decide what to review next. They are descriptive signals, not predictions about an application&apos;s outcome.</p><ul className="mt-6 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">{STAGE_AGE_BUCKETS.map((bucket) => { const count = stageAges.get(bucket) ?? 0; const guidance = stageAgeGuidance[bucket]; const countLabel = count === 0 ? "No applications in this range" : count === 1 ? "1 application" : `${count} applications`; const content = <><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold text-ink">{formatStageAge(bucket)}</p><p className="mt-1 text-xs leading-5 text-ink-muted">{guidance.description}</p></div><span className="text-sm font-bold text-ink">{countLabel}</span></div>{count > 0 ? <span className="mt-2 inline-flex min-h-10 items-center font-bold text-accent">View applications<ArrowRight aria-hidden="true" className="ml-1.5 size-4" /></span> : null}</>; return <li key={bucket} className={`border-b py-4 ${guidance.tone}`}>{count > 0 ? <Link to={stageAgeHref(bucket)} aria-label={`View applications aged ${formatStageAge(bucket)} (${countLabel})`} className="block rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">{content}</Link> : <div>{content}</div>}</li>; })}</ul></TonalChapter>
+    </div>
   </>;
 }
 
@@ -248,15 +250,15 @@ function Sources({ analytics }: { analytics: Analytics }) {
   const summary = analytics.source_summary;
   const sourcePeriod = analytics.source_period;
   const concentration = summary.concentration;
-  return <section className="min-w-0 rounded-2xl border border-line-subtle bg-surface p-5 sm:p-6" aria-labelledby="source-title">
-    <h2 id="source-title" className="text-xl font-bold text-ink">Source strategy</h2>
+  return <section className="min-w-0 border-b border-line pb-8" aria-labelledby="source-title">
+    <h2 id="source-title" className="text-3xl font-bold tracking-tight text-ink">Source strategy</h2>
     <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-muted">See which sources earn responses and interviews—not only where applications came from. Treat small samples as context, not conclusions.</p>
     <p className="mt-3 text-xs leading-5 text-ink-tertiary">Recent comparison: {sourcePeriod.label.toLowerCase()} ({formatDateOnly(sourcePeriod.current_start)}–{formatDateOnly(sourcePeriod.current_end)}) versus {formatDateOnly(sourcePeriod.previous_start)}–{formatDateOnly(sourcePeriod.previous_end)}.</p>
 
     {analytics.filters.source ? <div className="mt-4 flex flex-col gap-3 rounded-xl border border-info/25 bg-info-soft p-4 text-sm text-info sm:flex-row sm:items-center sm:justify-between"><p>Source comparisons are narrowed to {formatSource(analytics.filters.source)}. Clear this filter to compare your full source mix.</p><Link to={sourceComparisonHref(analytics)} className="inline-flex min-h-10 shrink-0 items-center font-bold hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">Compare all sources<ArrowRight aria-hidden="true" className="ml-1.5 size-4" /></Link></div> : null}
 
-    <h3 className="mt-5 text-base font-bold text-ink">Source strategy at a glance</h3>
-    <div className="mt-3 grid gap-3 md:grid-cols-3">
+    <h3 className="mt-8 text-lg font-bold text-ink">Source strategy at a glance</h3>
+    <div className="mt-4 grid gap-6 border-y border-line py-6 md:grid-cols-3 md:divide-x md:divide-line">
       <SourceSummaryCard title="Where your effort is going">
         {summary.top_volume ? <><p className="text-lg font-bold text-ink">{formatSource(summary.top_volume.source)}</p><p className="mt-1 text-sm text-ink-muted">{summary.top_volume.submitted_count} submitted · {percent(summary.top_volume.application_share)} of your search</p>{concentration.flagged ? <p className="mt-3 text-sm leading-6 text-warning">This is above the {percent(concentration.threshold)} concentration review threshold. Testing another source may broaden your search.</p> : <p className="mt-3 text-sm leading-6 text-ink-muted">Your highest-volume source is below the concentration review threshold.</p>}</> : <p className="text-sm text-ink-muted">Add submitted applications with a source to see your source mix.</p>}
       </SourceSummaryCard>
@@ -278,7 +280,7 @@ function Sources({ analytics }: { analytics: Analytics }) {
 }
 
 function SourceSummaryCard({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="rounded-xl bg-surface-muted p-4" aria-label={title}><p className="text-xs font-bold uppercase tracking-wide text-ink-tertiary">{title}</p><div className="mt-2">{children}</div></section>;
+  return <section className="min-w-0 md:px-5 md:first:pl-0 md:last:pr-0" aria-label={title}><p className="text-sm font-bold text-ink-muted">{title}</p><div className="mt-2">{children}</div></section>;
 }
 
 function SourceMetric({ label, value }: { label: string; value: string }) { return <div><dt className="text-xs font-bold uppercase tracking-wide text-ink-tertiary">{label}</dt><dd className="mt-1 font-semibold text-ink">{value}</dd></div>; }

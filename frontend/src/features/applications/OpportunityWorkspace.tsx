@@ -55,7 +55,7 @@ export function OpportunityWorkspace({
   highlightedApplicationId?: string;
 }) {
   return (
-    <div className="space-y-9">
+    <div className="space-y-12">
       {sections.map((section) => {
         const page = workspace.groups[section.group];
         if (section.group !== "needs_action" && page.total_count === 0) return null;
@@ -108,10 +108,10 @@ function OpportunitySection({
 
   return (
     <section aria-labelledby={`${regionId}-title`} aria-describedby={`${regionId}-description`}>
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line pb-3">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 id={`${regionId}-title`} className="text-xl font-bold text-ink sm:text-2xl">
+            <h2 id={`${regionId}-title`} className="font-display text-2xl font-bold text-ink sm:text-3xl">
               {title}
             </h2>
             <span className="rounded-full bg-surface-muted px-2.5 py-1 text-xs font-bold text-ink-muted">
@@ -181,13 +181,13 @@ function PriorityOpportunity({ item, timeZone, returnPath, highlighted }: RowPro
   const destination = actionDestination(item);
   const state = actionRouteState(item, returnPath);
   return (
-    <article className={`min-w-0 rounded-2xl border bg-surface-raised p-5 ${highlighted ? "border-accent bg-surface-selected ring-2 ring-focus/20" : "border-line-subtle"}`}>
+    <article className={`min-w-0 border-l-4 px-5 py-6 sm:px-7 ${highlighted ? "border-accent bg-surface-selected ring-2 ring-focus/20" : "border-accent bg-accent-soft/55"}`}>
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 rounded-xl bg-accent-soft p-2 text-accent"><Icon aria-hidden="true" className="size-5" /></span>
+        <span className="mt-0.5 p-1 text-accent"><Icon aria-hidden="true" className="size-6" /></span>
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-ink">{presentation.label}</p>
-          <p className="mt-3 truncate text-sm font-semibold text-ink-muted">{item.application.company_name}</p>
-          <Link to={`/applications/${item.application.application_id}`} state={applicationsRouteState("/applications", returnPath.slice("/applications".length))} className="mt-1 inline-flex min-h-11 max-w-full items-center [overflow-wrap:anywhere] text-lg font-bold leading-tight text-ink hover:text-accent hover:underline">
+          <p className="mt-4 truncate text-sm font-semibold text-ink-muted">{item.application.company_name}</p>
+          <Link to={`/applications/${item.application.application_id}`} state={applicationsRouteState("/applications", returnPath.slice("/applications".length))} className="mt-1 inline-flex min-h-11 max-w-full items-center [overflow-wrap:anywhere] font-display text-2xl font-bold leading-tight text-ink hover:text-accent hover:underline">
             {item.application.job_title}
           </Link>
           <SupportingValue item={item} timeZone={timeZone} />

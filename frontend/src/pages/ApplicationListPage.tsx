@@ -31,6 +31,7 @@ import {
   SuccessBanner,
 } from "../components/ui/Feedback";
 import { Drawer } from "../components/ui/Drawer";
+import { WorkspaceFrame, WorkspaceIntro } from "../components/ui/WorkspaceComposition";
 import { ApplicationListSkeleton } from "../features/applications/ApplicationSkeletons";
 import {
   readApplicationCreatedRouteState,
@@ -373,7 +374,7 @@ export function ApplicationListPage() {
   const hiddenFilterCount = Math.max(0, activeFilterItems.length - 3);
 
   return (
-    <div>
+    <WorkspaceFrame width="wide">
       {notice ? (
         <div className="mb-6">
           <SuccessBanner>
@@ -392,19 +393,7 @@ export function ApplicationListPage() {
         </div>
       ) : null}
 
-      <div>
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.16em] text-accent">
-            Opportunity workspace
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
-            Applications
-          </h1>
-          <p className="mt-2 max-w-2xl text-base leading-7 text-ink-muted">
-            Find the next action quickly, then keep every opportunity moving.
-          </p>
-        </div>
-      </div>
+      <WorkspaceIntro title="Applications" lead="What requires you, what is moving, and what is waiting?" context="Scan the opportunity field by responsibility and momentum without losing the details behind each application." />
 
       <nav
         className="mt-7 inline-flex w-full rounded-2xl border border-line bg-surface-muted p-1 sm:w-auto"
@@ -662,7 +651,7 @@ export function ApplicationListPage() {
         onApply={applyFilters}
         onClear={() => setFilterDraft(defaultFilterDraft)}
       />
-    </div>
+    </WorkspaceFrame>
   );
 }
 
