@@ -3,6 +3,7 @@ import {
   CalendarPlus,
   Check,
   CheckCircle2,
+  ChevronLeft,
   ChevronDown,
   Circle,
   Clock3,
@@ -19,7 +20,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type { Application, Interview, WorkspaceInterview } from "../api/schemas";
 import type { InterviewFields } from "../api/resources";
 import { buttonClassName } from "../components/ui/buttonStyles";
@@ -33,6 +34,11 @@ import {
   formatTimestamp,
 } from "../features/applications/format";
 import { useApplication } from "../features/applications/queries";
+import {
+  applicationsRouteStateWithoutIntent,
+  readApplicationsRouteState,
+  type ApplicationsRouteState,
+} from "../features/applications/opportunityNavigation";
 import { InterviewFocusedWorkspace } from "../features/resources/InterviewWorkspaceDrawer";
 import { InterviewScheduleWorkspace } from "../features/resources/InterviewScheduleWorkspace";
 import {
@@ -170,6 +176,16 @@ function orientation(
 }
 
 export function InterviewsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [applicationsOrigin] = useState(() =>
+    readApplicationsRouteState(location.state),
+  );
+  const automaticIntentHandled = useRef(false);
+  const automaticPreparationTriggerRef = useRef<HTMLButtonElement>(null);
+  const applicationRouteState = applicationsOrigin
+    ? applicationsRouteStateWithoutIntent(applicationsOrigin)
+    : undefined;
   const interviewsQuery = useWorkspaceInterviews();
   const settingsQuery = useSettings();
   const timeZone = settingsQuery.data?.time_zone ?? "UTC";
@@ -183,6 +199,7 @@ export function InterviewsPage() {
     "application_id" | "company_name" | "job_title"
   > | null>(null);
   const [scheduleEditing, setScheduleEditing] = useState<Interview | null>(null);
+  const [interviewSwitcherOpen, setInterviewSwitcherOpen] = useState(false);
   const detailRef = useRef<HTMLElement | null>(null);
   const transitionMutation = useTransitionWorkspaceInterview();
   const { showToast } = useToast();
@@ -264,7 +281,31 @@ export function InterviewsPage() {
     setSearchParams(next, { replace: true });
   }, [requestedId, searchParams, selected, setSearchParams]);
 
+  useEffect(() => {
+    if (
+      applicationsOrigin?.intent !== "OPEN_INTERVIEW_PREPARATION" ||
+      automaticIntentHandled.current ||
+      !requestedInterview
+    ) {
+      return;
+    }
+    automaticIntentHandled.current = true;
+    automaticPreparationTriggerRef.current?.focus();
+    setWorkspaceInterview(requestedInterview);
+    void navigate(`${location.pathname}${location.search}`, {
+      replace: true,
+      state: applicationsRouteStateWithoutIntent(applicationsOrigin),
+    });
+  }, [
+    applicationsOrigin,
+    location.pathname,
+    location.search,
+    navigate,
+    requestedInterview,
+  ]);
+
   function selectInterview(interview: WorkspaceInterview) {
+    setInterviewSwitcherOpen(false);
     const next = new URLSearchParams(searchParams);
     next.set("interview", interview.interview_id);
     setSearchParams(next);
@@ -344,6 +385,15 @@ export function InterviewsPage() {
 
   return (
     <div className="mx-auto max-w-7xl pb-6 sm:pb-8">
+      {applicationsOrigin ? (
+        <Link
+          to={applicationsOrigin.returnTo}
+          className="mb-3 inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-semibold text-accent hover:underline"
+        >
+          <ChevronLeft aria-hidden="true" className="size-4" />
+          Back to applications
+        </Link>
+      ) : null}
       <header className="border-b border-line pb-5 sm:flex sm:items-end sm:justify-between sm:gap-6">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
@@ -391,7 +441,7 @@ export function InterviewsPage() {
           />
         ) : null}
         {resolvingRequestedInterview ? (
-          <div role="status" aria-live="polite" className="rounded-2xl border border-line bg-surface p-6 shadow-panel">
+          <div role="status" aria-live="polite" className="rounded-2xl border border-line-subtle bg-surface p-6">
             <p className="font-semibold text-ink">Finding the requested interview…</p>
             <p className="mt-1 text-sm text-ink-muted">Checking the rest of your interview history.</p>
           </div>
@@ -418,22 +468,23 @@ export function InterviewsPage() {
           />
         ) : null}
         {selected ? (
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(18rem,0.78fr)_minmax(0,1.35fr)]">
+          <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(18rem,0.78fr)_minmax(0,1.35fr)]">
             <SchedulePane
-              className="order-2 lg:order-1 lg:sticky lg:top-24"
+              className="lg:sticky lg:top-24"
               needsAttention={needsAttention}
               upcoming={upcoming}
               completed={completed}
-              selectedId={selected.interview_id}
+              selected={selected}
               timeZone={timeZone}
               onSelect={selectInterview}
               hasNextPage={Boolean(interviewsQuery.hasNextPage)}
               isFetchingNextPage={interviewsQuery.isFetchingNextPage}
               onLoadMore={() => void interviewsQuery.fetchNextPage()}
+              compactOpen={interviewSwitcherOpen}
+              onCompactToggle={() => setInterviewSwitcherOpen((value) => !value)}
             />
             <InterviewDetail
               ref={detailRef}
-              className="order-1 lg:order-2"
               interview={selected}
               timeZone={timeZone}
               cancelingId={cancelingId}
@@ -444,6 +495,8 @@ export function InterviewsPage() {
               onTransition={transition}
               onSchedule={() => openSchedule(selected)}
               onEditSchedule={() => openSchedule(selected, selected)}
+              applicationRouteState={applicationRouteState}
+              primaryActionRef={automaticPreparationTriggerRef}
             />
           </div>
         ) : null}
@@ -482,52 +535,83 @@ function SchedulePane({
   needsAttention,
   upcoming,
   completed,
-  selectedId,
+  selected,
   timeZone,
   onSelect,
   hasNextPage,
   isFetchingNextPage,
   onLoadMore,
+  compactOpen,
+  onCompactToggle,
 }: {
   className?: string;
   needsAttention: WorkspaceInterview[];
   upcoming: WorkspaceInterview[];
   completed: WorkspaceInterview[];
-  selectedId: string;
+  selected: WorkspaceInterview;
   timeZone: string;
   onSelect: (interview: WorkspaceInterview) => void;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   onLoadMore: () => void;
+  compactOpen: boolean;
+  onCompactToggle: () => void;
 }) {
+  const compactRegionId = "responsive-interview-queue";
   return (
     <aside
       className={`${className ?? ""} min-w-0`}
       aria-labelledby="schedule-title"
     >
-      <div className="rounded-2xl border border-line bg-surface shadow-panel">
+      <div className="overflow-hidden rounded-2xl border border-line-subtle bg-surface">
         <div className="border-b border-line px-4 py-4 sm:px-5">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted">
             Your next steps
           </p>
-          <h2 id="schedule-title" className="mt-1 text-xl font-bold text-ink">
-            Interview queue
-          </h2>
-          <p className="mt-1 text-sm leading-6 text-ink-muted">
+          <div className="mt-1 flex items-start justify-between gap-3">
+            <div>
+              <h2 id="schedule-title" className="text-xl font-bold text-ink">
+                Interview queue
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">
             {needsAttention.length
               ? `${needsAttention.length} interview${needsAttention.length === 1 ? "" : "s"} ${needsAttention.length === 1 ? "needs" : "need"} attention. Select one to continue.`
               : upcoming.length
                 ? `${upcoming.length} prepared interview ${upcoming.length === 1 ? "is" : "are"} coming up.`
               : "Nothing needs action right now."}
-          </p>
+              </p>
+            </div>
+            <span className="rounded-full bg-surface-muted px-2.5 py-1 text-xs font-bold text-ink-muted">
+              {needsAttention.length + upcoming.length + completed.length}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="mt-4 flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-line bg-surface-raised px-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus lg:hidden"
+            aria-expanded={compactOpen}
+            aria-controls={compactRegionId}
+            aria-label={compactOpen ? "Hide interview choices" : "Switch interview"}
+            aria-describedby="current-interview-selection"
+            onClick={onCompactToggle}
+          >
+            <span className="min-w-0">
+              <span className="block text-xs font-semibold text-ink-muted">Viewing</span>
+              <span id="current-interview-selection" className="block truncate font-bold text-ink">{selected.company_name} · {formatInterviewType(selected.interview_type)}</span>
+              <span className="mt-0.5 block text-xs text-ink-muted">{stateLabel(selected)}</span>
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1 text-sm font-bold text-accent">
+              Switch
+              <ChevronDown aria-hidden="true" className={`size-4 transition-transform ${compactOpen ? "rotate-180" : ""}`} />
+            </span>
+          </button>
         </div>
 
-        <div className="divide-y divide-line">
+        <div id={compactRegionId} className={`${compactOpen ? "block" : "hidden"} divide-y divide-line lg:block`}>
           <QueueGroup
             id="needs-attention"
             title="Needs attention"
             interviews={needsAttention}
-            selectedId={selectedId}
+            selectedId={selected.interview_id}
             timeZone={timeZone}
             onSelect={onSelect}
           />
@@ -535,18 +619,17 @@ function SchedulePane({
             id="upcoming"
             title="Upcoming"
             interviews={upcoming}
-            selectedId={selectedId}
+            selectedId={selected.interview_id}
             timeZone={timeZone}
             onSelect={onSelect}
           />
-        </div>
 
         {completed.length ? (
           <details
             className="group border-t border-line"
             open={needsAttention.length === 0 && upcoming.length === 0}
           >
-            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 font-semibold text-ink marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent">
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 font-semibold text-ink marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus">
               <span>
                 Completed{" "}
                 <span className="ml-1 text-sm text-ink-muted">
@@ -560,7 +643,7 @@ function SchedulePane({
             </summary>
             <QueueRows
               interviews={completed}
-              selectedId={selectedId}
+              selectedId={selected.interview_id}
               timeZone={timeZone}
               onSelect={onSelect}
             />
@@ -579,6 +662,7 @@ function SchedulePane({
             </button>
           </div>
         ) : null}
+        </div>
       </div>
     </aside>
   );
@@ -672,7 +756,7 @@ function ScheduleRow({
         aria-label={`${interview.company_name}, ${formatInterviewType(interview.interview_type)}, ${date} at ${time}, ${stateLabel(interview)}`}
         aria-pressed={selected}
         onClick={onSelect}
-        className={`w-full rounded-xl border px-3 py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${selected ? "border-accent bg-accent-soft" : "border-transparent hover:border-line hover:bg-surface-muted"}`}
+        className={`w-full rounded-xl border px-3 py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${selected ? "border-accent bg-surface-selected" : "border-transparent hover:border-line hover:bg-surface-hover active:bg-surface-pressed"}`}
       >
         <div className="flex items-start gap-3">
           <div className="w-16 shrink-0">
@@ -709,6 +793,8 @@ const InterviewDetail = function InterviewDetail({
   onTransition,
   onSchedule,
   onEditSchedule,
+  applicationRouteState,
+  primaryActionRef,
 }: {
   ref: Ref<HTMLElement>;
   className?: string;
@@ -725,6 +811,8 @@ const InterviewDetail = function InterviewDetail({
   ) => Promise<void>;
   onSchedule: () => void;
   onEditSchedule: () => void;
+  applicationRouteState?: ApplicationsRouteState;
+  primaryActionRef?: Ref<HTMLButtonElement>;
 }) {
   const applicationQuery = useApplication(interview.application_id);
   const roundsQuery = useApplicationInterviews(interview.application_id);
@@ -773,7 +861,7 @@ const InterviewDetail = function InterviewDetail({
       className={`${className ?? ""} min-w-0 scroll-mt-24 focus:outline-none`}
       aria-labelledby="selected-interview-title"
     >
-      <div className="overflow-hidden rounded-[1.75rem] border border-line bg-surface shadow-panel">
+      <div className="overflow-hidden rounded-[1.75rem] border border-line-subtle bg-surface">
         <div className="border-b border-line px-5 py-5 sm:px-7 sm:py-6">
           <p className="text-xs font-bold uppercase tracking-[0.17em] text-accent">
             Selected interview
@@ -838,12 +926,14 @@ const InterviewDetail = function InterviewDetail({
               error={mutationError}
             />
           ) : null}
-          <LifecycleIndicator interview={interview} />
           <ContextCommand
             interview={interview}
             onOpenWorkspace={() => onOpenWorkspace(interview)}
             onTransition={onTransition}
+            applicationRouteState={applicationRouteState}
+            primaryActionRef={primaryActionRef}
           />
+          <LifecycleIndicator interview={interview} />
           <PreparationSnapshot
             interview={interview}
             timeZone={timeZone}
@@ -909,6 +999,7 @@ const InterviewDetail = function InterviewDetail({
             </div>
             <Link
               to={applicationHref(interview)}
+              state={applicationRouteState}
               className="inline-flex min-h-11 items-center text-sm font-bold text-accent hover:underline"
             >
               Open full application
@@ -971,7 +1062,7 @@ const InterviewDetail = function InterviewDetail({
           ) : null}
           {completed ? (
             <details className="group border-t border-line pt-2">
-              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 font-semibold text-ink-muted marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 font-semibold text-ink-muted marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
                 <span>Related journey actions</span>
                 <ChevronDown
                   aria-hidden="true"
@@ -1047,7 +1138,14 @@ function LifecycleIndicator({ interview }: { interview: WorkspaceInterview }) {
       >
         Interview lifecycle
       </h3>
-      <ol className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-muted px-3 py-3 sm:hidden">
+        <div>
+          <p className="text-xs font-semibold text-ink-muted">Current step</p>
+          <p className="mt-0.5 font-bold text-ink">{currentIndex >= 0 ? steps[currentIndex] : "Journey complete"}</p>
+        </div>
+        <span className="text-xs font-semibold text-ink-muted">{currentIndex >= 0 ? `${currentIndex + 1} of ${steps.length}` : "4 steps complete"}</span>
+      </div>
+      <ol className="mt-3 hidden grid-cols-5 gap-2 sm:grid">
         {steps.map((step, index) => {
           const isComplete = index <= completedThrough;
           const isCurrent = index === currentIndex;
@@ -1081,6 +1179,8 @@ function ContextCommand({
   interview,
   onOpenWorkspace,
   onTransition,
+  applicationRouteState,
+  primaryActionRef,
 }: {
   interview: WorkspaceInterview;
   onOpenWorkspace: () => void;
@@ -1088,6 +1188,8 @@ function ContextCommand({
     interview: WorkspaceInterview,
     status: "COMPLETED" | "CANCELED",
   ) => Promise<void>;
+  applicationRouteState?: ApplicationsRouteState;
+  primaryActionRef?: Ref<HTMLButtonElement>;
 }) {
   const state = interview.context.workflow_state;
   let eyebrow = "What to do now";
@@ -1155,6 +1257,7 @@ function ContextCommand({
     case "PREPARE":
       action = (
         <button
+          ref={primaryActionRef}
           type="button"
           className={buttonClassName("primary")}
           onClick={onOpenWorkspace}
@@ -1178,6 +1281,7 @@ function ContextCommand({
       ) : (
         <Link
           to={applicationHref(interview)}
+          state={applicationRouteState}
           className={buttonClassName("primary")}
         >
           Open application
@@ -1210,6 +1314,7 @@ function ContextCommand({
       action = (
         <Link
           to={followUpHref(interview)}
+          state={applicationRouteState}
           className={buttonClassName("primary")}
         >
           Review next step
@@ -1231,6 +1336,7 @@ function ContextCommand({
       action = (
         <Link
           to={applicationHref(interview)}
+          state={applicationRouteState}
           className={buttonClassName("primary")}
         >
           Open application
@@ -1569,7 +1675,7 @@ function InterviewsSkeleton() {
       </div>
       <div
         aria-hidden="true"
-        className="rounded-[1.75rem] border border-line bg-surface p-6 shadow-panel"
+        className="rounded-[1.75rem] border border-line-subtle bg-surface p-6"
       >
         <Skeleton className="h-4 w-32" />
         <Skeleton className="mt-5 h-9 w-3/5" />

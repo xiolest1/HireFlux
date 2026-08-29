@@ -90,7 +90,7 @@ export function Menu({ label, trigger, items, align = "end" }: MenuProps) {
             const classes = `flex min-h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
               item.danger
                 ? "text-danger hover:bg-danger-soft"
-                : "text-ink-muted hover:bg-surface-muted hover:text-ink"
+                : "text-ink-muted hover:bg-surface-hover hover:text-ink active:bg-surface-pressed"
             } ${item.disabled ? "pointer-events-none opacity-45" : ""}`;
             const content = (
               <>

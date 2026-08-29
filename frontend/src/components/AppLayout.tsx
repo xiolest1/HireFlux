@@ -91,8 +91,8 @@ function navClassName(
 ): string {
   return `group flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-[color,background-color,box-shadow] duration-200 ${
     isActive
-      ? "bg-accent-soft text-accent-strong shadow-sm ring-1 ring-accent/15"
-      : "text-ink-muted hover:bg-surface-muted hover:text-ink"
+      ? "bg-surface-selected text-accent-strong"
+      : "text-ink-muted hover:bg-surface-hover hover:text-ink active:bg-surface-pressed"
   }`;
 }
 
@@ -195,10 +195,14 @@ export function AppLayout() {
       if (!heading) return;
       focused = true;
       heading.setAttribute("tabindex", "-1");
+      heading.setAttribute("data-route-focus", "true");
       heading.focus({ preventScroll: true });
       heading.addEventListener(
         "blur",
-        () => heading.removeAttribute("tabindex"),
+        () => {
+          heading.removeAttribute("tabindex");
+          heading.removeAttribute("data-route-focus");
+        },
         { once: true },
       );
     };
@@ -276,7 +280,7 @@ export function AppLayout() {
           }`}
           aria-label="Workspace navigation"
         >
-          <div className="flex min-h-20 items-center border-b border-line px-4">
+          <div className="flex min-h-20 items-center border-b border-line-subtle px-4">
             <NavLink
               to="/dashboard"
               className="flex min-w-0 items-center gap-3 rounded-xl text-ink"
@@ -321,14 +325,14 @@ export function AppLayout() {
                   aria-label={label}
                   title={label}
                 >
-                  <Icon aria-hidden="true" className="size-5 shrink-0" strokeWidth={1.8} />
+                  <Icon aria-hidden="true" className="size-5 shrink-0" strokeWidth={2} />
                   {!sidebarCollapsed ? <span className="hidden lg:inline">{label}</span> : null}
                 </NavLink>
               ))}
             </nav>
           </div>
 
-          <div className="space-y-3 border-t border-line p-3">
+          <div className="space-y-3 border-t border-line-subtle p-3">
             {!sidebarCollapsed ? (
               <div className="hidden rounded-xl bg-surface-muted p-3 lg:block">
                 <div className="flex items-center gap-2.5">
@@ -349,7 +353,7 @@ export function AppLayout() {
               onClick={toggleSidebar}
               aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className={`hidden min-h-10 w-full items-center justify-center rounded-xl font-semibold text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink lg:flex ${
+              className={`hidden min-h-10 w-full items-center justify-center rounded-xl font-semibold text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink active:bg-surface-pressed lg:flex ${
                 sidebarCollapsed
                   ? "text-sm"
                   : "gap-2 text-sm"
@@ -372,7 +376,7 @@ export function AppLayout() {
               aria-expanded={tabletNavOpen}
               aria-controls="tablet-navigation-drawer"
               title="Open navigation"
-              className="hidden min-h-10 w-full items-center justify-center rounded-xl text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink md:flex lg:hidden"
+              className="hidden min-h-10 w-full items-center justify-center rounded-xl text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink active:bg-surface-pressed md:flex lg:hidden"
             >
               <PanelLeftOpen aria-hidden="true" className="size-5" />
             </button>
@@ -407,13 +411,13 @@ export function AppLayout() {
                 onClick={() => setTabletNavOpen(false)}
                 className={navClassName}
               >
-                <Icon aria-hidden="true" className="size-5 shrink-0" strokeWidth={1.8} />
+                <Icon aria-hidden="true" className="size-5 shrink-0" strokeWidth={2} />
                 <span>{label}</span>
               </NavLink>
             ))}
           </nav>
 
-          <div className="mt-6 border-t border-line pt-5">
+          <div className="mt-6 border-t border-line-subtle pt-5">
             <div className="rounded-xl bg-surface-muted p-3">
               <div className="flex items-center gap-2.5">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-soft text-violet">
@@ -431,7 +435,7 @@ export function AppLayout() {
         </Drawer>
 
         <div className="min-w-0 flex-1">
-          <header className="hf-glass sticky top-0 z-30 border-b">
+          <header className="hf-glass sticky top-0 z-30 border-b border-line">
             <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6 md:min-h-14 lg:px-8">
               <NavLink
                 to="/dashboard"
@@ -475,7 +479,7 @@ export function AppLayout() {
                   ref={resetTriggerRef}
                   type="button"
                   aria-label="Reset demo"
-                  className="hidden min-h-11 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-ink-muted transition-colors hover:border-line-strong hover:bg-surface-muted hover:text-ink lg:inline-flex"
+                  className="hidden min-h-11 items-center gap-2 rounded-xl border border-line bg-surface-raised px-3 text-sm font-semibold text-ink-muted transition-colors hover:border-line-strong hover:bg-surface-hover hover:text-ink active:bg-surface-pressed lg:inline-flex"
                   onClick={() => setConfirmingReset(true)}
                 >
                   <RotateCcw aria-hidden="true" className="size-4" />
@@ -510,12 +514,12 @@ export function AppLayout() {
         </div>
 
         <nav
-          className="hf-glass fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
+          className="hf-glass fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line-subtle px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
           aria-label="Mobile navigation"
         >
           {primaryNavigation.slice(0, 2).map(({ to, label, shortLabel, icon: Icon }) => (
             <NavLink key={to} to={to} className={mobileNavClassName}>
-              <Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
+              <Icon aria-hidden="true" className="size-5" strokeWidth={2} />
               <span>{shortLabel ?? label}</span>
             </NavLink>
           ))}
@@ -531,7 +535,7 @@ export function AppLayout() {
             <span>Add</span>
           </NavLink>
           <NavLink to="/interviews" className={mobileNavClassName}>
-            <CalendarDays aria-hidden="true" className="size-5" strokeWidth={1.8} />
+            <CalendarDays aria-hidden="true" className="size-5" strokeWidth={2} />
             <span>Interviews</span>
           </NavLink>
           <button
@@ -544,7 +548,7 @@ export function AppLayout() {
             }`}
             aria-label="More navigation"
           >
-            <MenuIcon aria-hidden="true" className="size-5" strokeWidth={1.8} />
+            <MenuIcon aria-hidden="true" className="size-5" strokeWidth={2} />
             <span>More</span>
           </button>
         </nav>
@@ -609,7 +613,7 @@ export function AppLayout() {
             </NavLink>
           </nav>
 
-          <div className="mt-6 border-t border-line pt-5">
+          <div className="mt-6 border-t border-line-subtle pt-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-ink">Appearance</p>
@@ -622,7 +626,7 @@ export function AppLayout() {
             </div>
             <button
               type="button"
-              className="mt-5 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
+              className="mt-5 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink active:bg-surface-pressed"
               onClick={requestReset}
             >
               <RotateCcw aria-hidden="true" className="size-5" />

@@ -5,7 +5,11 @@ import { renderApp } from "../test/renderApp";
 describe("AppLayout", () => {
   it("persists the desktop sidebar choice and announces the active route", async () => {
     const { user } = renderApp("/dashboard");
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    const routeHeading = await screen.findByRole("heading", { name: "Welcome back" });
+    expect(routeHeading).toBeVisible();
+    expect(routeHeading).toHaveFocus();
+    expect(routeHeading).toHaveAttribute("tabindex", "-1");
+    expect(routeHeading).toHaveAttribute("data-route-focus", "true");
     expect(document.title).toBe("Home · HireFlux");
     expect(screen.getByText("Home page loaded")).toBeInTheDocument();
 

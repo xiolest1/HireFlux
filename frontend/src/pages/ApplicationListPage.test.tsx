@@ -39,6 +39,28 @@ function emptyWorkspaceResponse() {
   return response;
 }
 
+function attentionItems(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    application: makeApplication({
+      application_id: `11111111-1111-4111-8111-${String(index + 1).padStart(12, "0")}`,
+      company_name: `Company ${index + 1}`,
+      job_title: `Role ${index + 1}`,
+      next_step_responsibility: "CANDIDATE",
+      next_step_note: "Send a work sample",
+      follow_up_date: "2026-08-29",
+    }),
+    classification: {
+      group: "needs_action" as const,
+      reason_code: "CANDIDATE_ACTION_UPCOMING" as const,
+      relevant_date: "2026-08-29",
+      relevant_at: null,
+      action_type: "OPEN_OPPORTUNITY" as const,
+      interview_id: null,
+      next_interview: null,
+    },
+  }));
+}
+
 describe("ApplicationListPage", () => {
   beforeEach(() => {
     server.use(
@@ -76,6 +98,98 @@ describe("ApplicationListPage", () => {
     expect(screen.getByRole("heading", { name: "Waiting" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Needs attention" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
+  });
+
+  it("features only the first attention item and renders the rest as compact rows", async () => {
+    const allItems = attentionItems(5);
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/workspace`, () =>
+        HttpResponse.json({
+          generated_at: "2026-08-27T14:00:00Z",
+          groups: {
+            needs_action: {
+              total_count: 5,
+              items: allItems.slice(0, 4),
+              next_cursor: "more",
+            },
+            moving_forward: { total_count: 0, items: [], next_cursor: null },
+            waiting: { total_count: 0, items: [], next_cursor: null },
+          },
+        }),
+      ),
+      http.get(
+        `${API_ORIGIN}/api/v1/applications/workspace/groups/needs_action`,
+        () =>
+          HttpResponse.json({
+            total_count: 5,
+            items: allItems,
+            next_cursor: null,
+          }),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, ({ params }) =>
+        HttpResponse.json(
+          allItems.find(
+            (item) => item.application.application_id === params.applicationId,
+          )?.application ?? allItems[0].application,
+        ),
+      ),
+    );
+
+    const { user, router } = renderApp("/applications?view=ACTIVE");
+    expect(
+      await screen.findByText(
+        "Review the action you planned for this opportunity.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getAllByText("Review the action you planned for this opportunity."),
+    ).toHaveLength(1);
+    expect(
+      screen.getAllByRole("link", { name: "Review next action" }),
+    ).toHaveLength(3);
+    const showMore = screen.getByRole("button", {
+      name: "Show 2 more needs your attention",
+    });
+    expect(showMore).toHaveAttribute("aria-expanded", "false");
+    await user.click(showMore);
+    expect(
+      screen.getAllByRole("link", { name: "Review next action" }),
+    ).toHaveLength(5);
+    expect(showMore).toHaveAccessibleName("Show fewer needs your attention");
+
+    await user.click(screen.getAllByRole("link", { name: "Review next action" })[0]);
+    expect(router.state.location.pathname).toBe(
+      `/applications/${allItems[0].application.application_id}`,
+    );
+    expect(router.state.location.state).toEqual({
+      applicationsOrigin: {
+        returnTo: "/applications?view=ACTIVE",
+        intent: "RUN_PRIMARY_ACTION",
+      },
+    });
+  });
+
+  it("explains Active retrieval mode and returns to the grouped workspace", async () => {
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications`, () =>
+        HttpResponse.json({ items: [makeApplication()], next_cursor: null }),
+      ),
+    );
+    const { user, router } = renderApp(
+      "/applications?view=ACTIVE&q=platform&source=REFERRAL&sort=updated_asc",
+    );
+
+    expect(
+      await screen.findByText(
+        "Showing active applications matching “platform”.",
+      ),
+    ).toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: "Return to opportunity workspace" }),
+    );
+    await waitFor(() =>
+      expect(router.state.location.search).toBe("?view=ACTIVE"),
+    );
   });
 
   it("keeps active filter chips compact and exposes the overflow accessibly", async () => {

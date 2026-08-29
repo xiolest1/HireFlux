@@ -68,3 +68,32 @@ status queries plus one context query with no N+1.
 
 The Applications collection never mutates follow-ups, interviews, or status directly.
 It routes the candidate to the authoritative opportunity or interview workspace.
+
+## Collection hierarchy and navigation continuity
+
+The first server-ordered `needs_action` item is the single featured obligation.
+Remaining attention items use compact divided rows. The bounded preview remains four
+items on desktop/tablet and three on phones; expanding a group keeps the first item
+featured and does not change server ordering. Moving forward, Waiting, and every flat
+retrieval mode continue using compact rows.
+
+Candidate-facing reason, timing, action, and flat-row supporting copy is centralized
+in the opportunity presentation module. React chooses display wording from returned
+reason/action codes but never recomputes classification, urgency, or transition
+validity.
+
+Links originating in Applications carry a validated router-state origin containing
+only `/applications` or `/applications?...`. Role links are passive. Follow-up,
+offer, candidate-action, and interview-preparation controls may additionally carry a
+one-shot intent. Detail and Interviews consume that intent with route replacement,
+preserve the exact Applications return URL, and never replay it after refresh or
+back/forward navigation. Invalid and external origins fall back to `/applications`.
+
+The application detail identity header exposes only exceptional actions through
+More. Lifecycle primary and secondary actions share the What’s next panel so the
+page has one dominant action location.
+
+Active search, narrowing filters, and explicit sorting remain flat retrieval modes.
+Their lightweight orientation row explains why grouping is absent and provides
+`Return to opportunity workspace`, which clears retrieval parameters while retaining
+the Active scope. All and Archived remain oriented by their selected scope tabs.

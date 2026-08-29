@@ -5,6 +5,7 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   Check,
+  ChevronDown,
   Clock3,
   Download,
   KeyRound,
@@ -216,67 +217,68 @@ export function SettingsPage() {
   return (
     <div className="space-y-7">
       <header>
-        <p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">Workspace controls</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Settings & profile</h1>
-        <p className="mt-2 max-w-3xl text-base leading-7 text-slate-600">Personalize your temporary candidate workspace and preview the controls a private HireFlux account could provide.</p>
+        <p className="text-sm font-bold uppercase tracking-[0.16em] text-accent">Workspace controls</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink sm:text-4xl">Settings & profile</h1>
+        <p className="mt-2 max-w-3xl text-base leading-7 text-ink-muted">Manage your profile, workspace preferences, data, and optional account previews.</p>
       </header>
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-panel sm:p-6" aria-labelledby="profile-title">
+        <section className="rounded-3xl border border-line-subtle bg-surface-raised p-5 sm:p-6 dark:border-line dark:shadow-panel" aria-labelledby="profile-title">
           <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><UserRound aria-hidden="true" className="size-5" /></span>
-            <div><h2 id="profile-title" className="text-xl font-bold text-slate-950">Profile</h2><p className="mt-1 text-sm leading-6 text-slate-600">Try a profile update in this local preview. The signed-in demo identity remains server-owned.</p></div>
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info"><UserRound aria-hidden="true" className="size-5" /></span>
+            <div><h2 id="profile-title" className="text-xl font-bold text-ink">Profile</h2><p className="mt-1 text-sm leading-6 text-ink-muted">Try a profile update in this local preview. The signed-in demo identity remains server-owned.</p></div>
           </div>
-          {meQuery.isPending ? <p className="mt-6 text-sm text-slate-600" role="status">Loading profile…</p> : null}
+          {meQuery.isPending ? <p className="mt-6 text-sm text-ink-muted" role="status">Loading profile…</p> : null}
           {meQuery.isError ? <div className="mt-6"><ErrorPanel compact error={meQuery.error} onRetry={() => void meQuery.refetch()} /></div> : null}
           {meQuery.data ? (
             <form className="mt-6 space-y-5" onSubmit={previewProfileChange}>
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="profile-name" className="text-sm font-semibold text-slate-800">Name</label>
-                  <input id="profile-name" value={profileName} onChange={(event) => { setProfileNameOverride(event.target.value); setProfilePreviewSaved(false); }} className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-slate-900" />
-                  <p id="profile-name-help" className="mt-2 text-xs leading-5 text-slate-500">Simulation only · no profile write endpoint is used.</p>
+                  <label htmlFor="profile-name" className="text-sm font-semibold text-ink">Name</label>
+                  <input id="profile-name" value={profileName} onChange={(event) => { setProfileNameOverride(event.target.value); setProfilePreviewSaved(false); }} className="hf-field mt-2 px-3" />
+                  <p id="profile-name-help" className="mt-2 text-xs leading-5 text-ink-tertiary">Simulation only · no profile write endpoint is used.</p>
                 </div>
                 <div>
-                  <label htmlFor="profile-email" className="text-sm font-semibold text-slate-800">Email address</label>
-                  <input id="profile-email" value={meQuery.data.email} readOnly disabled className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-slate-500" />
-                  <p className="mt-2 text-xs leading-5 text-slate-500">Read-only in the demo; email verification and delivery are not enabled.</p>
+                  <label htmlFor="profile-email" className="text-sm font-semibold text-ink">Email address</label>
+                  <input id="profile-email" value={meQuery.data.email} readOnly disabled className="hf-field mt-2 px-3" />
+                  <p className="mt-2 text-xs leading-5 text-ink-tertiary">Read-only in the demo; email verification and delivery are not enabled.</p>
                 </div>
               </div>
               {profilePreviewSaved ? <SuccessBanner>Profile preview updated locally. The demo identity is unchanged.</SuccessBanner> : null}
-              <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-slate-500">{profileNameOverride && profileNameOverride !== identityName ? "You have a local profile preview change." : "Profile preview matches the demo identity."}</p><Button type="submit" disabled={!profileNameOverride?.trim() || profileNameOverride.trim() === identityName}>Save profile preview</Button></div>
+              <div className="flex flex-col gap-3 border-t border-line-subtle pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-ink-tertiary">{profileNameOverride && profileNameOverride !== identityName ? "You have a local profile preview change." : "Profile preview matches the demo identity."}</p><Button type="submit" disabled={!profileNameOverride?.trim() || profileNameOverride.trim() === identityName}>Save profile preview</Button></div>
             </form>
           ) : null}
-          {meQuery.data ? <dl className="mt-6 grid gap-5 border-t border-slate-200 pt-5 sm:grid-cols-2"><ProfileItem label="Account type" value="Demo workspace" /><ProfileItem label="Workspace focus" value="Candidate job search" /></dl> : null}
+          {meQuery.data ? <dl className="mt-6 grid gap-5 border-t border-line-subtle pt-5 sm:grid-cols-2"><ProfileItem label="Account type" value="Demo workspace" /><ProfileItem label="Workspace focus" value="Candidate job search" /></dl> : null}
         </section>
 
-        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel" aria-labelledby="workspace-lifecycle-title"><div className="bg-gradient-to-br from-brand-600 to-violet-700 p-5 text-white sm:p-6"><Clock3 aria-hidden="true" className="size-7" /><h2 id="workspace-lifecycle-title" className="mt-4 text-xl font-bold">Temporary by design</h2><p className="mt-2 text-sm leading-6 text-blue-50">Every visitor gets a separate demo workspace with fictional data. Nothing is shared with another visitor.</p></div><dl className="space-y-4 p-5 sm:p-6"><ProfileItem label="Workspace expires" value={session ? formatTimestamp(session.expires_at, settingsQuery.data?.time_zone ?? "UTC") : "Not available"} /><ProfileItem label="Data lifetime" value="24 hours" /><ProfileItem label="Persistence" value="This browser session only" /></dl></section>
+        <section className="rounded-3xl border border-line bg-surface-raised p-5 sm:p-6 dark:shadow-panel" aria-labelledby="workspace-lifecycle-title"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info"><Clock3 aria-hidden="true" className="size-5" /></span><div><h2 id="workspace-lifecycle-title" className="text-xl font-bold text-ink">Demo workspace</h2><p className="mt-1 text-sm leading-6 text-ink-muted">Private fictional data for this browser session. The workspace expires automatically after 24 hours.</p></div></div><dl className="mt-5 grid gap-4 border-t border-line-subtle pt-5 sm:grid-cols-2 lg:grid-cols-1"><ProfileItem label="Workspace expires" value={session ? formatTimestamp(session.expires_at, settingsQuery.data?.time_zone ?? "UTC") : "Not available"} /><ProfileItem label="Persistence" value="This browser session only" /></dl></section>
       </div>
 
-      <section className="rounded-3xl border border-slate-200 bg-white shadow-panel" aria-labelledby="preferences-title">
-        <div className="border-b border-slate-200 p-5 sm:p-6"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><Palette aria-hidden="true" className="size-5" /></span><div><h2 id="preferences-title" className="text-xl font-bold text-slate-950">Preferences</h2><p className="mt-1 text-sm leading-6 text-slate-600">These settings persist only for this isolated 24-hour workspace. New workspaces start with this browser&apos;s detected time zone; selecting a different zone creates a manual override.</p></div></div></div>
+      <section className="rounded-3xl border border-line-subtle bg-surface-raised dark:border-line dark:shadow-panel" aria-labelledby="preferences-title">
+        <div className="border-b border-line-subtle p-5 sm:p-6"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-ink-muted"><Palette aria-hidden="true" className="size-5" /></span><div><h2 id="preferences-title" className="text-xl font-bold text-ink">Preferences</h2><p className="mt-1 text-sm leading-6 text-ink-muted">These settings persist only for this isolated 24-hour workspace. New workspaces start with this browser&apos;s detected time zone; selecting a different zone creates a manual override.</p></div></div></div>
         {settingsQuery.isPending || (!draft && !settingsQuery.isError) ? <SettingsSkeleton /> : null}
         {settingsQuery.isError ? <div className="p-5 sm:p-6"><ErrorPanel compact error={settingsQuery.error} onRetry={() => void settingsQuery.refetch()} /></div> : null}
         {draft && settingsQuery.data ? (
           <form onSubmit={submit}>
             <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
               <SettingSelect label="Time zone" value={draft.time_zone} onChange={(value) => change({ ...draft, time_zone: value })}>{availableTimeZones.map((zone) => <option key={zone} value={zone}>{zone.replaceAll("_", " ")}{!manualTimeZone && zone === browserTimeZone ? " (automatic)" : ""}</option>)}</SettingSelect>
-              <div><label htmlFor="follow-up-days" className="text-sm font-semibold text-slate-800">Default follow-up interval</label><div className="relative mt-2"><input id="follow-up-days" type="number" min={1} max={30} value={draft.default_follow_up_days} onChange={(event) => change({ ...draft, default_follow_up_days: Number(event.target.value) })} className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 pr-14 text-slate-900" /><span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">days</span></div></div>
+              <div><label htmlFor="follow-up-days" className="text-sm font-semibold text-ink">Default follow-up interval</label><div className="relative mt-2"><input id="follow-up-days" type="number" min={1} max={30} value={draft.default_follow_up_days} onChange={(event) => change({ ...draft, default_follow_up_days: Number(event.target.value) })} className="hf-field px-3 pr-14" /><span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-ink-tertiary">days</span></div></div>
               <SettingSelect label="Default application view" value={draft.default_application_view} onChange={(value) => change({ ...draft, default_application_view: value as SettingsDraft["default_application_view"] })}><option value="ACTIVE">Active pursuits</option><option value="ALL">All applications</option><option value="ARCHIVED">Archived</option></SettingSelect>
               <SettingSelect label="Default dashboard range" value={draft.default_dashboard_range} onChange={(value) => change({ ...draft, default_dashboard_range: value as DashboardRange })}><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="all">All time</option></SettingSelect>
               <SettingSelect label="Color theme" value={draft.theme} onChange={(value) => change({ ...draft, theme: value as ColorTheme })}><option value="SYSTEM">Use system preference</option><option value="LIGHT">Light</option><option value="DARK">Dark</option></SettingSelect>
             </div>
-            <div className="space-y-4 border-t border-slate-200 bg-slate-50 p-5 sm:p-6">
+            <div className="space-y-4 border-t border-line-subtle bg-surface-muted p-5 sm:p-6">
               {updateMutation.error ? <ErrorPanel compact title="Preferences could not be saved" error={updateMutation.error} /> : null}
               {saved ? <SuccessBanner>Preferences saved for this demo workspace.</SuccessBanner> : null}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-slate-500">{dirty ? "You have unsaved preference changes." : "Preferences are up to date."}</p><Button type="submit" disabled={!dirty || updateMutation.isPending || draft.default_follow_up_days < 1 || draft.default_follow_up_days > 30}>{updateMutation.isPending ? "Saving…" : "Save preferences"}</Button></div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-ink-tertiary">{dirty ? "You have unsaved preference changes." : "Preferences are up to date."}</p><Button type="submit" disabled={!dirty || updateMutation.isPending || draft.default_follow_up_days < 1 || draft.default_follow_up_days > 30}>{updateMutation.isPending ? "Saving…" : "Save preferences"}</Button></div>
             </div>
           </form>
         ) : null}
       </section>
 
+      <DataPrivacySection isDemo={Boolean(session)} />
+
       <CandidateAccountPreview
-        isDemo={Boolean(session)}
         workspaceToken={session?.access_token}
       />
     </div>
@@ -300,19 +302,93 @@ function SettingsSkeleton() {
   );
 }
 
-function CandidateAccountPreview({
-  isDemo,
-  workspaceToken,
-}: {
-  isDemo: boolean;
-  workspaceToken: string | undefined;
-}) {
+function DataPrivacySection({ isDemo }: { isDemo: boolean }) {
   const exportMutation = useExportWorkspace();
   const applicationsCsvMutation = useExportApplicationsCsv();
+
+  async function downloadExport() {
+    const data = await exportMutation.mutateAsync();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "hireflux-workspace-export.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function downloadApplicationsCsv() {
+    const file = await applicationsCsvMutation.mutateAsync();
+    const url = URL.createObjectURL(file.blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = file.filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <section className="rounded-3xl border border-line bg-surface-raised p-5 sm:p-6 dark:shadow-panel" aria-labelledby="account-data-title">
+      <div className="flex items-start gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success">
+          <Download aria-hidden="true" className="size-5" />
+        </span>
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 id="account-data-title" className="text-xl font-bold text-ink">Data & privacy</h2>
+            <PreviewStatus tone="available">Available in demo</PreviewStatus>
+          </div>
+          <p className="mt-1 text-sm leading-6 text-ink-muted">
+            {isDemo
+              ? "Download a spreadsheet-friendly copy of the fictional applications in this temporary workspace."
+              : "Export applications for review or download a complete machine-readable account copy."}
+          </p>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-3 lg:grid-cols-2">
+        <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold text-ink">{isDemo ? "Export sample applications" : "Export applications"}</p>
+            <p className="text-sm text-ink-muted">CSV format · One row per application.</p>
+          </div>
+          <Button onClick={() => void downloadApplicationsCsv()} disabled={applicationsCsvMutation.isPending}>
+            {applicationsCsvMutation.isPending ? "Preparing…" : "Export CSV"}
+          </Button>
+        </div>
+        {!isDemo ? (
+          <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-ink">Export my HireFlux data</p>
+              <p className="text-sm text-ink-muted">JSON format · Account backup and portability.</p>
+            </div>
+            <Button onClick={() => void downloadExport()} disabled={exportMutation.isPending}>
+              {exportMutation.isPending ? "Preparing…" : "Export JSON"}
+            </Button>
+          </div>
+        ) : (
+          <p className="rounded-2xl border border-warning/30 bg-warning-soft p-4 text-sm leading-6 text-warning">
+            Full account export is unavailable because this workspace is temporary and contains fictional data.
+          </p>
+        )}
+      </div>
+      {applicationsCsvMutation.error ? <div className="mt-4"><ErrorPanel compact title="Application export could not be prepared" error={applicationsCsvMutation.error} /></div> : null}
+      {applicationsCsvMutation.isSuccess ? <div className="mt-4"><SuccessBanner>Applications exported. The CSV file remains on your device only.</SuccessBanner></div> : null}
+      {!isDemo && exportMutation.error ? <div className="mt-4"><ErrorPanel compact title="Account export could not be prepared" error={exportMutation.error} /></div> : null}
+      {!isDemo && exportMutation.isSuccess ? <div className="mt-4"><SuccessBanner>Account data exported. The JSON file remains on your device only.</SuccessBanner></div> : null}
+    </section>
+  );
+}
+
+function CandidateAccountPreview({
+  workspaceToken,
+}: {
+  workspaceToken: string | undefined;
+}) {
   const workspaceMarker = accountPreviewWorkspaceMarker(workspaceToken);
   const [activePreview, setActivePreview] = useState<AccountPreviewKey | null>(null);
   const [previewCompleted, setPreviewCompleted] = useState<AccountPreviewKey | null>(null);
   const [notificationNotice, setNotificationNotice] = useState(false);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
   const [notificationPreview, setNotificationPreview] = useState(() =>
     readAccountPreviewPreference(workspaceMarker),
   );
@@ -321,6 +397,7 @@ function CandidateAccountPreview({
     setActivePreview(null);
     setPreviewCompleted(null);
     setNotificationNotice(false);
+    setPreviewExpanded(false);
     setNotificationPreview(readAccountPreviewPreference(workspaceMarker));
   }, [workspaceMarker]);
 
@@ -377,46 +454,31 @@ function CandidateAccountPreview({
     writeAccountPreviewPreference(workspaceMarker, next);
   }
 
-  async function downloadExport() {
-    const data = await exportMutation.mutateAsync();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "hireflux-workspace-export.json";
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }
-
-  async function downloadApplicationsCsv() {
-    const file = await applicationsCsvMutation.mutateAsync();
-    const url = URL.createObjectURL(file.blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = file.filename;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }
-
   return (
-    <section className="space-y-5 rounded-3xl border border-line bg-surface/70 p-3 shadow-panel sm:space-y-6 sm:p-4" aria-labelledby="account-preview-title">
-      <div className="overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-sm">
-        <div className="border-b border-line bg-surface p-5 sm:p-6">
+    <section className="rounded-3xl border border-line bg-surface-raised dark:shadow-panel" aria-labelledby="account-preview-title">
+      <div className="flex items-start justify-between gap-4 px-5 py-5 sm:px-6">
+        <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex rounded-full border border-accent/30 bg-accent-soft px-3 py-1 text-xs font-bold uppercase tracking-wide text-accent-strong">
-              Personal account preview
-            </span>
-            <PreviewStatus tone="simulation">Interactive simulation</PreviewStatus>
+            <h2 id="account-preview-title" className="text-xl font-bold text-ink">Personal account preview</h2>
+            <PreviewStatus tone="simulation">Optional simulation</PreviewStatus>
           </div>
-          <h2 id="account-preview-title" className="mt-4 text-2xl font-bold text-ink">
-            Explore a candidate-owned account control center
-          </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">
-            Try the controls a persistent HireFlux account could provide. Preview actions stay in this
-            browser workspace and never change real authentication or send messages.
-          </p>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-muted">Explore future sign-in, protection, notification, and portability controls without changing this demo identity.</p>
         </div>
-        <div className="grid gap-px bg-line md:grid-cols-3">
+        <button
+          type="button"
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-line text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          aria-expanded={previewExpanded}
+          aria-controls="personal-account-preview-content"
+          aria-label={previewExpanded ? "Collapse personal account preview" : "Expand personal account preview"}
+          onClick={() => setPreviewExpanded((value) => !value)}
+        >
+          <ChevronDown aria-hidden="true" className={`size-5 transition-transform ${previewExpanded ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+
+      <div id="personal-account-preview-content" hidden={!previewExpanded} className="space-y-6 border-t border-line p-4 sm:p-6">
+        <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
+          <div className="grid gap-px bg-line md:grid-cols-3">
           {capabilities.map(({ key, icon: Icon, title, description }) => (
             <article key={key} className="flex flex-col bg-surface-raised p-5 sm:p-6">
               <div className="flex items-start justify-between gap-3">
@@ -443,103 +505,10 @@ function CandidateAccountPreview({
               </Button>
             </article>
           ))}
+          </div>
         </div>
-      </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
-        <section
-          className="rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6"
-          aria-labelledby="account-data-title"
-        >
-          <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success">
-              <Download aria-hidden="true" className="size-5" />
-            </span>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 id="account-data-title" className="text-xl font-bold text-ink">
-                  Data & privacy
-                </h3>
-                <PreviewStatus tone="available">Available in demo</PreviewStatus>
-              </div>
-              <p className="mt-1 text-sm leading-6 text-ink-muted">
-                {isDemo
-                  ? "Download a spreadsheet-friendly copy of the fictional applications in this temporary demo workspace."
-                  : "Choose a human-friendly application export or a complete machine-readable copy for backup and portability."}
-              </p>
-            </div>
-          </div>
-          <div className="mt-5 space-y-3">
-            <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-semibold text-ink">
-                  {isDemo ? "Export sample applications" : "Export applications"}
-                </p>
-                <p className="text-sm text-ink-muted">
-                  CSV format · One row per application · Ready for spreadsheet tools.
-                </p>
-              </div>
-              <Button
-                onClick={() => void downloadApplicationsCsv()}
-                disabled={applicationsCsvMutation.isPending}
-              >
-                {applicationsCsvMutation.isPending ? "Preparing…" : "Export CSV"}
-              </Button>
-            </div>
-            {!isDemo ? (
-              <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-semibold text-ink">Export my HireFlux data</p>
-                  <p className="text-sm text-ink-muted">
-                    JSON format · Intended for account backup and data portability.
-                  </p>
-                </div>
-                <Button onClick={() => void downloadExport()} disabled={exportMutation.isPending}>
-                  {exportMutation.isPending ? "Preparing…" : "Export JSON"}
-                </Button>
-              </div>
-            ) : (
-              <p className="rounded-xl border border-warning/30 bg-warning-soft p-3 text-sm leading-6 text-warning">
-                This temporary workspace contains fictional data and expires after 24 hours. Full
-                account-data export is unavailable for demos.
-              </p>
-            )}
-          </div>
-          {applicationsCsvMutation.error ? (
-            <div className="mt-4">
-              <ErrorPanel
-                compact
-                title="Application export could not be prepared"
-                error={applicationsCsvMutation.error}
-              />
-            </div>
-          ) : null}
-          {applicationsCsvMutation.isSuccess ? (
-            <div className="mt-4">
-              <SuccessBanner>
-                Applications exported. The CSV file remains on your device only.
-              </SuccessBanner>
-            </div>
-          ) : null}
-          {!isDemo && exportMutation.error ? (
-            <div className="mt-4">
-              <ErrorPanel
-                compact
-                title="Account export could not be prepared"
-                error={exportMutation.error}
-              />
-            </div>
-          ) : null}
-          {!isDemo && exportMutation.isSuccess ? (
-            <div className="mt-4">
-              <SuccessBanner>
-                Account data exported. The JSON file remains on your device only.
-              </SuccessBanner>
-            </div>
-          ) : null}
-        </section>
-
-        <section
+      <section
           className="rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6"
           aria-labelledby="account-readiness-title"
         >
@@ -565,8 +534,7 @@ function CandidateAccountPreview({
               </li>
             ))}
           </ul>
-        </section>
-      </div>
+      </section>
 
       <section
         className="rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6"
@@ -639,7 +607,7 @@ function CandidateAccountPreview({
               <Link
                 key={title}
                 to={to}
-                className="group flex min-h-11 items-start gap-3 rounded-xl border border-line bg-surface p-3 transition-colors hover:border-accent/50 hover:bg-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="group flex min-h-11 items-start gap-3 rounded-xl border border-line-subtle bg-surface p-3 transition-colors hover:border-line hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-accent">
                   <Icon aria-hidden="true" className="size-5" />
@@ -723,6 +691,7 @@ function CandidateAccountPreview({
         permanent account deletion, conversion to a persistent account, and persistent login are
         intentionally unavailable. Application export is active; interactive account controls are
         safe simulations only.
+      </div>
       </div>
 
       <Drawer
@@ -920,9 +889,9 @@ function PreviewSession({
 
 function SettingSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode }) {
   const id = `setting-${label.toLowerCase().replaceAll(" ", "-")}`;
-  return <div><label htmlFor={id} className="text-sm font-semibold text-slate-800">{label}</label><select id={id} value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800">{children}</select></div>;
+  return <div><label htmlFor={id} className="text-sm font-semibold text-ink">{label}</label><select id={id} value={value} onChange={(event) => onChange(event.target.value)} className="hf-field mt-2 px-3 text-sm font-semibold">{children}</select></div>;
 }
 
 function ProfileItem({ label, value }: { label: string; value: string }) {
-  return <div><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="mt-1 break-words text-sm font-semibold text-slate-800">{value}</dd></div>;
+  return <div><dt className="text-xs font-bold uppercase tracking-wide text-ink-tertiary">{label}</dt><dd className="mt-1 break-words text-sm font-semibold text-ink">{value}</dd></div>;
 }

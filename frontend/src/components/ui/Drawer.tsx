@@ -100,7 +100,7 @@ export function Drawer({
       } ${sideClasses.container}`}
     >
       <div
-        className="absolute inset-0 cursor-default bg-slate-950/65 backdrop-blur-sm"
+        className="absolute inset-0 cursor-default bg-overlay backdrop-blur-sm"
         aria-hidden="true"
         onMouseDown={onClose}
       />
@@ -135,7 +135,7 @@ export function Drawer({
           {children}
         </div>
         {footer ? (
-          <div className="border-t border-line bg-surface px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
+          <div className="border-t border-line-subtle bg-surface px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
             {footer}
           </div>
         ) : null}

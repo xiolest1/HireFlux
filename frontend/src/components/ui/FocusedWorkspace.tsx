@@ -155,7 +155,7 @@ export function FocusedWorkspace({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-950/65 backdrop-blur-sm md:items-center md:p-5 lg:p-8"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-overlay backdrop-blur-sm md:items-center md:p-5 lg:p-8"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) requestClose();

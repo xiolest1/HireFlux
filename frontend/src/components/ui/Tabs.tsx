@@ -61,7 +61,7 @@ export function Tabs<T extends string>({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`inline-flex max-w-full gap-1 overflow-x-auto rounded-xl border border-line bg-surface-muted p-1 ${stretch ? "w-full" : ""} ${className}`}
+      className={`inline-flex max-w-full gap-1 overflow-x-auto rounded-xl border border-line-subtle bg-surface-muted p-1 ${stretch ? "w-full" : ""} ${className}`}
     >
       {items.map((item, index) => {
         const isSelected = item.value === value;
@@ -72,10 +72,10 @@ export function Tabs<T extends string>({
           tabIndex: isSelected ? 0 : -1,
           onKeyDown: (event: KeyboardEvent<HTMLAnchorElement | HTMLButtonElement>) =>
             handleKeyDown(event, index),
-          className: `inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-[color,background-color,box-shadow] duration-200 ${stretch ? "flex-1" : ""} ${
+          className: `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-[color,background-color,box-shadow] duration-200 ${stretch ? "min-w-0 flex-1 px-2" : "shrink-0 px-3"} ${
             isSelected
-              ? "bg-surface-raised text-ink shadow-sm ring-1 ring-line"
-              : "text-ink-muted hover:bg-surface/70 hover:text-ink"
+              ? "bg-surface-raised text-ink shadow-sm"
+              : "text-ink-muted hover:bg-surface-hover hover:text-ink active:bg-surface-pressed"
           } ${item.disabled ? "pointer-events-none opacity-45" : ""}`,
         };
         const content = (

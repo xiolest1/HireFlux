@@ -21,7 +21,7 @@ interface ToastItem extends Required<Pick<ToastOptions, "tone">> {
 
 const toneClasses: Record<ToastTone, string> = {
   success: "border-success/30 bg-success-soft text-success",
-  info: "border-accent/30 bg-accent-soft text-accent-strong",
+  info: "border-info/25 bg-info-soft text-info",
   warning: "border-warning/30 bg-warning-soft text-warning",
   danger: "border-danger/30 bg-danger-soft text-danger",
 };

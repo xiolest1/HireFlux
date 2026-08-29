@@ -22,7 +22,7 @@ import {
 import { formatRoleFamily, formatSource } from "./format";
 
 const fieldClassName =
-  "mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface-raised px-3 py-2 text-ink shadow-sm transition-colors placeholder:text-ink-muted hover:border-accent/60 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-surface-muted";
+  "mt-2 min-h-11 w-full rounded-xl border border-line bg-surface-raised px-3 py-2 text-ink transition-colors placeholder:text-ink-tertiary hover:border-line-strong hover:bg-surface-hover focus:border-accent focus:outline-none focus:ring-2 focus:ring-focus/20 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-disabled";
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
@@ -149,7 +149,7 @@ export function ApplicationForm({
     >
       {blocker.state === "blocked" ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm"
           role="presentation"
         >
           <section

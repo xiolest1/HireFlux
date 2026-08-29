@@ -28,7 +28,7 @@ import { formatDateOnly, formatSource } from "./format";
 import { useDuplicateCandidates } from "./queries";
 
 const fieldClassName =
-  "mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface-raised px-3 py-2 text-ink shadow-sm transition-colors placeholder:text-ink-muted hover:border-accent/60 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-surface-muted";
+  "mt-2 min-h-11 w-full rounded-xl border border-line bg-surface-raised px-3 py-2 text-ink transition-colors placeholder:text-ink-tertiary hover:border-line-strong hover:bg-surface-hover focus:border-accent focus:outline-none focus:ring-2 focus:ring-focus/20 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-disabled";
 
 const CREATE_STATUSES = [
   { value: "DRAFT", label: "Saved", description: "Track it before applying" },
@@ -253,7 +253,7 @@ export function ApplicationCreateForm({
     >
       {blocker.state === "blocked" ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm"
           role="presentation"
         >
           <section
@@ -345,7 +345,7 @@ export function ApplicationCreateForm({
             {CREATE_STATUSES.map((stage) => (
               <label
                 key={stage.value}
-                className={`flex min-h-12 cursor-pointer items-center justify-center rounded-xl px-2 text-center text-sm font-semibold transition-colors focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${
+                className={`flex min-h-12 cursor-pointer items-center justify-center rounded-xl px-2 text-center text-sm font-semibold transition-colors focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus ${
                   selectedStatus === stage.value
                     ? "bg-surface-raised text-accent shadow-sm ring-1 ring-accent/40"
                     : "text-ink-muted hover:bg-surface hover:text-ink"

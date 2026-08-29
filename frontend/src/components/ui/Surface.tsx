@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
-export type SurfaceTone = "default" | "raised" | "muted" | "accent";
+export type SurfaceTone = "default" | "raised" | "muted" | "accent" | "interactive";
 
 interface SurfaceProps extends HTMLAttributes<HTMLElement> {
   as?: "div" | "section" | "article";
@@ -10,11 +10,13 @@ interface SurfaceProps extends HTMLAttributes<HTMLElement> {
 }
 
 const toneClasses: Record<SurfaceTone, string> = {
-  default: "border-line bg-surface",
-  raised: "border-line bg-surface-raised shadow-panel",
-  muted: "border-line bg-surface-muted",
+  default: "border border-line bg-surface",
+  raised: "border border-line bg-surface-raised shadow-panel",
+  muted: "border border-transparent bg-surface-muted",
   accent:
-    "border-accent/30 bg-[linear-gradient(135deg,var(--hf-accent-soft),var(--hf-violet-soft))]",
+    "border border-accent/20 bg-accent-soft",
+  interactive:
+    "border border-line-subtle bg-surface transition-colors hover:border-line hover:bg-surface-hover active:bg-surface-pressed",
 };
 
 const paddingClasses = {
@@ -34,7 +36,7 @@ export function Surface({
 }: SurfaceProps) {
   return (
     <Component
-      className={`rounded-2xl border ${toneClasses[tone]} ${paddingClasses[padding]} ${className}`}
+      className={`rounded-2xl ${toneClasses[tone]} ${paddingClasses[padding]} ${className}`}
       {...props}
     >
       {children}

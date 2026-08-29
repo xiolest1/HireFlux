@@ -8,9 +8,12 @@ import {
   MoveRight,
 } from "lucide-react";
 import type {
+  Application,
   OpportunityAction,
   OpportunityReason,
+  OpportunityWorkspaceItem,
 } from "../../api/schemas";
+import { formatDateOnly, formatTimestamp } from "./format";
 
 export interface OpportunityReasonPresentation {
   label: string;
@@ -103,7 +106,7 @@ export const opportunityReasonPresentation: Record<
   },
 };
 
-export const opportunityActionLabel: Record<OpportunityAction, string> = {
+const opportunityActionLabel: Record<OpportunityAction, string> = {
   RESOLVE_INTERVIEW: "Resolve interview",
   REVIEW_FOLLOW_UP: "Review follow-up",
   PREPARE_INTERVIEW: "Prepare interview",
@@ -111,3 +114,84 @@ export const opportunityActionLabel: Record<OpportunityAction, string> = {
   OPEN_OPPORTUNITY: "Open opportunity",
 };
 
+export function opportunityActionText(
+  item: OpportunityWorkspaceItem,
+): string {
+  if (item.classification.reason_code === "CANDIDATE_ACTION_UPCOMING") {
+    return "Review next action";
+  }
+  if (item.classification.reason_code === "CANDIDATE_ACTION_UNSCHEDULED") {
+    return "Plan next action";
+  }
+  return opportunityActionLabel[item.classification.action_type];
+}
+
+export function opportunitySupportingText(
+  item: OpportunityWorkspaceItem,
+  timeZone: string,
+): string | null {
+  const { classification } = item;
+  const date = classification.relevant_date
+    ? formatDateOnly(classification.relevant_date)
+    : null;
+  const instant = classification.relevant_at
+    ? formatTimestamp(classification.relevant_at, timeZone)
+    : null;
+
+  switch (classification.reason_code) {
+    case "MISSED_INTERVIEW":
+      return instant ? `Scheduled ${instant}` : null;
+    case "FOLLOW_UP_OVERDUE":
+      return date ? `Planned check-back ${date}` : null;
+    case "FOLLOW_UP_DUE_TODAY":
+      return "Check back today";
+    case "INTERVIEW_PREPARATION_DUE":
+    case "INTERVIEW_PREPARATION_UPCOMING":
+      return instant ? `Interview ${instant}` : null;
+    case "CANDIDATE_ACTION_UPCOMING":
+      return date ? `Planned for ${date}` : null;
+    case "INTERVIEW_SCHEDULED":
+      return instant ? `Interview · ${instant}` : null;
+    case "CANDIDATE_ACTION_PLANNED":
+      return date ? `Your next action · ${date}` : null;
+    case "PROCESS_PROGRESSING":
+      return "No action needed right now";
+    case "WAITING_FOR_EMPLOYER":
+      return date ? `Check back · ${date}` : "Waiting on employer";
+    case "RECENTLY_APPLIED":
+      return date ? `Applied · ${date}` : null;
+    default:
+      return date ?? instant;
+  }
+}
+
+export function flatOpportunitySupportingText(application: Application): string {
+  if (
+    application.next_step_responsibility === "CANDIDATE" &&
+    application.next_step_note
+  ) {
+    return application.next_step_note;
+  }
+  if (
+    application.next_step_responsibility === "CANDIDATE" &&
+    application.follow_up_date
+  ) {
+    return `Your next action · ${formatDateOnly(application.follow_up_date)}`;
+  }
+  if (
+    application.next_step_responsibility === "EMPLOYER" &&
+    application.follow_up_date
+  ) {
+    return `Check back · ${formatDateOnly(application.follow_up_date)}`;
+  }
+  if (application.next_step_responsibility === "EMPLOYER") {
+    return "Waiting on employer";
+  }
+  if (application.follow_up_date) {
+    return `Check back · ${formatDateOnly(application.follow_up_date)}`;
+  }
+  if (application.status === "DRAFT") return "Draft";
+  return application.applied_date
+    ? `Applied · ${formatDateOnly(application.applied_date)}`
+    : "Application details available";
+}

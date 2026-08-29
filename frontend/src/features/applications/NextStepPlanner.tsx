@@ -112,7 +112,7 @@ export function NextStepPlanner({
               maxLength={500}
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              className="mt-2 w-full resize-y rounded-xl border border-line-strong bg-surface px-3 py-2 text-sm leading-6 text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              className="mt-2 w-full resize-y rounded-xl border border-line bg-surface-raised px-3 py-2 text-sm leading-6 text-ink hover:border-line-strong hover:bg-surface-hover focus:border-accent focus:outline-none focus:ring-2 focus:ring-focus/20"
             />
           </div>
           <div>

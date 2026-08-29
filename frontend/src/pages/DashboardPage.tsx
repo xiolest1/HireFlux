@@ -153,17 +153,17 @@ const groupMeta: Record<AttentionGroup, { description: string; icon: typeof Cloc
   Overdue: {
     description: "Handle these first",
     icon: TriangleAlert,
-    tone: "border-rose-200 bg-rose-50 text-rose-800",
+    tone: "border-danger/25 bg-danger-soft text-danger",
   },
   Today: {
     description: "Due before the day ends",
     icon: Clock3,
-    tone: "border-amber-200 bg-amber-50 text-amber-900",
+    tone: "border-warning/25 bg-warning-soft text-warning",
   },
   Upcoming: {
     description: "Prepare for what is next",
     icon: CalendarClock,
-    tone: "border-sky-200 bg-sky-50 text-sky-800",
+    tone: "border-info/25 bg-info-soft text-info",
   },
 };
 
@@ -333,7 +333,7 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-10">
-      <header className="overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-surface-raised via-surface-raised to-accent-soft shadow-panel">
+      <header className="overflow-hidden rounded-3xl border border-line bg-surface-raised shadow-panel dark:bg-gradient-to-br dark:from-surface-raised dark:via-surface-raised dark:to-accent-soft">
         <div className="p-5 sm:p-7 lg:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 max-w-3xl">
@@ -370,34 +370,34 @@ export function DashboardPage() {
       {!tour.dismissed ? <SearchTour tour={tour} onDismiss={dismissTour} /> : null}
 
       <section aria-labelledby="recent-title">
-        <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Recent movement</p><h2 id="recent-title" className="mt-1 text-2xl font-bold text-ink">What changed recently</h2><p className="mt-1 text-sm text-ink-muted">The opportunities most recently touched in this workspace.</p></div><Link to="/applications" className="text-sm font-bold text-accent hover:underline">View all applications</Link></div>
-        {dashboard.recent_applications.length === 0 ? <p className="mt-4 rounded-2xl border border-line bg-surface-raised p-5 text-sm text-ink-muted">There is no recent application activity to catch up on yet.</p> : <ol className="mt-5 border-l-2 border-line pl-5 sm:pl-7">{dashboard.recent_applications.slice(0, 4).map((application) => <li key={application.application_id} className="relative pb-6 last:pb-0"><span aria-hidden="true" className="absolute -left-[1.72rem] top-1.5 size-3 rounded-full border-2 border-surface-raised bg-accent sm:-left-[2.22rem]" /><div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><Link to={`/applications/${application.application_id}`} className="font-bold text-ink hover:text-accent hover:underline">{application.job_title}</Link><p className="mt-0.5 text-sm text-ink-muted">{application.company_name} · updated {formatTimestamp(application.updated_at, timeZone)}</p></div><StatusBadge status={application.status} /></div></li>)}</ol>}
+        <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted">Recent movement</p><h2 id="recent-title" className="mt-1 text-2xl font-bold text-ink">What changed recently</h2><p className="mt-1 text-sm text-ink-muted">The opportunities most recently touched in this workspace.</p></div><Link to="/applications" className="text-sm font-bold text-accent hover:underline">View all applications</Link></div>
+        {dashboard.recent_applications.length === 0 ? <p className="mt-4 rounded-2xl border border-line bg-surface p-5 text-sm text-ink-muted">There is no recent application activity to catch up on yet.</p> : <ol className="mt-5 border-l border-line-strong/60 pl-5 sm:pl-7">{dashboard.recent_applications.slice(0, 4).map((application) => <li key={application.application_id} className="relative pb-6 last:pb-0"><span aria-hidden="true" className="absolute -left-[1.56rem] top-1.5 size-2.5 rounded-full border-2 border-canvas bg-line-strong sm:-left-[2.06rem]" /><div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><Link to={`/applications/${application.application_id}`} className="font-bold text-ink hover:text-accent hover:underline">{application.job_title}</Link><p className="mt-0.5 text-sm text-ink-muted">{application.company_name} · updated {formatTimestamp(application.updated_at, timeZone)}</p></div><StatusBadge status={application.status} /></div></li>)}</ol>}
       </section>
 
       <section aria-labelledby="next-title">
-        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Coming next</p><h2 id="next-title" className="mt-1 text-2xl font-bold text-ink">What should I do next?</h2></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted">Coming next</p><h2 id="next-title" className="mt-1 text-2xl font-bold text-ink">What should I do next?</h2></div>
         <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-          <section className="rounded-3xl border border-line bg-surface-raised p-5 shadow-panel sm:p-6" aria-labelledby="interviews-title"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">Next conversation</p><h3 id="interviews-title" className="mt-1 text-xl font-bold text-ink">{nextInterview ? nextInterview.job_title ?? "Upcoming interview" : "No interview is currently scheduled"}</h3></div><CalendarClock aria-hidden="true" className="size-6 text-accent" /></div>{nextInterview ? <><time dateTime={nextInterview.scheduled_at} className="mt-5 block text-lg font-bold text-ink">{formatTimestamp(nextInterview.scheduled_at, timeZone)}</time><p className="mt-1 text-sm text-ink-muted">{nextInterview.company_name ?? "Application interview"}</p><div className="mt-5 flex flex-wrap gap-3"><Link to="/interviews" className={buttonClassName("primary")}>Prepare and review</Link><Link to={`/applications/${nextInterview.application_id}`} className={buttonClassName("secondary")}>Open application</Link></div></> : <><p className="mt-4 text-sm leading-6 text-ink-muted">When a conversation is scheduled, Home will bring the next one forward here.</p><Link to="/analytics?section=pipeline" className="mt-4 inline-flex min-h-11 items-center font-bold text-accent hover:underline">Review active pipeline<ArrowRight aria-hidden="true" className="ml-2 size-4" /></Link></>}</section>
-          <section className="rounded-3xl border border-line bg-surface-muted p-5 sm:p-6" aria-labelledby="continuity-title"><h3 id="continuity-title" className="text-lg font-bold text-ink">Keep the search moving</h3><p className="mt-2 text-sm leading-6 text-ink-muted">{overdueCount > 0 ? `${overdueCount} overdue ${overdueCount === 1 ? "item is" : "items are"} the clearest next step.` : todayCount > 0 ? `${todayCount} ${todayCount === 1 ? "item is" : "items are"} due today.` : "Nothing needs immediate attention. You can continue without creating urgency."}</p><div className="mt-5 flex flex-col gap-2"><Link to="/applications/new" state={applicationCreateRouteState("dashboard", location.pathname, location.search)} className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Add an application<ArrowRight aria-hidden="true" className="size-4" /></Link><Link to="/analytics?section=pipeline" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Review pipeline<ArrowRight aria-hidden="true" className="size-4" /></Link><Link to="/analytics" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-raised">Explore patterns<ArrowRight aria-hidden="true" className="size-4" /></Link></div></section>
+          <section className="rounded-3xl border border-line bg-surface-raised p-5 sm:p-6" aria-labelledby="interviews-title"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-tertiary">Next conversation</p><h3 id="interviews-title" className="mt-1 text-xl font-bold text-ink">{nextInterview ? nextInterview.job_title ?? "Upcoming interview" : "No interview is currently scheduled"}</h3></div><CalendarClock aria-hidden="true" className="size-6 text-accent" /></div>{nextInterview ? <><time dateTime={nextInterview.scheduled_at} className="mt-5 block text-lg font-bold text-ink">{formatTimestamp(nextInterview.scheduled_at, timeZone)}</time><p className="mt-1 text-sm text-ink-muted">{nextInterview.company_name ?? "Application interview"}</p><div className="mt-5 flex flex-wrap gap-3"><Link to="/interviews" className={buttonClassName("primary")}>Prepare and review</Link><Link to={`/applications/${nextInterview.application_id}`} className={buttonClassName("secondary")}>Open application</Link></div></> : <><p className="mt-4 text-sm leading-6 text-ink-muted">When a conversation is scheduled, Home will bring the next one forward here.</p><Link to="/analytics?section=pipeline" className="mt-4 inline-flex min-h-11 items-center font-bold text-accent hover:underline">Review active pipeline<ArrowRight aria-hidden="true" className="ml-2 size-4" /></Link></>}</section>
+          <section className="rounded-3xl bg-surface-muted p-5 sm:p-6" aria-labelledby="continuity-title"><h3 id="continuity-title" className="text-lg font-bold text-ink">Keep the search moving</h3><p className="mt-2 text-sm leading-6 text-ink-muted">{overdueCount > 0 ? `${overdueCount} overdue ${overdueCount === 1 ? "item is" : "items are"} the clearest next step.` : todayCount > 0 ? `${todayCount} ${todayCount === 1 ? "item is" : "items are"} due today.` : "Nothing needs immediate attention. You can continue without creating urgency."}</p><div className="mt-5 flex flex-col gap-2"><Link to="/applications/new" state={applicationCreateRouteState("dashboard", location.pathname, location.search)} className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-hover active:bg-surface-pressed">Add an application<ArrowRight aria-hidden="true" className="size-4" /></Link><Link to="/analytics?section=pipeline" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-hover active:bg-surface-pressed">Review pipeline<ArrowRight aria-hidden="true" className="size-4" /></Link><Link to="/analytics" className="inline-flex min-h-11 items-center justify-between rounded-xl px-3 font-bold text-ink hover:bg-surface-hover active:bg-surface-pressed">Explore patterns<ArrowRight aria-hidden="true" className="size-4" /></Link></div></section>
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel" aria-labelledby="attention-title">
-        <div className="border-b border-line bg-gradient-to-r from-accent-soft via-surface-raised to-violet-soft p-5 sm:p-6">
+      <section className="overflow-hidden rounded-3xl border border-line bg-surface-raised dark:shadow-panel" aria-labelledby="attention-title">
+        <div className="border-b border-line-subtle bg-surface-muted p-5 sm:p-6 dark:bg-gradient-to-r dark:from-accent-soft dark:via-surface-raised dark:to-violet-soft">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">What needs you</p>
-              <h2 id="attention-title" className="mt-2 text-2xl font-bold text-slate-950">What needs my attention today?</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600">Prioritized follow-ups, interview preparation, and stalled opportunities.</p>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-ink-tertiary">What needs you</p>
+              <h2 id="attention-title" className="mt-2 text-2xl font-bold text-ink">What needs my attention today?</h2>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">Prioritized follow-ups, interview preparation, and stalled opportunities.</p>
               {actionCenterIsCollapsed && dashboard.actions.length > 0 ? (
-                <p className="mt-3 text-sm font-semibold text-slate-700" aria-live="polite">{actionSummary}</p>
+                <p className="mt-3 text-sm font-semibold text-ink-muted" aria-live="polite">{actionSummary}</p>
               ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <span className="rounded-full bg-slate-950 px-3 py-1.5 text-sm font-bold text-white" aria-label={`${dashboard.actions.length} ${dashboard.actions.length === 1 ? "action" : "actions"}`}>{dashboard.actions.length}</span>
+              <span className="rounded-full bg-ink px-3 py-1.5 text-sm font-bold text-surface-raised" aria-label={`${dashboard.actions.length} ${dashboard.actions.length === 1 ? "action" : "actions"}`}>{dashboard.actions.length}</span>
               <button
                 type="button"
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-accent-soft"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink active:bg-surface-pressed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 aria-expanded={!actionCenterIsCollapsed}
                 aria-controls="action-center-content"
                 aria-label={actionCenterIsCollapsed ? "Expand action center" : "Collapse action center"}
@@ -410,12 +410,12 @@ export function DashboardPage() {
         </div>
         <div id="action-center-content" hidden={actionCenterIsCollapsed && dashboard.actions.length > 0}>
           {dashboard.actions.length === 0 ? (
-            <div className="m-5 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950 sm:m-6">
+            <div className="m-5 flex items-start gap-3 rounded-2xl border border-success/25 bg-success-soft p-5 text-success sm:m-6">
               <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
               <div><p className="font-semibold">You are caught up.</p><p className="mt-1 text-sm">There are no urgent actions in this workspace.</p></div>
             </div>
           ) : (
-            <div className="grid divide-y divide-slate-200 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+            <div className="grid divide-y divide-line-subtle lg:grid-cols-3 lg:divide-x lg:divide-y-0">
               {groupedActions.map(({ name, items }) => {
                 const meta = groupMeta[name];
                 const Icon = meta.icon;
@@ -431,36 +431,36 @@ export function DashboardPage() {
                     <div className="flex items-center gap-3">
                       <span className={`flex size-9 items-center justify-center rounded-xl border ${meta.tone}`}><Icon aria-hidden="true" className="size-4" /></span>
                       <div>
-                        <h3 id={`attention-${groupSlug}`} className="font-bold text-slate-950">{name} <span className="text-slate-500">({items.length})</span></h3>
-                        <p className="text-xs text-slate-500">{meta.description}</p>
-                        {hasOverflow ? <p className="text-xs font-semibold text-slate-500">Showing {visibleItems.length} of {items.length}</p> : null}
+                        <h3 id={`attention-${groupSlug}`} className="font-bold text-ink">{name} <span className="text-ink-tertiary">({items.length})</span></h3>
+                        <p className="text-xs text-ink-tertiary">{meta.description}</p>
+                        {hasOverflow ? <p className="text-xs font-semibold text-ink-tertiary">Showing {visibleItems.length} of {items.length}</p> : null}
                       </div>
                     </div>
-                    {items.length === 0 ? <p className="mt-5 text-sm text-slate-500">Nothing here right now.</p> : (
+                    {items.length === 0 ? <p className="mt-5 text-sm text-ink-tertiary">Nothing here right now.</p> : (
                       <>
                         <ul id={`attention-${groupSlug}-items`} className="mt-4 space-y-3">
                         {visibleItems.map((action) => {
                           const isFollowUp = action.kind.startsWith("FOLLOW_UP");
                           return (
-                            <li key={`${action.kind}-${action.application_id}-${actionDueKey(action)}`} className="rounded-2xl border border-slate-200 p-4">
+                            <li key={`${action.kind}-${action.application_id}-${actionDueKey(action)}`} className="rounded-2xl border border-line-subtle bg-surface p-4">
                               <div className="flex items-center justify-between gap-3">
-                                <span className="text-xs font-bold uppercase tracking-wide text-brand-700">{action.priority} priority</span>
-                                <time className="text-xs font-semibold text-slate-500" dateTime={actionDueKey(action)}>{actionDueLabel(action, timeZone)}</time>
+                                <span className="text-xs font-bold uppercase tracking-wide text-accent-strong">{action.priority} priority</span>
+                                <time className="text-xs font-semibold text-ink-tertiary" dateTime={actionDueKey(action)}>{actionDueLabel(action, timeZone)}</time>
                               </div>
-                              <Link to={`/applications/${action.application_id}`} className="mt-2 block font-bold text-slate-950 hover:text-brand-700 hover:underline">{action.job_title}</Link>
-                              <p className="mt-0.5 text-sm text-slate-600">{action.company_name}</p>
-                              <p className="mt-2 text-xs leading-5 text-slate-500">{action.label}</p>
+                              <Link to={`/applications/${action.application_id}`} className="mt-2 block font-bold text-ink hover:text-accent hover:underline">{action.job_title}</Link>
+                              <p className="mt-0.5 text-sm text-ink-muted">{action.company_name}</p>
+                              <p className="mt-2 text-xs leading-5 text-ink-tertiary">{action.label}</p>
                               <span className="sr-only">{action.label} · {actionDueLabel(action, timeZone)}</span>
                               {isFollowUp ? (
                                 <div className="mt-3 flex flex-wrap gap-2">
                                   <button type="button" className={buttonClassName("secondary", "min-h-10 px-3 py-1.5")} disabled={completeMutation.isPending} onClick={() => void complete(action.application_id)}>Complete</button>
-                                  <button type="button" className="min-h-10 rounded-lg px-3 text-sm font-semibold text-brand-700 hover:bg-brand-50" onClick={() => { setRescheduling(action.application_id); setFollowUpDate(""); }}>Reschedule</button>
+                                  <button type="button" className="min-h-10 rounded-lg px-3 text-sm font-semibold text-accent hover:bg-surface-hover active:bg-surface-pressed" onClick={() => { setRescheduling(action.application_id); setFollowUpDate(""); }}>Reschedule</button>
                                 </div>
                               ) : null}
                               {rescheduling === action.application_id ? (
-                                <div className="mt-3 space-y-2 rounded-xl bg-slate-50 p-3">
-                                  <label htmlFor={`reschedule-${action.application_id}`} className="text-xs font-bold text-slate-700">New follow-up date</label>
-                                  <input id={`reschedule-${action.application_id}`} type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900" />
+                                <div className="mt-3 space-y-2 rounded-xl bg-surface-muted p-3">
+                                  <label htmlFor={`reschedule-${action.application_id}`} className="text-xs font-bold text-ink">New follow-up date</label>
+                                  <input id={`reschedule-${action.application_id}`} type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} className="hf-field min-h-11 w-full rounded-lg px-3 text-sm" />
                                   <div className="flex gap-2"><button type="button" className={buttonClassName("primary", "min-h-10 px-3")} disabled={!followUpDate || rescheduleMutation.isPending} onClick={() => void reschedule(action.application_id)}>Save date</button><button type="button" className={buttonClassName("ghost", "min-h-10 px-3")} onClick={() => setRescheduling(null)}>Cancel</button></div>
                                 </div>
                               ) : null}
@@ -471,7 +471,7 @@ export function DashboardPage() {
                         {hasOverflow ? (
                           <button
                             type="button"
-                            className="mt-4 min-h-11 rounded-lg px-2 text-sm font-bold text-brand-700 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2"
+                            className="mt-4 min-h-11 rounded-lg px-2 text-sm font-bold text-accent hover:bg-surface-hover active:bg-surface-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
                             aria-expanded={groupExpanded}
                             aria-controls={`attention-${groupSlug}-items`}
                             aria-label={groupExpanded ? `Show fewer ${groupSlug} actions` : `Show ${remainingCount} more ${groupSlug} ${remainingCount === 1 ? "action" : "actions"}`}
@@ -546,7 +546,7 @@ function ProgressStory({
           </span>
           <Link
             to={analyticsHref(range)}
-            className="inline-flex min-h-10 items-center text-sm font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="inline-flex min-h-10 items-center text-sm font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             View full Analytics
             <ArrowRight aria-hidden="true" className="ml-1.5 size-4" />
@@ -606,7 +606,7 @@ function ProgressStory({
           <>
             <button
               type="button"
-              className="flex min-h-12 w-full items-center justify-between gap-3 border-t border-current/10 px-5 text-left font-bold text-ink hover:bg-surface-raised/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-accent sm:px-6 lg:px-7"
+              className="flex min-h-12 w-full items-center justify-between gap-3 border-t border-current/10 px-5 text-left font-bold text-ink hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-focus sm:px-6 lg:px-7"
               aria-expanded={open}
               aria-controls="progress-story-details"
               onClick={() => onOpenChange(!open)}
@@ -783,7 +783,7 @@ function ExpandedProgressStory({
             <Link
               to={insightActionHref(focus.action)}
               state={focus.action.kind === "ADD_APPLICATION" ? createState : undefined}
-              className="mt-3 inline-flex min-h-11 items-center font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="mt-3 inline-flex min-h-11 items-center font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               {focus.action.label}
               <ArrowRight aria-hidden="true" className="ml-1.5 size-4" />
@@ -936,13 +936,13 @@ function SearchTour({ tour, onDismiss }: { tour: SearchTourState; onDismiss: () 
   const completed = steps.filter(([key]) => tour[key]).length;
   const nextStep = steps.find(([key]) => !tour[key]);
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-line bg-surface-raised p-4 shadow-panel sm:p-5" aria-labelledby="search-tour-title">
+    <section className="relative overflow-hidden rounded-2xl border border-line bg-surface p-4 sm:p-5 dark:bg-surface-raised dark:shadow-panel" aria-labelledby="search-tour-title">
       <Sparkles aria-hidden="true" className="absolute -right-5 -top-5 size-24 text-accent opacity-10" />
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Search tour · {completed}/3</p><h2 id="search-tour-title" className="mt-1 text-lg font-bold text-ink">Three ways to explore HireFlux</h2><p className="mt-1 text-sm text-ink-muted">{nextStep ? `Next: ${nextStep[1]}.` : "The hands-on tour is complete."}</p></div>
-        <button type="button" className="flex size-10 shrink-0 items-center justify-center rounded-xl text-ink-muted hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onClick={onDismiss} aria-label="Dismiss search tour"><X aria-hidden="true" className="size-4" /></button>
+        <button type="button" className="flex size-10 shrink-0 items-center justify-center rounded-xl text-ink-muted hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" onClick={onDismiss} aria-label="Dismiss search tour"><X aria-hidden="true" className="size-4" /></button>
       </div>
-      <details className="relative mt-3 border-t border-line pt-3"><summary className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm font-bold text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">View tour details<ChevronDown aria-hidden="true" className="size-4" /></summary><ol className="mt-3 grid gap-3 lg:grid-cols-3">{steps.map(([key, title, description, href]) => <li key={key} className="rounded-xl border border-line bg-surface-muted p-4"><div className="flex gap-3">{tour[key] ? <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><Check aria-hidden="true" className="size-4" /></span> : <Circle aria-hidden="true" className="size-7 shrink-0 text-ink-subtle" />}<div className="min-w-0"><p className="font-bold text-ink">{title}</p><p className="mt-1 text-sm leading-5 text-ink-muted">{description}</p>{!tour[key] ? <Link to={href} className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:underline">Try it<ArrowRight aria-hidden="true" className="size-3.5" /></Link> : <p className="mt-3 text-sm font-semibold text-emerald-800">Completed</p>}</div></div></li>)}</ol></details>
+      <details className="relative mt-3 border-t border-line-subtle pt-3"><summary className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm font-bold text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">View tour details<ChevronDown aria-hidden="true" className="size-4" /></summary><ol className="mt-3 grid gap-3 lg:grid-cols-3">{steps.map(([key, title, description, href]) => <li key={key} className="rounded-xl bg-surface-muted p-4"><div className="flex gap-3">{tour[key] ? <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success-soft text-success"><Check aria-hidden="true" className="size-4" /></span> : <Circle aria-hidden="true" className="size-7 shrink-0 text-ink-tertiary" />}<div className="min-w-0"><p className="font-bold text-ink">{title}</p><p className="mt-1 text-sm leading-5 text-ink-muted">{description}</p>{!tour[key] ? <Link to={href} className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:underline">Try it<ArrowRight aria-hidden="true" className="size-3.5" /></Link> : <p className="mt-3 text-sm font-semibold text-success">Completed</p>}</div></div></li>)}</ol></details>
     </section>
   );
 }

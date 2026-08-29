@@ -5,7 +5,7 @@ import { Button } from "./Button";
 export function LoadingState({ label = "Loading…" }: { label?: string }) {
   return (
     <div
-      className="flex min-h-48 items-center justify-center gap-3 rounded-2xl border border-line bg-surface p-8 text-sm font-medium text-ink-muted shadow-panel"
+      className="flex min-h-48 items-center justify-center gap-3 rounded-2xl border border-line-subtle bg-surface p-8 text-sm font-medium text-ink-muted"
       role="status"
     >
       <span
@@ -63,7 +63,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
-    <section className="rounded-2xl border border-dashed border-line-strong bg-surface px-6 py-14 text-center shadow-panel">
+    <section className="rounded-2xl border border-dashed border-line bg-surface px-6 py-14 text-center">
       <div
         aria-hidden="true"
         className="mx-auto flex size-12 items-center justify-center rounded-xl bg-accent-soft text-lg font-bold text-accent"

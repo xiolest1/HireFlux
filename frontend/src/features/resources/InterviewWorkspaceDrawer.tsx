@@ -66,9 +66,9 @@ function draftFrom(interview: Interview): WorkspaceDraft {
 }
 
 const textAreaClassName =
-  "mt-2 min-h-28 w-full resize-y rounded-xl border border-line-strong bg-surface px-3 py-2 text-sm leading-6 text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20";
+  "mt-2 min-h-28 w-full resize-y rounded-xl border border-line bg-surface-raised px-3 py-2 text-sm leading-6 text-ink placeholder:text-ink-tertiary hover:border-line-strong hover:bg-surface-hover focus:border-accent focus:outline-none focus:ring-2 focus:ring-focus/20";
 const focusClassName =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
 type DrawerMode = "PREPARE" | "CAPTURE" | "REVIEW" | "EDIT" | "HANDOFF";
 

@@ -1213,13 +1213,13 @@ describe("workspace milestone features", () => {
     expect(save).toBeDisabled();
     expect(screen.getByRole("heading", { name: "Profile" })).toBeVisible();
     expect(
-      screen.getByRole("heading", { name: "Temporary by design" }),
+      screen.getByRole("heading", { name: "Demo workspace" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("heading", {
-        name: "Explore a candidate-owned account control center",
+      screen.getByRole("button", {
+        name: /personal account preview/i,
       }),
-    ).toBeVisible();
+    ).toHaveAttribute("aria-expanded", "false");
     expect(
       screen.queryByRole("navigation", { name: "Settings sections" }),
     ).not.toBeInTheDocument();
@@ -1293,6 +1293,11 @@ describe("workspace milestone features", () => {
 
   it("keeps the candidate workflow and provides safe interactive account previews", async () => {
     const { user } = renderApp("/settings");
+    const previewDisclosure = await screen.findByRole("button", { name: /personal account preview/i });
+    expect(previewDisclosure).toHaveAttribute("aria-controls", "personal-account-preview-content");
+    expect(screen.queryByRole("heading", { name: "Your candidate workflow" })).not.toBeInTheDocument();
+    await user.click(previewDisclosure);
+    expect(previewDisclosure).toHaveAttribute("aria-expanded", "true");
     const workflowHeading = await screen.findByRole("heading", {
       name: "Your candidate workflow",
     });
@@ -1342,6 +1347,7 @@ describe("workspace milestone features", () => {
 
   it("previews account protection accessibly and restores its trigger", async () => {
     const { user } = renderApp("/settings");
+    await user.click(await screen.findByRole("button", { name: /personal account preview/i }));
     const trigger = await screen.findByRole("button", {
       name: "Explore account protection",
     });
@@ -1369,6 +1375,7 @@ describe("workspace milestone features", () => {
 
   it("scopes simulated notification preferences to the current demo workspace", async () => {
     const first = renderApp("/settings");
+    await first.user.click(await screen.findByRole("button", { name: /personal account preview/i }));
     const digest = await screen.findByRole("checkbox", {
       name: /Weekly search digest/,
     });
@@ -1377,18 +1384,20 @@ describe("workspace milestone features", () => {
     first.unmount();
 
     const sameWorkspace = renderApp("/settings");
+    await sameWorkspace.user.click(await screen.findByRole("button", { name: /personal account preview/i }));
     expect(
       await screen.findByRole("checkbox", { name: /Weekly search digest/ }),
     ).toBeChecked();
     sameWorkspace.unmount();
 
-    renderApp("/settings", {
+    const differentWorkspace = renderApp("/settings", {
       session: {
         access_token: "different.settings.preview.session.token.123456789",
         token_type: "Bearer",
         expires_at: "2099-08-11T12:00:00Z",
       },
     });
+    await differentWorkspace.user.click(await screen.findByRole("button", { name: /personal account preview/i }));
     expect(
       await screen.findByRole("checkbox", { name: /Weekly search digest/ }),
     ).not.toBeChecked();
@@ -1481,11 +1490,14 @@ describe("workspace milestone features", () => {
       ),
     );
 
-    renderApp("/interviews?interview=44444444-4444-4444-8444-444444444444");
+    const { user } = renderApp("/interviews?interview=44444444-4444-4444-8444-444444444444");
     expect(
       await screen.findByRole("heading", { name: "Northstar Labs" }),
     ).toBeVisible();
     expect(screen.getByText("Aug 14, 2026, 8:00 AM")).toBeVisible();
+    const switcher = screen.getByRole("button", { name: /Switch interview/ });
+    expect(switcher).toHaveAttribute("aria-expanded", "false");
+    await user.click(switcher);
     expect(
       screen.getByRole("button", { name: /Northstar Labs, Technical screen/ }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -1495,6 +1507,43 @@ describe("workspace milestone features", () => {
       "href",
       "/applications/11111111-1111-4111-8111-111111111111?section=interviews&interview=44444444-4444-4444-8444-444444444444",
     );
+  });
+
+  it("opens interview preparation once and preserves the Applications origin", async () => {
+    const interview = makeWorkspaceInterview();
+    server.use(
+      ...interviewContextHandlers([interview]),
+      http.get(`${API_ORIGIN}/api/v1/interviews`, () =>
+        HttpResponse.json({ items: [interview], next_cursor: null }),
+      ),
+    );
+
+    const { router, user } = renderApp({
+      pathname: `/interviews`,
+      search: `?interview=${interview.interview_id}`,
+      state: {
+        applicationsOrigin: {
+          returnTo: "/applications?view=ACTIVE&q=platform",
+          intent: "OPEN_INTERVIEW_PREPARATION",
+        },
+      },
+    });
+
+    expect(
+      await screen.findByRole("dialog", { name: "Interview preparation" }),
+    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Close workspace" }));
+    expect(
+      screen.getAllByRole("button", { name: "Continue preparation" })[0],
+    ).toHaveFocus();
+    expect(
+      screen.getByRole("link", { name: "Back to applications" }),
+    ).toHaveAttribute("href", "/applications?view=ACTIVE&q=platform");
+    expect(router.state.location.state).toEqual({
+      applicationsOrigin: {
+        returnTo: "/applications?view=ACTIVE&q=platform",
+      },
+    });
   });
 
   it("resolves a requested interview beyond the first workspace page without selecting another record", async () => {
@@ -1517,12 +1566,13 @@ describe("workspace milestone features", () => {
       }),
     );
 
-    renderApp(`/interviews?interview=${requested.interview_id}`);
+    const { user } = renderApp(`/interviews?interview=${requested.interview_id}`);
     expect(await screen.findByText("Finding the requested interview…")).toBeVisible();
     expect(
       await screen.findByRole("heading", { name: "Deep Link Company" }),
     ).toBeVisible();
     expect(cursors).toEqual([null, "next-interview-page"]);
+    await user.click(screen.getByRole("button", { name: /Switch interview/ }));
     expect(
       screen.getByRole("button", { name: /Deep Link Company/ }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -1609,11 +1659,16 @@ describe("workspace milestone features", () => {
     expect(screen.getByRole("heading", { name: /Needs attention/ })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Today" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Tomorrow" })).not.toBeInTheDocument();
+    const switcher = screen.getByRole("button", { name: /Switch interview/ });
+    expect(switcher).toHaveAttribute("aria-controls", "responsive-interview-queue");
+    await user.click(switcher);
+    expect(switcher).toHaveAttribute("aria-expanded", "true");
     const second = screen.getByRole("button", {
       name: /Second Studio, Hiring manager/,
     });
     second.focus();
     await user.keyboard("{Enter}");
+    expect(switcher).toHaveAttribute("aria-expanded", "false");
     expect(second).toHaveAttribute("aria-pressed", "true");
     expect(
       screen.getByRole("heading", { name: "Second Studio" }),

@@ -215,7 +215,7 @@ function PipelineCardItem({ card, onMove, dragEnabled }: { card: PipelineCard; o
   return (
     <article ref={ref} className={`rounded-xl border border-line bg-surface-raised p-3 shadow-sm ${isDragging ? "opacity-45" : ""}`}>
       <div className="flex gap-2">
-        <button ref={handleRef} type="button" className="hidden min-h-11 w-8 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:inline-flex" aria-label={`Drag ${card.application.company_name} to another allowed stage`} title="Drag to an allowed stage"><GripVertical aria-hidden="true" className="size-4" /></button>
+        <button ref={handleRef} type="button" className="hidden min-h-11 w-8 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-hover active:bg-surface-pressed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus lg:inline-flex" aria-label={`Drag ${card.application.company_name} to another allowed stage`} title="Drag to an allowed stage"><GripVertical aria-hidden="true" className="size-4" /></button>
         <div className="min-w-0 flex-1">
           <p className="truncate font-bold text-ink">{card.application.company_name}</p>
           <p className="mt-0.5 truncate text-sm text-ink-muted">{card.application.job_title}</p>
@@ -227,7 +227,7 @@ function PipelineCardItem({ card, onMove, dragEnabled }: { card: PipelineCard; o
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
         <Link to={`/applications/${card.application.application_id}`} className="inline-flex min-h-11 items-center text-xs font-bold text-accent hover:underline">Open details<ArrowRight aria-hidden="true" className="ml-1 size-3.5" /></Link>
-        {targets.length ? <button type="button" className="inline-flex min-h-11 items-center text-xs font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onClick={() => onMove(card)}><MoveRight aria-hidden="true" className="mr-1 size-3.5" />Move…</button> : null}
+        {targets.length ? <button type="button" className="inline-flex min-h-11 items-center text-xs font-bold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" onClick={() => onMove(card)}><MoveRight aria-hidden="true" className="mr-1 size-3.5" />Move…</button> : null}
       </div>
     </article>
   );

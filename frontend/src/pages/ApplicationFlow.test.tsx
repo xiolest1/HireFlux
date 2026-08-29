@@ -323,7 +323,7 @@ describe("application critical flow", () => {
       `/applications/${created.application_id}`,
     );
     const contextLink = await screen.findByRole("link", { name: "Context Engineer" });
-    expect(contextLink.closest("li")).toHaveClass("bg-accent-soft");
+    expect(contextLink.closest("li")).toHaveClass("bg-surface-selected");
   });
 
   it("returns a Dashboard-origin creation to Dashboard with a View link", async () => {

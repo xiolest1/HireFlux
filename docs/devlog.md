@@ -1141,6 +1141,46 @@ inherit the same visual language. This was a presentation-only change; all
 existing preview actions, workspace-scoped persistence, and demo boundaries are
 unchanged.
 
+## Applications workspace UX refinement - August 27, 2026
+
+Refined the existing server-classified Applications workspace without changing its
+classifier, API, lifecycle rules, or DynamoDB model. The first server-ordered
+attention item is now the single featured opportunity, while the remaining preview
+items use compact divided rows. Desktop and tablet retain four preview items and
+phones retain three. The zero-attention state is now a calm inline message.
+
+Centralized reason-specific action labels and supporting context across featured,
+compact, and flat rows. Candidate actions now use `Review next action` or
+`Plan next action`; timing copy distinguishes interviews, planned check-backs,
+candidate-owned dates, employer waiting, drafts, and applied dates without creating
+new client-side urgency or grouping policy.
+
+Removed the search/filter toolbar's heavy card chrome and added lightweight Active
+retrieval orientation with a direct return to the grouped opportunity workspace.
+Search debounce, URL state, staged filters, cursor pagination, sorting, live-region
+updates, and existing API contracts remain intact.
+
+Added a validated Applications-origin router-state contract. Collection role links
+preserve the exact search/filter/scope URL without running actions. Contextual links
+can carry a one-shot primary-action or interview-preparation intent, which detail and
+Interviews consume with route replacement. Back links restore the exact Applications
+URL, unsafe/external paths fall back locally, and drawer focus restoration begins at
+the corresponding What’s next action. The detail identity header now keeps only More;
+primary and secondary lifecycle actions share the What’s next panel.
+
+Focused coverage verifies origin validation, one-shot consumption, focus restoration,
+action de-duplication, featured attention hierarchy, reason-specific copy,
+supporting-value precedence, and retrieval return behavior. This remains a
+frontend/router-only refinement with no backend or persistence change.
+
+Final validation passed Ruff check and format check, Mypy across 58 backend source
+files, all 259 backend tests, frontend lint and typecheck, all 155 frontend tests,
+and the production build. Playwright passed 84 tests across 320px, 390px, 768px,
+and 1280px projects with 12 fixture-dependent skips; its route checks included Axe,
+keyboard flows, overflow checks, deep-link refresh, and the existing 200% zoom
+equivalent. Four intentional Applications/detail light/dark visual baselines were
+reviewed and updated for the new hierarchy.
+
 ## Next recommended work
 
 Freeze and commit the validated local Milestone 2 baseline, then build and

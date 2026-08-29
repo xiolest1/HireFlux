@@ -159,13 +159,30 @@ test("interview journey selection, preparation, and deep-link refresh stay conne
   await expect(
     page.getByRole("heading", { name: "Interview queue" }),
   ).toBeVisible();
+  const responsiveSwitcher = page.getByRole("button", {
+    name: "Switch interview",
+  });
+  const compactSwitcherVisible = await responsiveSwitcher.isVisible();
+  if (compactSwitcherVisible) {
+    await responsiveSwitcher.focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      page.getByRole("button", { name: "Hide interview choices" }),
+    ).toHaveAttribute("aria-expanded", "true");
+  }
 
   const scheduledRound = page.getByRole("button", {
     name: /Northstar Labs, Technical screen/,
   });
   await scheduledRound.focus();
   await page.keyboard.press("Enter");
-  await expect(scheduledRound).toHaveAttribute("aria-pressed", "true");
+  if (compactSwitcherVisible) {
+    await expect(
+      page.getByRole("button", { name: "Switch interview" }),
+    ).toHaveAttribute("aria-expanded", "false");
+  } else {
+    await expect(scheduledRound).toHaveAttribute("aria-pressed", "true");
+  }
   await expect(page).toHaveURL(
     /interview=44444444-4444-4444-8444-444444444444/,
   );
@@ -239,7 +256,13 @@ test("interview journey selection, preparation, and deep-link refresh stay conne
   await expect(prepare).toBeFocused();
 
   await page.reload();
-  await expect(scheduledRound).toHaveAttribute("aria-pressed", "true");
+  if (compactSwitcherVisible) {
+    await expect(
+      page.getByRole("button", { name: "Switch interview" }),
+    ).toHaveAttribute("aria-expanded", "false");
+  } else {
+    await expect(scheduledRound).toHaveAttribute("aria-pressed", "true");
+  }
   await expectNoHorizontalPageOverflow(page);
 });
 

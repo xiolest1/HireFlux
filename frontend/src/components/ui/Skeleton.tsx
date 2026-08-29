@@ -28,7 +28,7 @@ export function Skeleton({
 export function PanelSkeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div
-      className="rounded-2xl border border-line bg-surface p-5 shadow-panel"
+      className="rounded-2xl border border-line-subtle bg-surface p-5"
       aria-hidden="true"
     >
       <Skeleton className="h-5 w-2/5" />

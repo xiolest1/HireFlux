@@ -4,6 +4,8 @@ import { useState } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { Drawer } from "./Drawer";
+import { StatusBadge } from "./StatusBadge";
+import { Surface } from "./Surface";
 import { Tabs } from "./Tabs";
 
 function TabsHarness() {
@@ -37,6 +39,32 @@ function DrawerHarness() {
 }
 
 describe("navigation primitives", () => {
+  it("exposes semantic surface roles without forcing elevation", () => {
+    render(
+      <>
+        <Surface aria-label="Standard group">Standard</Surface>
+        <Surface aria-label="Interactive group" tone="interactive">Interactive</Surface>
+        <Surface aria-label="Raised group" tone="raised">Raised</Surface>
+      </>,
+    );
+
+    expect(screen.getByLabelText("Standard group")).toHaveClass("border-line", "bg-surface");
+    expect(screen.getByLabelText("Standard group")).not.toHaveClass("border-line-subtle");
+    expect(screen.getByLabelText("Standard group")).not.toHaveClass("shadow-panel");
+    expect(screen.getByLabelText("Interactive group")).toHaveClass("bg-surface", "hover:bg-surface-hover");
+    expect(screen.getByLabelText("Raised group")).toHaveClass("shadow-panel");
+  });
+
+  it("renders lifecycle status with a semantic text label", () => {
+    render(<StatusBadge status="APPLIED" />);
+    expect(screen.getByText("Applied")).toHaveClass(
+      "border-info/40",
+      "bg-info-soft",
+      "text-info",
+      "dark:border-info/25",
+    );
+  });
+
   it("moves and selects tabs with arrow keys", async () => {
     const user = userEvent.setup();
     render(

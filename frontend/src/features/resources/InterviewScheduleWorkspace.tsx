@@ -36,7 +36,7 @@ const emptyDraft: InterviewDraft = {
 };
 
 const fieldClassName =
-  "mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20";
+  "mt-2 min-h-11 w-full rounded-xl border border-line bg-surface-raised px-3 text-ink placeholder:text-ink-tertiary hover:border-line-strong hover:bg-surface-hover focus:border-accent focus:outline-none focus:ring-2 focus:ring-focus/20";
 
 function draftFor(interview: Interview | null, timeZone: string): InterviewDraft {
   if (!interview) return emptyDraft;

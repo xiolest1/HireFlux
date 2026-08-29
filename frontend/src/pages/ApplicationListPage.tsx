@@ -361,6 +361,8 @@ export function ApplicationListPage() {
     followUp ? { name: "follow_up", label: "Follow-up: Needs attention" } : null,
   ].filter((item): item is ActiveFilterItem => Boolean(item));
   const hasFilters = activeFilterItems.length > 0;
+  const hasNarrowingFilters = Boolean(status || source || workMode || stageAge || followUp);
+  const hasExplicitSort = searchParams.has("sort");
   const filterCount = [
     status,
     source,
@@ -417,8 +419,8 @@ export function ApplicationListPage() {
               aria-current={selected ? "page" : undefined}
               className={`min-h-10 flex-1 rounded-xl px-5 text-sm font-semibold transition-colors sm:flex-none ${
                 selected
-                  ? "bg-surface-raised text-accent shadow-sm"
-                  : "text-ink-muted hover:bg-surface hover:text-ink"
+                  ? "bg-surface-selected text-accent-strong"
+                  : "text-ink-muted hover:bg-surface-hover hover:text-ink"
               }`}
               onClick={() => setApplicationView(view)}
             >
@@ -429,7 +431,7 @@ export function ApplicationListPage() {
       </nav>
 
       <section
-        className="mt-5 rounded-2xl border border-line bg-surface p-4 shadow-panel sm:p-5"
+        className="mt-5 dark:rounded-2xl dark:border dark:border-line dark:bg-surface dark:p-4 dark:shadow-panel sm:dark:p-5"
         aria-labelledby="application-search-title"
       >
         <h2 id="application-search-title" className="sr-only">
@@ -442,13 +444,10 @@ export function ApplicationListPage() {
             role="search"
           >
             <div className="min-w-0 flex-1">
-              <label
-                htmlFor="application-search"
-                className="text-xs font-bold uppercase tracking-wide text-ink-muted"
-              >
-                Search applications
+              <label htmlFor="application-search" className="sr-only dark:not-sr-only dark:text-xs dark:font-bold dark:uppercase dark:tracking-wide dark:text-ink-muted">
+                Search applications by company or role
               </label>
-              <div className="relative mt-1.5">
+              <div className="relative dark:mt-1.5">
                 <Search
                   aria-hidden="true"
                   className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted"
@@ -460,7 +459,7 @@ export function ApplicationListPage() {
                   value={searchDraft}
                   onChange={(event) => setSearchDraft(event.target.value)}
                   placeholder="Search company or role"
-                  className="min-h-11 w-full rounded-xl border border-line-strong bg-surface-raised py-2 pl-10 pr-3 text-sm text-ink placeholder:text-ink-muted"
+                  className="hf-field min-h-11 w-full py-2 pl-10 pr-3 text-sm"
                 />
               </div>
             </div>
@@ -469,7 +468,7 @@ export function ApplicationListPage() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface-raised px-4 text-sm font-semibold text-ink transition-colors hover:border-accent/50 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line bg-surface-raised px-4 text-sm font-semibold text-ink transition-colors hover:border-line-strong hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               aria-label={filterCount ? `Filters, ${filterCount} active` : "Filters"}
               onClick={() => openFilters()}
             >
@@ -485,7 +484,7 @@ export function ApplicationListPage() {
         </div>
 
         {hasFilters ? (
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4" role="group" aria-label="Active application filters">
+          <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Active application filters">
             <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
               Active filters
             </span>
@@ -501,7 +500,7 @@ export function ApplicationListPage() {
                 </div>
                 <button
                   type="button"
-                  className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2.5 text-sm font-semibold text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2.5 text-sm font-semibold text-accent hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   aria-expanded={activeFiltersExpanded}
                   aria-controls="additional-application-filters"
                   onClick={() => setActiveFiltersExpanded((expanded) => !expanded)}
@@ -513,7 +512,7 @@ export function ApplicationListPage() {
             ) : null}
             <button
               type="button"
-              className="min-h-9 rounded-lg px-2.5 text-sm font-semibold text-accent hover:bg-accent-soft"
+              className="min-h-9 rounded-lg px-2.5 text-sm font-semibold text-accent hover:bg-surface-hover"
               onClick={clearAllFilters}
             >
               Clear all
@@ -534,6 +533,26 @@ export function ApplicationListPage() {
               ? "Updating application results."
               : `${applications.length} application results loaded.`}
         </p>
+        {!groupedActiveMode && applicationView === "ACTIVE" ? (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <p className="text-ink-muted">
+              {q
+                ? `Showing active applications matching “${q}”.`
+                : hasNarrowingFilters
+                  ? "Showing a narrowed Active view."
+                  : hasExplicitSort
+                    ? "Showing Active applications in your selected order."
+                    : null}
+            </p>
+            <button
+              type="button"
+              className="min-h-11 rounded-xl px-3 font-semibold text-accent hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              onClick={clearAllFilters}
+            >
+              Return to opportunity workspace
+            </button>
+          </div>
+        ) : null}
         {groupedActiveMode && workspaceQuery.isPending ? (
           <ApplicationListSkeleton />
         ) : groupedActiveMode && workspaceQuery.isError ? (
@@ -599,10 +618,10 @@ export function ApplicationListPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-line bg-surface px-4 shadow-sm sm:px-5">
+            <div className="rounded-2xl border border-line-subtle bg-surface px-4 sm:px-5">
               <ul>
                 {applications.map((application) => (
-                  <FlatOpportunityRow key={application.application_id} application={application} highlighted={application.application_id === highlightedApplicationId} />
+                  <FlatOpportunityRow key={application.application_id} application={application} returnPath={`${location.pathname}${location.search}`} highlighted={application.application_id === highlightedApplicationId} />
                 ))}
               </ul>
             </div>
@@ -844,7 +863,7 @@ function SortSelect({
       aria-label="Sort applications"
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="min-h-10 rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink"
+      className="hf-field min-h-10 px-3 text-sm font-semibold"
     >
       <option value="updated_desc">Recently updated</option>
       <option value="updated_asc">Least recently updated</option>
@@ -877,7 +896,7 @@ function ListFilter({
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 min-h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-60"
+        className="hf-field mt-2 px-3 text-sm font-semibold"
       >
         {children}
       </select>
