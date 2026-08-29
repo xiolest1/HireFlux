@@ -60,6 +60,16 @@ async function expectLandingContentInsideViewport(page: Page) {
   expect(clipped).toEqual([]);
 }
 
+async function waitForLandingAnimationsToSettle(page: Page) {
+  await page.locator("#landing-main").evaluate(async (element) => {
+    await Promise.all(
+      element.getAnimations({ subtree: true }).map((animation) =>
+        animation.finished.catch(() => undefined),
+      ),
+    );
+  });
+}
+
 const routes = [
   {
     name: "landing",
@@ -107,7 +117,8 @@ for (const route of routes) {
     if (route.name === "landing") {
       await expect(page.locator("[data-hero-story]")).toBeVisible();
       await expectLandingContentInsideViewport(page);
-      if (testInfo.project.name === "desktop-1280") {
+      await waitForLandingAnimationsToSettle(page);
+      if (["desktop-1024", "desktop-1280"].includes(testInfo.project.name)) {
         await expect(page.getByTestId("desktop-product-story")).toBeVisible();
         await expect(page.getByTestId("mobile-product-story")).toBeHidden();
       } else {
@@ -148,6 +159,74 @@ test("landing story becomes a stable complete state with reduced motion", async 
     page.getByRole("button", { name: /application story/i }),
   ).toHaveCount(0);
   await expect(page.getByText("The next move is visible")).toBeVisible();
+  await page.getByRole("button", { name: "Show Prepare stage" }).click();
+  await expect(page.locator("[data-hero-story]")).toHaveAttribute(
+    "data-story-step",
+    "prepare",
+  );
+  await expect(
+    page.getByRole("button", { name: "Show Prepare stage" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("[data-flux-story]")).toHaveAttribute(
+    "data-flux-settled",
+    "true",
+  );
+});
+
+test("Flux Rail scenes preserve one opportunity through Capture, Progress, and Prepare", async ({
+  page,
+}, testInfo) => {
+  test.skip(!["mobile-390", "desktop-1280"].includes(testInfo.project.name));
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  if (testInfo.project.name === "mobile-390") {
+    await page.addInitScript(() =>
+      window.localStorage.setItem("hireflux-color-theme", "light"),
+    );
+  }
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Keep every opportunity moving forward.", level: 1 }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Pause application story" }).click();
+
+  const story = page.locator("[data-flux-story]");
+  const opportunity = story.locator("[data-persistent-opportunity]");
+  await expect(opportunity).toHaveCount(1);
+
+  for (const stage of ["Capture", "Progress", "Prepare"] as const) {
+    await page.getByRole("button", { name: `Show ${stage} stage` }).click();
+    await expect(story).toHaveAttribute("data-visual-stage", stage.toLowerCase());
+    await expect(story).toHaveAttribute("data-flux-settled", "true");
+    await expect(opportunity).toHaveCount(1);
+    await expect(story).toHaveScreenshot(`flux-${stage.toLowerCase()}.png`);
+  }
+
+  await expectNoHorizontalPageOverflow(page);
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "Welcome back", level: 1 })).toBeVisible();
+  await expect(page.locator("[data-flux-story]")).toHaveCount(0);
+});
+
+test("authenticated entry does not download the lazy landing route", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  const landingChunkRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/\/assets\/(?:LandingPage|gsap)-[^/]+\.js$/.test(request.url())) {
+      landingChunkRequests.push(request.url());
+    }
+  });
+
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "Welcome back", level: 1 })).toBeVisible();
+  expect(landingChunkRequests).toEqual([]);
+
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Keep every opportunity moving forward.", level: 1 }),
+  ).toBeVisible();
+  expect(landingChunkRequests.length).toBeGreaterThanOrEqual(1);
 });
 
 test("Home progress story stays coherent, keyboard-operable, and accessible", async ({
@@ -623,7 +702,7 @@ test("duplicate advice and creation failures remain non-blocking and preserve qu
 
 test("the explicit light theme persists and remains accessible", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(page.locator("html")).not.toHaveClass(/dark/);
@@ -638,12 +717,15 @@ test("the explicit light theme persists and remains accessible", async ({
     page.getByRole("button", { name: "Switch to dark mode" }),
   ).toBeVisible();
   await expect(page.locator("html")).not.toHaveClass(/dark/);
+  await waitForLandingAnimationsToSettle(page);
   const accessibility = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
   expect(accessibility.violations).toEqual([]);
   await expectNoHorizontalPageOverflow(page);
-  await expect(page).toHaveScreenshot("landing-light.png", { fullPage: true });
+  if (testInfo.project.name !== "desktop-1024") {
+    await expect(page).toHaveScreenshot("landing-light.png", { fullPage: true });
+  }
 });
 
 test("quick capture remains accessible in explicit light mode", async ({

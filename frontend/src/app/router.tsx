@@ -4,10 +4,10 @@ import { DemoSessionGuard } from "../auth/DemoSessionGuard";
 import { AppLayout } from "../components/AppLayout";
 import { DocumentTitle } from "../components/DocumentTitle";
 import { LoadingState } from "../components/ui/Feedback";
-import { LandingPage } from "../pages/LandingPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { RouteErrorPage } from "../pages/RouteErrorPage";
 
+const LandingPage = lazy(() => import("../pages/LandingPage").then((module) => ({ default: module.LandingPage })));
 const DashboardPage = lazy(() => import("../pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const ApplicationListPage = lazy(() => import("../pages/ApplicationListPage").then((module) => ({ default: module.ApplicationListPage })));
 const ApplicationCreatePage = lazy(() => import("../pages/ApplicationCreatePage").then((module) => ({ default: module.ApplicationCreatePage })));
@@ -17,7 +17,7 @@ const InterviewsPage = lazy(() => import("../pages/InterviewsPage").then((module
 const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage").then((module) => ({ default: module.AnalyticsPage })));
 const SettingsPage = lazy(() => import("../pages/SettingsPage").then((module) => ({ default: module.SettingsPage })));
 
-function privatePage(page: ReactNode, label: string) {
+function suspendedPage(page: ReactNode, label: string) {
   return <Suspense fallback={<LoadingState label={label} />}>{page}</Suspense>;
 }
 
@@ -28,7 +28,7 @@ function titledPage(title: string, page: ReactNode) {
 export const appRoutes: RouteObject[] = [
   {
     path: "/",
-    element: titledPage("Demo workspace", <LandingPage />),
+    element: titledPage("Demo workspace", suspendedPage(<LandingPage />, "Loading demo workspace…")),
     errorElement: <RouteErrorPage />,
   },
   {
@@ -38,20 +38,20 @@ export const appRoutes: RouteObject[] = [
         element: <AppLayout />,
         errorElement: <RouteErrorPage />,
         children: [
-          { path: "dashboard", element: privatePage(<DashboardPage />, "Loading dashboard…") },
-          { path: "applications", element: privatePage(<ApplicationListPage />, "Loading applications…") },
-          { path: "applications/new", element: privatePage(<ApplicationCreatePage />, "Loading application form…") },
+          { path: "dashboard", element: suspendedPage(<DashboardPage />, "Loading dashboard…") },
+          { path: "applications", element: suspendedPage(<ApplicationListPage />, "Loading applications…") },
+          { path: "applications/new", element: suspendedPage(<ApplicationCreatePage />, "Loading application form…") },
           {
             path: "applications/:applicationId",
-            element: privatePage(<ApplicationDetailPage />, "Loading application…"),
+            element: suspendedPage(<ApplicationDetailPage />, "Loading application…"),
           },
           {
             path: "applications/:applicationId/edit",
-            element: privatePage(<ApplicationEditPage />, "Loading application form…"),
+            element: suspendedPage(<ApplicationEditPage />, "Loading application form…"),
           },
-          { path: "interviews", element: privatePage(<InterviewsPage />, "Loading interviews…") },
-          { path: "analytics", element: privatePage(<AnalyticsPage />, "Loading analytics…") },
-          { path: "settings", element: privatePage(<SettingsPage />, "Loading settings…") },
+          { path: "interviews", element: suspendedPage(<InterviewsPage />, "Loading interviews…") },
+          { path: "analytics", element: suspendedPage(<AnalyticsPage />, "Loading analytics…") },
+          { path: "settings", element: suspendedPage(<SettingsPage />, "Loading settings…") },
         ],
       },
     ],

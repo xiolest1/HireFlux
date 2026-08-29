@@ -481,6 +481,85 @@
   animation: hf-story-swap 360ms var(--ease-fluid) both;
 }
 
+.hf-flux-story [data-flux-rail-capture],
+.hf-flux-story [data-flux-rail-progress],
+.hf-flux-story [data-flux-rail-prepare] {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.hf-flux-story [data-flux-rail-progress],
+.hf-flux-story [data-flux-rail-prepare],
+.hf-flux-story [data-flux-progress-status],
+.hf-flux-story [data-flux-interview],
+.hf-flux-story [data-flux-preparation] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.hf-flux-story [data-flux-rail-capture] {
+  stroke-dashoffset: 0;
+}
+
+.hf-flux-story[data-reduced-motion="true"] [data-flux-rail-base],
+.hf-flux-story[data-reduced-motion="true"] [data-flux-marker-desktop],
+.hf-flux-story[data-reduced-motion="true"] [data-flux-marker-mobile] {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="progress"] [data-flux-capture-status],
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-capture-status],
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="progress"] [data-flux-capture-hint],
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-capture-hint] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="progress"] [data-flux-progress-status],
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-progress-status],
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="progress"] [data-flux-rail-progress],
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-rail-progress],
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-rail-prepare],
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="progress"] [data-flux-interview],
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-interview] {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="progress"] [data-flux-rail-progress],
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-rail-progress],
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-rail-prepare] {
+  stroke-dashoffset: 0;
+}
+
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="progress"] [data-flux-marker-desktop] {
+  transform: translate(166px, 27px);
+}
+
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="progress"] [data-flux-marker-mobile] {
+  transform: translate(162px, 29px);
+}
+
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-marker-desktop] {
+  transform: translate(416px, 51px);
+}
+
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-marker-mobile] {
+  transform: translate(234px, 54px);
+}
+
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-preparation] {
+  opacity: 1;
+  visibility: visible;
+  clip-path: inset(0 0 0 0 round 0.75rem);
+  transform: scaleY(1);
+}
+
+.hf-flux-story[data-reduced-motion="true"][data-visual-stage="prepare"] [data-flux-prep-progress] {
+  width: 66.666%;
+}
+
 .hf-section-reveal {
   animation: hf-story-swap 520ms var(--ease-fluid) both;
 }
