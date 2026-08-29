@@ -26,7 +26,7 @@ describe("demo workspace flow", () => {
       screen.getByText("Start a demo workspace to explore the page."),
     ).toBeVisible();
     expect(
-      screen.getByText(/Explore fictional applications, interviews, notes, and analytics/),
+      screen.getByText(/Follow one coherent workflow across applications, interviews, notes, and analytics/),
     ).toBeVisible();
     expect(screen.queryByText(/Sixteen fictional opportunities/i)).toBeNull();
   });

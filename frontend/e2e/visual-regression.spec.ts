@@ -44,6 +44,22 @@ async function expectNoHorizontalPageOverflow(page: Page) {
   ).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 }
 
+async function expectLandingContentInsideViewport(page: Page) {
+  const clipped = await page.locator("[data-landing-clip-check]:visible").evaluateAll(
+    (elements) => elements
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          text: element.textContent?.trim().slice(0, 60),
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+        };
+      })
+      .filter(({ left, right }) => left < -1 || right > window.innerWidth + 1),
+  );
+  expect(clipped).toEqual([]);
+}
+
 const routes = [
   {
     name: "landing",
@@ -88,6 +104,18 @@ for (const route of routes) {
 
     await expectNoHorizontalPageOverflow(page);
 
+    if (route.name === "landing") {
+      await expect(page.locator("[data-hero-story]")).toBeVisible();
+      await expectLandingContentInsideViewport(page);
+      if (testInfo.project.name === "desktop-1280") {
+        await expect(page.getByTestId("desktop-product-story")).toBeVisible();
+        await expect(page.getByTestId("mobile-product-story")).toBeHidden();
+      } else {
+        await expect(page.getByTestId("mobile-product-story")).toBeVisible();
+        await expect(page.getByTestId("desktop-product-story")).toBeHidden();
+      }
+    }
+
     const accessibility = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
@@ -106,6 +134,21 @@ for (const route of routes) {
     }
   });
 }
+
+test("landing story becomes a stable complete state with reduced motion", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(page.locator("[data-hero-story]")).toHaveAttribute(
+    "data-story-step",
+    "act",
+  );
+  await expect(
+    page.getByRole("button", { name: /application story/i }),
+  ).toHaveCount(0);
+  await expect(page.getByText("The next move is visible")).toBeVisible();
+});
 
 test("Home progress story stays coherent, keyboard-operable, and accessible", async ({
   page,

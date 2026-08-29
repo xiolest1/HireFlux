@@ -382,6 +382,18 @@
   }
 }
 
+@keyframes hf-story-swap {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .hf-toast-enter {
   animation: hf-toast-in 180ms var(--ease-fluid) both;
 }
@@ -397,6 +409,14 @@
   animation: hf-shimmer 1.6s ease-in-out infinite;
 }
 
+.hf-story-swap {
+  animation: hf-story-swap 360ms var(--ease-fluid) both;
+}
+
+.hf-section-reveal {
+  animation: hf-story-swap 520ms var(--ease-fluid) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -410,4 +430,5 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+
 }
