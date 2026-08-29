@@ -158,7 +158,7 @@ test("landing story becomes a stable complete state with reduced motion", async 
   await expect(
     page.getByRole("button", { name: /application story/i }),
   ).toHaveCount(0);
-  await expect(page.getByText("The next move is visible")).toBeVisible();
+  await expect(page.locator("[data-flux-action]")).toHaveCount(1);
   await page.getByRole("button", { name: "Show Prepare stage" }).click();
   await expect(page.locator("[data-hero-story]")).toHaveAttribute(
     "data-story-step",
@@ -173,7 +173,7 @@ test("landing story becomes a stable complete state with reduced motion", async 
   );
 });
 
-test("Flux Rail scenes preserve one opportunity through Capture, Progress, and Prepare", async ({
+test("Flux Rail scenes preserve one opportunity through Capture, Progress, Prepare, and Act", async ({
   page,
 }, testInfo) => {
   test.skip(!["mobile-390", "desktop-1280"].includes(testInfo.project.name));
@@ -193,7 +193,7 @@ test("Flux Rail scenes preserve one opportunity through Capture, Progress, and P
   const opportunity = story.locator("[data-persistent-opportunity]");
   await expect(opportunity).toHaveCount(1);
 
-  for (const stage of ["Capture", "Progress", "Prepare"] as const) {
+  for (const stage of ["Capture", "Progress", "Prepare", "Act"] as const) {
     await page.getByRole("button", { name: `Show ${stage} stage` }).click();
     await expect(story).toHaveAttribute("data-visual-stage", stage.toLowerCase());
     await expect(story).toHaveAttribute("data-flux-settled", "true");

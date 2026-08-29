@@ -21,9 +21,12 @@ export type LandingHeroStage = (typeof landingHeroStageOrder)[number];
 
 export const landingHeroAutoplayStageOrder = [
   "capture",
+  "context",
   "progress",
   "prepare",
-] as const satisfies readonly LandingHeroStage[];
+  "resolve",
+  "act",
+] as const satisfies readonly LandingStoryStage[];
 
 export type LandingAdvancedHeroStage =
   (typeof landingHeroAutoplayStageOrder)[number];
@@ -35,6 +38,9 @@ export const landingStory = {
     source: "Referral",
     workMode: "Remote",
     compensation: "$145k–$165k",
+    location: "New York, NY",
+    followUp: "Follow up September 5",
+    decisionContext: "Review the platform scope before the technical screen",
   },
   interview: {
     dateLabel: "September 2 · 10:00 AM",
@@ -45,6 +51,8 @@ export const landingStory = {
     totalCount: 3,
     savedContext: "Company context and examples saved",
     remainingAction: "Write two questions to ask",
+    resolvedStatus: "Preparation saved",
+    resolvedDetail: "Company context, examples, and questions retained",
   },
   action: {
     status: "Due today",

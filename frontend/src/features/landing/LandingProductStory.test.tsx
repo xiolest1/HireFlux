@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 describe("HeroApplicationStory", () => {
-  it("advances through the advanced milestones and settles at Prepare", () => {
+  it("advances through all internal scenes and settles at Act", () => {
     matchMedia(false);
     vi.useFakeTimers();
     render(<HeroApplicationStory />);
@@ -34,13 +34,14 @@ describe("HeroApplicationStory", () => {
     const story = document.querySelector("[data-hero-story]");
     const frame = story?.querySelector("[aria-live='off']");
     expect(story).toHaveAttribute("data-story-step", "capture");
-    expect(frame).toHaveClass("min-h-[28.5rem]");
+    expect(frame).toHaveClass("min-h-[29.75rem]");
 
-    for (const expected of ["progress", "prepare"]) {
+    for (const expected of ["context", "progress", "prepare", "resolve", "act"]) {
       act(() => vi.runOnlyPendingTimers());
-      expect(story).toHaveAttribute("data-story-step", expected);
+      expect(story).toHaveAttribute("data-story-scene", expected);
     }
 
+    expect(story).toHaveAttribute("data-story-step", "act");
     expect(screen.getByRole("button", { name: "Replay application story" })).toBeVisible();
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -65,7 +66,7 @@ describe("HeroApplicationStory", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show Prepare stage" }));
     expect(document.querySelector("[data-hero-story]")).toHaveAttribute("data-story-step", "prepare");
     expect(screen.getByRole("button", { name: "Show Prepare stage" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Replay application story" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Play application story" })).toBeVisible();
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -74,7 +75,7 @@ describe("HeroApplicationStory", () => {
     vi.useFakeTimers();
     render(<HeroApplicationStory />);
 
-    for (let index = 0; index < 2; index += 1) {
+    for (let index = 0; index < 5; index += 1) {
       act(() => vi.runOnlyPendingTimers());
     }
     fireEvent.click(screen.getByRole("button", { name: "Replay application story" }));
@@ -83,16 +84,16 @@ describe("HeroApplicationStory", () => {
     expect(screen.getByRole("button", { name: "Pause application story" })).toBeVisible();
   });
 
-  it("keeps Act available as the static Phase A presentation", () => {
+  it("renders Act in the persistent advanced composition", () => {
     matchMedia(false);
     render(<HeroApplicationStory />);
 
     fireEvent.click(screen.getByRole("button", { name: "Show Act stage" }));
 
     expect(document.querySelector("[data-hero-story]")).toHaveAttribute("data-story-step", "act");
-    expect(screen.getByText("The next move is visible")).toBeVisible();
-    expect(document.querySelector("[aria-live='off']")).toHaveClass("min-h-[14.5rem]");
-    expect(document.querySelector("[data-flux-story]")).not.toBeInTheDocument();
+    expect(document.querySelector("[data-flux-story]")).toHaveAttribute("data-visual-stage", "act");
+    expect(document.querySelector("[data-flux-action]")).toBeInTheDocument();
+    expect(document.querySelector("[aria-live='off']")).toHaveClass("min-h-[29.75rem]");
     expect(screen.getByRole("button", { name: "Replay application story" })).toBeVisible();
   });
 
@@ -102,7 +103,8 @@ describe("HeroApplicationStory", () => {
     render(<HeroApplicationStory />);
 
     expect(document.querySelector("[data-hero-story]")).toHaveAttribute("data-story-step", "act");
-    expect(screen.getByText("The next move is visible")).toBeVisible();
+    expect(document.querySelector("[data-flux-story]")).toHaveAttribute("data-visual-stage", "act");
+    expect(document.querySelector("[data-flux-action]")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /application story/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show Capture stage" }));

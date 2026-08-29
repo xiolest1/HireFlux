@@ -66,6 +66,25 @@ beforeEach(() => {
 });
 
 describe("FluxStoryVisual", () => {
+  it("builds one readable six-scene timeline", () => {
+    render(<FluxStoryVisual stage="capture" reducedMotion={false} />);
+
+    for (const label of [
+      "capture:start",
+      "context:start",
+      "progress:start",
+      "prepare:start",
+      "resolve:start",
+      "act:start",
+      "act:settled",
+    ]) {
+      expect(gsapMocks.timeline.addLabel).toHaveBeenCalledWith(
+        label,
+        ...(label === "capture:start" ? [0] : []),
+      );
+    }
+  });
+
   it("keeps one persistent opportunity while semantic stages change", () => {
     const { container, rerender } = render(
       <FluxStoryVisual stage="capture" reducedMotion={false} />,
@@ -74,10 +93,12 @@ describe("FluxStoryVisual", () => {
 
     rerender(<FluxStoryVisual stage="progress" reducedMotion={false} />);
     rerender(<FluxStoryVisual stage="prepare" reducedMotion={false} />);
+    rerender(<FluxStoryVisual stage="resolve" reducedMotion={false} />);
+    rerender(<FluxStoryVisual stage="act" reducedMotion={false} />);
 
     expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
       "data-visual-stage",
-      "prepare",
+      "act",
     );
     expect(container.querySelector("[data-persistent-opportunity]")).toBe(opportunity);
     expect(container.querySelector("[aria-live]")).not.toBeInTheDocument();
@@ -89,18 +110,18 @@ describe("FluxStoryVisual", () => {
     );
     const captureTween = gsapMocks.targetTweens[0];
 
-    rerender(<FluxStoryVisual stage="prepare" reducedMotion={false} />);
+    rerender(<FluxStoryVisual stage="act" reducedMotion={false} />);
 
     expect(captureTween.kill).toHaveBeenCalledOnce();
     expect(gsapMocks.timeline.tweenTo).toHaveBeenLastCalledWith(
-      "prepare:settled",
-      expect.objectContaining({ duration: 0.95 }),
+      "act:settled",
+      expect.objectContaining({ duration: 1.02 }),
     );
   });
 
   it("does not create GSAP choreography for reduced motion", () => {
     const { container } = render(
-      <FluxStoryVisual stage="prepare" reducedMotion />,
+      <FluxStoryVisual stage="act" reducedMotion />,
     );
 
     expect(gsapMocks.context).not.toHaveBeenCalled();
@@ -109,6 +130,7 @@ describe("FluxStoryVisual", () => {
       "data-reduced-motion",
       "true",
     );
+    expect(container.querySelector("[data-flux-action]")).toBeInTheDocument();
   });
 
   it("cleans Strict Mode contexts and leaves none active after unmount", () => {

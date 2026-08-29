@@ -1,5 +1,53 @@
 # HireFlux development log
 
+## 2026-08-29 — Phase C complete Flux Rail hero journey
+
+Extended the landing-only Flux Rail proof into the complete finite hero story:
+Capture → Context → Progress → Prepare → Resolve → Act. React remains the
+semantic authority, the four accessible user controls remain Capture, Progress,
+Prepare, and Act, and the existing scoped GSAP timeline now owns all six
+internal choreography endpoints. The story autoplays once to Act and stops;
+manual selection, pause, play, replay, reverse retargeting, Strict Mode cleanup,
+and reduced-motion static endpoints remain deterministic.
+
+Capture now begins as compact incoming referral data, forms the persistent
+Northstar Labs application shell, attaches metadata and Applied status, and
+activates the rail origin. The previous detached confirmation card was removed;
+organization resolves inside the application record. Context expands from that
+same record with location, compensation, follow-up timing, and decision context.
+Progress and the protected Progress → Prepare handoff retain the Phase B
+application-to-interview-to-preparation continuity.
+
+Resolve completes readiness without celebration, changes two-of-three to
+three-of-three, and preserves a preparation-history proof. Resolve → Act draws
+the final rejoin segment, compacts the completed interview/preparation evidence,
+and settles a credible Action Center instruction: send a thoughtful follow-up.
+The rail gained restrained diamond junctions, a branch/rejoin endpoint, and
+Capture-stage journey labels. Light surfaces received clearer separation and
+controlled depth, while 320-pixel layouts drop redundant status chrome before
+truncating the role or action meaning.
+
+Live browser QA at desktop, 390, and 320 pixels caught and corrected a Context
+shelf collision, an overlapping Act history layer, and narrow role compression.
+Stable Capture, Progress, Prepare, and Act baselines now cover dark desktop 1280
+and light mobile 390. Existing landing baselines changed only for the completed
+hero composition. ScrollTrigger, pinned scrolling, body-story choreography,
+path morphing, and additional animation systems remain out of scope.
+
+Final validation passed ESLint, TypeScript, 188 Vitest tests across 26 files,
+the production build, three hosting-header tests, and all 135 Playwright cases
+(112 passed and 23 intentional viewport skips). Browser coverage includes Axe,
+reduced motion, light/dark rendering, 320/390/768/1024/1280 layouts, overflow,
+route cleanup, keyboard controls, and proof that authenticated entry does not
+request the lazy landing/GSAP dependency graph. `git diff --check` passed with
+only Windows line-ending notices.
+
+Compared with Phase B, main JS remains effectively isolated at 282.87 kB raw /
+84.76 kB gzip. The lazy landing chunk grew from 105.75 kB / 36.77 kB gzip to
+112.93 kB / 38.04 kB gzip, and CSS grew from 105.38 kB / 17.31 kB gzip to
+114.44 kB / 18.03 kB gzip. No new dependency or separate animation chunk was
+introduced.
+
 ## 2026-08-29 — Phase B Flux Rail visual proof
 
 Implemented the approved Phase B landing-page proof as commit `e36350d`

@@ -7,14 +7,17 @@ afterEach(() => {
 });
 
 describe("useLandingStoryController", () => {
-  it("autoplays once and leaves no timer after Prepare", () => {
+  it("autoplays the complete story once and leaves no timer after Act", () => {
     vi.useFakeTimers();
     const { result } = renderHook(() => useLandingStoryController(false));
 
     expect(result.current.currentStage).toBe("capture");
-    for (const expected of ["progress", "prepare"]) {
+    expect(result.current.currentScene).toBe("capture");
+    act(() => vi.runOnlyPendingTimers());
+    expect(result.current).toMatchObject({ currentScene: "context", currentStage: "capture" });
+    for (const expected of ["progress", "prepare", "resolve", "act"]) {
       act(() => vi.runOnlyPendingTimers());
-      expect(result.current.currentStage).toBe(expected);
+      expect(result.current.currentScene).toBe(expected);
     }
     expect(result.current.playbackMode).toBe("complete");
     expect(vi.getTimerCount()).toBe(0);
@@ -31,11 +34,11 @@ describe("useLandingStoryController", () => {
     act(() => result.current.selectStage("progress"));
     expect(result.current.playbackMode).toBe("manual");
     act(() => vi.runOnlyPendingTimers());
-    expect(result.current.currentStage).toBe("progress");
+    expect(result.current.currentScene).toBe("progress");
 
     act(() => result.current.play());
     act(() => vi.runOnlyPendingTimers());
-    expect(result.current.currentStage).toBe("prepare");
+    expect(result.current.currentScene).toBe("prepare");
 
     act(() => result.current.replay());
     expect(result.current.currentStage).toBe("capture");
@@ -56,7 +59,7 @@ describe("useLandingStoryController", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("keeps Act manually selectable without extending autoplay", () => {
+  it("keeps Act manually selectable as the terminal advanced scene", () => {
     vi.useFakeTimers();
     const { result } = renderHook(() => useLandingStoryController(false));
 
@@ -65,6 +68,7 @@ describe("useLandingStoryController", () => {
 
     expect(result.current).toMatchObject({
       currentStage: "act",
+      currentScene: "act",
       playbackMode: "manual",
     });
     expect(vi.getTimerCount()).toBe(0);
@@ -72,6 +76,7 @@ describe("useLandingStoryController", () => {
     act(() => result.current.replay());
     expect(result.current).toMatchObject({
       currentStage: "capture",
+      currentScene: "capture",
       playbackMode: "autoplay",
     });
   });

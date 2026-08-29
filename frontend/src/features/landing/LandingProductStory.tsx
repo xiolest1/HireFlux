@@ -2,44 +2,23 @@ import {
   ArrowUpRight,
   BellRing,
   BriefcaseBusiness,
-  CalendarCheck2,
   Check,
   CirclePause,
   CirclePlay,
-  ClipboardCheck,
-  Clock3,
   MessageSquareText,
   Sparkles,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useReducedMotion } from "../../components/ui/motionHooks";
 import {
-  landingHeroAutoplayStageOrder,
   landingHeroMilestoneByStage,
   landingHeroMilestones,
   landingProofSteps,
   landingStory,
-  type LandingAdvancedHeroStage,
-  type LandingHeroMilestone,
-  type LandingHeroStage,
   type LandingProofStep,
 } from "./landingStoryModel";
 import { FluxStoryVisual } from "./FluxStoryVisual";
 import { useLandingStoryController } from "./useLandingStoryController";
-
-const heroIcons = {
-  capture: BriefcaseBusiness,
-  progress: CalendarCheck2,
-  prepare: ClipboardCheck,
-  act: BellRing,
-} satisfies Record<LandingHeroStage, typeof BriefcaseBusiness>;
-
-const heroStatusTones = {
-  capture: "bg-sky-100 text-sky-800",
-  progress: "bg-violet-100 text-violet-800",
-  prepare: "bg-warning-soft text-warning",
-  act: "bg-danger-soft text-danger",
-} satisfies Record<LandingHeroStage, string>;
 
 const proofIcons = {
   capture: BriefcaseBusiness,
@@ -47,52 +26,14 @@ const proofIcons = {
   act: BellRing,
 } satisfies Record<LandingProofStep["stage"], typeof BriefcaseBusiness>;
 
-function isAdvancedHeroStage(
-  stage: LandingHeroStage,
-): stage is LandingAdvancedHeroStage {
-  return landingHeroAutoplayStageOrder.some((candidate) => candidate === stage);
-}
-
-function StoryCard({ step, compact = false }: { step: LandingHeroMilestone; compact?: boolean }) {
-  const Icon = heroIcons[step.stage];
-  return (
-    <div className="min-w-0 rounded-2xl border border-line bg-surface-raised p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-5">
-      <div className="flex min-w-0 items-start gap-3">
-        <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white dark:bg-slate-700">
-          <Icon className="size-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-ink-muted">{step.eyebrow}</p>
-          <p className="mt-1 text-sm font-bold text-ink dark:text-white">{step.title}</p>
-          <p className="mt-1 text-xs leading-5 text-ink-muted dark:text-slate-400">{step.detail}</p>
-        </div>
-        <span className={`max-w-24 shrink-0 rounded-full px-2.5 py-1 text-center text-[0.68rem] font-bold leading-4 ${heroStatusTones[step.stage]}`}>{step.status}</span>
-      </div>
-      <div className={`${compact ? "mt-4" : "mt-6"} flex min-w-0 items-center gap-3 rounded-xl border border-accent/25 bg-accent-soft px-3 py-3`}>
-        <Clock3 aria-hidden="true" className="size-4 shrink-0 text-accent" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-ink-muted">{step.nextLabel}</p>
-          <p className="text-sm font-bold leading-5 text-ink">{step.nextAction}</p>
-        </div>
-        <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-accent-strong" />
-      </div>
-    </div>
-  );
-}
-
 export function HeroApplicationStory() {
   const reducedMotion = useReducedMotion();
   const controller = useLandingStoryController(reducedMotion);
   const activeStep = landingHeroMilestoneByStage[controller.currentStage];
-  const advancedStage = isAdvancedHeroStage(controller.currentStage)
-    ? controller.currentStage
-    : null;
   const activeIndex = landingHeroMilestones.findIndex(
     ({ stage }) => stage === controller.currentStage,
   );
-  const replayAvailable = controller.currentStage === "act" ||
-    controller.currentStage === "prepare" ||
-    controller.playbackMode === "complete";
+  const replayAvailable = controller.currentScene === "act" || controller.playbackMode === "complete";
   const storyControl = replayAvailable
     ? { label: "Replay application story", action: controller.replay, Icon: CirclePlay }
     : controller.playbackMode === "autoplay"
@@ -105,6 +46,7 @@ export function HeroApplicationStory() {
       aria-labelledby="hero-story-caption"
       data-hero-story
       data-story-step={activeStep.stage}
+      data-story-scene={controller.currentScene}
       data-landing-clip-check
     >
       <div aria-hidden="true" className="absolute -inset-4 -z-10 rotate-2 rounded-[2rem] bg-gradient-to-br from-cyan-200/60 to-violet-200/60 blur-sm dark:from-cyan-950/50 dark:to-violet-950/50 sm:-inset-5 sm:rounded-[2.25rem]" />
@@ -135,13 +77,13 @@ export function HeroApplicationStory() {
                 <li key={step.stage} className="min-w-0">
                   <button
                     type="button"
-                    className="group min-h-11 w-full rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus active:scale-[0.98]"
+                    className={`group min-h-11 w-full rounded-xl px-1.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus active:scale-[0.98] ${current ? "bg-surface-raised shadow-sm" : "hover:bg-surface-raised/60"}`}
                     aria-label={`Show ${step.label} stage`}
                     aria-pressed={current}
                     aria-current={current ? "step" : undefined}
                     onClick={() => controller.selectStage(step.stage)}
                   >
-                    <span className={`block h-1.5 rounded-full transition-colors duration-300 ${reached ? "bg-accent" : "bg-line group-hover:bg-line-strong"}`} />
+                    <span className={`block h-1 rounded-full transition-colors duration-300 ${current ? "bg-accent" : reached ? "bg-accent/55" : "bg-line-strong/60 group-hover:bg-line-strong"}`} />
                     <span className={`mt-2 block truncate text-[0.62rem] font-bold sm:text-[0.68rem] ${current ? "text-ink" : "text-ink-muted group-hover:text-ink"}`}>{step.label}</span>
                   </button>
                 </li>
@@ -149,19 +91,13 @@ export function HeroApplicationStory() {
             })}
           </ol>
           <div
-            className={`mt-4 ${advancedStage ? "min-h-[28.5rem] sm:min-h-[24.75rem]" : "min-h-[14.5rem] sm:min-h-[15rem]"}`}
+            className="mt-4 min-h-[29.75rem] sm:min-h-[25.75rem]"
             aria-live="off"
           >
-            {advancedStage ? (
-              <FluxStoryVisual
-                stage={advancedStage}
-                reducedMotion={reducedMotion}
-              />
-            ) : (
-              <div key={activeStep.stage} className="hf-story-swap">
-                <StoryCard step={activeStep} />
-              </div>
-            )}
+            <FluxStoryVisual
+              stage={controller.currentScene}
+              reducedMotion={reducedMotion}
+            />
             <div className="mt-3 flex items-center gap-2 px-1 text-xs font-medium text-ink-muted">
               <Sparkles aria-hidden="true" className="size-3.5 text-accent-strong" />
               One opportunity, connected from capture to action.
@@ -169,7 +105,7 @@ export function HeroApplicationStory() {
           </div>
         </div>
       </div>
-      <figcaption id="hero-story-caption" className="sr-only">Northstar Labs moves from captured opportunity to application progress, interview preparation, and a clear follow-up action.</figcaption>
+      <figcaption id="hero-story-caption" className="sr-only">Northstar Labs becomes an organized application, carries context into interview preparation, preserves completed work, and surfaces a clear follow-up action.</figcaption>
     </figure>
   );
 }

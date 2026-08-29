@@ -23,7 +23,14 @@ describe("landing story model", () => {
 
   it("preserves the four visible landing milestones", () => {
     expect(landingHeroStageOrder).toEqual(["capture", "progress", "prepare", "act"]);
-    expect(landingHeroAutoplayStageOrder).toEqual(["capture", "progress", "prepare"]);
+    expect(landingHeroAutoplayStageOrder).toEqual([
+      "capture",
+      "context",
+      "progress",
+      "prepare",
+      "resolve",
+      "act",
+    ]);
     expect(landingHeroMilestones.map(({ stage }) => stage)).toEqual(landingHeroStageOrder);
   });
 

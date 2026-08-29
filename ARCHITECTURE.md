@@ -52,7 +52,7 @@ The frontend is a React and TypeScript single-page application built by Vite.
 
 - React Router separates the public `/` route from protected workspace routes.
 - The public landing feature is lazy-loaded separately from authenticated
-  routes. Its optional Phase B GSAP timeline is confined to the landing chunk;
+  routes. Its scoped GSAP hero timeline is confined to the landing chunk;
   authenticated navigation does not request the landing or GSAP assets.
 - TanStack Query owns server-state fetching, caching, mutation invalidation,
   and loading/error states.

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   landingHeroAutoplayStageOrder,
-  landingHeroStageOrder,
+  type LandingAdvancedHeroStage,
   type LandingHeroStage,
 } from "./landingStoryModel";
 
@@ -13,26 +13,42 @@ export type LandingStoryPlaybackMode =
   | "reduced";
 
 interface LandingStoryControllerState {
-  currentStage: LandingHeroStage;
+  currentScene: LandingAdvancedHeroStage;
   playbackMode: LandingStoryPlaybackMode;
 }
 
-const STORY_DURATION_MS = 3_000;
+const STORY_DURATION_MS: Record<LandingAdvancedHeroStage, number> = {
+  capture: 2_800,
+  context: 2_200,
+  progress: 3_000,
+  prepare: 3_300,
+  resolve: 2_500,
+  act: 0,
+};
 const firstStage = landingHeroAutoplayStageOrder[0];
-const autoplayFinalStage = landingHeroAutoplayStageOrder.at(-1) ?? "prepare";
-const reducedMotionStage = landingHeroStageOrder.at(-1) ?? "act";
+const autoplayFinalStage = landingHeroAutoplayStageOrder.at(-1) ?? "act";
+const reducedMotionStage = "act" as const;
+
+const milestoneForScene: Record<LandingAdvancedHeroStage, LandingHeroStage> = {
+  capture: "capture",
+  context: "capture",
+  progress: "progress",
+  prepare: "prepare",
+  resolve: "prepare",
+  act: "act",
+};
 
 function advanceState(
   state: LandingStoryControllerState,
 ): LandingStoryControllerState {
   if (state.playbackMode !== "autoplay") return state;
   const currentIndex = landingHeroAutoplayStageOrder.findIndex(
-    (stage) => stage === state.currentStage,
+    (stage) => stage === state.currentScene,
   );
   const nextStage = landingHeroAutoplayStageOrder[currentIndex + 1];
   if (!nextStage) return { ...state, playbackMode: "complete" };
   return {
-    currentStage: nextStage,
+    currentScene: nextStage,
     playbackMode: nextStage === autoplayFinalStage ? "complete" : "autoplay",
   };
 }
@@ -40,8 +56,8 @@ function advanceState(
 export function useLandingStoryController(reducedMotion: boolean) {
   const [state, setState] = useState<LandingStoryControllerState>(() =>
     reducedMotion
-      ? { currentStage: reducedMotionStage, playbackMode: "reduced" }
-      : { currentStage: firstStage, playbackMode: "autoplay" },
+      ? { currentScene: reducedMotionStage, playbackMode: "reduced" }
+      : { currentScene: firstStage, playbackMode: "autoplay" },
   );
 
   useEffect(() => {
@@ -49,12 +65,12 @@ export function useLandingStoryController(reducedMotion: boolean) {
       if (reducedMotion) {
         if (
           current.playbackMode === "reduced" &&
-          current.currentStage === reducedMotionStage
+          current.currentScene === reducedMotionStage
         ) return current;
-        return { currentStage: reducedMotionStage, playbackMode: "reduced" };
+        return { currentScene: reducedMotionStage, playbackMode: "reduced" };
       }
       if (current.playbackMode === "reduced") {
-        return { currentStage: reducedMotionStage, playbackMode: "complete" };
+        return { currentScene: reducedMotionStage, playbackMode: "complete" };
       }
       return current;
     });
@@ -64,9 +80,9 @@ export function useLandingStoryController(reducedMotion: boolean) {
     if (state.playbackMode !== "autoplay") return;
     const timer = window.setTimeout(() => {
       setState((current) => advanceState(current));
-    }, STORY_DURATION_MS);
+    }, STORY_DURATION_MS[state.currentScene]);
     return () => window.clearTimeout(timer);
-  }, [state.currentStage, state.playbackMode]);
+  }, [state.currentScene, state.playbackMode]);
 
   const advance = useCallback(() => {
     setState((current) => advanceState(current));
@@ -74,7 +90,7 @@ export function useLandingStoryController(reducedMotion: boolean) {
 
   const selectStage = useCallback((stage: LandingHeroStage) => {
     setState((current) => ({
-      currentStage: stage,
+      currentScene: stage,
       playbackMode: current.playbackMode === "reduced" ? "reduced" : "manual",
     }));
   }, []);
@@ -91,10 +107,7 @@ export function useLandingStoryController(reducedMotion: boolean) {
     setState((current) => {
       if (
         current.playbackMode === "reduced" ||
-        !landingHeroAutoplayStageOrder.includes(
-          current.currentStage as (typeof landingHeroAutoplayStageOrder)[number],
-        ) ||
-        current.currentStage === autoplayFinalStage
+        current.currentScene === autoplayFinalStage
       ) return current;
       return { ...current, playbackMode: "autoplay" };
     });
@@ -102,13 +115,14 @@ export function useLandingStoryController(reducedMotion: boolean) {
 
   const replay = useCallback(() => {
     setState((current) => ({
-      currentStage: firstStage,
+      currentScene: firstStage,
       playbackMode: current.playbackMode === "reduced" ? "reduced" : "autoplay",
     }));
   }, []);
 
   return {
     ...state,
+    currentStage: milestoneForScene[state.currentScene],
     advance,
     selectStage,
     pause,
