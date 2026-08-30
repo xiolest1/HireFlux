@@ -1,292 +1,171 @@
-import {
-  BriefcaseBusiness,
-  CalendarCheck2,
-  Check,
-  CircleCheckBig,
-  Clock3,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, CalendarCheck2, Check, ChevronRight, CircleCheckBig, Clock3, ListChecks, MessageSquareText, Search } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useReducedMotion } from "../../components/ui/motionHooks";
-import { FluxRail } from "./FluxRail";
-import {
-  landingScrollChapters,
-  landingStory,
-  type LandingHeroStage,
-  type LandingScrollChapter,
-} from "./landingStoryModel";
+import { landingScrollChapters, landingStory, landingWorkspace, type LandingScrollChapter, type LandingWorkspaceStage } from "./landingStoryModel";
 import {
   scrollChapterForProgress,
   scrollStoryDesktopQuery,
   scrollStoryTimelineLabels,
+  scrollStoryTravelViewportHeights,
 } from "./scrollStoryConfig";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const endpointCopy: Record<LandingHeroStage, { eyebrow: string; title: string; detail: string }> = {
-  capture: {
-    eyebrow: "Opportunity organized",
-    title: "One reliable record",
-    detail: `${landingStory.opportunity.source} · ${landingStory.opportunity.workMode} · ${landingStory.opportunity.compensation}`,
-  },
-  progress: {
-    eyebrow: "Interview created",
-    title: landingStory.interview.title,
-    detail: landingStory.interview.dateLabel,
-  },
-  prepare: {
-    eyebrow: "Interview preparation",
-    title: `${landingStory.preparation.readyCount} of ${landingStory.preparation.totalCount} ready`,
-    detail: landingStory.preparation.remainingAction,
-  },
-  act: {
-    eyebrow: `Action Center · ${landingStory.action.status}`,
-    title: landingStory.action.nextAction,
-    detail: "Interview complete · Preparation retained",
-  },
-};
+const workspaceNavigation = [
+  { stage: "applications", label: "Applications", icon: BriefcaseBusiness },
+  { stage: "interviews", label: "Interviews", icon: CalendarCheck2 },
+  { stage: "preparation", label: "Preparation", icon: ListChecks },
+  { stage: "action-center", label: "Action Center", icon: Clock3 },
+] as const;
 
-function OpportunityIdentity() {
-  return (
-    <div className="flex min-w-0 items-center gap-3">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white dark:bg-slate-950">
-        <BriefcaseBusiness className="size-4.5" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-[0.58rem] font-bold uppercase tracking-[0.14em] text-ink-muted">{landingStory.opportunity.company}</p>
-        <p className="truncate text-xs font-black text-ink sm:text-sm dark:text-white">{landingStory.opportunity.role}</p>
-      </div>
-    </div>
-  );
+interface ScrollProductStoryProps { ctaLabel: string; ctaDisabled?: boolean; onCta: () => void; }
+
+function OpportunityRows({ compact = false }: { compact?: boolean }) {
+  return <div className={compact ? "divide-y divide-line" : "mt-3 divide-y divide-line"}>
+    {landingWorkspace.opportunities.map((opportunity, index) => <div key={opportunity.company} className={`flex min-w-0 items-center gap-3 ${compact ? "py-2" : "py-3"} ${!compact && index === 0 ? "-mx-2 rounded-xl bg-violet-soft/45 px-2" : ""}`} data-workspace-opportunity={opportunity.company} data-workspace-opportunity-primary={index === 0 || undefined}>
+      <span className={`flex shrink-0 items-center justify-center rounded-lg font-black ${compact ? "size-7 text-[0.55rem]" : "size-9 text-[0.62rem]"} ${index === 0 ? "bg-violet-soft text-violet" : index === 1 ? "bg-surface-muted text-ink-muted" : "bg-accent-soft text-accent-strong"}`}>{opportunity.company.slice(0, 2).toUpperCase()}</span>
+      <div className="min-w-0 flex-1"><p className={`${compact ? "text-[0.62rem]" : "text-xs"} truncate font-black text-ink dark:text-white`}>{opportunity.company}</p>{!compact ? <p className="truncate text-[0.62rem] font-semibold text-ink-muted">{opportunity.role}</p> : null}</div>
+      <div className="shrink-0 text-right"><p className={`${compact ? "text-[0.54rem]" : "text-[0.6rem]"} font-bold ${index === 0 ? "text-violet" : "text-ink-muted"}`}>{opportunity.status}</p>{!compact ? <p className="mt-0.5 text-[0.55rem] text-ink-muted">{opportunity.next}</p> : null}</div>
+    </div>)}
+  </div>;
 }
 
-function ScrollProductVisual() {
-  return (
-    <div
-      className="hf-scroll-product-visual relative h-[36rem] min-w-0 overflow-hidden rounded-[1.75rem] border border-line-strong bg-surface-muted p-4 shadow-panel dark:border-slate-700 dark:bg-slate-950/70"
-      data-scroll-product-visual
-      data-landing-clip-check
-      aria-hidden="true"
-    >
-      <div className="absolute left-5 top-5 flex items-center gap-2 rounded-full border border-line bg-surface-raised px-3 py-2 text-[0.62rem] font-bold text-ink-muted shadow-sm" data-scroll-incoming>
-        <Sparkles className="size-3.5 text-accent" />Referral opportunity
-      </div>
-
-      <section className="absolute inset-x-4 top-4 z-20 rounded-2xl border border-line-strong bg-surface-raised p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-scroll-application data-scroll-story-panel data-persistent-scroll-opportunity>
-        <div className="flex items-start justify-between gap-3">
-          <OpportunityIdentity />
-          <div className="relative shrink-0">
-            <span className="rounded-full bg-accent-soft px-2.5 py-1 text-[0.58rem] font-bold text-accent-strong" data-scroll-capture-status>Organized</span>
-            <span className="invisible absolute right-0 top-0 rounded-full bg-violet-soft px-2.5 py-1 text-[0.58rem] font-bold text-violet" data-scroll-progress-status>Interview</span>
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.62rem] font-semibold text-ink-muted" data-scroll-metadata>
-          <span>{landingStory.opportunity.source}</span><span>·</span><span>{landingStory.opportunity.workMode}</span><span>·</span><span>{landingStory.opportunity.compensation}</span>
-        </div>
-      </section>
-
-      <section className="invisible absolute inset-x-7 top-[6.7rem] z-10 grid grid-cols-3 gap-2 rounded-xl border border-line bg-surface-raised/95 p-2.5 shadow-sm dark:bg-slate-900/95" data-scroll-context data-scroll-story-panel>
-        <div className="rounded-lg bg-surface-muted px-2 py-2" data-scroll-context-item><p className="text-[0.48rem] font-bold uppercase tracking-[0.1em] text-ink-muted">Location</p><p className="truncate text-[0.62rem] font-bold text-ink">{landingStory.opportunity.location}</p></div>
-        <div className="rounded-lg bg-surface-muted px-2 py-2" data-scroll-context-item><p className="text-[0.48rem] font-bold uppercase tracking-[0.1em] text-ink-muted">Follow-up</p><p className="truncate text-[0.62rem] font-bold text-ink">September 5</p></div>
-        <div className="rounded-lg bg-surface-muted px-2 py-2" data-scroll-context-item><p className="text-[0.48rem] font-bold uppercase tracking-[0.1em] text-ink-muted">Decision</p><p className="truncate text-[0.62rem] font-bold text-ink">Platform scope</p></div>
-      </section>
-
-      <FluxRail />
-
-      <div className="absolute inset-x-6 top-[15.75rem] z-20">
-        <section className="invisible rounded-2xl border border-accent/35 bg-surface-raised p-3.5 shadow-sm dark:bg-slate-900" data-scroll-interview data-scroll-story-panel>
-          <div className="flex items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-strong"><CalendarCheck2 className="size-4" /></span>
-            <div className="min-w-0 flex-1"><p className="text-[0.55rem] font-bold uppercase tracking-[0.12em] text-accent-strong">Interview created</p><p className="truncate text-xs font-black text-ink dark:text-white">{landingStory.interview.title}</p></div>
-            <span className="max-w-24 text-right text-[0.55rem] font-bold leading-3 text-ink-muted">{landingStory.interview.dateLabel}</span>
-          </div>
-        </section>
-
-        <section className="invisible mt-3 rounded-2xl border border-violet/30 bg-surface-raised p-3.5 shadow-sm dark:bg-slate-900" data-scroll-preparation data-scroll-story-panel>
-          <div className="flex items-center justify-between gap-3">
-            <div><p className="text-[0.55rem] font-bold uppercase tracking-[0.12em] text-violet">Preparation workspace</p><p className="mt-1 text-xs font-black text-ink dark:text-white">Turn interview context into a plan</p></div>
-            <span className="rounded-full bg-warning-soft px-2.5 py-1 text-[0.58rem] font-bold text-warning" data-scroll-prep-count>{landingStory.preparation.readyCount} of {landingStory.preparation.totalCount} ready</span>
-          </div>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-line"><div className="h-full w-2/3 rounded-full bg-violet" data-scroll-prep-progress /></div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-[0.62rem] font-semibold text-ink-muted">
-            <div className="rounded-xl bg-surface-muted p-2.5" data-scroll-prep-item><Check className="mb-1 size-3.5 text-success" />Company context saved</div>
-            <div className="rounded-xl bg-surface-muted p-2.5" data-scroll-prep-item><Clock3 className="mb-1 size-3.5 text-violet" />{landingStory.preparation.remainingAction}</div>
-          </div>
-          <div className="invisible mt-3 flex items-center gap-2 rounded-xl bg-success-soft px-3 py-2 text-[0.6rem] font-bold text-success" data-scroll-resolve-proof><CircleCheckBig className="size-3.5" />Preparation saved to interview history</div>
-        </section>
-
-        <section className="invisible absolute inset-x-0 top-8 rounded-2xl border border-accent/35 bg-surface-raised p-4 shadow-panel dark:bg-slate-900" data-scroll-action data-scroll-story-panel>
-          <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-strong"><Clock3 className="size-4.5" /></span>
-            <div className="min-w-0 flex-1"><p className="text-[0.55rem] font-bold uppercase tracking-[0.13em] text-accent-strong">Action Center · Due today</p><p className="mt-1 text-base font-black text-ink dark:text-white">{landingStory.action.nextAction}</p></div>
-          </div>
-          <div className="mt-3 rounded-xl bg-success-soft px-3 py-2 text-[0.62rem] font-bold text-success" data-scroll-action-proof>Interview complete · Preparation retained</div>
-        </section>
-      </div>
-
-      <div className="absolute bottom-4 left-5 flex items-center gap-2 text-[0.58rem] font-semibold text-ink-muted" data-scroll-settle-anchor><Sparkles className="size-3.5 text-accent" />Each next step keeps the context behind it.</div>
-    </div>
-  );
+function WorkspaceNavigation() {
+  return <nav className="border-r border-line bg-surface px-2 py-3 dark:bg-slate-950/45" aria-label="Product story navigation">
+    <p className="px-2 text-[0.52rem] font-black uppercase tracking-[0.14em] text-ink-muted">Workspace</p>
+    <ul className="mt-3 space-y-1">{workspaceNavigation.map(({ stage, label, icon: Icon }) => <li key={stage}><div className="relative flex items-center gap-2 rounded-lg px-2 py-2 text-[0.6rem] font-bold text-ink-muted" data-workspace-nav={stage}><span className="absolute inset-0 rounded-lg bg-accent-soft opacity-0" data-workspace-nav-active={stage} /><Icon className="relative size-3.5 shrink-0" /><span className="relative truncate">{label}</span></div></li>)}</ul>
+  </nav>;
 }
 
-function StaticChapterVisual({ chapter }: { chapter: LandingScrollChapter }) {
-  const endpoint = endpointCopy[chapter.stage];
-  return (
-    <div className="hf-scroll-static-visual relative mt-5 h-64 overflow-hidden rounded-2xl border border-line-strong bg-surface-muted p-3 shadow-sm dark:border-slate-700 dark:bg-slate-950/70" data-scroll-static-stage={chapter.stage} aria-hidden="true">
-      <div className="rounded-xl border border-line bg-surface-raised p-3 dark:bg-slate-900" data-scroll-static-identity><OpportunityIdentity /></div>
-      <FluxRail />
-      <div className="absolute inset-x-4 bottom-4 rounded-xl border border-line bg-surface-raised p-3 shadow-sm dark:bg-slate-900" data-scroll-static-endpoint>
-        <p className="text-[0.52rem] font-bold uppercase tracking-[0.12em] text-accent-strong">{endpoint.eyebrow}</p>
-        <p className="mt-1 text-sm font-black text-ink dark:text-white">{endpoint.title}</p>
-        <p className="mt-1 truncate text-[0.62rem] font-semibold text-ink-muted">{endpoint.detail}</p>
-      </div>
-    </div>
-  );
+function InterviewSurface({ compact = false }: { compact?: boolean }) {
+  return <div className={compact ? "flex min-w-0 items-center gap-3" : "grid h-full min-w-0 grid-rows-[auto_1fr]"}>
+    <div className={`flex min-w-0 items-center gap-3 ${compact ? "" : "border-b border-line px-5 py-4"}`}><span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-soft text-violet"><CalendarCheck2 className="size-4" /></span><div className="min-w-0 flex-1"><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-violet">Northstar Labs · Interview</p><p className="truncate text-sm font-black text-ink dark:text-white">Technical screen</p></div><p className="shrink-0 text-right text-[0.58rem] font-bold leading-4 text-ink-muted">Sep 2<br />10:00 AM</p></div>
+    {!compact ? <div className="grid min-h-0 grid-cols-[1.1fr_0.9fr] gap-5 p-5"><div className="min-w-0"><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-ink-muted">Conversation context</p><h4 className="mt-2 text-lg font-black text-ink dark:text-white">Platform architecture and collaboration</h4><p className="mt-2 text-xs leading-5 text-ink-muted">The referral source, role scope, and saved platform notes followed Northstar into this interview.</p><div className="mt-5 border-t border-line pt-4"><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-ink-muted">From Applications</p><p className="mt-2 text-xs font-bold text-ink">Referral · Remote · $145k–$165k</p></div></div><div className="rounded-xl bg-surface-muted p-4"><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-accent-strong">Next preparation action</p><p className="mt-2 text-sm font-black text-ink dark:text-white">{landingStory.preparation.remainingAction}</p><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-line"><div className="h-full w-2/3 rounded-full bg-violet" /></div><p className="mt-2 text-[0.6rem] font-bold text-ink-muted">2 of 3 ready</p></div></div> : null}
+  </div>;
+}
+
+function PreparationSurface() {
+  return <div className="grid h-full min-w-0 grid-rows-[auto_1fr]"><div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4"><div><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-violet">Preparation workspace</p><p className="mt-1 text-sm font-black text-ink dark:text-white">Technical screen · Northstar Labs</p></div><span className="rounded-full bg-warning-soft px-2.5 py-1 text-[0.58rem] font-bold text-warning">2 of 3 ready</span></div><div className="grid min-h-0 grid-cols-[0.9fr_1.1fr] gap-5 p-5"><div className="min-w-0 border-r border-line pr-5"><p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-ink-muted">Inherited context</p><p className="mt-3 text-xs font-black text-ink dark:text-white">Platform scope</p><p className="mt-1 text-[0.65rem] leading-5 text-ink-muted">Role notes and the technical-screen focus remain attached.</p><div className="mt-5 flex items-center gap-2 text-[0.62rem] font-bold text-success"><Check className="size-3.5" />Company context saved</div><div className="mt-3 flex items-center gap-2 text-[0.62rem] font-bold text-success"><Check className="size-3.5" />Evidence story selected</div></div><div className="min-w-0"><div className="flex items-center gap-2"><MessageSquareText className="size-4 text-accent-strong" /><p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-accent-strong">Candidate questions</p></div><p className="mt-3 text-sm font-black text-ink dark:text-white">How does the platform team measure adoption?</p><div className="mt-4 border-t border-line pt-4"><p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-ink-muted">Readiness checklist</p><div className="mt-3 space-y-2 text-[0.65rem] font-semibold text-ink-muted"><p className="flex items-center gap-2"><CircleCheckBig className="size-3.5 text-success" />Research Northstar</p><p className="flex items-center gap-2"><CircleCheckBig className="size-3.5 text-success" />Choose collaboration story</p><p className="flex items-center gap-2"><Clock3 className="size-3.5 text-warning" />Write one more question</p></div></div></div></div></div>;
+}
+
+function ActionCenterSurface({ compact = false }: { compact?: boolean }) {
+  return <div className={compact ? "divide-y divide-line" : "h-full min-w-0"}>{!compact ? <div className="border-b border-line px-5 py-3"><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-accent-strong">Action Center</p><p className="mt-1 text-sm font-black text-ink dark:text-white">What deserves attention right now</p></div> : null}<div className={compact ? "divide-y divide-line" : "divide-y divide-line px-5"}>{landingWorkspace.priorities.map((priority, index) => <div key={priority.company} className={`flex min-w-0 items-start gap-3 ${compact ? "py-2.5" : "py-3"}`} data-workspace-priority={priority.priority}><span className={`mt-0.5 size-2.5 shrink-0 rounded-full ${index === 0 ? "bg-accent" : index === 1 ? "bg-line-strong" : "bg-violet"}`} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className={`${compact ? "text-[0.65rem]" : "text-xs"} font-black text-ink dark:text-white`}>{priority.company}</p><span className={`${compact ? "text-[0.52rem]" : "text-[0.58rem]"} shrink-0 font-black uppercase tracking-[0.08em] ${index === 0 ? "text-accent-strong" : "text-ink-muted"}`}>{priority.timing}</span></div><p className={`${compact ? "mt-0.5 text-[0.58rem]" : "mt-1 text-sm"} font-bold text-ink`}>{priority.action}</p>{!compact ? <p className="mt-1 flex items-center gap-1 text-[0.58rem] font-semibold text-ink-muted"><ChevronRight className="size-3" />{priority.provenance}</p> : null}</div></div>)}</div></div>;
+}
+
+function ConnectedWorkspaceVisual() {
+  return <div className="hf-connected-workspace relative h-[32rem] min-w-0 overflow-hidden rounded-[1.6rem] border border-line-strong bg-surface-muted shadow-panel dark:border-slate-700 dark:bg-slate-950/70" data-connected-workspace data-workspace-shell data-landing-clip-check aria-hidden="true">
+    <header className="flex h-12 items-center justify-between border-b border-line bg-surface-raised px-4 dark:bg-slate-900"><div className="flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-lg bg-accent text-[0.55rem] font-black text-white">HF</span><span className="text-xs font-black text-ink dark:text-white">HireFlux</span></div><div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[0.58rem] font-semibold text-ink-muted"><Search className="size-3" />Search your workspace</div></header>
+    <div className="grid h-[calc(100%-3rem)] grid-cols-[7.5rem_minmax(0,1fr)]"><WorkspaceNavigation /><div className="relative min-w-0 overflow-hidden p-4">
+      <div className="absolute inset-x-4 top-3 flex items-end justify-between" data-workspace-heading><div><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-ink-muted">Your search</p><p className="mt-0.5 text-base font-black text-ink dark:text-white">Connected workspace</p></div><span className="rounded-full border border-line bg-surface-raised px-2.5 py-1 text-[0.56rem] font-bold text-ink-muted">3 active</span></div>
+      <section className="absolute inset-x-4 top-[4.1rem] h-[17.5rem] overflow-hidden rounded-2xl border border-line-strong bg-surface-raised px-5 py-4 dark:border-slate-700 dark:bg-slate-900" data-workspace-applications data-workspace-panel><div className="flex items-center justify-between gap-4"><div><p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-accent-strong">Applications workspace</p><p className="mt-1 text-sm font-black text-ink dark:text-white">Three opportunities moving at different speeds</p></div><span className="text-[0.58rem] font-bold text-ink-muted">Updated today</span></div><OpportunityRows /></section>
+      <aside className="invisible absolute bottom-4 left-4 top-[4.1rem] z-20 w-[9.5rem] overflow-hidden rounded-2xl border border-line bg-surface-raised p-3 dark:bg-slate-900" data-workspace-recent data-workspace-panel><p className="text-[0.52rem] font-black uppercase tracking-[0.12em] text-ink-muted">Recent opportunities</p><OpportunityRows compact /></aside>
+      <section className="invisible absolute bottom-4 left-[11rem] right-4 top-[4.1rem] z-30 overflow-hidden rounded-2xl border border-violet/30 bg-surface-raised dark:bg-slate-900" data-workspace-interviews data-workspace-panel><InterviewSurface /></section>
+      <section className="invisible absolute inset-x-4 top-[4.1rem] z-30 overflow-hidden rounded-2xl border border-violet/30 bg-surface-raised dark:bg-slate-900" data-workspace-interview-context data-workspace-panel><div className="px-4 py-3"><InterviewSurface compact /></div></section>
+      <section className="invisible absolute inset-x-4 bottom-4 top-[8.6rem] z-40 overflow-hidden rounded-2xl border border-accent/30 bg-surface-raised dark:bg-slate-900" data-workspace-preparation data-workspace-panel><PreparationSurface /></section>
+      <section className="invisible absolute inset-x-4 top-[4.1rem] z-30 flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-raised px-4 py-3 dark:bg-slate-900" data-workspace-history data-workspace-panel><div className="flex min-w-0 items-center gap-2"><CircleCheckBig className="size-4 shrink-0 text-success" /><div className="min-w-0"><p className="truncate text-[0.62rem] font-black text-ink dark:text-white">Northstar preparation retained</p><p className="truncate text-[0.55rem] font-semibold text-ink-muted">Technical screen · 3 readiness items</p></div></div><span className="shrink-0 text-[0.54rem] font-bold text-success">History saved</span></section>
+      <section className="invisible absolute inset-x-4 bottom-4 top-[8.6rem] z-40 overflow-hidden rounded-2xl border border-accent/35 bg-surface-raised dark:bg-slate-900" data-workspace-actions data-workspace-panel><ActionCenterSurface /></section>
+    </div></div>
+  </div>;
+}
+
+function StaticWorkspaceVisual({ stage }: { stage: LandingWorkspaceStage }) {
+  return <div className="hf-static-workspace mt-5 min-w-0 overflow-hidden rounded-2xl border border-line-strong bg-surface-muted p-3 dark:border-slate-700 dark:bg-slate-950/70" data-scroll-static-stage={stage} aria-hidden="true"><div className="flex items-center justify-between border-b border-line pb-2"><span className="text-[0.58rem] font-black text-ink dark:text-white">HireFlux</span><span className="text-[0.52rem] font-bold text-accent-strong">{workspaceNavigation.find((item) => item.stage === stage)?.label}</span></div><div className="mt-2 rounded-xl bg-surface-raised px-3 dark:bg-slate-900">{stage === "applications" ? <OpportunityRows compact /> : null}{stage === "interviews" ? <div className="py-3"><InterviewSurface compact /><p className="mt-3 border-t border-line pt-2 text-[0.58rem] font-semibold text-ink-muted">Application context retained</p></div> : null}{stage === "preparation" ? <div className="py-3"><p className="text-[0.6rem] font-black text-ink dark:text-white">Technical screen · Northstar Labs</p><div className="mt-3 h-1.5 rounded-full bg-line"><div className="h-full w-2/3 rounded-full bg-violet" /></div><p className="mt-2 text-[0.58rem] font-bold text-ink-muted">Company context and evidence ready · One question remaining</p></div> : null}{stage === "action-center" ? <ActionCenterSurface compact /> : null}</div></div>;
 }
 
 function ChapterCopy({ chapter, visual = false }: { chapter: LandingScrollChapter; visual?: boolean }) {
-  return (
-    <div aria-hidden={visual || undefined}>
-      <p className="text-xs font-black uppercase tracking-[0.14em] text-accent-strong">{chapter.number} · {chapter.label}</p>
-      <p className="mt-4 text-sm font-bold leading-6 text-ink-muted dark:text-slate-300">{chapter.question}</p>
-      <h3 className="mt-3 text-3xl font-black tracking-tight text-ink dark:text-white">{chapter.title}</h3>
-      <p className="mt-4 max-w-xl leading-7 text-ink-muted dark:text-slate-300">{chapter.description}</p>
-    </div>
-  );
+  return <div aria-hidden={visual || undefined}><p className="text-xs font-black uppercase tracking-[0.14em] text-accent-strong">{chapter.number} · {chapter.label}</p><p className="mt-4 text-sm font-bold leading-6 text-ink-muted dark:text-slate-300">{chapter.question}</p><h3 className="mt-3 text-3xl font-black tracking-tight text-ink dark:text-white">{chapter.title}</h3><p className="mt-4 max-w-xl leading-7 text-ink-muted dark:text-slate-300">{chapter.description}</p></div>;
 }
 
-export function ScrollProductStory() {
+export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: ScrollProductStoryProps) {
   const reducedMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const activeChapterRef = useRef<LandingHeroStage>("capture");
-  const [activeChapter, setActiveChapter] = useState<LandingHeroStage>("capture");
+  const activeChapterRef = useRef<LandingWorkspaceStage>("applications");
+  const [activeChapter, setActiveChapter] = useState<LandingWorkspaceStage>("applications");
 
   useLayoutEffect(() => {
     if (reducedMotion || !rootRef.current || !stageRef.current) return;
-
     const root = rootRef.current;
     const stage = stageRef.current;
     const media = gsap.matchMedia();
     const context = gsap.context(() => {
       media.add(scrollStoryDesktopQuery, () => {
-        const selectChapter = (progress: number) => {
-          const nextChapter = scrollChapterForProgress(progress);
-          if (activeChapterRef.current === nextChapter) return;
-          activeChapterRef.current = nextChapter;
-          setActiveChapter(nextChapter);
-        };
-
-        const timeline = gsap.timeline({
-          defaults: { ease: "power2.out" },
-          scrollTrigger: {
-            trigger: stage,
-            pin: stage,
-            pinSpacing: true,
-            start: "top top",
-            end: () => `+=${Math.round(window.innerHeight * 3.4)}`,
-            scrub: 0.35,
-            anticipatePin: 1,
-            invalidateOnRefresh: true,
-            onUpdate: (self) => selectChapter(self.progress),
-          },
-        });
-
+        const selectChapter = (progress: number) => { const next = scrollChapterForProgress(progress); if (activeChapterRef.current !== next) { activeChapterRef.current = next; setActiveChapter(next); } };
+        const inwardShift = () => Math.min(32, Math.max(20, window.innerWidth * 0.025));
+        const timeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * scrollStoryTravelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onUpdate: (self) => selectChapter(self.progress) } });
         timeline
-          .addLabel("capture", scrollStoryTimelineLabels.capture)
+          .addLabel("applications", scrollStoryTimelineLabels.applications)
           .set("[data-scroll-copy-stage]", { autoAlpha: 0 }, 0)
-          .set('[data-scroll-copy-stage="capture"]', { autoAlpha: 1 }, 0)
-          .fromTo("[data-scroll-incoming]", { autoAlpha: 0, x: -10 }, { autoAlpha: 1, x: 0, duration: 0.08 }, 0)
-          .fromTo("[data-scroll-application]", { y: 8 }, { y: 0, duration: 0.16 }, 0.02)
-          .to("[data-scroll-incoming]", { autoAlpha: 0, y: -5, duration: 0.04 }, 0.07)
-          .addLabel("context", scrollStoryTimelineLabels.context)
-          .to('[data-scroll-copy-stage="capture"]', { autoAlpha: 0, y: -6, duration: 0.04 }, 0.18)
-          .fromTo('[data-scroll-copy-stage="progress"]', { autoAlpha: 0, y: 7 }, { autoAlpha: 1, y: 0, duration: 0.05 }, 0.2)
-          .to("[data-scroll-context]", { autoAlpha: 1, y: 0, duration: 0.08 }, 0.2)
-          .to("[data-flux-rail-context]", { strokeDashoffset: 0, duration: 0.08 }, 0.2)
-          .to("[data-flux-context-node]", { autoAlpha: 1, duration: 0.05 }, 0.24)
-          .to("[data-flux-marker-desktop]", { x: 142, duration: 0.1, ease: "power2.inOut" }, 0.2)
-          .addLabel("progress", scrollStoryTimelineLabels.progress)
-          .to("[data-scroll-context]", { autoAlpha: 0.5, y: -4, duration: 0.06 }, 0.32)
-          .to("[data-scroll-capture-status]", { autoAlpha: 0, duration: 0.04 }, 0.32)
-          .to("[data-scroll-progress-status]", { autoAlpha: 1, duration: 0.05 }, 0.33)
-          .to("[data-flux-rail-progress]", { strokeDashoffset: 0, duration: 0.08 }, 0.32)
-          .to("[data-flux-marker-desktop]", { x: 310, y: 28, duration: 0.08, ease: "power2.inOut" }, 0.32)
-          .to("[data-scroll-interview]", { autoAlpha: 1, y: 0, duration: 0.08 }, 0.33)
-          .addLabel("prepare", scrollStoryTimelineLabels.prepare)
-          .to('[data-scroll-copy-stage="progress"]', { autoAlpha: 0, y: -6, duration: 0.04 }, 0.38)
-          .fromTo('[data-scroll-copy-stage="prepare"]', { autoAlpha: 0, y: 7 }, { autoAlpha: 1, y: 0, duration: 0.05 }, 0.4)
-          .to("[data-scroll-context]", { autoAlpha: 0, duration: 0.06 }, 0.4)
-          .to("[data-scroll-interview]", { y: -10, duration: 0.1 }, 0.41)
-          .to("[data-flux-rail-prepare]", { strokeDashoffset: 0, duration: 0.16, ease: "power2.inOut" }, 0.42)
-          .to("[data-flux-marker-desktop]", { x: 384, y: 54, duration: 0.16, ease: "power2.inOut" }, 0.42)
-          .fromTo("[data-scroll-preparation]", { autoAlpha: 0, y: 10, clipPath: "inset(0 0 100% 0 round 1rem)" }, { autoAlpha: 1, y: 0, clipPath: "inset(0 0 0% 0 round 1rem)", duration: 0.18 }, 0.45)
-          .addLabel("resolve", scrollStoryTimelineLabels.resolve)
-          .to("[data-scroll-prep-progress]", { width: "100%", duration: 0.1 }, 0.68)
-          .to("[data-scroll-prep-count]", { autoAlpha: 0, scale: 0.96, duration: 0.05 }, 0.68)
-          .to("[data-scroll-resolve-proof]", { autoAlpha: 1, y: 0, duration: 0.08 }, 0.7)
-          .to("[data-scroll-interview]", { autoAlpha: 0.45, y: -13, duration: 0.08 }, 0.71)
-          .to("[data-flux-resolve-node]", { autoAlpha: 1, duration: 0.06 }, 0.72)
-          .to("[data-flux-marker-desktop]", { x: 432, y: 54, duration: 0.1, ease: "power2.inOut" }, 0.72)
-          .addLabel("act", scrollStoryTimelineLabels.act)
-          .to('[data-scroll-copy-stage="prepare"]', { autoAlpha: 0, y: -6, duration: 0.04 }, 0.83)
-          .fromTo('[data-scroll-copy-stage="act"]', { autoAlpha: 0, y: 7 }, { autoAlpha: 1, y: 0, duration: 0.05 }, 0.85)
-          .to("[data-scroll-interview], [data-scroll-preparation]", { autoAlpha: 0, y: -12, duration: 0.07 }, 0.85)
-          .to("[data-flux-rail-act]", { strokeDashoffset: 0, duration: 0.09, ease: "power2.inOut" }, 0.85)
-          .to("[data-flux-act-node]", { autoAlpha: 1, duration: 0.05 }, 0.88)
-          .to("[data-flux-marker-desktop]", { x: 454, y: 29, duration: 0.09, ease: "power2.inOut" }, 0.85)
-          .fromTo("[data-scroll-action]", { autoAlpha: 0, y: 12, scale: 0.985 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.09 }, 0.86)
-          .addLabel("settled", scrollStoryTimelineLabels.settled)
-          .to("[data-scroll-settle-anchor]", { opacity: 1, duration: 0.06 }, scrollStoryTimelineLabels.settled);
+          .set("[data-workspace-panel]", { autoAlpha: 0 }, 0)
+          .set("[data-workspace-nav-active]", { opacity: 0 }, 0)
+          .set('[data-scroll-copy-stage="applications"]', { autoAlpha: 1 }, 0)
+          .set('[data-workspace-nav-active="applications"]', { opacity: 1 }, 0)
+          .set("[data-workspace-applications]", { autoAlpha: 1, zIndex: 10 }, 0)
+          .set("[data-workspace-shell]", { x: 0, y: 6, scale: 0.99, transformOrigin: "center center" }, 0)
+          .fromTo("[data-workspace-applications]", { y: 8 }, { y: 0, duration: 0.12 }, 0)
 
-        return () => {
-          timeline.scrollTrigger?.kill();
-          timeline.kill();
-        };
+          .addLabel("interviews", scrollStoryTimelineLabels.interviews)
+          .to('[data-scroll-copy-stage="applications"]', { autoAlpha: 0, y: -7, duration: 0.05 }, 0.2)
+          .fromTo('[data-scroll-copy-stage="interviews"]', { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.06 }, 0.23)
+          .to('[data-workspace-nav-active="applications"]', { opacity: 0, duration: 0.04 }, 0.2)
+          .to('[data-workspace-nav-active="interviews"]', { opacity: 1, duration: 0.05 }, 0.23)
+          .to("[data-workspace-shell]", { x: () => -inwardShift(), y: 0, scale: 1, duration: 0.14, transformOrigin: "center center" }, 0.2)
+          .to("[data-workspace-applications]", { x: -36, scale: 0.94, autoAlpha: 0, duration: 0.06, transformOrigin: "left center" }, 0.18)
+          .set("[data-workspace-recent]", { zIndex: 20 }, 0.235)
+          .set("[data-workspace-interviews]", { zIndex: 30 }, 0.24)
+          .fromTo("[data-workspace-recent]", { x: -18, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.11 }, 0.235)
+          .fromTo("[data-workspace-interviews]", { x: 34, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.14, ease: "power3.out" }, 0.24)
+
+          .addLabel("preparation", scrollStoryTimelineLabels.preparation)
+          .to('[data-scroll-copy-stage="interviews"]', { autoAlpha: 0, y: -7, duration: 0.05 }, 0.41)
+          .fromTo('[data-scroll-copy-stage="preparation"]', { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.06 }, 0.445)
+          .to('[data-workspace-nav-active="interviews"]', { opacity: 0, duration: 0.04 }, 0.43)
+          .to('[data-workspace-nav-active="preparation"]', { opacity: 1, duration: 0.05 }, 0.455)
+          .to("[data-workspace-shell]", { x: () => -(inwardShift() + 8), y: -4, scale: 1.035, duration: 0.14, transformOrigin: "center center" }, 0.44)
+          .to("[data-workspace-recent]", { x: -14, autoAlpha: 0, duration: 0.045 }, 0.405)
+          .to("[data-workspace-interviews]", { y: -16, scale: 0.95, autoAlpha: 0, duration: 0.045, transformOrigin: "top center" }, 0.42)
+          .set("[data-workspace-interview-context]", { zIndex: 30 }, 0.465)
+          .set("[data-workspace-preparation]", { zIndex: 40 }, 0.48)
+          .fromTo("[data-workspace-interview-context]", { y: 10, scaleX: 0.94, autoAlpha: 0 }, { y: 0, scaleX: 1, autoAlpha: 1, duration: 0.09 }, 0.465)
+          .fromTo("[data-workspace-preparation]", { y: 20, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.16, ease: "power3.out" }, 0.48)
+
+          .addLabel("action-center", scrollStoryTimelineLabels.actionCenter)
+          .to('[data-scroll-copy-stage="preparation"]', { autoAlpha: 0, y: -7, duration: 0.05 }, 0.71)
+          .fromTo('[data-scroll-copy-stage="action-center"]', { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.06 }, 0.745)
+          .to('[data-workspace-nav-active="preparation"]', { opacity: 0, duration: 0.04 }, 0.73)
+          .to('[data-workspace-nav-active="action-center"]', { opacity: 1, duration: 0.05 }, 0.755)
+          .to("[data-workspace-shell]", { x: () => -inwardShift() / 2, y: 2, scale: 0.995, duration: 0.14, transformOrigin: "center center" }, 0.74)
+          .to("[data-workspace-interview-context]", { y: -12, autoAlpha: 0, duration: 0.045 }, 0.71)
+          .to("[data-workspace-preparation]", { y: -18, scale: 0.95, autoAlpha: 0, duration: 0.045, transformOrigin: "top center" }, 0.72)
+          .set("[data-workspace-history]", { zIndex: 30 }, 0.77)
+          .set("[data-workspace-actions]", { zIndex: 40 }, 0.78)
+          .fromTo("[data-workspace-history]", { y: 10, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.09 }, 0.77)
+          .fromTo("[data-workspace-actions]", { y: 20, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.14, ease: "power3.out" }, 0.78)
+          .fromTo("[data-workspace-story-cta]", { y: 10, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.1 }, 0.82)
+          .addLabel("settled", scrollStoryTimelineLabels.settled);
+        return () => { timeline.scrollTrigger?.kill(); timeline.kill(); };
       });
     }, root);
-
-    return () => {
-      media.revert();
-      context.revert();
-    };
+    return () => { media.revert(); context.revert(); };
   }, [reducedMotion]);
 
-  return (
-    <div ref={rootRef} className="hf-scroll-story mt-14 sm:mt-16" data-scroll-story data-active-chapter={activeChapter} data-reduced-motion={reducedMotion}>
-      <div className="hf-scroll-story-desktop" data-testid="desktop-product-story">
-        <div ref={stageRef} className="hf-scroll-story-stage grid h-[min(44rem,100vh)] min-h-[40rem] grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] items-center gap-10" data-scroll-story-pin>
-          <div className="relative min-h-[23rem] min-w-0">
-            <ol className="sr-only">
-              {landingScrollChapters.map((chapter) => <li key={chapter.stage}><ChapterCopy chapter={chapter} /></li>)}
-            </ol>
-            <div className="absolute inset-x-0 top-0" aria-hidden="true">
-              {landingScrollChapters.map((chapter) => (
-                <div key={chapter.stage} className="invisible absolute inset-x-0 top-0" data-scroll-copy-stage={chapter.stage}>
-                  <ChapterCopy chapter={chapter} visual />
-                </div>
-              ))}
-            </div>
-            <ol className="absolute inset-x-0 bottom-0 grid grid-cols-4 gap-2" aria-hidden="true">
-              {landingScrollChapters.map((chapter) => <li key={chapter.stage} className={`h-1 rounded-full transition-colors ${chapter.stage === activeChapter ? "bg-accent" : "bg-line-strong/60"}`} />)}
-            </ol>
+  return <div ref={rootRef} className="hf-scroll-story mt-12 sm:mt-14" data-scroll-story data-active-chapter={activeChapter} data-reduced-motion={reducedMotion}>
+    <div className="hf-scroll-story-desktop" data-testid="desktop-product-story">
+      <div ref={stageRef} className="hf-scroll-story-stage relative grid h-[min(43rem,100vh)] min-h-[40rem] grid-cols-[minmax(0,0.52fr)_minmax(0,1.18fr)] items-center gap-8" data-scroll-story-pin>
+        <div className="relative min-h-[31rem] min-w-0">
+          <ol className="sr-only">{landingScrollChapters.map((chapter) => <li key={chapter.stage}><ChapterCopy chapter={chapter} /></li>)}</ol>
+          <div className="absolute inset-x-0 top-8" data-scroll-narrative>
+            <div className="grid" data-scroll-copy-stack>{landingScrollChapters.map((chapter) => <div key={chapter.stage} className="invisible col-start-1 row-start-1" data-scroll-copy-stage={chapter.stage}><ChapterCopy chapter={chapter} visual /></div>)}</div>
+            <ol className="mt-7 grid grid-cols-4 gap-2" data-scroll-progress aria-hidden="true">{landingScrollChapters.map((chapter) => <li key={chapter.stage} className={`h-1 rounded-full transition-colors ${chapter.stage === activeChapter ? "bg-accent" : "bg-line-strong/60"}`} />)}</ol>
+            <div className="invisible mt-5" data-workspace-story-cta><p className="mb-3 text-xs font-semibold leading-5 text-ink-muted">Your next move is already in view.</p><button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60" disabled={ctaDisabled} onClick={onCta}>{ctaLabel}<ArrowRight className="size-4" /></button></div>
           </div>
-          <ScrollProductVisual />
         </div>
+        <ConnectedWorkspaceVisual />
       </div>
-
-      <ol className="hf-scroll-story-fallback grid gap-8 md:grid-cols-2" data-testid="mobile-product-story">
-        {landingScrollChapters.map((chapter) => (
-          <li key={chapter.stage} className="min-w-0">
-            <article className="h-full min-w-0 rounded-3xl border border-line bg-surface-raised p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-6" data-scroll-fallback-chapter={chapter.stage} data-landing-clip-check>
-              <ChapterCopy chapter={chapter} />
-              <StaticChapterVisual chapter={chapter} />
-            </article>
-          </li>
-        ))}
-      </ol>
+      <div className="hf-scroll-story-release-buffer" data-scroll-story-release-buffer aria-hidden="true" />
     </div>
-  );
+    <ol className="hf-scroll-story-fallback grid gap-8 md:grid-cols-2" data-testid="mobile-product-story">{landingScrollChapters.map((chapter) => <li key={chapter.stage} className="min-w-0"><article className="h-full min-w-0 border-t border-line pt-6" data-scroll-fallback-chapter={chapter.stage} data-landing-clip-check><ChapterCopy chapter={chapter} /><StaticWorkspaceVisual stage={chapter.stage} />{chapter.stage === "action-center" ? <button type="button" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60" disabled={ctaDisabled} onClick={onCta}>{ctaLabel}<ArrowRight className="size-4" /></button> : null}</article></li>)}</ol>
+  </div>;
 }

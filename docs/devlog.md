@@ -1,5 +1,97 @@
 # HireFlux development log
 
+## 2026-08-30 — Connected Workspace spatial choreography refinement
+
+Refined only the desktop Connected Workspace body story so its persistent
+HireFlux shell now reallocates attention across Applications, Interviews,
+Preparation, and Action Center. The chapter model, candidate data, one scoped
+GSAP timeline, one timeline-owned ScrollTrigger, responsive and reduced-motion
+fallbacks, lazy landing boundary, and hero choreography remain unchanged.
+
+Applications is now a compact broad-search surface with a restrained Northstar
+selection treatment rather than a tall mostly empty card. The shell begins
+slightly right-weighted, shifts inward for Interviews, reaches its largest and
+most central state for Preparation, then relaxes outward for Action Center.
+The bounded desktop transform range is 40px horizontally with a 3.5% peak
+scale increase. Supporting opportunity context narrows for Interviews,
+preparation gains the largest work surface, and Action Center restores the
+three-priority view with its CTA as the resolution of that movement.
+
+The narrative column now uses a flow stack: layered visual copy, the four-step
+indicator 28px below it, and the final CTA below the indicator. Chapter-specific
+width/offset changes bring the text closer to the product as focus narrows.
+Panel handoffs now fully demote outgoing surfaces before incoming surfaces use
+the same region, with explicit visual stacking to prevent readable double
+exposure at partial scroll stops.
+
+Desktop pin travel is now 2.5 viewport heights. A viewport-derived release
+buffer after the pinned stage gives the final Action Center and CTA enough
+document headroom to settle and unpin before the footer enters; it adds no
+content and is not rendered in the mobile, tablet, short-viewport, or
+reduced-motion fallback.
+
+The clean pre-change production baseline was main 282.95 kB raw / 84.80 kB
+gzip, lazy landing 173.99 / 59.34, and CSS 117.27 / 18.47. After this pass the
+main entry remains 282.95 / 84.80, the lazy landing chunk is 175.28 / 59.65,
+and CSS is 118.11 / 18.63. No dependency or separate GSAP-related chunk was
+added. The full 193-test Vitest suite and the full Playwright/accessibility
+matrix (117 passed, 38 intentionally project-filtered skips), plus ESLint,
+TypeScript, the production build, and hosting-header tests pass. Refreshed
+baselines cover Applications, Interviews, Preparation, Action Center, and
+light-mode Action Center.
+
+## 2026-08-29 — Connected Workspace body-story redesign
+
+Replaced the rejected body-level Northstar progression with a broader product
+story: Applications → Interviews → Preparation → Action Center. The hero remains
+the detailed one-opportunity narrative. In the body, Northstar is one compact
+row beside Atlas Systems and Harborline, and the persistent HireFlux shell now
+reallocates its navigation, primary workspace, and supporting context as the
+visitor moves through the candidate's wider search.
+
+The redesign preserves the lazy landing boundary, exact GSAP dependency,
+`gsap.matchMedia()` lifecycle, one scoped timeline, one timeline-owned
+ScrollTrigger, React boundary-only semantic state, and the existing desktop,
+short-viewport, tablet, mobile, and reduced-motion split. The full body Flux
+Rail, hero-sized application shell, static single-opportunity endpoints, and
+3.4-viewport scroll assumption were retired. Desktop starts at 2.75 viewport
+heights with chapter ranges at 0%, 24%, 46%, and 76%. The strongest handoff
+compresses interview details into a contextual header while the preparation
+workspace opens beneath it. Preparation then becomes retained history as three
+differentiated Action Center priorities bring the whole search back into view.
+
+The former late standalone CTA was removed. `Start Demo Workspace` now appears
+inside the final story composition as Action Center settles and remains in the
+normal document flow after pin release; the same action follows the final
+normal-flow chapter on non-pinned layouts. The hero's incoming referral cue was
+moved into a reserved strip above application identity, preventing transient
+Capture copy from sharing the company-information region without changing the
+rest of the hero choreography.
+
+Implementation review deliberately reused authenticated product language—row
+hierarchy, restrained statuses, contextual interview detail, readiness, and
+Action Center provenance—without importing authenticated components or backend
+policy into the marketing feature. Focused tests cover the four workspace
+endpoints, three-opportunity model, differentiated priorities, CTA wiring,
+semantic forward/reverse boundaries, reduced-motion fallback, and owned GSAP
+cleanup. Live QA corrected two transition issues discovered between endpoints:
+chapter copy briefly disappeared before Interviews became dominant, and an
+early clipping transition could crop interview or preparation content. The
+final choreography overlaps copy handoffs and uses bounded transform/opacity
+reallocation so every intermediate stop remains legible.
+
+The final production build keeps the main entry effectively unchanged at
+282.95 kB raw / 84.80 kB gzip (baseline 282.87 / 84.76). The lazy landing chunk
+is 173.99 / 59.34 kB (baseline 167.64 / 58.24), while deleting the retired body
+rail/static endpoint CSS reduces the global stylesheet from 124.65 / 18.92 kB
+to 117.27 / 18.47. ESLint, TypeScript, all 193 Vitest tests, the production
+build, hosting-header tests, and `git diff --check` pass. The complete 155-case
+Playwright/accessibility matrix produced 116 passes and 38 intentional viewport
+skips; one unrelated desktop-1024 long-content fixture timed out once and passed
+immediately in isolated rerun. Browser review covered dark/light 1280, 1024,
+768, 390, and 320 layouts, pinned progression, reverse/fast traversal, release,
+CTA timing, breakpoint recreation, reduced motion, overflow, and Axe contrast.
+
 ## 2026-08-29 — Final landing-page polish
 
 Completed the final refinement pass after the Phase D experience audit without

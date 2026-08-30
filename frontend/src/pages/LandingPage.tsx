@@ -90,18 +90,8 @@ export function LandingPage() {
 
         <LandingReveal className="hf-scroll-story-reveal">
           <section className="mx-auto max-w-7xl min-w-0 px-4 py-16 sm:px-6 sm:py-24 lg:px-8" aria-labelledby="proof-title">
-            <div className="max-w-2xl" data-landing-clip-check><p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">Connected workflow</p><h2 id="proof-title" className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">Context that stays useful at every step.</h2><p className="mt-4 leading-7 text-slate-600 dark:text-slate-300">Follow Northstar Labs to see how application details inform the interview, shape preparation, and explain the action HireFlux surfaces next.</p></div>
-            <ScrollProductStory />
-          </section>
-        </LandingReveal>
-
-        <LandingReveal>
-          <section className="mx-auto max-w-7xl min-w-0 px-4 pb-16 sm:px-6 sm:pb-24 lg:px-8">
-            <div className="relative overflow-hidden rounded-[2rem] bg-slate-950 px-6 py-12 text-white shadow-2xl sm:px-10 lg:flex lg:items-center lg:justify-between lg:gap-10 dark:border dark:border-slate-800" data-landing-clip-check>
-              <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_15%_30%,rgba(34,211,238,0.2),transparent_22rem),radial-gradient(circle_at_90%_80%,rgba(139,92,246,0.24),transparent_25rem)]" />
-              <div className="relative min-w-0"><p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-300">Capture → Progress → Prepare → Act</p><h2 className="mt-3 text-3xl font-black tracking-tight">See the next move before it becomes a missed one.</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Your temporary environment is private, pre-populated, and ready in one click.</p></div>
-              <Button className="group relative mt-7 shrink-0 gap-2 lg:mt-0" disabled={isCreating} onClick={() => void enterDemo()}>{status === "active" ? "Return to Workspace" : "Start Demo Workspace"}<ArrowRight aria-hidden="true" className="size-4 transition-transform group-hover:translate-x-1 group-focus-visible:translate-x-1" /></Button>
-            </div>
+            <div className="max-w-2xl" data-landing-clip-check><p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">Connected workspace</p><h2 id="proof-title" className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">The workspace adapts around your search.</h2><p className="mt-4 leading-7 text-slate-600 dark:text-slate-300">See applications become interview context, preparation become a working plan, and the full search return as clear priorities.</p></div>
+            <ScrollProductStory ctaDisabled={isCreating} ctaLabel={status === "active" ? "Return to Workspace" : "Start Demo Workspace"} onCta={() => void enterDemo()} />
           </section>
         </LandingReveal>
       </main>

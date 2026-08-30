@@ -6,6 +6,8 @@ import {
   landingScrollChapters,
   landingStory,
   landingStoryStageOrder,
+  landingWorkspace,
+  landingWorkspaceStageOrder,
 } from "./landingStoryModel";
 
 describe("landing story model", () => {
@@ -34,18 +36,21 @@ describe("landing story model", () => {
     expect(landingHeroMilestones.map(({ stage }) => stage)).toEqual(landingHeroStageOrder);
   });
 
-  it("defines four body chapters from the same opportunity narrative", () => {
+  it("defines a four-workspace body story across multiple opportunities", () => {
     expect(landingHeroMilestones[0].detail).toContain(landingStory.opportunity.source);
     expect(landingHeroMilestones[1].detail).toBe(landingStory.interview.dateLabel);
     expect(landingScrollChapters.map(({ stage }) => stage)).toEqual([
-      "capture",
-      "progress",
-      "prepare",
-      "act",
+      "applications",
+      "interviews",
+      "preparation",
+      "action-center",
     ]);
-    expect(landingScrollChapters[0].description).toContain("follow-up");
-    expect(landingScrollChapters[1].title).toContain("History");
-    expect(landingScrollChapters[2].description).toContain("context");
-    expect(landingScrollChapters[3].description).toContain("follow-up");
+    expect(landingWorkspaceStageOrder).toEqual(landingScrollChapters.map(({ stage }) => stage));
+    expect(landingWorkspace.opportunities.map(({ company }) => company)).toEqual([
+      "Northstar Labs",
+      "Atlas Systems",
+      "Harborline",
+    ]);
+    expect(landingWorkspace.priorities.map(({ priority }) => priority)).toEqual(["now", "waiting", "later"]);
   });
 });

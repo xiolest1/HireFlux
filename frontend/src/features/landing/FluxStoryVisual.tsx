@@ -189,9 +189,11 @@ export function FluxStoryVisual({ stage, reducedMotion }: FluxStoryVisualProps) 
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_8%_4%,color-mix(in_srgb,var(--hf-accent)_8%,transparent),transparent_42%),radial-gradient(circle_at_92%_94%,color-mix(in_srgb,var(--hf-violet)_7%,transparent),transparent_38%)]" />
 
-      <section className="absolute inset-x-3 top-3 z-20 rounded-xl border border-line-strong/75 bg-surface-raised px-3 py-2.5 shadow-sm sm:right-[24%] sm:px-4" data-flux-application data-persistent-opportunity>
-        <div className="absolute inset-x-3 top-3 flex items-center gap-2 text-[0.62rem] font-bold text-accent-strong" data-flux-incoming>
-          <span className="size-1.5 rounded-full bg-accent" /> Incoming referral opportunity
+      <section className="absolute inset-x-3 top-3 z-20 rounded-xl border border-line-strong/75 bg-surface-raised px-3 py-1.5 shadow-sm sm:right-[24%] sm:px-4" data-flux-application data-persistent-opportunity>
+        <div className="relative h-3 overflow-hidden" data-flux-cue-strip>
+          <div className="absolute inset-x-0 top-0 flex items-center gap-2 text-[0.6rem] font-bold leading-3 text-accent-strong" data-flux-incoming>
+            <span className="size-1.5 rounded-full bg-accent" /> Incoming referral opportunity
+          </div>
         </div>
         <div className="flex min-w-0 items-start gap-2.5">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white dark:bg-slate-700 sm:size-10 sm:rounded-xl"><BriefcaseBusiness className="size-4" /></span>

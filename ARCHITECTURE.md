@@ -55,8 +55,12 @@ The frontend is a React and TypeScript single-page application built by Vite.
   routes. Its scoped GSAP hero timeline and single desktop body-story
   ScrollTrigger are confined to the landing chunk; authenticated navigation
   does not request the landing, GSAP, or ScrollTrigger assets. The body story
-  uses normal-flow static chapters below its desktop/height threshold and for
-  reduced motion.
+  keeps one bounded HireFlux shell mounted while its Applications, Interviews,
+  Preparation, and Action Center workspaces spatially reorganize. React updates
+  semantic chapter state only at range boundaries, while one scoped GSAP
+  timeline owns visual interpolation and its single pin. The same four
+  workspaces render as concise normal-flow chapters below the desktop/height
+  threshold and for reduced motion.
 - TanStack Query owns server-state fetching, caching, mutation invalidation,
   and loading/error states.
 - Zod validates every untrusted API response before components consume it.

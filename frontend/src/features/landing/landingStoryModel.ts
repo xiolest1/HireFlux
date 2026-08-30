@@ -116,9 +116,17 @@ export const landingHeroMilestones: readonly LandingHeroMilestone[] = [
   },
 ] as const;
 
+export const landingWorkspaceStageOrder = [
+  "applications",
+  "interviews",
+  "preparation",
+  "action-center",
+] as const;
+
+export type LandingWorkspaceStage = (typeof landingWorkspaceStageOrder)[number];
+
 export interface LandingScrollChapter {
-  stage: LandingHeroStage;
-  internalStage: LandingAdvancedHeroStage;
+  stage: LandingWorkspaceStage;
   number: string;
   label: string;
   question: string;
@@ -128,42 +136,87 @@ export interface LandingScrollChapter {
 
 export const landingScrollChapters: readonly LandingScrollChapter[] = [
   {
-    stage: "capture",
-    internalStage: "capture",
+    stage: "applications",
     number: "01",
-    label: "Capture",
-    question: "What should HireFlux remember first?",
-    title: "Start with decision-ready context.",
-    description: "Role, source, work mode, compensation, and follow-up become one reliable record.",
+    label: "Applications",
+    question: "How do I keep the search organized?",
+    title: "Everything starts in one workspace.",
+    description: "Three opportunities, their current stages, and the next decision stay visible without turning one role into the whole search.",
   },
   {
-    stage: "progress",
-    internalStage: "progress",
+    stage: "interviews",
     number: "02",
-    label: "Progress",
+    label: "Interviews",
     question: "How does the history stay connected?",
-    title: "History stays attached.",
-    description: "The technical screen joins that record, preserving what led there.",
+    title: "Context follows the opportunity.",
+    description: "Northstar becomes supporting context while its technical screen, timing, and preparation status take focus.",
   },
   {
-    stage: "prepare",
-    internalStage: "prepare",
+    stage: "preparation",
     number: "03",
-    label: "Prepare",
-    question: "How does context guide interview preparation?",
+    label: "Preparation",
+    question: "How does that context improve preparation?",
     title: "Preparation starts informed.",
-    description: "Company and interview context shape questions and a focused readiness checklist.",
+    description: "Company context, interview details, questions, and evidence become one focused working surface.",
   },
   {
-    stage: "act",
-    internalStage: "act",
+    stage: "action-center",
     number: "04",
-    label: "Act",
-    question: "Why does this action come next?",
-    title: "The journey explains what comes next.",
-    description: "Saved preparation grounds a timely follow-up in what happened.",
+    label: "Action Center",
+    question: "What deserves attention next?",
+    title: "The workspace turns history into priorities.",
+    description: "Do-now, waiting, and review-later signals bring the whole search back into view with clear provenance.",
   },
 ] as const;
+
+export const landingWorkspace = {
+  opportunities: [
+    {
+      company: landingStory.opportunity.company,
+      role: landingStory.opportunity.role,
+      status: "Interview",
+      next: "Technical screen · Sep 2",
+      tone: "violet",
+    },
+    {
+      company: "Atlas Systems",
+      role: "Product Platform Engineer",
+      status: "Applied",
+      next: "Waiting for employer",
+      tone: "muted",
+    },
+    {
+      company: "Harborline",
+      role: "Frontend Infrastructure Engineer",
+      status: "Screening",
+      next: "Review role notes",
+      tone: "accent",
+    },
+  ],
+  priorities: [
+    {
+      company: landingStory.opportunity.company,
+      action: landingStory.action.nextAction,
+      timing: "Due today",
+      provenance: "Interview complete · Preparation retained",
+      priority: "now",
+    },
+    {
+      company: "Atlas Systems",
+      action: "Wait for employer response",
+      timing: "Waiting",
+      provenance: "Application sent August 28",
+      priority: "waiting",
+    },
+    {
+      company: "Harborline",
+      action: "Review role notes",
+      timing: "Review later",
+      provenance: "Screening details saved",
+      priority: "later",
+    },
+  ],
+} as const;
 
 export const landingHeroMilestoneByStage = Object.fromEntries(
   landingHeroMilestones.map((milestone) => [milestone.stage, milestone]),

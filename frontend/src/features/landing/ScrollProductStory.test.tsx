@@ -1,11 +1,12 @@
 import { StrictMode } from "react";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ScrollProductStory } from "./ScrollProductStory";
 import {
   scrollChapterForProgress,
   scrollStoryDesktopQuery,
   scrollStoryTimelineLabels,
+  scrollStoryTravelViewportHeights,
 } from "./scrollStoryConfig";
 
 const gsapMocks = vi.hoisted(() => {
@@ -106,29 +107,30 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("scroll story configuration", () => {
-  it("maps the four semantic chapters across six internal labels", () => {
+  it("maps the four semantic workspaces and settled endpoint", () => {
     expect(scrollStoryTimelineLabels).toEqual({
-      capture: 0,
-      context: 0.2,
-      progress: 0.32,
-      prepare: 0.4,
-      resolve: 0.68,
-      act: 0.85,
+      applications: 0,
+      interviews: 0.24,
+      preparation: 0.46,
+      actionCenter: 0.76,
       settled: 0.94,
     });
-    expect([0, 0.2, 0.4, 0.85].map(scrollChapterForProgress)).toEqual([
-      "capture",
-      "progress",
-      "prepare",
-      "act",
+    expect([0, 0.24, 0.46, 0.76].map(scrollChapterForProgress)).toEqual([
+      "applications",
+      "interviews",
+      "preparation",
+      "action-center",
     ]);
+    expect(scrollStoryTravelViewportHeights).toBe(2.5);
   });
 });
+
+const storyProps = { ctaLabel: "Start Demo Workspace", onCta: vi.fn() };
 
 describe("ScrollProductStory", () => {
   it("creates one desktop timeline with the approved pin configuration", () => {
     setReducedMotion(false);
-    render(<ScrollProductStory />);
+    render(<ScrollProductStory {...storyProps} />);
 
     expect(gsapMocks.media.add).toHaveBeenCalledWith(scrollStoryDesktopQuery, expect.any(Function));
     expect(gsapMocks.timelineFactory).toHaveBeenCalledOnce();
@@ -141,17 +143,33 @@ describe("ScrollProductStory", () => {
         invalidateOnRefresh: true,
       }),
     }));
-    for (const label of ["capture", "context", "progress", "prepare", "resolve", "act", "settled"]) {
+    for (const [label, position] of [
+      ["applications", scrollStoryTimelineLabels.applications],
+      ["interviews", scrollStoryTimelineLabels.interviews],
+      ["preparation", scrollStoryTimelineLabels.preparation],
+      ["action-center", scrollStoryTimelineLabels.actionCenter],
+      ["settled", scrollStoryTimelineLabels.settled],
+    ] as const) {
       expect(gsapMocks.timeline.addLabel).toHaveBeenCalledWith(
         label,
-        scrollStoryTimelineLabels[label as keyof typeof scrollStoryTimelineLabels],
+        position,
       );
     }
+    expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
+      "[data-workspace-shell]",
+      expect.objectContaining({ scale: 0.99 }),
+      0,
+    );
+    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+      "[data-workspace-shell]",
+      expect.objectContaining({ scale: 1.035 }),
+      0.44,
+    );
   });
 
   it("commits React chapter state only when semantic boundaries change", () => {
     setReducedMotion(false);
-    const { container } = render(<ScrollProductStory />);
+    const { container } = render(<ScrollProductStory {...storyProps} />);
     const configuration = gsapMocks.getLastTimelineConfiguration() as {
       scrollTrigger: { onUpdate: (self: { progress: number }) => void };
     };
@@ -159,21 +177,21 @@ describe("ScrollProductStory", () => {
     const story = container.querySelector("[data-scroll-story]");
 
     act(() => update({ progress: 0.1 }));
-    expect(story).toHaveAttribute("data-active-chapter", "capture");
+    expect(story).toHaveAttribute("data-active-chapter", "applications");
     act(() => update({ progress: 0.25 }));
-    expect(story).toHaveAttribute("data-active-chapter", "progress");
+    expect(story).toHaveAttribute("data-active-chapter", "interviews");
     act(() => update({ progress: 0.7 }));
-    expect(story).toHaveAttribute("data-active-chapter", "prepare");
+    expect(story).toHaveAttribute("data-active-chapter", "preparation");
     act(() => update({ progress: 0.9 }));
-    expect(story).toHaveAttribute("data-active-chapter", "act");
+    expect(story).toHaveAttribute("data-active-chapter", "action-center");
     act(() => update({ progress: 0.3 }));
-    expect(story).toHaveAttribute("data-active-chapter", "progress");
+    expect(story).toHaveAttribute("data-active-chapter", "interviews");
   });
 
   it("creates no pinned timeline outside the desktop media query", () => {
     setReducedMotion(false);
     gsapMocks.setDesktopMatches(false);
-    render(<ScrollProductStory />);
+    render(<ScrollProductStory {...storyProps} />);
 
     expect(gsapMocks.timelineFactory).not.toHaveBeenCalled();
     expect(screen.getByTestId("mobile-product-story")).toBeInTheDocument();
@@ -181,25 +199,46 @@ describe("ScrollProductStory", () => {
 
   it("creates no GSAP lifecycle for reduced motion and exposes every chapter", () => {
     setReducedMotion(true);
-    const { container } = render(<ScrollProductStory />);
+    const { container } = render(<ScrollProductStory {...storyProps} />);
 
     expect(gsapMocks.context).not.toHaveBeenCalled();
     expect(gsapMocks.timelineFactory).not.toHaveBeenCalled();
     for (const question of [
-      "What should HireFlux remember first?",
+      "How do I keep the search organized?",
       "How does the history stay connected?",
-      "How does context guide interview preparation?",
-      "Why does this action come next?",
+      "How does that context improve preparation?",
+      "What deserves attention next?",
     ]) {
       expect(screen.getAllByText(question).length).toBeGreaterThan(0);
     }
     expect(container.querySelectorAll("[data-scroll-static-stage]")).toHaveLength(4);
+    expect(screen.getAllByText("Atlas Systems").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Harborline").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Start Demo Workspace" }).length).toBeGreaterThan(0);
     expect(container.querySelector("[aria-live]")).not.toBeInTheDocument();
+  });
+
+  it("keeps every workspace endpoint mounted and wires the final CTA", () => {
+    setReducedMotion(true);
+    const onCta = vi.fn();
+    const { container } = render(<ScrollProductStory ctaLabel="Start Demo Workspace" onCta={onCta} />);
+
+    expect(container.querySelectorAll("[data-workspace-opportunity]")).not.toHaveLength(0);
+    expect(container.querySelector("[data-workspace-interviews]")).toBeInTheDocument();
+    expect(container.querySelector("[data-workspace-preparation]")).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-workspace-priority]")).not.toHaveLength(0);
+    expect(container.querySelector("[data-scroll-narrative]")).toBeInTheDocument();
+    expect(container.querySelector("[data-scroll-progress]")).toBeInTheDocument();
+    expect(container.querySelector("[data-scroll-story-release-buffer]")).toBeInTheDocument();
+    expect(container.querySelector("[data-flux-rail]")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Start Demo Workspace" }).at(-1)!);
+    expect(onCta).toHaveBeenCalledOnce();
   });
 
   it("cleans its owned trigger and never overlaps contexts in Strict Mode", () => {
     setReducedMotion(false);
-    const { unmount } = render(<StrictMode><ScrollProductStory /></StrictMode>);
+    const { unmount } = render(<StrictMode><ScrollProductStory {...storyProps} /></StrictMode>);
 
     expect(gsapMocks.getMaximumActiveContexts()).toBe(1);
     expect(gsapMocks.getActiveContexts()).toBe(1);

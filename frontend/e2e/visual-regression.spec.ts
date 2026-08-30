@@ -174,7 +174,7 @@ test("landing story becomes a stable complete state with reduced motion", async 
   await expect(page.locator(".pin-spacer")).toHaveCount(0);
 });
 
-test("desktop scroll story controls one continuous journey and releases into the CTA", async ({
+test("desktop scroll story reorganizes one workspace and releases with its CTA", async ({
   page,
 }, testInfo) => {
   test.skip(!["desktop-1024", "desktop-1280"].includes(testInfo.project.name));
@@ -187,11 +187,13 @@ test("desktop scroll story controls one continuous journey and releases into the
   await expect(page.getByTestId("desktop-product-story")).toBeVisible();
   await expect(page.getByTestId("mobile-product-story")).toBeHidden();
   await expect(page.locator(".pin-spacer")).toHaveCount(1);
-  await expect(stage.locator("[data-persistent-scroll-opportunity]")).toHaveCount(1);
+  await expect(stage.locator("[data-connected-workspace]")).toHaveCount(1);
+  await expect(stage.locator("[data-workspace-opportunity]")).toHaveCount(6);
+  await expect(stage.locator("[data-flux-rail]")).toHaveCount(0);
 
   const metrics = await stage.evaluate((element) => ({
     start: element.getBoundingClientRect().top + window.scrollY,
-    travel: window.innerHeight * 3.4,
+    travel: window.innerHeight * 2.5,
   }));
   const moveTo = async (progress: number) => {
     await page.evaluate(
@@ -202,28 +204,32 @@ test("desktop scroll story controls one continuous journey and releases into the
   };
 
   await moveTo(0.1);
-  await expect(story).toHaveAttribute("data-active-chapter", "capture");
+  await expect(story).toHaveAttribute("data-active-chapter", "applications");
   await moveTo(0.25);
-  await expect(story).toHaveAttribute("data-active-chapter", "progress");
+  await expect(story).toHaveAttribute("data-active-chapter", "interviews");
   await moveTo(0.55);
-  await expect(story).toHaveAttribute("data-active-chapter", "prepare");
+  await expect(story).toHaveAttribute("data-active-chapter", "preparation");
   expect(Math.abs(await stage.evaluate((element) => element.getBoundingClientRect().top))).toBeLessThan(3);
   await moveTo(0.9);
-  await expect(story).toHaveAttribute("data-active-chapter", "act");
-  await expect(stage.locator("[data-scroll-action]")).toBeVisible();
+  await expect(story).toHaveAttribute("data-active-chapter", "action-center");
+  await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
+  await expect(stage.getByRole("button", { name: /Workspace/ })).toBeVisible();
   await moveTo(0.3);
-  await expect(story).toHaveAttribute("data-active-chapter", "progress");
+  await expect(story).toHaveAttribute("data-active-chapter", "interviews");
   await moveTo(0.96);
-  await expect(story).toHaveAttribute("data-active-chapter", "act");
+  await expect(story).toHaveAttribute("data-active-chapter", "action-center");
 
   await page.evaluate(
-    ({ start, travel }) => window.scrollTo(0, start + travel + 120),
+    ({ start, travel }) => window.scrollTo(0, start + travel + 8),
     metrics,
   );
   await page.waitForTimeout(450);
   const workspaceCta = page.getByRole("button", { name: /Workspace/ }).last();
-  await workspaceCta.scrollIntoViewIfNeeded();
   await expect(workspaceCta).toBeVisible();
+  expect(await stage.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
+  await page.locator("footer").scrollIntoViewIfNeeded();
+  await expect(page.locator("footer")).toBeVisible();
+  expect(await stage.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
   await expectNoHorizontalPageOverflow(page);
 });
 
@@ -248,7 +254,7 @@ test("scroll story breakpoint changes do not duplicate pin wrappers", async ({
   expect(await page.locator(".pin-spacer").count()).toBe(1);
 });
 
-test("desktop scroll story has focused Capture, Prepare, and Act baselines", async ({
+test("desktop scroll story has focused Applications, Interviews, Preparation, and Action Center baselines", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1280");
@@ -258,10 +264,10 @@ test("desktop scroll story has focused Capture, Prepare, and Act baselines", asy
   const stage = page.locator("[data-scroll-story-pin]");
   const metrics = await stage.evaluate((element) => ({
     start: element.getBoundingClientRect().top + window.scrollY,
-    travel: window.innerHeight * 3.4,
+    travel: window.innerHeight * 2.5,
   }));
 
-  for (const [chapter, progress] of [["capture", 0.1], ["prepare", 0.55], ["act", 0.92]] as const) {
+  for (const [chapter, progress] of [["applications", 0.1], ["interviews", 0.32], ["preparation", 0.58], ["action-center", 0.92]] as const) {
     await page.evaluate(
       ({ start, travel, progress }) => window.scrollTo(0, start + travel * progress),
       { ...metrics, progress },
@@ -272,7 +278,7 @@ test("desktop scroll story has focused Capture, Prepare, and Act baselines", asy
   }
 });
 
-test("desktop scroll story Act remains defined in light mode", async ({
+test("desktop Action Center remains defined in light mode", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1280");
@@ -285,15 +291,15 @@ test("desktop scroll story Act remains defined in light mode", async ({
   const stage = page.locator("[data-scroll-story-pin]");
   const metrics = await stage.evaluate((element) => ({
     start: element.getBoundingClientRect().top + window.scrollY,
-    travel: window.innerHeight * 3.4,
+    travel: window.innerHeight * 2.5,
   }));
   await page.evaluate(
     ({ start, travel }) => window.scrollTo(0, start + travel * 0.92),
     metrics,
   );
   await page.waitForTimeout(600);
-  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-active-chapter", "act");
-  await expect(stage).toHaveScreenshot("scroll-story-act-light.png");
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-active-chapter", "action-center");
+  await expect(stage).toHaveScreenshot("scroll-story-action-center-light.png");
 });
 
 test("Flux Rail scenes preserve one opportunity through Capture, Progress, Prepare, and Act", async ({
