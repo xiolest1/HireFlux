@@ -1,8 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HeroApplicationStory, ProgressiveProductStory } from "./LandingProductStory";
-import { landingStory } from "./landingStoryModel";
+import { HeroApplicationStory } from "./LandingProductStory";
 
 function matchMedia(reducedMotion: boolean) {
   vi.stubGlobal(
@@ -110,29 +109,5 @@ describe("HeroApplicationStory", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show Capture stage" }));
     expect(document.querySelector("[data-hero-story]")).toHaveAttribute("data-story-step", "capture");
     expect(vi.getTimerCount()).toBe(0);
-  });
-});
-
-describe("ProgressiveProductStory", () => {
-  it("uses the shared opportunity model across the hero and proof story", () => {
-    matchMedia(false);
-    render(<><HeroApplicationStory /><ProgressiveProductStory /></>);
-
-    expect(screen.getAllByText(landingStory.opportunity.company).length).toBeGreaterThan(1);
-    expect(screen.getAllByText(landingStory.opportunity.role).length).toBeGreaterThan(1);
-  });
-
-  it("keeps all three snapshots in the mobile fallback and supports manual desktop selection", () => {
-    render(<ProgressiveProductStory />);
-
-    const mobile = screen.getByTestId("mobile-product-story");
-    expect(mobile).toHaveTextContent("Capture");
-    expect(mobile).toHaveTextContent("Move");
-    expect(mobile).toHaveTextContent("Learn");
-    expect(mobile).toHaveTextContent("What should I do next?");
-
-    const learn = screen.getByRole("button", { name: "Show Learn moment" });
-    fireEvent.click(learn);
-    expect(learn).toHaveAttribute("aria-pressed", "true");
   });
 });

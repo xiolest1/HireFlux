@@ -1,5 +1,98 @@
 # HireFlux development log
 
+## 2026-08-29 — Final landing-page polish
+
+Completed the final refinement pass after the Phase D experience audit without
+adding or retiming motion. The hero, six-scene GSAP choreography, single pinned
+body timeline, 3.4-viewport scroll distance, Flux Rail geometry, CTA, and all
+reduced-motion and responsive fallbacks remain architecturally unchanged.
+
+The body story now explains why continuity matters instead of repeating the
+hero's overview. Its framing changed from generic product proof to a connected
+workflow, and the four chapters now focus on decision-ready source context,
+attached application history, informed interview preparation, and a next action
+grounded in saved preparation. Northstar Labs remains the single continuous
+example. The body composition's closing caption now reinforces retained context
+rather than repeating the hero's “connected from capture to action” language.
+
+Light-mode hierarchy was refined only inside the body story. The desktop and
+static artboards now have clearer tonal separation from the page, persistent
+product panels have more deliberate border contrast, Context, Interview,
+Preparation, and Action surfaces receive restrained semantic tints, and the
+inactive rail base and neutral stage nodes remain visible without increasing
+stroke weight or accent saturation. Dark-mode styling is unchanged. Mobile copy
+was shortened while preserving all four candidate questions, Northstar identity,
+chapter endpoints, and static product visuals; the 320-pixel layout remains free
+of horizontal overflow and retains 44-pixel hero controls.
+
+Live browser review covered dark and light desktop at 1280 pixels, the complete
+pinned progression and release, 768-pixel tablet, 390-pixel mobile, and
+320-pixel narrow mobile. Intentional landing and body-story snapshots were
+refreshed. ESLint, TypeScript, all 192 Vitest tests across 27 files, the
+production build, all three hosting-header tests, and the complete 155-case
+Playwright/accessibility matrix passed (117 passed and 38 intentional viewport
+skips). The browser matrix reconfirmed reduced-motion completeness, Axe results,
+responsive containment, theme persistence, and authenticated-route isolation.
+
+Compared with the Phase D baseline, the main entry remains 282.87 kB raw /
+84.76 kB gzip. The lazy landing chunk changes from 167.34 kB / 58.21 kB gzip to
+167.64 kB / 58.24 kB gzip. CSS changes from 120.18 kB / 18.59 kB gzip to
+124.65 kB / 18.92 kB gzip. The increase is confined to copy and scoped
+light-mode story styling; no dependency or runtime animation architecture was
+added, and direct authenticated entry still downloads no landing, GSAP, or
+ScrollTrigger assets.
+
+## 2026-08-29 — Phase D ScrollTrigger product story
+
+Replaced the landing page's three-card proof selector with one continuous body
+story for Capture → Progress → Prepare → Act. The Northstar Labs application,
+Flux Rail, interview, preparation workspace, history proof, and Action Center
+remain part of one persistent composition. Context is the first part of the
+Progress range and Resolve completes the Prepare range before Act becomes
+dominant. The independently controlled Phase C hero was not redesigned or
+retimed.
+
+The body story owns one `gsap.matchMedia()` lifecycle, one scoped GSAP context,
+one master timeline, and one timeline-owned ScrollTrigger. It activates only at
+1024 pixels and wider, 720 pixels and taller, and no motion reduction. The
+stage pins at the viewport top for 3.4 viewport heights with a 0.35-second scrub,
+uses labeled Capture, Context, Progress, Prepare, Resolve, Act, and settled
+positions, and updates React chapter state only when the four semantic ranges
+change. Native scrolling, pin spacing, and normal document release remain in
+control; no snapping, observers, scroll listeners, smooth-scroll library, Flip,
+MotionPath, or additional animation dependency was added.
+
+Tablet, mobile, short-height, and reduced-motion presentations use a complete
+normal-flow four-chapter layout with static endpoint visuals and no ScrollTrigger
+or pin wrapper. Copy remains available in semantic order without live-region
+scroll narration. The CTA and footer remain outside the pin, while the settled
+Act composition stays visible as the pin releases.
+
+Live browser QA found and corrected four implementation issues: the existing
+section-reveal transform initially offset the fixed pin, the rail crossed the
+Context shelf at 1024 pixels, the incoming Capture cue remained faintly visible
+behind the organized record, and partial application opacity lowered transient
+light-mode contrast. The proof wrapper now avoids the transformed reveal,
+scroll-specific rail geometry has more separation, Capture resolves earlier,
+and persistent application text stays fully opaque. Dark/light desktop, 1024,
+768, 390, and 320-pixel states were reviewed, including reverse traversal,
+release, and breakpoint changes.
+
+Final validation passed ESLint, TypeScript, all 192 Vitest tests across 27
+files, the production build, all three hosting-header tests, and the complete
+155-case Playwright matrix (117 passed and 38 intentional viewport skips).
+Browser coverage includes Axe, reduced motion, light/dark rendering, pin start
+and release, fast/slow/reverse progression, 1280 → 768 → 1280 cleanup, overflow,
+CTA/footer access, focused visual baselines, and authenticated-route network
+proof. `git diff --check` passed with only Windows line-ending notices.
+
+Compared with Phase C, the main entry remains unchanged at 282.87 kB raw /
+84.76 kB gzip. The lazy landing chunk grows from 112.93 kB / 38.04 kB gzip to
+167.34 kB / 58.21 kB gzip, and CSS grows from 114.44 kB / 18.03 kB gzip to
+120.18 kB / 18.59 kB gzip. ScrollTrigger is folded into the lazy landing chunk;
+there is no separate animation chunk, and direct authenticated entry still
+requests neither the landing code nor GSAP/ScrollTrigger.
+
 ## 2026-08-29 — Phase C complete Flux Rail hero journey
 
 Extended the landing-only Flux Rail proof into the complete finite hero story:

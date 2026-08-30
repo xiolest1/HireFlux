@@ -52,8 +52,11 @@ The frontend is a React and TypeScript single-page application built by Vite.
 
 - React Router separates the public `/` route from protected workspace routes.
 - The public landing feature is lazy-loaded separately from authenticated
-  routes. Its scoped GSAP hero timeline is confined to the landing chunk;
-  authenticated navigation does not request the landing or GSAP assets.
+  routes. Its scoped GSAP hero timeline and single desktop body-story
+  ScrollTrigger are confined to the landing chunk; authenticated navigation
+  does not request the landing, GSAP, or ScrollTrigger assets. The body story
+  uses normal-flow static chapters below its desktop/height threshold and for
+  reduced motion.
 - TanStack Query owns server-state fetching, caching, mutation invalidation,
   and loading/error states.
 - Zod validates every untrusted API response before components consume it.

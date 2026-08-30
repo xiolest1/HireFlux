@@ -4,7 +4,8 @@ import { useDemoSession } from "../auth/demoSessionContext";
 import { Button } from "../components/ui/Button";
 import { ErrorPanel } from "../components/ui/Feedback";
 import { ThemeToggle } from "../components/ui/ThemeToggle";
-import { HeroApplicationStory, LandingReveal, ProgressiveProductStory } from "../features/landing/LandingProductStory";
+import { HeroApplicationStory, LandingReveal } from "../features/landing/LandingProductStory";
+import { ScrollProductStory } from "../features/landing/ScrollProductStory";
 
 interface LandingLocationState {
   from?: string;
@@ -87,10 +88,10 @@ export function LandingPage() {
           </section>
         </LandingReveal>
 
-        <LandingReveal>
+        <LandingReveal className="hf-scroll-story-reveal">
           <section className="mx-auto max-w-7xl min-w-0 px-4 py-16 sm:px-6 sm:py-24 lg:px-8" aria-labelledby="proof-title">
-            <div className="max-w-2xl" data-landing-clip-check><p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">Product proof</p><h2 id="proof-title" className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">One opportunity. A clearer next move.</h2><p className="mt-4 leading-7 text-slate-600 dark:text-slate-300">Follow the same Northstar Labs application as HireFlux turns captured context into progress, preparation, and a timely action.</p></div>
-            <ProgressiveProductStory />
+            <div className="max-w-2xl" data-landing-clip-check><p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">Connected workflow</p><h2 id="proof-title" className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">Context that stays useful at every step.</h2><p className="mt-4 leading-7 text-slate-600 dark:text-slate-300">Follow Northstar Labs to see how application details inform the interview, shape preparation, and explain the action HireFlux surfaces next.</p></div>
+            <ScrollProductStory />
           </section>
         </LandingReveal>
 

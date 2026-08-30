@@ -1,30 +1,17 @@
 import {
-  ArrowUpRight,
-  BellRing,
-  BriefcaseBusiness,
-  Check,
   CirclePause,
   CirclePlay,
-  MessageSquareText,
   Sparkles,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useReducedMotion } from "../../components/ui/motionHooks";
 import {
   landingHeroMilestoneByStage,
   landingHeroMilestones,
-  landingProofSteps,
   landingStory,
-  type LandingProofStep,
 } from "./landingStoryModel";
 import { FluxStoryVisual } from "./FluxStoryVisual";
 import { useLandingStoryController } from "./useLandingStoryController";
-
-const proofIcons = {
-  capture: BriefcaseBusiness,
-  progress: MessageSquareText,
-  act: BellRing,
-} satisfies Record<LandingProofStep["stage"], typeof BriefcaseBusiness>;
 
 export function HeroApplicationStory() {
   const reducedMotion = useReducedMotion();
@@ -107,83 +94,6 @@ export function HeroApplicationStory() {
       </div>
       <figcaption id="hero-story-caption" className="sr-only">Northstar Labs becomes an organized application, carries context into interview preparation, preserves completed work, and surfaces a clear follow-up action.</figcaption>
     </figure>
-  );
-}
-
-function ProofSnapshot({ step }: { step: LandingProofStep }) {
-  const Icon = proofIcons[step.stage];
-  return (
-    <div className="min-w-0 rounded-3xl border border-line-strong bg-surface-raised p-5 shadow-panel dark:border-slate-700 dark:bg-slate-900 sm:p-7" data-landing-clip-check>
-      <div className="flex min-w-0 items-center gap-3 border-b border-line pb-5 dark:border-slate-700">
-        <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-strong"><Icon className="size-5" /></span>
-        <div className="min-w-0">
-          <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-ink-muted">{landingStory.opportunity.company}</p>
-          <p className="truncate text-sm font-bold text-ink dark:text-white">{landingStory.opportunity.role}</p>
-        </div>
-      </div>
-      <div className="py-6">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent-strong">{step.label} result</p>
-        <p className="mt-2 text-xl font-black text-ink dark:text-white">{step.result}</p>
-      </div>
-      <div className="rounded-2xl bg-slate-950 p-4 text-white dark:border dark:border-slate-700">
-        <p className="text-xs font-semibold text-cyan-300">{step.question}</p>
-        <p className="mt-2 text-sm font-bold leading-6">{step.answer}</p>
-        <div className="mt-4 flex items-center gap-2 text-xs text-slate-300"><Check aria-hidden="true" className="size-3.5 text-emerald-300" />Grounded in the opportunity history</div>
-      </div>
-    </div>
-  );
-}
-
-export function ProgressiveProductStory() {
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  return (
-    <>
-      <div className="mt-12 hidden grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-12 lg:grid" data-testid="desktop-product-story">
-        <ol className="space-y-6">
-          {landingProofSteps.map((step, index) => (
-            <li key={step.stage}>
-              <article
-                className={`min-h-[18rem] rounded-3xl border p-7 transition-colors ${activeIndex === index ? "border-accent/50 bg-accent-soft" : "border-line bg-surface-raised dark:bg-slate-900"}`}
-                onMouseEnter={() => setActiveIndex(index)}
-                onFocus={() => setActiveIndex(index)}
-              >
-                <span className="text-sm font-black text-accent-strong">{step.number} · {step.label}</span>
-                <h3 className="mt-5 text-2xl font-black text-ink dark:text-white">{step.title}</h3>
-                <p className="mt-3 max-w-xl leading-7 text-ink-muted dark:text-slate-300">{step.description}</p>
-                <button
-                  type="button"
-                  className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl text-sm font-bold text-accent-strong"
-                  aria-label={`Show ${step.label} moment`}
-                  aria-pressed={activeIndex === index}
-                  onClick={() => setActiveIndex(index)}
-                >
-                  Show this moment <ArrowUpRight aria-hidden="true" className="size-4" />
-                </button>
-              </article>
-            </li>
-          ))}
-        </ol>
-        <div className="relative">
-          <div className="sticky top-8 min-h-[31rem]" aria-live="polite">
-            <div key={landingProofSteps[activeIndex].stage} className="hf-story-swap"><ProofSnapshot step={landingProofSteps[activeIndex]} /></div>
-          </div>
-        </div>
-      </div>
-
-      <ol className="mt-10 space-y-6 lg:hidden" data-testid="mobile-product-story">
-        {landingProofSteps.map((step) => (
-          <li key={step.stage} className="min-w-0">
-            <article className="min-w-0">
-              <span className="text-sm font-black text-accent-strong">{step.number} · {step.label}</span>
-              <h3 className="mt-3 text-xl font-black text-ink dark:text-white">{step.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-ink-muted dark:text-slate-300">{step.description}</p>
-              <div className="mt-4"><ProofSnapshot step={step} /></div>
-            </article>
-          </li>
-        ))}
-      </ol>
-    </>
   );
 }
 

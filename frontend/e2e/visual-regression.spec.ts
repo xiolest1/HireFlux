@@ -106,6 +106,9 @@ for (const route of routes) {
   test(`${route.name} is responsive and accessible`, async ({
     page,
   }, testInfo) => {
+    if (route.name === "landing") {
+      await page.emulateMedia({ reducedMotion: "reduce" });
+    }
     await page.goto(route.path);
     await expect(
       page.getByRole("heading", { name: route.heading, level: 1 }),
@@ -118,13 +121,8 @@ for (const route of routes) {
       await expect(page.locator("[data-hero-story]")).toBeVisible();
       await expectLandingContentInsideViewport(page);
       await waitForLandingAnimationsToSettle(page);
-      if (["desktop-1024", "desktop-1280"].includes(testInfo.project.name)) {
-        await expect(page.getByTestId("desktop-product-story")).toBeVisible();
-        await expect(page.getByTestId("mobile-product-story")).toBeHidden();
-      } else {
-        await expect(page.getByTestId("mobile-product-story")).toBeVisible();
-        await expect(page.getByTestId("desktop-product-story")).toBeHidden();
-      }
+      await expect(page.getByTestId("mobile-product-story")).toBeVisible();
+      await expect(page.getByTestId("desktop-product-story")).toBeHidden();
     }
 
     const accessibility = await new AxeBuilder({ page })
@@ -171,6 +169,131 @@ test("landing story becomes a stable complete state with reduced motion", async 
     "data-flux-settled",
     "true",
   );
+  await expect(page.getByTestId("mobile-product-story")).toBeVisible();
+  await expect(page.getByTestId("desktop-product-story")).toBeHidden();
+  await expect(page.locator(".pin-spacer")).toHaveCount(0);
+});
+
+test("desktop scroll story controls one continuous journey and releases into the CTA", async ({
+  page,
+}, testInfo) => {
+  test.skip(!["desktop-1024", "desktop-1280"].includes(testInfo.project.name));
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; });
+
+  const story = page.locator("[data-scroll-story]");
+  const stage = page.locator("[data-scroll-story-pin]");
+  await expect(page.getByTestId("desktop-product-story")).toBeVisible();
+  await expect(page.getByTestId("mobile-product-story")).toBeHidden();
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+  await expect(stage.locator("[data-persistent-scroll-opportunity]")).toHaveCount(1);
+
+  const metrics = await stage.evaluate((element) => ({
+    start: element.getBoundingClientRect().top + window.scrollY,
+    travel: window.innerHeight * 3.4,
+  }));
+  const moveTo = async (progress: number) => {
+    await page.evaluate(
+      ({ start, travel, progress }) => window.scrollTo(0, start + travel * progress),
+      { ...metrics, progress },
+    );
+    await page.waitForTimeout(450);
+  };
+
+  await moveTo(0.1);
+  await expect(story).toHaveAttribute("data-active-chapter", "capture");
+  await moveTo(0.25);
+  await expect(story).toHaveAttribute("data-active-chapter", "progress");
+  await moveTo(0.55);
+  await expect(story).toHaveAttribute("data-active-chapter", "prepare");
+  expect(Math.abs(await stage.evaluate((element) => element.getBoundingClientRect().top))).toBeLessThan(3);
+  await moveTo(0.9);
+  await expect(story).toHaveAttribute("data-active-chapter", "act");
+  await expect(stage.locator("[data-scroll-action]")).toBeVisible();
+  await moveTo(0.3);
+  await expect(story).toHaveAttribute("data-active-chapter", "progress");
+  await moveTo(0.96);
+  await expect(story).toHaveAttribute("data-active-chapter", "act");
+
+  await page.evaluate(
+    ({ start, travel }) => window.scrollTo(0, start + travel + 120),
+    metrics,
+  );
+  await page.waitForTimeout(450);
+  const workspaceCta = page.getByRole("button", { name: /Workspace/ }).last();
+  await workspaceCta.scrollIntoViewIfNeeded();
+  await expect(workspaceCta).toBeVisible();
+  await expectNoHorizontalPageOverflow(page);
+});
+
+test("scroll story breakpoint changes do not duplicate pin wrappers", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; });
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+
+  const stage = page.locator("[data-scroll-story-pin]");
+  await stage.scrollIntoViewIfNeeded();
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await expect(page.locator(".pin-spacer")).toHaveCount(0);
+  await expect(page.getByTestId("mobile-product-story")).toBeVisible();
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+  await expect(page.getByTestId("desktop-product-story")).toBeVisible();
+  expect(await page.locator(".pin-spacer").count()).toBe(1);
+});
+
+test("desktop scroll story has focused Capture, Prepare, and Act baselines", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; });
+  const stage = page.locator("[data-scroll-story-pin]");
+  const metrics = await stage.evaluate((element) => ({
+    start: element.getBoundingClientRect().top + window.scrollY,
+    travel: window.innerHeight * 3.4,
+  }));
+
+  for (const [chapter, progress] of [["capture", 0.1], ["prepare", 0.55], ["act", 0.92]] as const) {
+    await page.evaluate(
+      ({ start, travel, progress }) => window.scrollTo(0, start + travel * progress),
+      { ...metrics, progress },
+    );
+    await page.waitForTimeout(450);
+    await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-active-chapter", chapter);
+    await expect(stage).toHaveScreenshot(`scroll-story-${chapter}.png`);
+  }
+});
+
+test("desktop scroll story Act remains defined in light mode", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.addInitScript(() =>
+    window.localStorage.setItem("hireflux-color-theme", "light"),
+  );
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; });
+  const stage = page.locator("[data-scroll-story-pin]");
+  const metrics = await stage.evaluate((element) => ({
+    start: element.getBoundingClientRect().top + window.scrollY,
+    travel: window.innerHeight * 3.4,
+  }));
+  await page.evaluate(
+    ({ start, travel }) => window.scrollTo(0, start + travel * 0.92),
+    metrics,
+  );
+  await page.waitForTimeout(600);
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-active-chapter", "act");
+  await expect(stage).toHaveScreenshot("scroll-story-act-light.png");
 });
 
 test("Flux Rail scenes preserve one opportunity through Capture, Progress, Prepare, and Act", async ({
@@ -213,7 +336,7 @@ test("authenticated entry does not download the lazy landing route", async ({
   test.skip(testInfo.project.name !== "desktop-1280");
   const landingChunkRequests: string[] = [];
   page.on("request", (request) => {
-    if (/\/assets\/(?:LandingPage|gsap)-[^/]+\.js$/.test(request.url())) {
+    if (/\/assets\/(?:LandingPage|gsap|ScrollTrigger)-[^/]+\.js$/.test(request.url())) {
       landingChunkRequests.push(request.url());
     }
   });
@@ -703,6 +826,7 @@ test("duplicate advice and creation failures remain non-blocking and preserve qu
 test("the explicit light theme persists and remains accessible", async ({
   page,
 }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(page.locator("html")).not.toHaveClass(/dark/);

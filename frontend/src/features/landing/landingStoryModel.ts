@@ -116,47 +116,52 @@ export const landingHeroMilestones: readonly LandingHeroMilestone[] = [
   },
 ] as const;
 
-export interface LandingProofStep {
-  stage: Extract<LandingHeroStage, "capture" | "progress" | "act">;
+export interface LandingScrollChapter {
+  stage: LandingHeroStage;
+  internalStage: LandingAdvancedHeroStage;
   number: string;
   label: string;
+  question: string;
   title: string;
   description: string;
-  result: string;
-  question: string;
-  answer: string;
 }
 
-export const landingProofSteps: readonly LandingProofStep[] = [
+export const landingScrollChapters: readonly LandingScrollChapter[] = [
   {
     stage: "capture",
+    internalStage: "capture",
     number: "01",
     label: "Capture",
-    title: "Turn a job post into an opportunity",
-    description: "Keep the role, source, work mode, compensation context, and follow-up date in one reliable record.",
-    result: `Captured from a ${landingStory.opportunity.source.toLowerCase()}`,
-    question: "What needs a decision?",
-    answer: "Review the role and submit by Friday.",
+    question: "What should HireFlux remember first?",
+    title: "Start with decision-ready context.",
+    description: "Role, source, work mode, compensation, and follow-up become one reliable record.",
   },
   {
     stage: "progress",
+    internalStage: "progress",
     number: "02",
-    label: "Move",
-    title: "Carry context into every conversation",
-    description: "Advance through valid stages, schedule the technical screen, and keep preparation attached to the same opportunity.",
-    result: `Interview · ${landingStory.interview.dateLabel.split(" · ")[0]}`,
-    question: "What should I prepare?",
-    answer: `Finish one checklist item and ${landingStory.preparation.totalCount - 1} candidate questions.`,
+    label: "Progress",
+    question: "How does the history stay connected?",
+    title: "History stays attached.",
+    description: "The technical screen joins that record, preserving what led there.",
+  },
+  {
+    stage: "prepare",
+    internalStage: "prepare",
+    number: "03",
+    label: "Prepare",
+    question: "How does context guide interview preparation?",
+    title: "Preparation starts informed.",
+    description: "Company and interview context shape questions and a focused readiness checklist.",
   },
   {
     stage: "act",
-    number: "03",
-    label: "Learn",
-    title: "Use history to choose the next move",
-    description: "See the milestones that already happened and let the action center surface what deserves attention now.",
-    result: "Follow-up due today",
-    question: "What should I do next?",
-    answer: landingStory.action.proofAction,
+    internalStage: "act",
+    number: "04",
+    label: "Act",
+    question: "Why does this action come next?",
+    title: "The journey explains what comes next.",
+    description: "Saved preparation grounds a timely follow-up in what happened.",
   },
 ] as const;
 

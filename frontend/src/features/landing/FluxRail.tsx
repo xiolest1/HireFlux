@@ -18,7 +18,7 @@ export function FluxRail() {
         <path d="M352 66 C389 66 394 92 426 92" pathLength="1" vectorEffect="non-scaling-stroke" className="fill-none stroke-violet" strokeWidth="3" strokeLinecap="round" data-flux-rail-prepare />
         <path d="M426 92 C450 92 447 67 460 67" pathLength="1" vectorEffect="non-scaling-stroke" className="fill-none stroke-success" strokeWidth="3" strokeLinecap="round" data-flux-rail-act />
         <path d="M184 31 L191 38 L184 45 L177 38 Z" className="fill-surface-raised stroke-accent-strong" strokeWidth="2" vectorEffect="non-scaling-stroke" data-flux-context-node />
-        <circle cx="352" cy="66" r="3.5" className="fill-surface-raised stroke-line-strong" strokeWidth="2" />
+        <circle cx="352" cy="66" r="3.5" className="fill-surface-raised stroke-line-strong" strokeWidth="2" data-flux-stage-node />
         <path d="M426 85 L433 92 L426 99 L419 92 Z" className="fill-surface-raised stroke-violet" strokeWidth="2" vectorEffect="non-scaling-stroke" data-flux-resolve-node />
         <circle cx="460" cy="67" r="4" className="fill-surface-raised stroke-success" strokeWidth="2" data-flux-act-node />
         <g transform="translate(42 38)"><FluxMarker /></g>
@@ -32,7 +32,7 @@ export function FluxRail() {
         <path d="M204 62 C229 62 231 86 248 86" pathLength="1" vectorEffect="non-scaling-stroke" className="fill-none stroke-violet" strokeWidth="3" strokeLinecap="round" data-flux-rail-prepare />
         <path d="M248 86 C263 86 257 64 266 64" pathLength="1" vectorEffect="non-scaling-stroke" className="fill-none stroke-success" strokeWidth="3" strokeLinecap="round" data-flux-rail-act />
         <path d="M102 28 L108 34 L102 40 L96 34 Z" className="fill-surface-raised stroke-accent-strong" strokeWidth="2" vectorEffect="non-scaling-stroke" data-flux-context-node />
-        <circle cx="204" cy="62" r="3.5" className="fill-surface-raised stroke-line-strong" strokeWidth="2" />
+        <circle cx="204" cy="62" r="3.5" className="fill-surface-raised stroke-line-strong" strokeWidth="2" data-flux-stage-node />
         <path d="M248 80 L254 86 L248 92 L242 86 Z" className="fill-surface-raised stroke-violet" strokeWidth="2" vectorEffect="non-scaling-stroke" data-flux-resolve-node />
         <circle cx="266" cy="64" r="4" className="fill-surface-raised stroke-success" strokeWidth="2" data-flux-act-node />
         <g transform="translate(28 34)"><FluxMarker mobile /></g>
