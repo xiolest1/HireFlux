@@ -169,6 +169,11 @@ test("landing story becomes a stable complete state with reduced motion", async 
     "data-flux-settled",
     "true",
   );
+  await expect(page.locator("[data-flux-metadata]")).toBeHidden();
+  await expect(page.locator("[data-flux-context]")).toBeHidden();
+  await expect(page.locator("[data-flux-preparation]")).toBeVisible();
+  await expect(page.locator("[data-flux-interview]")).toHaveCSS("opacity", "0.72");
+  await expect(page.locator("[data-flux-interview-detail]")).toBeHidden();
   await expect(page.getByTestId("mobile-product-story")).toBeVisible();
   await expect(page.getByTestId("desktop-product-story")).toBeHidden();
   await expect(page.locator(".pin-spacer")).toHaveCount(0);
@@ -518,6 +523,10 @@ test("Flux Rail scenes preserve one opportunity through Capture, Progress, Prepa
 
   const story = page.locator("[data-flux-story]");
   const opportunity = story.locator("[data-persistent-opportunity]");
+  const opacity = async (selector: string) =>
+    story.locator(selector).evaluate((element) =>
+      Number(getComputedStyle(element).opacity),
+    );
   await expect(opportunity).toHaveCount(1);
 
   for (const stage of ["Capture", "Progress", "Prepare", "Act"] as const) {
@@ -525,8 +534,40 @@ test("Flux Rail scenes preserve one opportunity through Capture, Progress, Prepa
     await expect(story).toHaveAttribute("data-visual-stage", stage.toLowerCase());
     await expect(story).toHaveAttribute("data-flux-settled", "true");
     await expect(opportunity).toHaveCount(1);
+
+    if (stage === "Capture") {
+      expect(await opacity("[data-flux-metadata]")).toBeGreaterThan(0.95);
+      expect(await opacity("[data-flux-interview]")).toBeLessThan(0.05);
+      expect(await opacity("[data-flux-preparation]")).toBeLessThan(0.05);
+    } else if (stage === "Progress") {
+      expect(await opacity("[data-flux-metadata]")).toBeLessThan(0.05);
+      expect(await opacity("[data-flux-context]")).toBeLessThan(0.05);
+      expect(await opacity("[data-flux-interview]")).toBeGreaterThan(0.95);
+      expect(await opacity("[data-flux-interview-content]")).toBeGreaterThan(0.95);
+      expect(await opacity("[data-flux-preparation]")).toBeLessThan(0.05);
+    } else if (stage === "Prepare") {
+      expect(await opacity("[data-flux-metadata]")).toBeLessThan(0.05);
+      expect(await opacity("[data-flux-context]")).toBeLessThan(0.05);
+      expect(await opacity("[data-flux-interview]")).toBeGreaterThan(0.68);
+      expect(await opacity("[data-flux-interview]")).toBeLessThan(0.76);
+      expect(await opacity("[data-flux-interview-detail]")).toBeLessThan(0.05);
+      expect(await opacity("[data-flux-preparation]")).toBeGreaterThan(0.95);
+    }
     await expect(story).toHaveScreenshot(`flux-${stage.toLowerCase()}.png`);
   }
+
+  await page.getByRole("button", { name: "Show Progress stage" }).click();
+  await expect(story).toHaveAttribute("data-flux-settled", "true");
+  expect(await opacity("[data-flux-interview]")).toBeGreaterThan(0.95);
+  expect(await opacity("[data-flux-preparation]")).toBeLessThan(0.05);
+
+  await page.getByRole("button", { name: "Show Capture stage" }).click();
+  await page.getByRole("button", { name: "Show Prepare stage" }).click();
+  await page.getByRole("button", { name: "Show Progress stage" }).click();
+  await expect(story).toHaveAttribute("data-flux-settled", "true");
+  expect(await opacity("[data-flux-context]")).toBeLessThan(0.05);
+  expect(await opacity("[data-flux-interview]")).toBeGreaterThan(0.95);
+  expect(await opacity("[data-flux-preparation]")).toBeLessThan(0.05);
 
   await expectNoHorizontalPageOverflow(page);
   await page.goto("/dashboard");

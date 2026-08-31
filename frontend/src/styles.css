@@ -692,6 +692,31 @@
   transform: translateY(-0.3125rem) scale(0.96);
 }
 
+.hf-flux-story[data-reduced-motion="true"]:is([data-visual-stage="progress"], [data-visual-stage="prepare"], [data-visual-stage="resolve"], [data-visual-stage="act"])
+  :is([data-flux-metadata], [data-flux-capture-link], [data-flux-context]) {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.hf-flux-story[data-reduced-motion="true"]:is([data-visual-stage="prepare"], [data-visual-stage="resolve"])
+  [data-flux-interview] {
+  opacity: 0.72;
+  visibility: visible;
+  transform: translateY(-0.4375rem) scaleX(0.96) scaleY(0.86);
+  transform-origin: top center;
+}
+
+.hf-flux-story[data-reduced-motion="true"]:is([data-visual-stage="prepare"], [data-visual-stage="resolve"])
+  [data-flux-interview-content] {
+  opacity: 0.8;
+}
+
+.hf-flux-story[data-reduced-motion="true"]:is([data-visual-stage="prepare"], [data-visual-stage="resolve"])
+  [data-flux-interview-detail] {
+  opacity: 0;
+  visibility: hidden;
+}
+
 .hf-section-reveal {
   animation: hf-story-swap 520ms var(--ease-fluid) both;
 }

@@ -9,11 +9,13 @@ const gsapMocks = vi.hoisted(() => {
   let maximumActiveContexts = 0;
   const timeline = {
     addLabel: vi.fn(),
+    set: vi.fn(),
     to: vi.fn(),
     tweenTo: vi.fn(),
     kill: vi.fn(),
   };
   timeline.addLabel.mockReturnValue(timeline);
+  timeline.set.mockReturnValue(timeline);
   timeline.to.mockReturnValue(timeline);
   timeline.tweenTo.mockImplementation(() => {
     const tween = { kill: vi.fn() };
@@ -57,6 +59,7 @@ beforeEach(() => {
   gsapMocks.targetTweens.length = 0;
   gsapMocks.resetContextCounts();
   gsapMocks.timeline.addLabel.mockReturnValue(gsapMocks.timeline);
+  gsapMocks.timeline.set.mockReturnValue(gsapMocks.timeline);
   gsapMocks.timeline.to.mockReturnValue(gsapMocks.timeline);
   gsapMocks.timeline.tweenTo.mockImplementation(() => {
     const tween = { kill: vi.fn() };
@@ -102,6 +105,48 @@ describe("FluxStoryVisual", () => {
     );
     expect(container.querySelector("[data-persistent-opportunity]")).toBe(opportunity);
     expect(container.querySelector("[aria-live]")).not.toBeInTheDocument();
+  });
+
+  it("assigns one persistent owner and explicit scene-owned surfaces", () => {
+    const { container } = render(
+      <FluxStoryVisual stage="capture" reducedMotion={false} />,
+    );
+
+    expect(
+      container.querySelector('[data-flux-scene-owner="opportunity"]'),
+    ).toHaveAttribute("data-persistent-opportunity");
+    for (const owner of ["context", "progress", "prepare", "act"]) {
+      expect(
+        container.querySelector(`[data-flux-scene-owner="${owner}"]`),
+      ).toBeInTheDocument();
+    }
+    expect(
+      container.querySelector("[data-flux-interview-content]"),
+    ).toBeInTheDocument();
+  });
+
+  it("yields outgoing chrome before the next solid surface takes ownership", () => {
+    render(<FluxStoryVisual stage="capture" reducedMotion={false} />);
+
+    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+      expect.stringContaining("[data-flux-metadata]"),
+      expect.objectContaining({ autoAlpha: 0, duration: 0.22 }),
+    );
+    expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
+      "[data-flux-interview]",
+      { autoAlpha: 1 },
+      "<+0.14",
+    );
+    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+      "[data-flux-interview-content]",
+      expect.objectContaining({ autoAlpha: 0.8, duration: 0.22 }),
+      "<",
+    );
+    expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
+      "[data-flux-preparation]",
+      { autoAlpha: 1 },
+      "<+0.14",
+    );
   });
 
   it("kills an in-flight target tween before moving to a newer selection", () => {

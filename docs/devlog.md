@@ -1,5 +1,63 @@
 # HireFlux development log
 
+## 2026-08-31 — E5 hero scene ownership and overlap cleanup
+
+Completed a visual-state ownership pass only for the upper Capture → Context →
+Progress → Prepare hero. The lower Connected Workspace sequence, E4 desktop
+geometry, 2.5-viewport travel, CTA and release timing, breakpoints, and route
+architecture remain unchanged.
+
+The overlap was caused by three ownership ambiguities rather than one long
+fade. The persistent Northstar container also carried capture-only metadata
+indefinitely; the Context surface and Technical screen crossfaded while both
+were readable; and the complete Technical screen remained at full prominence
+while Preparation expanded beneath it. On dark surfaces, those technically
+valid opacity ranges read as accumulated interface layers.
+
+Northstar Labs identity and role now explicitly own the persistent opportunity
+surface. Capture metadata, its Organized affordance, and Context are
+scene-owned and yield over 0.22 seconds at Progress. The Applied status exits
+over 0.14 seconds before the Interview status resolves. The Technical screen's
+solid outer surface takes ownership 0.14 seconds into that handoff, while a
+separate content target resolves over the normal 0.32-second state timing.
+This retains continuity without allowing Context and the incoming interview to
+compete at full strength.
+
+During Progress → Prepare, the Technical screen becomes provenance instead of
+remaining a second primary card. Its date detail exits over 0.18 seconds, its
+content settles at 80% internal opacity, and the surface contracts to
+`scaleX(0.96) scaleY(0.86)`, `y: -7px`, and 72% outer opacity. Preparation then
+takes solid ownership after a 0.14-second handoff and opens through the existing
+clip/scale choreography. The persistent Northstar identity and Interview
+status remain the connective tissue; obsolete capture metadata, Context, and
+full-strength interview chrome do not.
+
+Live endpoint measurements confirmed Capture with capture metadata/status at
+full strength and later surfaces hidden; Progress with metadata and Context at
+zero while the Technical screen and its content are fully visible; and Prepare
+with the Preparation surface at full strength while the interview is a 72%
+supporting strip, its content is 80%, and its date detail is hidden. Repeated
+Capture → Prepare → Progress reversals and rapid mixed selections settled to
+the requested endpoint with no stale Context or Preparation UI and no
+horizontal overflow. Dark desktop and light mobile Prepare frames were
+reviewed and only their intentional visual baselines were refreshed.
+
+Reduced-motion endpoint CSS now follows the same ownership model without
+creating a GSAP lifecycle: later stages hide capture metadata and Context, and
+Prepare/Resolve render the interview as subordinate provenance. Existing
+Strict Mode cleanup, one persistent DOM composition, one hero timeline, and
+target-tween cancellation remain intact.
+
+Against E4, the production main entry remains 282.95 kB raw / 84.81 kB gzip.
+The lazy landing chunk is 181.47 / 60.68 (+0.67 / +0.15), and CSS is 120.51 /
+18.95 (+0.79 / +0.10). No dependency or extra animation chunk was added.
+ESLint, TypeScript, all 195 Vitest tests, the production build,
+hosting-header tests, `git diff --check`, and the complete Playwright / Axe
+matrix pass (118 passed, 42 intentional project-filtered skips).
+
+E6 lower-story geometry and E7 responsive choreography concerns were
+deliberately left untouched.
+
 ## 2026-08-31 — E4 final transition integrity and viewport composition polish
 
 Completed the landing page's final motion pass without changing the approved

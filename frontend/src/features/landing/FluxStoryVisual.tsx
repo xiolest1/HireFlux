@@ -70,6 +70,7 @@ export function FluxStoryVisual({ stage, reducedMotion }: FluxStoryVisualProps) 
       gsap.set("[data-flux-rail-context], [data-flux-rail-progress], [data-flux-rail-prepare], [data-flux-rail-act], [data-flux-context-node], [data-flux-resolve-node], [data-flux-act-node]", { autoAlpha: 0 });
       gsap.set("[data-flux-marker-desktop], [data-flux-marker-mobile]", { autoAlpha: 0 });
       gsap.set("[data-flux-interview]", { autoAlpha: 0, y: 9, scale: 0.985 });
+      gsap.set("[data-flux-interview-content]", { autoAlpha: 0, y: 4 });
       gsap.set("[data-flux-interview-detail]", { autoAlpha: 0, y: 5 });
       gsap.set("[data-flux-preparation]", { autoAlpha: 0, clipPath: "inset(0 0 100% 0 round 0.75rem)", scaleY: 0.88, transformOrigin: "top center" });
       gsap.set("[data-flux-prep-item]", { autoAlpha: 0, y: 6 });
@@ -108,23 +109,29 @@ export function FluxStoryVisual({ stage, reducedMotion }: FluxStoryVisualProps) 
         .addLabel("context:settled")
 
         .addLabel("progress:start")
-        .to("[data-flux-context], [data-flux-decision-context], [data-flux-capture-link]", { autoAlpha: 0, y: -3, duration: timing.state })
+        .to("[data-flux-context], [data-flux-decision-context], [data-flux-capture-link], [data-flux-metadata]", { autoAlpha: 0, y: -3, duration: 0.22 })
         .to("[data-flux-rail-progress]", { autoAlpha: 1, strokeDashoffset: 0, duration: timing.travel, ease: "power2.inOut" }, "<+0.04")
         .to("[data-flux-marker-desktop]", { x: 310, y: 28, duration: timing.travel, ease: "power2.inOut" }, "<")
         .to("[data-flux-marker-mobile]", { x: 176, y: 28, duration: timing.travel, ease: "power2.inOut" }, "<")
-        .to("[data-flux-capture-status]", { autoAlpha: 0, y: -4, duration: timing.quick }, "<+0.08")
-        .to("[data-flux-progress-status]", { autoAlpha: 1, y: 0, duration: timing.state }, "<+0.06")
-        .to("[data-flux-interview]", { autoAlpha: 1, y: 0, scale: 1, duration: timing.state }, "<+0.04")
-        .to("[data-flux-interview-detail]", { autoAlpha: 1, y: 0, duration: timing.state }, "<+0.1")
+        .to("[data-flux-capture-status]", { autoAlpha: 0, y: -4, duration: 0.14 }, "<+0.02")
+        .set("[data-flux-progress-status]", { autoAlpha: 1 }, "<+0.11")
+        .to("[data-flux-progress-status]", { y: 0, duration: timing.quick }, "<")
+        .set("[data-flux-interview]", { autoAlpha: 1 }, "<+0.14")
+        .to("[data-flux-interview]", { y: 0, scale: 1, duration: timing.state }, "<")
+        .to("[data-flux-interview-content]", { autoAlpha: 1, y: 0, duration: timing.state }, "<+0.04")
+        .to("[data-flux-interview-detail]", { autoAlpha: 1, y: 0, duration: timing.state }, "<")
         .addLabel("progress:settled")
 
         .addLabel("prepare:start")
         .to("[data-flux-rail-prepare]", { autoAlpha: 1, strokeDashoffset: 0, duration: timing.travel, ease: "power2.inOut" })
         .to("[data-flux-marker-desktop]", { x: 384, y: 54, duration: timing.travel, ease: "power2.inOut" }, "<")
         .to("[data-flux-marker-mobile]", { x: 220, y: 52, duration: timing.travel, ease: "power2.inOut" }, "<")
-        .to("[data-flux-interview]", { y: -5, scale: 0.99, duration: timing.state }, "<+0.08")
-        .to("[data-flux-preparation]", { autoAlpha: 1, clipPath: "inset(0 0 0% 0 round 0.75rem)", scaleY: 1, duration: timing.handoff, ease: "power3.out" }, "<+0.05")
-        .to("[data-flux-prep-item]", { autoAlpha: 1, y: 0, duration: timing.state, stagger: timing.stagger }, "<+0.2")
+        .to("[data-flux-interview-detail]", { autoAlpha: 0, y: -3, duration: timing.quick }, "<+0.06")
+        .to("[data-flux-interview-content]", { autoAlpha: 0.8, y: -1, duration: 0.22 }, "<")
+        .to("[data-flux-interview]", { autoAlpha: 0.72, y: -7, scaleX: 0.96, scaleY: 0.86, duration: timing.state, transformOrigin: "top center" }, "<")
+        .set("[data-flux-preparation]", { autoAlpha: 1 }, "<+0.14")
+        .to("[data-flux-preparation]", { clipPath: "inset(0 0 0% 0 round 0.75rem)", scaleY: 1, duration: timing.handoff, ease: "power3.out" }, "<")
+        .to("[data-flux-prep-item]", { autoAlpha: 1, y: 0, duration: timing.state, stagger: timing.stagger }, "<+0.18")
         .to("[data-flux-prep-progress]", { width: "66.666%", duration: timing.travel, ease: "power2.inOut" }, "<")
         .addLabel("prepare:settled")
 
@@ -189,7 +196,7 @@ export function FluxStoryVisual({ stage, reducedMotion }: FluxStoryVisualProps) 
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_8%_4%,color-mix(in_srgb,var(--hf-accent)_8%,transparent),transparent_42%),radial-gradient(circle_at_92%_94%,color-mix(in_srgb,var(--hf-violet)_7%,transparent),transparent_38%)]" />
 
-      <section className="absolute inset-x-3 top-3 z-20 rounded-xl border border-line-strong/75 bg-surface-raised px-3 py-1.5 shadow-sm sm:right-[24%] sm:px-4" data-flux-application data-persistent-opportunity>
+      <section className="absolute inset-x-3 top-3 z-20 rounded-xl border border-line-strong/75 bg-surface-raised px-3 py-1.5 shadow-sm sm:right-[24%] sm:px-4" data-flux-application data-flux-scene-owner="opportunity" data-persistent-opportunity>
         <div className="relative h-3 overflow-hidden" data-flux-cue-strip>
           <div className="absolute inset-x-0 top-0 flex items-center gap-2 text-[0.6rem] font-bold leading-3 text-accent-strong" data-flux-incoming>
             <span className="size-1.5 rounded-full bg-accent" /> Incoming referral opportunity
@@ -212,7 +219,7 @@ export function FluxStoryVisual({ stage, reducedMotion }: FluxStoryVisualProps) 
         </div>
       </section>
 
-      <section className="absolute inset-x-3 top-[5.9rem] z-10 grid grid-cols-3 gap-1.5 rounded-xl border border-line bg-surface/95 p-2 shadow-sm sm:right-[10%] sm:top-[6rem] sm:gap-2" data-flux-context>
+      <section className="absolute inset-x-3 top-[5.9rem] z-10 grid grid-cols-3 gap-1.5 rounded-xl border border-line bg-surface/95 p-2 shadow-sm sm:right-[10%] sm:top-[6rem] sm:gap-2" data-flux-context data-flux-scene-owner="context">
         <div className="min-w-0 rounded-lg bg-surface-muted px-2 py-1.5" data-flux-context-item><p className="text-[0.5rem] font-bold uppercase tracking-[0.1em] text-ink-muted">Location</p><p className="truncate text-[0.62rem] font-bold text-ink">{landingStory.opportunity.location}</p></div>
         <div className="min-w-0 rounded-lg bg-surface-muted px-2 py-1.5" data-flux-context-item><p className="text-[0.5rem] font-bold uppercase tracking-[0.1em] text-ink-muted">Compensation</p><p className="truncate text-[0.62rem] font-bold text-ink">{landingStory.opportunity.compensation}</p></div>
         <div className="min-w-0 rounded-lg bg-accent-soft px-2 py-1.5" data-flux-context-item><p className="text-[0.5rem] font-bold uppercase tracking-[0.1em] text-accent-strong">Next check</p><p className="truncate text-[0.62rem] font-bold text-ink">September 5</p></div>
@@ -221,15 +228,15 @@ export function FluxStoryVisual({ stage, reducedMotion }: FluxStoryVisualProps) 
       <FluxRail />
 
       <div className="absolute inset-x-3 top-[11.15rem] z-20 sm:left-[29%] sm:top-[10.55rem]">
-        <section className="invisible rounded-xl border border-accent/30 bg-surface-raised p-2.5 shadow-sm" data-flux-interview>
-          <div className="flex items-center gap-2.5">
+        <section className="invisible rounded-xl border border-accent/30 bg-surface-raised p-2.5 shadow-sm" data-flux-interview data-flux-scene-owner="progress">
+          <div className="flex items-center gap-2.5" data-flux-interview-content>
             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-strong"><CalendarCheck2 className="size-4" /></span>
             <div className="min-w-0 flex-1"><p className="text-[0.54rem] font-bold uppercase tracking-[0.12em] text-accent-strong">Interview created</p><p className="text-[0.68rem] font-black leading-4 text-ink sm:text-xs">{landingStory.interview.title}</p></div>
             <span className="max-w-20 text-right text-[0.54rem] font-bold leading-3 text-ink-muted" data-flux-interview-detail>{landingStory.interview.dateLabel}</span>
           </div>
         </section>
 
-        <section className="invisible mt-2 rounded-xl border border-violet/30 bg-surface-raised p-2.5 shadow-sm" data-flux-preparation>
+        <section className="invisible mt-2 rounded-xl border border-violet/30 bg-surface-raised p-2.5 shadow-sm" data-flux-preparation data-flux-scene-owner="prepare">
           <div className="flex items-center gap-2" data-flux-prep-item>
             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-soft text-violet"><ClipboardCheck className="size-4" /></span>
             <div className="min-w-0 flex-1"><p className="text-[0.54rem] font-bold uppercase tracking-[0.12em] text-violet">Interview preparation</p><p className="truncate text-[0.68rem] font-black text-ink sm:text-xs">Context carried forward</p></div>
@@ -244,7 +251,7 @@ export function FluxStoryVisual({ stage, reducedMotion }: FluxStoryVisualProps) 
           <div className="invisible mt-2 flex items-center gap-2 rounded-lg bg-success-soft px-2 py-1.5 text-[0.58rem] font-bold text-success" data-flux-resolve-proof><CircleCheckBig className="size-3.5 shrink-0" />Preparation saved to the interview history</div>
         </section>
 
-        <section className="invisible absolute inset-x-0 top-8 z-20 rounded-xl border border-accent/35 bg-surface-raised p-3 shadow-panel" data-flux-action>
+        <section className="invisible absolute inset-x-0 top-8 z-20 rounded-xl border border-accent/35 bg-surface-raised p-3 shadow-panel" data-flux-action data-flux-scene-owner="act">
           <div className="flex items-start gap-2.5" data-flux-action-item>
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-strong"><Clock3 className="size-4" /></span>
             <div className="min-w-0 flex-1"><p className="text-[0.54rem] font-bold uppercase tracking-[0.13em] text-accent-strong">Action Center · Due today</p><p className="mt-0.5 text-sm font-black leading-5 text-ink">{landingStory.action.nextAction}</p></div>
