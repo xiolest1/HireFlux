@@ -181,6 +181,22 @@ describe("ScrollProductStory", () => {
       expect.objectContaining({ scaleY: 1, autoAlpha: 1 }),
       0.41,
     );
+    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+      "[data-workspace-shell]",
+      expect.objectContaining({ y: 2, scale: 1.01 }),
+      0.69,
+    );
+    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+      "[data-workspace-preparation]",
+      expect.objectContaining({ scaleY: 0.26, autoAlpha: 0 }),
+      0.67,
+    );
+    expect(gsapMocks.timeline.fromTo).toHaveBeenCalledWith(
+      "[data-workspace-story-cta]",
+      expect.objectContaining({ autoAlpha: 0 }),
+      expect.objectContaining({ autoAlpha: 1 }),
+      0.8,
+    );
   });
 
   it("commits React chapter state only when semantic boundaries change", () => {
@@ -246,6 +262,10 @@ describe("ScrollProductStory", () => {
     expect(container.querySelector("[data-workspace-preparation-readiness]")).toBeInTheDocument();
     expect(container.querySelector("[data-workspace-preparation-primary]")).toBeInTheDocument();
     expect(container.querySelector("[data-workspace-preparation-supporting]")).toBeInTheDocument();
+    expect(container.querySelector("[data-workspace-history-origin]")).toBeInTheDocument();
+    expect(container.querySelector("[data-workspace-action-content]")).toBeInTheDocument();
+    expect(container.querySelector("[data-workspace-priority-primary]")).toBeInTheDocument();
+    expect(container.querySelector("[data-workspace-priority-supporting]")).toBeInTheDocument();
     expect(container.querySelectorAll("[data-workspace-priority]")).not.toHaveLength(0);
     expect(container.querySelector("[data-scroll-narrative]")).toBeInTheDocument();
     expect(container.querySelector("[data-scroll-progress]")).toBeInTheDocument();

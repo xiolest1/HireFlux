@@ -237,10 +237,45 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   expect(preparationShell.scale).toBeGreaterThan(interviewsShell.scale);
   expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
   expect(Math.abs(await stage.evaluate((element) => element.getBoundingClientRect().top))).toBeLessThan(3);
+  await moveTo(0.84);
+  await expect(story).toHaveAttribute("data-active-chapter", "action-center");
+  await expect(stage.locator("[data-workspace-history]")).toBeVisible();
+  await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
+  await expect(stage.locator("[data-workspace-priority-primary]")).toBeVisible();
+  expect(
+    await stage.locator("[data-workspace-preparation]").evaluate(
+      (element) => Number(getComputedStyle(element).opacity),
+    ),
+  ).toBeLessThan(0.06);
+  expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
   await moveTo(0.9);
   await expect(story).toHaveAttribute("data-active-chapter", "action-center");
   await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
-  await expect(stage.getByRole("button", { name: /Workspace/ })).toBeVisible();
+  await expect(stage.locator("[data-workspace-priority]")).toHaveCount(3);
+  await expect(stage.locator("[data-workspace-priority-supporting]")).toBeVisible();
+  const actionShell = await stage.locator("[data-workspace-shell]").evaluate((element) => {
+    const matrix = new DOMMatrix(getComputedStyle(element).transform);
+    return { x: matrix.m41, scale: matrix.a };
+  });
+  expect(actionShell.x).toBeGreaterThan(preparationShell.x);
+  expect(actionShell.scale).toBeLessThan(preparationShell.scale);
+  await moveTo(0.68);
+  await expect(story).toHaveAttribute("data-active-chapter", "preparation");
+  await expect(stage.locator("[data-workspace-interview-context]")).toBeVisible();
+  await expect(stage.locator("[data-workspace-preparation]")).toBeVisible();
+  await expect(stage.locator("[data-workspace-actions]")).toBeHidden();
+  await expect(stage.locator("[data-workspace-history]")).toBeHidden();
+  await page.evaluate(
+    ({ start, travel }) => {
+      window.scrollTo(0, start + travel * 0.91);
+      window.scrollTo(0, start + travel * 0.68);
+      window.scrollTo(0, start + travel * 0.9);
+    },
+    metrics,
+  );
+  await page.waitForTimeout(500);
+  await expect(story).toHaveAttribute("data-active-chapter", "action-center");
+  await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
   await moveTo(0.3);
   await expect(story).toHaveAttribute("data-active-chapter", "interviews");
   await expect(stage.locator("[data-workspace-interviews]")).toBeVisible();
@@ -261,19 +296,38 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   await moveTo(0.1);
   await expect(story).toHaveAttribute("data-active-chapter", "applications");
   await expect(stage.locator("[data-workspace-applications]")).toBeVisible();
-  await moveTo(0.96);
+  await moveTo(0.98);
+  await page.waitForTimeout(600);
   await expect(story).toHaveAttribute("data-active-chapter", "action-center");
+  await expect(stage.getByRole("button", { name: /Workspace/ })).toBeVisible();
+  expect(await stage.locator("[data-workspace-story-cta]").evaluate((element) => Number(getComputedStyle(element).opacity))).toBeGreaterThan(0.98);
 
+  const footer = page.locator("footer");
+  const release = await footer.evaluate((element) => ({
+    footerTop: element.getBoundingClientRect().top + window.scrollY,
+    viewportHeight: window.innerHeight,
+  }));
   await page.evaluate(
-    ({ start, travel }) => window.scrollTo(0, start + travel + 8),
+    ({ start, travel }) => window.scrollTo(0, start + travel - 1),
+    metrics,
+  );
+  await page.waitForTimeout(450);
+  expect(await stage.evaluate((element) => getComputedStyle(element).position)).toBe("fixed");
+  expect(await footer.evaluate((element) => element.getBoundingClientRect().top)).toBeGreaterThanOrEqual(release.viewportHeight);
+  await page.evaluate(
+    ({ start, travel }) => window.scrollTo(0, start + travel + 1),
     metrics,
   );
   await page.waitForTimeout(450);
   const workspaceCta = page.getByRole("button", { name: /Workspace/ }).last();
   await expect(workspaceCta).toBeVisible();
   expect(await stage.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
-  await page.locator("footer").scrollIntoViewIfNeeded();
-  await expect(page.locator("footer")).toBeVisible();
+  await page.evaluate(
+    ({ footerTop, viewportHeight }) => window.scrollTo(0, footerTop - viewportHeight + 1),
+    release,
+  );
+  await page.waitForTimeout(450);
+  await expect(footer).toBeVisible();
   expect(await stage.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
   await expectNoHorizontalPageOverflow(page);
 });
@@ -299,6 +353,37 @@ test("scroll story breakpoint changes do not duplicate pin wrappers", async ({
   expect(await page.locator(".pin-spacer").count()).toBe(1);
 });
 
+test("footer enters only after the 1440 desktop story releases", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; });
+  const stage = page.locator("[data-scroll-story-pin]");
+  const footer = page.locator("footer");
+  const metrics = await stage.evaluate((element) => ({
+    start: element.getBoundingClientRect().top + window.scrollY,
+    travel: window.innerHeight * 2.5,
+  }));
+  const release = await footer.evaluate((element) => ({
+    footerTop: element.getBoundingClientRect().top + window.scrollY,
+    viewportHeight: window.innerHeight,
+  }));
+
+  await page.evaluate(({ start, travel }) => window.scrollTo(0, start + travel - 1), metrics);
+  await page.waitForTimeout(450);
+  expect(await stage.evaluate((element) => getComputedStyle(element).position)).toBe("fixed");
+  expect(await footer.evaluate((element) => element.getBoundingClientRect().top)).toBeGreaterThanOrEqual(release.viewportHeight);
+  await page.evaluate(({ start, travel }) => window.scrollTo(0, start + travel + 1), metrics);
+  await page.waitForTimeout(450);
+  expect(await stage.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
+  await page.evaluate(({ footerTop, viewportHeight }) => window.scrollTo(0, footerTop - viewportHeight + 1), release);
+  await page.waitForTimeout(450);
+  await expect(footer).toBeVisible();
+  expect(await stage.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
+  await expectNoHorizontalPageOverflow(page);
+});
+
 test("desktop scroll story has focused Applications, Interviews, Preparation, and Action Center baselines", async ({
   page,
 }, testInfo) => {
@@ -312,7 +397,7 @@ test("desktop scroll story has focused Applications, Interviews, Preparation, an
     travel: window.innerHeight * 2.5,
   }));
 
-  for (const [chapter, progress] of [["applications", 0.05], ["interviews", 0.38], ["preparation", 0.68], ["action-center", 0.92]] as const) {
+  for (const [chapter, progress] of [["applications", 0.05], ["interviews", 0.38], ["preparation", 0.68], ["action-center", 0.98]] as const) {
     await page.evaluate(
       ({ start, travel, progress }) => window.scrollTo(0, start + travel * progress),
       { ...metrics, progress },
@@ -337,6 +422,15 @@ test("desktop scroll story has focused Applications, Interviews, Preparation, an
   );
   await page.waitForTimeout(1_500);
   await expect(stage).toHaveScreenshot("scroll-story-interviews-to-preparation.png");
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(500);
+  await page.evaluate(
+    ({ start, travel }) => window.scrollTo(0, start + travel * 0.85),
+    metrics,
+  );
+  await page.waitForTimeout(1_500);
+  await expect(stage).toHaveScreenshot("scroll-story-preparation-to-action-center.png");
 });
 
 test("desktop Action Center remains defined in light mode", async ({
@@ -355,7 +449,7 @@ test("desktop Action Center remains defined in light mode", async ({
     travel: window.innerHeight * 2.5,
   }));
   await page.evaluate(
-    ({ start, travel }) => window.scrollTo(0, start + travel * 0.92),
+    ({ start, travel }) => window.scrollTo(0, start + travel * 0.98),
     metrics,
   );
   await page.waitForTimeout(600);

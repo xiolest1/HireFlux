@@ -794,7 +794,7 @@
 
   .hf-scroll-story[data-reduced-motion="false"] .hf-scroll-story-release-buffer {
     display: block;
-    min-height: max(4rem, calc(100svh - 52rem));
+    min-height: max(10rem, calc(100svh - 48rem));
   }
 }
 

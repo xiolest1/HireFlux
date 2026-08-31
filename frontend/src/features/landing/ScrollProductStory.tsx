@@ -91,7 +91,31 @@ function PreparationSurface() {
 }
 
 function ActionCenterSurface({ compact = false }: { compact?: boolean }) {
-  return <div className={compact ? "divide-y divide-line" : "h-full min-w-0"}>{!compact ? <div className="border-b border-line px-5 py-3"><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-accent-strong">Action Center</p><p className="mt-1 text-sm font-black text-ink dark:text-white">What deserves attention right now</p></div> : null}<div className={compact ? "divide-y divide-line" : "divide-y divide-line px-5"}>{landingWorkspace.priorities.map((priority, index) => <div key={priority.company} className={`flex min-w-0 items-start gap-3 ${compact ? "py-2.5" : "py-3"}`} data-workspace-priority={priority.priority}><span className={`mt-0.5 size-2.5 shrink-0 rounded-full ${index === 0 ? "bg-accent" : index === 1 ? "bg-line-strong" : "bg-violet"}`} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className={`${compact ? "text-[0.65rem]" : "text-xs"} font-black text-ink dark:text-white`}>{priority.company}</p><span className={`${compact ? "text-[0.52rem]" : "text-[0.58rem]"} shrink-0 font-black uppercase tracking-[0.08em] ${index === 0 ? "text-accent-strong" : "text-ink-muted"}`}>{priority.timing}</span></div><p className={`${compact ? "mt-0.5 text-[0.58rem]" : "mt-1 text-sm"} font-bold text-ink`}>{priority.action}</p>{!compact ? <p className="mt-1 flex items-center gap-1 text-[0.58rem] font-semibold text-ink-muted"><ChevronRight className="size-3" />{priority.provenance}</p> : null}</div></div>)}</div></div>;
+  if (compact) {
+    return <div className="divide-y divide-line">{landingWorkspace.priorities.map((priority, index) => <div key={priority.company} className="flex min-w-0 items-start gap-3 py-2.5" data-workspace-priority={priority.priority}><span className={`mt-0.5 size-2.5 shrink-0 rounded-full ${index === 0 ? "bg-accent" : index === 1 ? "bg-line-strong" : "bg-violet"}`} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className="text-[0.65rem] font-black text-ink dark:text-white">{priority.company}</p><span className={`shrink-0 text-[0.52rem] font-black uppercase tracking-[0.08em] ${index === 0 ? "text-accent-strong" : "text-ink-muted"}`}>{priority.timing}</span></div><p className="mt-0.5 text-[0.58rem] font-bold text-ink">{priority.action}</p></div></div>)}</div>;
+  }
+
+  const [primaryPriority, ...supportingPriorities] = landingWorkspace.priorities;
+  return <div className="grid h-full min-w-0 grid-rows-[auto_auto_1fr]" data-workspace-action-content>
+    <div className="border-b border-line px-5 py-3">
+      <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-accent-strong">Action Center</p>
+      <p className="mt-1 text-sm font-black text-ink dark:text-white">What deserves attention right now</p>
+    </div>
+    <div className="border-b border-line bg-accent-soft/20 px-5 py-3.5" data-workspace-priority={primaryPriority.priority} data-workspace-priority-primary>
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="mt-1 size-2.5 shrink-0 rounded-full bg-accent" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0"><p className="text-[0.54rem] font-black uppercase tracking-[0.1em] text-accent-strong">Do now</p><p className="mt-0.5 text-sm font-black text-ink dark:text-white">{primaryPriority.company}</p></div>
+            <span className="shrink-0 text-[0.58rem] font-black uppercase tracking-[0.08em] text-accent-strong">{primaryPriority.timing}</span>
+          </div>
+          <p className="mt-1 text-sm font-black text-ink">{primaryPriority.action}</p>
+          <p className="mt-1 flex items-center gap-1 text-[0.58rem] font-semibold text-ink-muted"><ChevronRight className="size-3" />{primaryPriority.provenance}</p>
+        </div>
+      </div>
+    </div>
+    <div className="min-h-0 divide-y divide-line px-5" data-workspace-priority-supporting>{supportingPriorities.map((priority, index) => <div key={priority.company} className="flex min-w-0 items-start gap-3 py-2.5" data-workspace-priority={priority.priority}><span className={`mt-1 size-2.5 shrink-0 rounded-full ${index === 0 ? "bg-line-strong" : "bg-violet"}`} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className="text-xs font-black text-ink dark:text-white">{priority.company}</p><span className="shrink-0 text-[0.56rem] font-black uppercase tracking-[0.08em] text-ink-muted">{priority.timing}</span></div><p className="mt-0.5 text-xs font-bold text-ink">{priority.action}</p><p className="mt-0.5 flex items-center gap-1 text-[0.56rem] font-semibold text-ink-muted"><ChevronRight className="size-3" />{priority.provenance}</p></div></div>)}</div>
+  </div>;
 }
 
 function ConnectedWorkspaceVisual() {
@@ -105,7 +129,7 @@ function ConnectedWorkspaceVisual() {
       <section className="invisible absolute bottom-4 left-[11rem] right-4 top-[4.1rem] z-30 overflow-hidden rounded-2xl border border-violet/30 bg-surface-raised dark:bg-slate-900" data-workspace-interviews data-workspace-panel><InterviewSurface /></section>
       <section className="invisible absolute inset-x-4 top-[4.1rem] z-30 overflow-hidden rounded-2xl border border-violet/30 bg-surface-raised dark:bg-slate-900" data-workspace-interview-context data-workspace-panel><div className="px-4 py-3"><InterviewSurface compact /></div></section>
       <section className="invisible absolute inset-x-4 bottom-4 top-[8.6rem] z-40 overflow-hidden rounded-2xl border border-accent/30 bg-surface-raised dark:bg-slate-900" data-workspace-preparation data-workspace-panel><PreparationSurface /></section>
-      <section className="invisible absolute inset-x-4 top-[4.1rem] z-30 flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-raised px-4 py-3 dark:bg-slate-900" data-workspace-history data-workspace-panel><div className="flex min-w-0 items-center gap-2"><CircleCheckBig className="size-4 shrink-0 text-success" /><div className="min-w-0"><p className="truncate text-[0.62rem] font-black text-ink dark:text-white">Northstar preparation retained</p><p className="truncate text-[0.55rem] font-semibold text-ink-muted">Technical screen · 3 readiness items</p></div></div><span className="shrink-0 text-[0.54rem] font-bold text-success">History saved</span></section>
+      <section className="invisible absolute inset-x-4 top-[4.1rem] z-30 flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-raised px-4 py-3 dark:bg-slate-900" data-workspace-history data-workspace-panel><div className="flex min-w-0 items-center gap-2" data-workspace-history-origin><CircleCheckBig className="size-4 shrink-0 text-success" /><div className="min-w-0"><p className="truncate text-[0.62rem] font-black text-ink dark:text-white">Technical screen complete</p><p className="truncate text-[0.55rem] font-semibold text-ink-muted">Preparation retained · 3 readiness items</p></div></div><div className="flex shrink-0 items-center gap-1 text-[0.54rem] font-bold text-accent-strong"><ChevronRight className="size-3" /><span>Follow-up due today</span></div></section>
       <section className="invisible absolute inset-x-4 bottom-4 top-[8.6rem] z-40 overflow-hidden rounded-2xl border border-accent/35 bg-surface-raised dark:bg-slate-900" data-workspace-actions data-workspace-panel><ActionCenterSurface /></section>
     </div></div>
   </div>;
@@ -137,8 +161,8 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
         // E1 moves through a 44–60px viewport relationship change while the
         // Applications surface physically compresses into supporting context.
         const interviewShift = () => Math.min(46, Math.max(30, window.innerWidth * 0.04));
-        const inwardShift = () => Math.min(32, Math.max(20, window.innerWidth * 0.025));
         const preparationShift = () => interviewShift() + Math.min(14, Math.max(10, window.innerWidth * 0.01));
+        const actionShift = () => Math.min(22, Math.max(16, window.innerWidth * 0.015));
         const timeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * scrollStoryTravelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onUpdate: (self) => selectChapter(self.progress) } });
         timeline
           .addLabel("applications", scrollStoryTimelineLabels.applications)
@@ -187,18 +211,23 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .fromTo("[data-workspace-preparation-readiness-bar]", { scaleX: 0.48 }, { scaleX: 1, duration: 0.13, ease: "power2.inOut", transformOrigin: "left center" }, 0.425)
 
           .addLabel("action-center", scrollStoryTimelineLabels.actionCenter)
-          .to('[data-scroll-copy-stage="preparation"]', { autoAlpha: 0, y: -7, duration: 0.05 }, 0.71)
-          .fromTo('[data-scroll-copy-stage="action-center"]', { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.06 }, 0.745)
-          .to('[data-workspace-nav-active="preparation"]', { opacity: 0, duration: 0.04 }, 0.73)
-          .to('[data-workspace-nav-active="action-center"]', { opacity: 1, duration: 0.05 }, 0.755)
-          .to("[data-workspace-shell]", { x: () => -inwardShift() / 2, y: 2, scale: 0.995, duration: 0.14, transformOrigin: "center center" }, 0.74)
-          .to("[data-workspace-interview-context]", { y: -12, autoAlpha: 0, duration: 0.045 }, 0.71)
-          .to("[data-workspace-preparation]", { y: -18, scale: 0.95, autoAlpha: 0, duration: 0.045, transformOrigin: "top center" }, 0.72)
-          .set("[data-workspace-history]", { zIndex: 30 }, 0.77)
-          .set("[data-workspace-actions]", { zIndex: 40 }, 0.78)
-          .fromTo("[data-workspace-history]", { y: 10, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.09 }, 0.77)
-          .fromTo("[data-workspace-actions]", { y: 20, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.14, ease: "power3.out" }, 0.78)
-          .fromTo("[data-workspace-story-cta]", { y: 10, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.1 }, 0.82)
+          .set('[data-scroll-copy-stage="preparation"]', { autoAlpha: 0, y: -7 }, 0.714)
+          .set('[data-scroll-copy-stage="action-center"]', { autoAlpha: 1, y: 0 }, 0.714)
+          .to('[data-workspace-nav-active="preparation"]', { opacity: 0, duration: 0.04 }, 0.7)
+          .to('[data-workspace-nav-active="action-center"]', { opacity: 1, duration: 0.05 }, 0.72)
+          .to("[data-workspace-shell]", { x: () => -actionShift(), y: 2, scale: 1.01, duration: 0.17, ease: "power2.inOut", transformOrigin: "center center" }, 0.69)
+          .to("[data-workspace-preparation-primary]", { y: -6, autoAlpha: 0, duration: 0.05 }, 0.66)
+          .to("[data-workspace-preparation-supporting]", { x: -8, autoAlpha: 0, duration: 0.05 }, 0.665)
+          .to("[data-workspace-preparation-readiness]", { autoAlpha: 0, duration: 0.05 }, 0.665)
+          .to("[data-workspace-interview-context]", { y: -8, scaleX: 0.94, scaleY: 0.72, autoAlpha: 0, duration: 0.08, ease: "power2.inOut", transformOrigin: "top center" }, 0.67)
+          .to("[data-workspace-preparation]", { y: -22, scaleX: 0.9, scaleY: 0.26, autoAlpha: 0, clipPath: "inset(0% 0% 70% 0% round 1rem)", duration: 0.09, ease: "power2.inOut", transformOrigin: "top center" }, 0.67)
+          .set("[data-workspace-history]", { zIndex: 30 }, 0.67)
+          .set("[data-workspace-actions]", { zIndex: 40 }, 0.68)
+          .fromTo("[data-workspace-history]", { y: 10, scaleX: 0.9, autoAlpha: 0 }, { y: 0, scaleX: 1, autoAlpha: 1, duration: 0.11, ease: "power3.out", transformOrigin: "top center" }, 0.67)
+          .fromTo("[data-workspace-actions]", { y: 22, scaleX: 0.94, scaleY: 0.74, autoAlpha: 0, clipPath: "inset(16% 0% 0% 0% round 1rem)" }, { y: 0, scaleX: 1, scaleY: 1, autoAlpha: 1, clipPath: "inset(0% 0% 0% 0% round 1rem)", duration: 0.14, ease: "power3.out", transformOrigin: "top center" }, 0.68)
+          .fromTo("[data-workspace-priority-primary]", { y: 8 }, { y: 0, duration: 0.08 }, 0.72)
+          .fromTo("[data-workspace-priority-supporting]", { y: 10 }, { y: 0, duration: 0.09 }, 0.75)
+          .fromTo("[data-workspace-story-cta]", { y: 10, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.08 }, 0.8)
           .addLabel("settled", scrollStoryTimelineLabels.settled);
         return () => { timeline.scrollTrigger?.kill(); timeline.kill(); };
       });

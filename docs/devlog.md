@@ -1,5 +1,59 @@
 # HireFlux development log
 
+## 2026-08-30 — E3 Action Center pullback, CTA resolution, and pin release
+
+Completed only the Preparation → Action Center portion of the Connected
+Workspace arc. E1 and E2 retain their approved geometry and timing, with
+Preparation remaining the spatial peak at `scale: 1.065`, `y: -6px`, and
+approximately `x: -51px` at 1024px / `x: -60px` at 1440px. E3 now relaxes the
+same persistent shell to `scale: 1.01`, `y: 2px`, and
+`x: -clamp(16px, 1.5vw, 22px)`, producing the intended broad → focused →
+deepest-focus → broad arc without returning to the initial Applications
+geometry.
+
+Preparation now resolves causally instead of disappearing in a 45ms fade. Its
+checklist and supporting modules demote first, the focused surface contracts
+toward its provenance, and a retained “Technical screen complete · Preparation
+retained” history strip forms before the broader priorities take over. Live
+midpoint inspection exposed and corrected the former empty-shell/ghosting frame:
+at the final transition midpoint the history strip is approximately 99%
+established, Action Center is approximately 93% established, Preparation is
+below 1% opacity, and exactly one narrative copy is readable. Reverse and rapid
+direction changes restore the focused Preparation surface without stale Atlas
+or Harborline content.
+
+The desktop Action Center now uses a differentiated hierarchy. Northstar Labs
+is the featured “Do now” / “Due today” row and keeps its interview and
+preparation provenance; Atlas Systems and Harborline are quieter “Waiting” and
+“Review later” rows. The CTA remains below the narrative progress indicator,
+enters after Action Center establishes its hierarchy, reaches approximately 99%
+opacity before release, and reads as the consequence of the resolved journey
+rather than a separate product-mockup control.
+
+The ScrollTrigger distance remains exactly 2.5 viewport heights. The desktop
+release buffer is now `max(10rem, calc(100svh - 48rem))`, still bounded to this
+section and containing no visual content. Live measurements at 1440×900 and
+1280×900 put the footer's first visible pixel about 44px after the trigger end;
+at 1024×768 the margin is about 177px. Immediately before the trigger end the
+stage is fixed and the footer is outside the viewport; immediately after it the
+stage is relative, and it remains unpinned when the footer first appears.
+
+Live dark-theme QA covered the Preparation endpoint, E3 midpoint, settled
+Action endpoint, slow/normal/fast movement, partial stops, reverse and rapid
+reversal, CTA dwell, and release at 1440×900, 1280×900, and 1024×768. Light-mode
+Action coverage and the new midpoint baseline were reviewed visually. At 768,
+390, 320, and 1024×700, all four chapters remain in normal flow with zero pin
+spacers and no horizontal overflow. Reduced motion continues to use the tested
+complete linear fallback, and the hero remains unchanged.
+
+Against the approved E2 build, the production main entry remains 282.95 kB raw /
+84.80 kB gzip. The lazy landing chunk is 180.42 / 60.43 (+2.71 / +0.24), and CSS
+is 119.43 / 18.80 (+0.27 / +0.02). GSAP and ScrollTrigger remain inside the lazy
+landing chunk; no dependency or separate GSAP chunk was added. ESLint,
+TypeScript, all 193 Vitest tests, the production build, hosting-header tests,
+`git diff --check`, and the complete Playwright/accessibility matrix pass (118
+passed, 42 intentional project-filtered skips).
+
 ## 2026-08-30 — E2 Interviews to Preparation spatial peak
 
 Extended the approved E1 body-story language only through Interviews →
