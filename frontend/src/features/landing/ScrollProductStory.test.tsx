@@ -157,13 +157,29 @@ describe("ScrollProductStory", () => {
     }
     expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
       "[data-workspace-shell]",
-      expect.objectContaining({ scale: 0.99 }),
+      expect.objectContaining({ x: 14, y: 8, scale: 0.975 }),
       0,
     );
     expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
       "[data-workspace-shell]",
-      expect.objectContaining({ scale: 1.035 }),
-      0.44,
+      expect.objectContaining({ y: 0, scale: 1.035 }),
+      0.1,
+    );
+    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+      "[data-workspace-handoff-line]",
+      expect.objectContaining({ scaleX: 1 }),
+      0.14,
+    );
+    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+      "[data-workspace-shell]",
+      expect.objectContaining({ y: -6, scale: 1.065 }),
+      0.37,
+    );
+    expect(gsapMocks.timeline.fromTo).toHaveBeenCalledWith(
+      "[data-workspace-preparation]",
+      expect.objectContaining({ scaleY: 0.62, autoAlpha: 0 }),
+      expect.objectContaining({ scaleY: 1, autoAlpha: 1 }),
+      0.41,
     );
   });
 
@@ -225,7 +241,11 @@ describe("ScrollProductStory", () => {
 
     expect(container.querySelectorAll("[data-workspace-opportunity]")).not.toHaveLength(0);
     expect(container.querySelector("[data-workspace-interviews]")).toBeInTheDocument();
+    expect(container.querySelector("[data-workspace-handoff]")).toBeInTheDocument();
     expect(container.querySelector("[data-workspace-preparation]")).toBeInTheDocument();
+    expect(container.querySelector("[data-workspace-preparation-readiness]")).toBeInTheDocument();
+    expect(container.querySelector("[data-workspace-preparation-primary]")).toBeInTheDocument();
+    expect(container.querySelector("[data-workspace-preparation-supporting]")).toBeInTheDocument();
     expect(container.querySelectorAll("[data-workspace-priority]")).not.toHaveLength(0);
     expect(container.querySelector("[data-scroll-narrative]")).toBeInTheDocument();
     expect(container.querySelector("[data-scroll-progress]")).toBeInTheDocument();

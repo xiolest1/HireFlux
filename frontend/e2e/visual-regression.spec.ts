@@ -205,10 +205,37 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
 
   await moveTo(0.1);
   await expect(story).toHaveAttribute("data-active-chapter", "applications");
+  const applicationsShell = await stage.locator("[data-workspace-shell]").evaluate((element) => {
+    const matrix = new DOMMatrix(getComputedStyle(element).transform);
+    return { x: matrix.m41, scale: matrix.a };
+  });
   await moveTo(0.25);
   await expect(story).toHaveAttribute("data-active-chapter", "interviews");
+  await expect(stage.locator("[data-workspace-applications]")).toBeHidden();
+  await expect(stage.locator("[data-workspace-recent]")).toBeVisible();
+  await expect(stage.locator("[data-workspace-handoff]")).toBeVisible();
+  expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
+  await moveTo(0.32);
+  await expect(story).toHaveAttribute("data-active-chapter", "interviews");
+  await expect(stage.locator("[data-workspace-interviews]")).toBeVisible();
+  const interviewsShell = await stage.locator("[data-workspace-shell]").evaluate((element) => {
+    const matrix = new DOMMatrix(getComputedStyle(element).transform);
+    return { x: matrix.m41, scale: matrix.a };
+  });
+  expect(interviewsShell.x).toBeLessThan(applicationsShell.x);
+  expect(interviewsShell.scale).toBeGreaterThan(applicationsShell.scale);
   await moveTo(0.55);
   await expect(story).toHaveAttribute("data-active-chapter", "preparation");
+  await expect(stage.locator("[data-workspace-interview-context]")).toBeVisible();
+  await expect(stage.locator("[data-workspace-preparation]")).toBeVisible();
+  await expect(stage.locator("[data-workspace-preparation-primary]")).toBeVisible();
+  const preparationShell = await stage.locator("[data-workspace-shell]").evaluate((element) => {
+    const matrix = new DOMMatrix(getComputedStyle(element).transform);
+    return { x: matrix.m41, scale: matrix.a };
+  });
+  expect(preparationShell.x).toBeLessThan(interviewsShell.x);
+  expect(preparationShell.scale).toBeGreaterThan(interviewsShell.scale);
+  expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
   expect(Math.abs(await stage.evaluate((element) => element.getBoundingClientRect().top))).toBeLessThan(3);
   await moveTo(0.9);
   await expect(story).toHaveAttribute("data-active-chapter", "action-center");
@@ -216,6 +243,24 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   await expect(stage.getByRole("button", { name: /Workspace/ })).toBeVisible();
   await moveTo(0.3);
   await expect(story).toHaveAttribute("data-active-chapter", "interviews");
+  await expect(stage.locator("[data-workspace-interviews]")).toBeVisible();
+  await expect(stage.locator("[data-workspace-preparation]")).toBeHidden();
+  await expect(stage.locator("[data-workspace-interview-context]")).toBeHidden();
+  await expect(stage.locator("[data-workspace-recent]")).toBeVisible();
+  await page.evaluate(
+    ({ start, travel }) => {
+      window.scrollTo(0, start + travel * 0.68);
+      window.scrollTo(0, start + travel * 0.31);
+      window.scrollTo(0, start + travel * 0.66);
+    },
+    metrics,
+  );
+  await page.waitForTimeout(500);
+  await expect(story).toHaveAttribute("data-active-chapter", "preparation");
+  await expect(stage.locator("[data-workspace-preparation-primary]")).toBeVisible();
+  await moveTo(0.1);
+  await expect(story).toHaveAttribute("data-active-chapter", "applications");
+  await expect(stage.locator("[data-workspace-applications]")).toBeVisible();
   await moveTo(0.96);
   await expect(story).toHaveAttribute("data-active-chapter", "action-center");
 
@@ -267,7 +312,7 @@ test("desktop scroll story has focused Applications, Interviews, Preparation, an
     travel: window.innerHeight * 2.5,
   }));
 
-  for (const [chapter, progress] of [["applications", 0.1], ["interviews", 0.32], ["preparation", 0.58], ["action-center", 0.92]] as const) {
+  for (const [chapter, progress] of [["applications", 0.05], ["interviews", 0.38], ["preparation", 0.68], ["action-center", 0.92]] as const) {
     await page.evaluate(
       ({ start, travel, progress }) => window.scrollTo(0, start + travel * progress),
       { ...metrics, progress },
@@ -276,6 +321,22 @@ test("desktop scroll story has focused Applications, Interviews, Preparation, an
     await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-active-chapter", chapter);
     await expect(stage).toHaveScreenshot(`scroll-story-${chapter}.png`);
   }
+
+  await page.evaluate(
+    ({ start, travel }) => window.scrollTo(0, start + travel * 0.25),
+    metrics,
+  );
+  await page.waitForTimeout(700);
+  await expect(stage).toHaveScreenshot("scroll-story-applications-to-interviews.png");
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(500);
+  await page.evaluate(
+    ({ start, travel }) => window.scrollTo(0, start + travel * 0.5),
+    metrics,
+  );
+  await page.waitForTimeout(1_500);
+  await expect(stage).toHaveScreenshot("scroll-story-interviews-to-preparation.png");
 });
 
 test("desktop Action Center remains defined in light mode", async ({

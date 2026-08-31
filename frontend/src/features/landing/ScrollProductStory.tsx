@@ -47,7 +47,47 @@ function InterviewSurface({ compact = false }: { compact?: boolean }) {
 }
 
 function PreparationSurface() {
-  return <div className="grid h-full min-w-0 grid-rows-[auto_1fr]"><div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4"><div><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-violet">Preparation workspace</p><p className="mt-1 text-sm font-black text-ink dark:text-white">Technical screen · Northstar Labs</p></div><span className="rounded-full bg-warning-soft px-2.5 py-1 text-[0.58rem] font-bold text-warning">2 of 3 ready</span></div><div className="grid min-h-0 grid-cols-[0.9fr_1.1fr] gap-5 p-5"><div className="min-w-0 border-r border-line pr-5"><p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-ink-muted">Inherited context</p><p className="mt-3 text-xs font-black text-ink dark:text-white">Platform scope</p><p className="mt-1 text-[0.65rem] leading-5 text-ink-muted">Role notes and the technical-screen focus remain attached.</p><div className="mt-5 flex items-center gap-2 text-[0.62rem] font-bold text-success"><Check className="size-3.5" />Company context saved</div><div className="mt-3 flex items-center gap-2 text-[0.62rem] font-bold text-success"><Check className="size-3.5" />Evidence story selected</div></div><div className="min-w-0"><div className="flex items-center gap-2"><MessageSquareText className="size-4 text-accent-strong" /><p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-accent-strong">Candidate questions</p></div><p className="mt-3 text-sm font-black text-ink dark:text-white">How does the platform team measure adoption?</p><div className="mt-4 border-t border-line pt-4"><p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-ink-muted">Readiness checklist</p><div className="mt-3 space-y-2 text-[0.65rem] font-semibold text-ink-muted"><p className="flex items-center gap-2"><CircleCheckBig className="size-3.5 text-success" />Research Northstar</p><p className="flex items-center gap-2"><CircleCheckBig className="size-3.5 text-success" />Choose collaboration story</p><p className="flex items-center gap-2"><Clock3 className="size-3.5 text-warning" />Write one more question</p></div></div></div></div></div>;
+  return <div className="grid h-full min-w-0 grid-rows-[auto_1fr]" data-workspace-preparation-content>
+    <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-3.5">
+      <div className="min-w-0">
+        <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-violet">Preparation workspace</p>
+        <p className="mt-1 truncate text-sm font-black text-ink dark:text-white">Technical screen · Northstar Labs</p>
+      </div>
+      <div className="min-w-[7.25rem] shrink-0" data-workspace-preparation-readiness>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[0.54rem] font-black uppercase tracking-[0.1em] text-ink-muted">Readiness</span>
+          <span className="text-[0.62rem] font-black text-warning">2 of 3</span>
+        </div>
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line">
+          <div className="h-full w-2/3 origin-left rounded-full bg-violet" data-workspace-preparation-readiness-bar />
+        </div>
+      </div>
+    </div>
+    <div className="grid min-h-0 grid-cols-[1.18fr_0.82fr] gap-0">
+      <div className="min-w-0 px-5 py-4" data-workspace-preparation-primary>
+        <p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-ink-muted">Focused checklist</p>
+        <p className="mt-1.5 text-sm font-black text-ink dark:text-white">Ready the technical-screen story</p>
+        <div className="mt-3 divide-y divide-line text-[0.65rem] font-semibold text-ink-muted">
+          <p className="flex items-center gap-2 py-2"><CircleCheckBig className="size-3.5 shrink-0 text-success" />Research Northstar and platform scope</p>
+          <p className="flex items-center gap-2 py-2"><CircleCheckBig className="size-3.5 shrink-0 text-success" />Choose the collaboration evidence story</p>
+          <p className="flex items-center gap-2 py-2"><Clock3 className="size-3.5 shrink-0 text-warning" />Write one more candidate question</p>
+        </div>
+      </div>
+      <div className="min-w-0 border-l border-line bg-surface-muted/55 px-4 py-4" data-workspace-preparation-supporting>
+        <div className="flex items-center gap-2">
+          <MessageSquareText className="size-4 shrink-0 text-accent-strong" />
+          <p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-accent-strong">Candidate question</p>
+        </div>
+        <p className="mt-2 text-xs font-black leading-5 text-ink dark:text-white">How does the platform team measure adoption?</p>
+        <div className="mt-3 border-t border-line pt-3">
+          <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-ink-muted">Inherited context</p>
+          <p className="mt-1.5 text-[0.62rem] font-bold text-ink">Platform scope · Referral</p>
+          <p className="mt-1 text-[0.6rem] leading-4 text-ink-muted">Company notes and interview focus remain attached.</p>
+          <p className="mt-2 flex items-center gap-2 text-[0.6rem] font-bold text-success"><Check className="size-3.5 shrink-0" />Evidence story selected</p>
+        </div>
+      </div>
+    </div>
+  </div>;
 }
 
 function ActionCenterSurface({ compact = false }: { compact?: boolean }) {
@@ -61,6 +101,7 @@ function ConnectedWorkspaceVisual() {
       <div className="absolute inset-x-4 top-3 flex items-end justify-between" data-workspace-heading><div><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-ink-muted">Your search</p><p className="mt-0.5 text-base font-black text-ink dark:text-white">Connected workspace</p></div><span className="rounded-full border border-line bg-surface-raised px-2.5 py-1 text-[0.56rem] font-bold text-ink-muted">3 active</span></div>
       <section className="absolute inset-x-4 top-[4.1rem] h-[17.5rem] overflow-hidden rounded-2xl border border-line-strong bg-surface-raised px-5 py-4 dark:border-slate-700 dark:bg-slate-900" data-workspace-applications data-workspace-panel><div className="flex items-center justify-between gap-4"><div><p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-accent-strong">Applications workspace</p><p className="mt-1 text-sm font-black text-ink dark:text-white">Three opportunities moving at different speeds</p></div><span className="text-[0.58rem] font-bold text-ink-muted">Updated today</span></div><OpportunityRows /></section>
       <aside className="invisible absolute bottom-4 left-4 top-[4.1rem] z-20 w-[9.5rem] overflow-hidden rounded-2xl border border-line bg-surface-raised p-3 dark:bg-slate-900" data-workspace-recent data-workspace-panel><p className="text-[0.52rem] font-black uppercase tracking-[0.12em] text-ink-muted">Recent opportunities</p><OpportunityRows compact /></aside>
+      <div className="invisible absolute left-[10rem] top-[6.65rem] z-40 flex w-[3rem] items-center" data-workspace-handoff><span className="h-px flex-1 bg-violet opacity-60" data-workspace-handoff-line /><span className="size-2.5 shrink-0 rounded-full border-2 border-surface-raised bg-violet" data-workspace-handoff-node /></div>
       <section className="invisible absolute bottom-4 left-[11rem] right-4 top-[4.1rem] z-30 overflow-hidden rounded-2xl border border-violet/30 bg-surface-raised dark:bg-slate-900" data-workspace-interviews data-workspace-panel><InterviewSurface /></section>
       <section className="invisible absolute inset-x-4 top-[4.1rem] z-30 overflow-hidden rounded-2xl border border-violet/30 bg-surface-raised dark:bg-slate-900" data-workspace-interview-context data-workspace-panel><div className="px-4 py-3"><InterviewSurface compact /></div></section>
       <section className="invisible absolute inset-x-4 bottom-4 top-[8.6rem] z-40 overflow-hidden rounded-2xl border border-accent/30 bg-surface-raised dark:bg-slate-900" data-workspace-preparation data-workspace-panel><PreparationSurface /></section>
@@ -93,43 +134,57 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
     const context = gsap.context(() => {
       media.add(scrollStoryDesktopQuery, () => {
         const selectChapter = (progress: number) => { const next = scrollChapterForProgress(progress); if (activeChapterRef.current !== next) { activeChapterRef.current = next; setActiveChapter(next); } };
+        // E1 moves through a 44–60px viewport relationship change while the
+        // Applications surface physically compresses into supporting context.
+        const interviewShift = () => Math.min(46, Math.max(30, window.innerWidth * 0.04));
         const inwardShift = () => Math.min(32, Math.max(20, window.innerWidth * 0.025));
+        const preparationShift = () => interviewShift() + Math.min(14, Math.max(10, window.innerWidth * 0.01));
         const timeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * scrollStoryTravelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onUpdate: (self) => selectChapter(self.progress) } });
         timeline
           .addLabel("applications", scrollStoryTimelineLabels.applications)
           .set("[data-scroll-copy-stage]", { autoAlpha: 0 }, 0)
           .set("[data-workspace-panel]", { autoAlpha: 0 }, 0)
+          .set("[data-workspace-handoff]", { autoAlpha: 0 }, 0)
+          .set("[data-workspace-handoff-line]", { scaleX: 0, transformOrigin: "left center" }, 0)
           .set("[data-workspace-nav-active]", { opacity: 0 }, 0)
           .set('[data-scroll-copy-stage="applications"]', { autoAlpha: 1 }, 0)
           .set('[data-workspace-nav-active="applications"]', { opacity: 1 }, 0)
           .set("[data-workspace-applications]", { autoAlpha: 1, zIndex: 10 }, 0)
-          .set("[data-workspace-shell]", { x: 0, y: 6, scale: 0.99, transformOrigin: "center center" }, 0)
+          .set("[data-workspace-shell]", { x: 14, y: 8, scale: 0.975, transformOrigin: "center center" }, 0)
           .fromTo("[data-workspace-applications]", { y: 8 }, { y: 0, duration: 0.12 }, 0)
 
           .addLabel("interviews", scrollStoryTimelineLabels.interviews)
-          .to('[data-scroll-copy-stage="applications"]', { autoAlpha: 0, y: -7, duration: 0.05 }, 0.2)
-          .fromTo('[data-scroll-copy-stage="interviews"]', { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.06 }, 0.23)
-          .to('[data-workspace-nav-active="applications"]', { opacity: 0, duration: 0.04 }, 0.2)
-          .to('[data-workspace-nav-active="interviews"]', { opacity: 1, duration: 0.05 }, 0.23)
-          .to("[data-workspace-shell]", { x: () => -inwardShift(), y: 0, scale: 1, duration: 0.14, transformOrigin: "center center" }, 0.2)
-          .to("[data-workspace-applications]", { x: -36, scale: 0.94, autoAlpha: 0, duration: 0.06, transformOrigin: "left center" }, 0.18)
-          .set("[data-workspace-recent]", { zIndex: 20 }, 0.235)
-          .set("[data-workspace-interviews]", { zIndex: 30 }, 0.24)
-          .fromTo("[data-workspace-recent]", { x: -18, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.11 }, 0.235)
-          .fromTo("[data-workspace-interviews]", { x: 34, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.14, ease: "power3.out" }, 0.24)
+          .set('[data-scroll-copy-stage="applications"]', { autoAlpha: 0, y: -7 }, 0.226)
+          .set('[data-scroll-copy-stage="interviews"]', { autoAlpha: 1, y: 0 }, 0.226)
+          .to('[data-workspace-nav-active="applications"]', { opacity: 0, duration: 0.04 }, 0.205)
+          .to('[data-workspace-nav-active="interviews"]', { opacity: 1, duration: 0.04 }, 0.225)
+          .to("[data-workspace-shell]", { x: () => -interviewShift(), y: 0, scale: 1.035, duration: 0.3, transformOrigin: "center center" }, 0.1)
+          .to("[data-workspace-applications]", { x: -10, scaleX: 0.28, scaleY: 1.06, autoAlpha: 0, duration: 0.08, transformOrigin: "left top" }, 0.08)
+          .set("[data-workspace-recent]", { zIndex: 20 }, 0.11)
+          .set("[data-workspace-interviews]", { zIndex: 30 }, 0.19)
+          .fromTo("[data-workspace-recent]", { x: -18, y: 5, scale: 0.92, autoAlpha: 0 }, { x: 0, y: 0, scale: 1, autoAlpha: 1, duration: 0.14 }, 0.11)
+          .fromTo("[data-workspace-handoff]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.05 }, 0.14)
+          .to("[data-workspace-handoff-line]", { scaleX: 1, duration: 0.2, ease: "power2.inOut" }, 0.14)
+          .fromTo("[data-workspace-handoff-node]", { x: -8, scale: 0.72 }, { x: 0, scale: 1, duration: 0.18, ease: "power3.out" }, 0.15)
+          .fromTo("[data-workspace-interviews]", { x: 48, scaleX: 0.82, scaleY: 0.96, autoAlpha: 0 }, { x: 0, scaleX: 1, scaleY: 1, autoAlpha: 1, duration: 0.2, ease: "power3.out", transformOrigin: "right center" }, 0.19)
 
           .addLabel("preparation", scrollStoryTimelineLabels.preparation)
-          .to('[data-scroll-copy-stage="interviews"]', { autoAlpha: 0, y: -7, duration: 0.05 }, 0.41)
-          .fromTo('[data-scroll-copy-stage="preparation"]', { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.06 }, 0.445)
-          .to('[data-workspace-nav-active="interviews"]', { opacity: 0, duration: 0.04 }, 0.43)
-          .to('[data-workspace-nav-active="preparation"]', { opacity: 1, duration: 0.05 }, 0.455)
-          .to("[data-workspace-shell]", { x: () => -(inwardShift() + 8), y: -4, scale: 1.035, duration: 0.14, transformOrigin: "center center" }, 0.44)
-          .to("[data-workspace-recent]", { x: -14, autoAlpha: 0, duration: 0.045 }, 0.405)
-          .to("[data-workspace-interviews]", { y: -16, scale: 0.95, autoAlpha: 0, duration: 0.045, transformOrigin: "top center" }, 0.42)
-          .set("[data-workspace-interview-context]", { zIndex: 30 }, 0.465)
-          .set("[data-workspace-preparation]", { zIndex: 40 }, 0.48)
-          .fromTo("[data-workspace-interview-context]", { y: 10, scaleX: 0.94, autoAlpha: 0 }, { y: 0, scaleX: 1, autoAlpha: 1, duration: 0.09 }, 0.465)
-          .fromTo("[data-workspace-preparation]", { y: 20, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.16, ease: "power3.out" }, 0.48)
+          .set('[data-scroll-copy-stage="interviews"]', { autoAlpha: 0, y: -7 }, 0.432)
+          .set('[data-scroll-copy-stage="preparation"]', { autoAlpha: 1, y: 0 }, 0.432)
+          .to('[data-workspace-nav-active="interviews"]', { opacity: 0, duration: 0.04 }, 0.415)
+          .to('[data-workspace-nav-active="preparation"]', { opacity: 1, duration: 0.05 }, 0.435)
+          .to("[data-workspace-shell]", { x: () => -preparationShift(), y: -6, scale: 1.065, duration: 0.24, ease: "power2.inOut", transformOrigin: "center center" }, 0.37)
+          .to("[data-workspace-recent]", { x: -14, autoAlpha: 0, duration: 0.055 }, 0.375)
+          .to("[data-workspace-handoff]", { autoAlpha: 0, duration: 0.055 }, 0.375)
+          .to("[data-workspace-interviews]", { y: -10, scaleX: 0.9, scaleY: 0.74, autoAlpha: 0, duration: 0.07, ease: "power2.inOut", transformOrigin: "top center" }, 0.38)
+          .set("[data-workspace-interview-context]", { zIndex: 30 }, 0.39)
+          .set("[data-workspace-preparation]", { zIndex: 40 }, 0.41)
+          .fromTo("[data-workspace-interview-context]", { y: 18, scaleX: 0.82, scaleY: 0.74, autoAlpha: 0 }, { y: 0, scaleX: 1, scaleY: 1, autoAlpha: 1, duration: 0.135, ease: "power3.out", transformOrigin: "top center" }, 0.39)
+          .fromTo("[data-workspace-preparation]", { y: 30, scaleX: 0.94, scaleY: 0.62, autoAlpha: 0, clipPath: "inset(18% 0% 0% 0% round 1rem)" }, { y: 0, scaleX: 1, scaleY: 1, autoAlpha: 1, clipPath: "inset(0% 0% 0% 0% round 1rem)", duration: 0.18, ease: "power3.out", transformOrigin: "top center" }, 0.41)
+          .fromTo("[data-workspace-preparation-primary]", { y: 8, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.12 }, 0.42)
+          .fromTo("[data-workspace-preparation-supporting]", { x: 10, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.11 }, 0.44)
+          .fromTo("[data-workspace-preparation-readiness]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.1 }, 0.415)
+          .fromTo("[data-workspace-preparation-readiness-bar]", { scaleX: 0.48 }, { scaleX: 1, duration: 0.13, ease: "power2.inOut", transformOrigin: "left center" }, 0.425)
 
           .addLabel("action-center", scrollStoryTimelineLabels.actionCenter)
           .to('[data-scroll-copy-stage="preparation"]', { autoAlpha: 0, y: -7, duration: 0.05 }, 0.71)

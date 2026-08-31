@@ -1,5 +1,95 @@
 # HireFlux development log
 
+## 2026-08-30 — E2 Interviews to Preparation spatial peak
+
+Extended the approved E1 body-story language only through Interviews →
+Preparation. The settled Interviews endpoint remains `scale: 1.035` with its
+Recent opportunities context and Northstar handoff intact. Preparation now
+moves the same persistent shell an additional 10–14px inward, reaching roughly
+`x: -51px` at 1024px and `x: -60px` at 1440px, `y: -6px`, and `scale: 1.065`.
+Together with a narrative width reduction from 92% in Interviews to 78% in
+Preparation, this gives the product approximately three quarters of the
+meaningful desktop story area without turning it into a viewport-filling zoom.
+
+The full interview surface now compresses and fully demotes while a compact
+Northstar Labs / Technical screen / date header settles as provenance. The
+Preparation surface opens beneath it through bounded translation, vertical
+expansion, clipping, and opacity. Its former equal-column card treatment was
+reorganized into a clear hierarchy: readiness state, a dominant focused
+checklist, candidate question, and supporting inherited context. The expanded
+surface uses the added space for working content instead of filler, and receives
+only a modest shadow increase for foreground separation.
+
+Live midpoint QA initially found a dark, nearly empty shell: the provenance
+header was only partly established while Preparation had not meaningfully
+opened. The structural handoff and internal content entrance were moved earlier
+within the same timeline. At the corrected midpoint the full interview is
+non-readable, the compact interview header is approximately 95% established,
+and the Preparation surface is approximately 73% established, so the frame
+reads as one workspace transforming rather than two opaque screens or an empty
+crossfade. Reverse scrolling restores the full interview, Recent opportunities,
+and the E1 shell endpoint; rapid direction changes settle without stale
+Preparation modules.
+
+Live dark-theme QA covered slow, normal, fast, partial-stop, reverse, and rapid
+reversal behavior at 1440×900, 1280×900, and 1024×768. The 1024 endpoint has no
+internal vertical clipping, all three desktop sizes have no horizontal overflow,
+and the refreshed visual coverage adds the Interviews → Preparation midpoint.
+Short desktop height, 768px tablet, 390px, and 320px continue to render the four
+normal-flow static chapters with no pin wrapper or overflow. Reduced motion
+continues to create no GSAP lifecycle through the existing tested fallback.
+Applications → Interviews, Preparation → Action Center, Action Center, CTA,
+hero behavior, chapter boundaries, 2.5-viewport travel, and the one-timeline /
+one-ScrollTrigger lifecycle remain unchanged.
+
+Against the approved E1 build, the production main entry remains 282.95 kB raw /
+84.80 kB gzip. The lazy landing chunk is 177.71 / 60.19 (+1.46 / +0.30), and CSS
+is 119.16 / 18.78 (+0.84 / +0.10). No dependency or separate GSAP chunk was
+added. ESLint, TypeScript, all 193 Vitest tests, production build,
+hosting-header tests, `git diff --check`, and the complete Playwright /
+accessibility matrix pass (117 passed, 38 intentional project-filtered skips).
+
+## 2026-08-30 — E1 Applications to Interviews spatial proof (redone)
+
+Rebuilt only the desktop Applications → Interviews handoff after reviewing the
+first E1 attempt as provisional. Applications remains a broad, right-weighted
+three-opportunity surface at `x: 14`, `y: 8`, `scale: 0.975`. As focus narrows,
+the shell travels inward by 44–60px overall and grows to `scale: 1.035`; the
+visual change is carried primarily by panel compression and expansion rather
+than a full-surface crossfade.
+
+The Applications panel now compresses and becomes non-readable while the Recent
+opportunities strip settles into its supporting column. A short, restrained
+Northstar handoff line connects the selected Northstar row to the expanding
+Technical screen. The interview surface enters from the released right region
+with bounded translation and horizontal expansion, reaching full prominence
+only near the settled Interviews endpoint. Atlas and Harborline remain visible
+as context but no longer compete with the active interview.
+
+Live slow-scroll QA exposed and corrected three midpoint defects: a faint
+compressed Applications ghost, double-exposed narrative copy, and a brief blank
+narrative caused by the timeline's normalized `0.94` endpoint. Applications is
+now hidden before it can ghost behind Recent context; exactly one chapter copy
+is readable; and the decorative copy switches atomically at the existing 24%
+semantic boundary while product transforms continue smoothly. Reverse and rapid
+direction changes restore authoritative endpoint visibility without stale
+surfaces.
+
+Preparation, Action Center, the hero, chapter boundaries, 2.5-viewport travel,
+one-timeline/one-ScrollTrigger ownership, release behavior, lazy-route isolation,
+and mobile/tablet/short-viewport/reduced-motion fallbacks remain unchanged. The
+visual baselines now include the broad Applications endpoint, a true partial
+handoff, and the settled Interviews endpoint. Browser assertions verify outer
+prominence change, hidden outgoing UI, retained context, one readable narrative,
+reverse restoration, overflow, and fallback behavior.
+
+Against the pre-E1 spatial-pass baseline, the production main entry remains
+282.95 kB raw / 84.80 kB gzip. The lazy landing chunk is 176.25 / 59.89
+(+0.97 / +0.24), and CSS is 118.32 / 18.68 (+0.21 / +0.05). The connector uses
+existing color/opacity utilities; no dependency or separate GSAP chunk was
+added. ESLint, TypeScript, all 193 Vitest tests, hosting-header tests, focused
+desktop proof coverage, and the complete browser/accessibility matrix pass.
+
 ## 2026-08-30 — Connected Workspace spatial choreography refinement
 
 Refined only the desktop Connected Workspace body story so its persistent

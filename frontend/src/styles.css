@@ -713,6 +713,7 @@
 }
 
 .hf-connected-workspace [data-workspace-recent],
+.hf-connected-workspace [data-workspace-handoff],
 .hf-connected-workspace [data-workspace-interviews],
 .hf-connected-workspace [data-workspace-interview-context],
 .hf-connected-workspace [data-workspace-preparation],
@@ -731,6 +732,10 @@
 
 .hf-connected-workspace [data-workspace-panel] {
   box-shadow: 0 10px 24px color-mix(in srgb, var(--hf-ink) 7%, transparent);
+}
+
+.hf-connected-workspace [data-workspace-preparation] {
+  transition: box-shadow 180ms var(--ease-standard);
 }
 
 :root:not(.dark) .hf-connected-workspace,
@@ -761,8 +766,16 @@
 }
 
 .hf-scroll-story[data-active-chapter="preparation"] [data-scroll-narrative] {
-  max-width: 84%;
-  transform: translateX(16px);
+  max-width: 78%;
+  transform: translateX(18px);
+}
+
+.hf-scroll-story[data-active-chapter="preparation"] [data-workspace-preparation] {
+  box-shadow: 0 18px 38px color-mix(in srgb, var(--hf-ink) 12%, transparent);
+}
+
+.dark .hf-scroll-story[data-active-chapter="preparation"] [data-workspace-preparation] {
+  box-shadow: 0 18px 38px rgb(0 0 0 / 34%);
 }
 
 .hf-scroll-story[data-active-chapter="action-center"] [data-scroll-narrative] {
