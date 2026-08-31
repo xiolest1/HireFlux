@@ -160,15 +160,51 @@ describe("ScrollProductStory", () => {
       expect.objectContaining({ x: 14, y: 8, scale: 0.975 }),
       0,
     );
+    expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
+      '[data-scroll-copy-stage]:not([data-scroll-copy-stage="applications"])',
+      expect.objectContaining({ autoAlpha: 0 }),
+      0,
+    );
+    expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
+      "[data-workspace-panel]:not([data-workspace-applications])",
+      expect.objectContaining({ autoAlpha: 0 }),
+      0,
+    );
+    expect(gsapMocks.timeline.set).not.toHaveBeenCalledWith(
+      "[data-workspace-panel]",
+      expect.anything(),
+      0,
+    );
     expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
       "[data-workspace-shell]",
       expect.objectContaining({ y: 0, scale: 1.035 }),
       0.1,
     );
     expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+      "[data-workspace-applications]",
+      expect.objectContaining({ scaleX: 0.28, duration: 0.13 }),
+      0.08,
+    );
+    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+      "[data-workspace-applications]",
+      expect.objectContaining({ autoAlpha: 0, duration: 0.04 }),
+      0.17,
+    );
+    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
       "[data-workspace-handoff-line]",
       expect.objectContaining({ scaleX: 1 }),
-      0.14,
+      0.12,
+    );
+    expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
+      "[data-workspace-interviews]",
+      expect.objectContaining({ zIndex: 30, autoAlpha: 1 }),
+      0.15,
+    );
+    expect(gsapMocks.timeline.fromTo).toHaveBeenCalledWith(
+      "[data-workspace-interview-content]",
+      expect.objectContaining({ autoAlpha: 0.4 }),
+      expect.objectContaining({ autoAlpha: 1, duration: 0.18 }),
+      0.15,
     );
     expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
       "[data-workspace-shell]",
@@ -188,8 +224,19 @@ describe("ScrollProductStory", () => {
     );
     expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
       "[data-workspace-preparation]",
-      expect.objectContaining({ scaleY: 0.26, autoAlpha: 0 }),
+      expect.objectContaining({ scaleY: 0.26, autoAlpha: 0, duration: 0.06 }),
+      0.655,
+    );
+    expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
+      "[data-workspace-actions]",
+      expect.objectContaining({ zIndex: 40, autoAlpha: 1 }),
       0.67,
+    );
+    expect(gsapMocks.timeline.fromTo).toHaveBeenCalledWith(
+      "[data-workspace-action-content]",
+      expect.objectContaining({ autoAlpha: 0.45 }),
+      expect.objectContaining({ autoAlpha: 1, duration: 0.11 }),
+      0.68,
     );
     expect(gsapMocks.timeline.fromTo).toHaveBeenCalledWith(
       "[data-workspace-story-cta]",
@@ -257,6 +304,7 @@ describe("ScrollProductStory", () => {
 
     expect(container.querySelectorAll("[data-workspace-opportunity]")).not.toHaveLength(0);
     expect(container.querySelector("[data-workspace-interviews]")).toBeInTheDocument();
+    expect(container.querySelector("[data-workspace-interview-content]")).toBeInTheDocument();
     expect(container.querySelector("[data-workspace-handoff]")).toBeInTheDocument();
     expect(container.querySelector("[data-workspace-preparation]")).toBeInTheDocument();
     expect(container.querySelector("[data-workspace-preparation-readiness]")).toBeInTheDocument();

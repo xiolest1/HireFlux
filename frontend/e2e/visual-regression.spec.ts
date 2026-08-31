@@ -190,6 +190,11 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   await expect(stage.locator("[data-connected-workspace]")).toHaveCount(1);
   await expect(stage.locator("[data-workspace-opportunity]")).toHaveCount(6);
   await expect(stage.locator("[data-flux-rail]")).toHaveCount(0);
+  await expect(stage.locator("[data-workspace-applications]")).toBeVisible();
+  expect(await stage.locator("[data-workspace-applications]").evaluate(
+    (element) => Number(getComputedStyle(element).opacity),
+  )).toBeGreaterThan(0.98);
+  await expect(stage.locator('[data-scroll-copy-stage="applications"]')).toBeVisible();
 
   const metrics = await stage.evaluate((element) => ({
     start: element.getBoundingClientRect().top + window.scrollY,
@@ -214,7 +219,24 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   await expect(stage.locator("[data-workspace-applications]")).toBeHidden();
   await expect(stage.locator("[data-workspace-recent]")).toBeVisible();
   await expect(stage.locator("[data-workspace-handoff]")).toBeVisible();
+  expect(await stage.locator("[data-workspace-shell]").evaluate(
+    (element) => Number(getComputedStyle(element).opacity),
+  )).toBeGreaterThan(0.98);
+  expect(await stage.locator("[data-workspace-recent]").evaluate(
+    (element) => Number(getComputedStyle(element).opacity),
+  )).toBeGreaterThan(0.9);
+  expect(await stage.locator("[data-workspace-interviews]").evaluate(
+    (element) => Number(getComputedStyle(element).opacity),
+  )).toBeGreaterThan(0.98);
+  expect(await stage.locator("[data-workspace-interview-content]").evaluate(
+    (element) => Number(getComputedStyle(element).opacity),
+  )).toBeGreaterThan(0.7);
   expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
+  await page.evaluate(({ start }) => window.scrollTo(0, start - 100), metrics);
+  await page.waitForTimeout(450);
+  await expect(stage.locator("[data-workspace-applications]")).toBeVisible();
+  await expect(stage.locator("[data-workspace-interviews]")).toBeHidden();
+  await expect(stage.locator('[data-scroll-copy-stage="applications"]')).toBeVisible();
   await moveTo(0.32);
   await expect(story).toHaveAttribute("data-active-chapter", "interviews");
   await expect(stage.locator("[data-workspace-interviews]")).toBeVisible();
@@ -237,11 +259,16 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   expect(preparationShell.scale).toBeGreaterThan(interviewsShell.scale);
   expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
   expect(Math.abs(await stage.evaluate((element) => element.getBoundingClientRect().top))).toBeLessThan(3);
-  await moveTo(0.84);
+  await moveTo(0.81);
   await expect(story).toHaveAttribute("data-active-chapter", "action-center");
   await expect(stage.locator("[data-workspace-history]")).toBeVisible();
   await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
   await expect(stage.locator("[data-workspace-priority-primary]")).toBeVisible();
+  expect(
+    await stage.locator("[data-workspace-action-content]").evaluate(
+      (element) => Number(getComputedStyle(element).opacity),
+    ),
+  ).toBeGreaterThan(0.75);
   expect(
     await stage.locator("[data-workspace-preparation]").evaluate(
       (element) => Number(getComputedStyle(element).opacity),
@@ -361,6 +388,10 @@ test("footer enters only after the 1440 desktop story releases", async ({ page }
   await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; });
   const stage = page.locator("[data-scroll-story-pin]");
   const footer = page.locator("footer");
+  expect(await stage.locator("[data-workspace-shell]").evaluate(
+    (element) => element.getBoundingClientRect().width,
+  )).toBeGreaterThan(920);
+  await expect(stage.locator("[data-workspace-applications]")).toBeVisible();
   const metrics = await stage.evaluate((element) => ({
     start: element.getBoundingClientRect().top + window.scrollY,
     travel: window.innerHeight * 2.5,
@@ -396,6 +427,9 @@ test("desktop scroll story has focused Applications, Interviews, Preparation, an
     start: element.getBoundingClientRect().top + window.scrollY,
     travel: window.innerHeight * 2.5,
   }));
+  expect(await stage.locator("[data-workspace-shell]").evaluate(
+    (element) => element.getBoundingClientRect().width,
+  )).toBeGreaterThan(820);
 
   for (const [chapter, progress] of [["applications", 0.05], ["interviews", 0.38], ["preparation", 0.68], ["action-center", 0.98]] as const) {
     await page.evaluate(
@@ -426,14 +460,14 @@ test("desktop scroll story has focused Applications, Interviews, Preparation, an
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(500);
   await page.evaluate(
-    ({ start, travel }) => window.scrollTo(0, start + travel * 0.85),
+    ({ start, travel }) => window.scrollTo(0, start + travel * 0.81),
     metrics,
   );
   await page.waitForTimeout(1_500);
   await expect(stage).toHaveScreenshot("scroll-story-preparation-to-action-center.png");
 });
 
-test("desktop Action Center remains defined in light mode", async ({
+test("desktop transition and Action Center remain defined in light mode", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1280");
@@ -448,6 +482,15 @@ test("desktop Action Center remains defined in light mode", async ({
     start: element.getBoundingClientRect().top + window.scrollY,
     travel: window.innerHeight * 2.5,
   }));
+  await page.evaluate(
+    ({ start, travel }) => window.scrollTo(0, start + travel * 0.25),
+    metrics,
+  );
+  await page.waitForTimeout(700);
+  expect(await stage.locator("[data-workspace-interview-content]").evaluate(
+    (element) => Number(getComputedStyle(element).opacity),
+  )).toBeGreaterThan(0.7);
+  await expect(stage).toHaveScreenshot("scroll-story-applications-to-interviews-light.png");
   await page.evaluate(
     ({ start, travel }) => window.scrollTo(0, start + travel * 0.98),
     metrics,

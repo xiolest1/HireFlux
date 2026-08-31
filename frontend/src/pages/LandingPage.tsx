@@ -89,7 +89,7 @@ export function LandingPage() {
         </LandingReveal>
 
         <LandingReveal className="hf-scroll-story-reveal">
-          <section className="mx-auto max-w-7xl min-w-0 px-4 py-16 sm:px-6 sm:py-24 lg:px-8" aria-labelledby="proof-title">
+          <section className="mx-auto max-w-[90rem] min-w-0 px-4 py-16 sm:px-6 sm:py-24 lg:px-8" aria-labelledby="proof-title">
             <div className="max-w-2xl" data-landing-clip-check><p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">Connected workspace</p><h2 id="proof-title" className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">The workspace adapts around your search.</h2><p className="mt-4 leading-7 text-slate-600 dark:text-slate-300">See applications become interview context, preparation become a working plan, and the full search return as clear priorities.</p></div>
             <ScrollProductStory ctaDisabled={isCreating} ctaLabel={status === "active" ? "Return to Workspace" : "Start Demo Workspace"} onCta={() => void enterDemo()} />
           </section>

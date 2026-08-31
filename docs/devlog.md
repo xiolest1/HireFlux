@@ -1,5 +1,70 @@
 # HireFlux development log
 
+## 2026-08-31 — E4 final transition integrity and viewport composition polish
+
+Completed the landing page's final motion pass without changing the approved
+story, hero, chapter boundaries, 2.5-viewport travel, CTA timing, release
+buffer, or one-timeline / one-ScrollTrigger ownership. Timeline initialization
+now excludes the initial Applications panel, narrative, and navigation state;
+their explicit CSS endpoint remains authoritative until the later states begin.
+Applications is therefore complete on first paint, before the pin, after
+reverse scrolling above the trigger, and after rapid direction changes. The
+desktop thesis-to-story gap is 48px, with no added entrance animation.
+
+Applications now compresses spatially from raw timeline `0.08–0.21` while its
+opacity stays strong until `0.17–0.21`. Recent opportunities begins at `0.095`,
+the connector and node at `0.12` / `0.13`, and the Technical screen's solid
+outer surface at `0.15`. A new private interview-content target resolves from
+40% to full opacity through `0.33`, keeping the product canvas opaque while the
+internal hierarchy forms. At normalized progress `0.25`, live measurements
+showed shell opacity `1`, Recent opportunities `1`, Technical screen surface
+opacity `1`, and interview-content opacity approximately `0.92` at 1280×900
+dark, `0.92` in light mode, and `0.88` at 1024×768. Northstar remains traceable
+through the selected context row and connector, without two full-strength
+screens.
+
+The Preparation → Action handoff now uses the same solid-surface principle.
+Preparation contraction and retained history establish from `0.655`, the
+Action surface becomes opaque at `0.67` and expands through transform and
+clipping, its content resolves from 45% over `0.68–0.79`, and priorities retain
+their approved `0.70` / `0.735` entrances. Live continuous-scroll inspection
+initially found approximately 18% residual Preparation opacity in the open
+space at the true `0.81` midpoint; tightening only the handoff reduced it to
+approximately `0.02%`, while retained history measured `95%` and Action content
+`87%`. Forward, reverse, and rapid-reversal passes keep one readable surface
+and preserve the E3 endpoint, CTA entrance at `0.80–0.88`, and final dwell.
+
+Only the Connected Workspace proof uses the wider composition. Its container
+now caps at 90rem and the `xl` grid uses `0.48fr / 1.22fr` with a 24px gap;
+1024px retains the prior grid and internal density. The initial shell measured
+approximately 823px at 1280×900 and 935px at 1440×900, expanding to about
+1022px at the 1440px Preparation peak without horizontal overflow. The
+1024×768 shell remains approximately 618px wide. This uses the available
+desktop canvas more fully while keeping the product bounded and the narrative
+legible.
+
+Live dark-theme QA covered first arrival, continuous slow/normal traversal,
+partial stops, forward, reverse, and rapid reversals at 1440×900, 1280×900,
+and 1024×768; light-mode QA covered the Applications → Interviews handoff at
+1280×900. CTA dwell and release remain ordered: the CTA is settled while the
+stage is fixed, the stage returns to relative positioning immediately after
+the owned trigger end, and the footer first appears only after release. At
+1024×700, 768, 390, and 320, all four chapters remain in normal flow with zero
+pin spacers and no horizontal overflow. Reduced motion retains the tested
+complete linear fallback. The hero was rechecked at its existing progression
+points and needs no E4 adjustment.
+
+Against E3, the production main entry remains 282.95 kB raw / 84.80 kB gzip.
+The lazy landing chunk is 180.80 / 60.53 (+0.38 / +0.10), and CSS is 119.72 /
+18.85 (+0.29 / +0.05). No dependency or separately emitted GSAP chunk was
+added. ESLint, TypeScript, all 193 Vitest tests, the production build,
+hosting-header tests, `git diff --check`, and the complete Playwright / Axe
+matrix pass (118 passed, 42 intentional project-filtered skips).
+
+The landing experience is now feature-frozen. No E5 or further landing motion
+phase should be proposed unless live use reveals a genuine P1 usability or
+accessibility defect.
+
 ## 2026-08-30 — E3 Action Center pullback, CTA resolution, and pin release
 
 Completed only the Preparation → Action Center portion of the Connected

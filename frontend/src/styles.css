@@ -724,6 +724,7 @@
   visibility: hidden;
 }
 
+.hf-connected-workspace [data-workspace-applications],
 .hf-connected-workspace [data-workspace-nav-active="applications"],
 .hf-scroll-story-desktop [data-scroll-copy-stage="applications"] {
   opacity: 1;
