@@ -1,5 +1,75 @@
 # HireFlux development log
 
+## 2026-08-31 — E7 responsive choreography preservation
+
+Replaced the lower Connected Workspace story's former binary responsive rule
+with an explicit Full / Adapted / Static capability model. Previously the one
+ScrollTrigger branch required at least 1024×720, so a capable 900×768 landscape
+viewport and short-but-wide 1180×650 or 1280×650 windows immediately received
+the four-card linear fallback. Width and height were both present in the old
+query, but only as one hard gate; there was no intermediate composition. The
+upper E5 hero uses its own responsive visual geometry and already remained a
+progressive, persistent Northstar Labs story at these sizes, so E7 makes no hero
+timing, ownership, or layout change.
+
+Full choreography remains exactly the E6 experience at 1024px or wider and
+720px or taller: the same persistent 36rem stage envelope and 32rem shell, one
+master timeline, one ScrollTrigger, 2.5 viewport heights of travel, approved
+chapter timing, CTA dwell, and release order. Adapted choreography activates
+for 900–1023px viewports with at least 680px height, or viewports at least
+1024px wide with 640–719px height. It runs the same timeline builder and
+semantic scene definitions with configuration rather than a parallel story:
+travel contracts to 2 viewport heights, horizontal entrances reduce from
+48px to 32px (and supporting translations proportionally), vertical scene
+entrances reduce from 30/12px to 20/8px, and the stage uses a compact 34rem
+envelope with a 6.5rem navigation rail and tighter but readable Interview
+internals. Narrative/product spacing remains at least 16px and the E6 shell
+stays fully contained inside its stage.
+
+Static fallback remains authoritative below 900px, below the mode-specific
+height floors, and whenever reduced motion is requested. This deliberately
+classifies 1024×600 and 1440×600 as Static: their width is ample, but a 36rem
+minimum pinned stage plus browser chrome, narrative, CTA, and release space
+would be vertically cramped. Reduced motion is encoded into both choreography
+queries and remains higher priority than responsive capability, so no GSAP
+timeline, ScrollTrigger, or pin spacer is created in that mode.
+
+Both choreographed branches are registered through the existing scoped
+`gsap.matchMedia()` lifecycle. Crossing Full → Adapted → Static and back reverts
+the active branch, kills only its owned trigger and timeline, removes its pin
+spacer and inline transforms through the enclosing context, then creates at
+most one replacement. Focused browser coverage crosses the exact 900/899px and
+640/639px edges, toggles reduced motion while Adapted is active, and leaves and
+re-enters the landing route; each transition resolves to the correct mode with
+zero duplicate pin wrappers or stale story instances.
+
+Live dark-theme QA selected Full at 1440×900, 1280×800, 1180×800, 1100×800,
+1024×768, and 1024×900; Adapted at 900×768, 1180×650, and 1280×650; and Static
+at 1440×600, 1024×600, 768×1024, 430×932, 390×844, and 320×568. Adapted
+Applications, Interviews, Preparation, and Action Center were exercised
+forward, in reverse, at partial stops, with fast jumps and repeated direction
+changes. At 900×768 the pinned stage measured about 837×640px, its product
+envelope about 588×544px, and its shell about 580×512px with a 24px layout gap.
+At 1280×650 the envelope remained 544px high and the shell about 842×512px.
+Both retained one readable dominant scene, Northstar continuity, one pin
+spacer, complete envelope containment, a visible CTA before release, and zero
+horizontal overflow. The complete linear fallback remained readable and
+unpinned at every constrained and reduced-motion size.
+
+Against E6, the production main entry remains 282.95 kB raw / 84.79 kB gzip
+(0.00 / -0.01). The lazy landing chunk is 182.08 / 60.84 (+1.00 / +0.25), and
+CSS is 122.78 / 19.26 (+2.25 / +0.31). No dependency, separately emitted GSAP
+chunk, or authenticated-route payload was added. ESLint, TypeScript, all 196
+Vitest tests, production build, three hosting-header tests, `git diff --check`,
+and the complete Playwright/Axe matrix pass (119 passed, 46 intentional
+project-filtered skips). Two reviewed Adapted-only visual baselines protect the
+Interviews and settled Action/CTA compositions; existing E5/E6 wide-desktop
+baselines remain byte-for-byte unchanged.
+
+E5 scene ownership, E6 stable-stage geometry, persistent DOM, chapter
+boundaries, wide-desktop choreography, CTA/release ordering, one-timeline /
+one-ScrollTrigger ownership, and reduced-motion semantics remain unchanged.
+
 ## 2026-08-31 — E6 stable Connected Workspace stage geometry
 
 Completed the lower Applications → Interviews → Preparation → Action Center

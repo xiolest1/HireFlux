@@ -384,17 +384,138 @@ test("scroll story breakpoint changes do not duplicate pin wrappers", async ({
   await page.goto("/");
   await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; });
   await expect(page.locator(".pin-spacer")).toHaveCount(1);
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "full");
 
   const stage = page.locator("[data-scroll-story-pin]");
   await stage.scrollIntoViewIfNeeded();
+  await page.setViewportSize({ width: 900, height: 768 });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "adapted");
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+  await expect(page.getByTestId("desktop-product-story")).toBeVisible();
+
+  await page.setViewportSize({ width: 899, height: 768 });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "static");
+  await expect(page.locator(".pin-spacer")).toHaveCount(0);
+
+  await page.setViewportSize({ width: 900, height: 768 });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "adapted");
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+
   await page.setViewportSize({ width: 768, height: 1024 });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "static");
   await expect(page.locator(".pin-spacer")).toHaveCount(0);
   await expect(page.getByTestId("mobile-product-story")).toBeVisible();
 
+  await page.setViewportSize({ width: 1180, height: 650 });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "adapted");
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+  await expect(page.getByTestId("desktop-product-story")).toBeVisible();
+
+  await page.setViewportSize({ width: 1180, height: 639 });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "static");
+  await expect(page.locator(".pin-spacer")).toHaveCount(0);
+
+  await page.setViewportSize({ width: 1180, height: 640 });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "adapted");
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "static");
+  await expect(page.locator(".pin-spacer")).toHaveCount(0);
+  await expect(page.getByTestId("mobile-product-story")).toBeVisible();
+
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "adapted");
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+
   await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "full");
   await expect(page.locator(".pin-spacer")).toHaveCount(1);
   await expect(page.getByTestId("desktop-product-story")).toBeVisible();
   expect(await page.locator(".pin-spacer").count()).toBe(1);
+
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "Welcome back", level: 1 })).toBeVisible();
+  await expect(page.locator(".pin-spacer")).toHaveCount(0);
+  await page.goto("/");
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "full");
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+});
+
+test("adapted scroll story remains progressive, contained, and reversible", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.setViewportSize({ width: 900, height: 768 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; });
+
+  const story = page.locator("[data-scroll-story]");
+  const stage = page.locator("[data-scroll-story-pin]");
+  const shell = stage.locator("[data-workspace-shell]");
+  const envelope = stage.locator("[data-workspace-stage-envelope]");
+  await expect(story).toHaveAttribute("data-scroll-mode", "adapted");
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+  await expect(page.getByTestId("desktop-product-story")).toBeVisible();
+  await expect(page.getByTestId("mobile-product-story")).toBeHidden();
+
+  const metrics = await stage.evaluate((element) => ({
+    start: element.getBoundingClientRect().top + window.scrollY,
+    travel: window.innerHeight * 2,
+  }));
+  const moveTo = async (progress: number) => {
+    await page.evaluate(
+      ({ start, travel, progress }) => window.scrollTo(0, start + travel * progress),
+      { ...metrics, progress },
+    );
+    await page.waitForTimeout(900);
+  };
+  const expectContained = async () => {
+    const geometry = await stage.evaluate((element) => {
+      const shellRect = element.querySelector("[data-workspace-shell]")!.getBoundingClientRect();
+      const envelopeRect = element.querySelector("[data-workspace-stage-envelope]")!.getBoundingClientRect();
+      const narrativeRect = element.querySelector("[data-scroll-narrative]")!.getBoundingClientRect();
+      return {
+        gap: shellRect.left - narrativeRect.right,
+        contained: shellRect.left >= envelopeRect.left
+          && shellRect.right <= envelopeRect.right
+          && shellRect.top >= envelopeRect.top
+          && shellRect.bottom <= envelopeRect.bottom,
+      };
+    });
+    expect(geometry.gap).toBeGreaterThanOrEqual(16);
+    expect(geometry.contained).toBe(true);
+    await expectNoHorizontalPageOverflow(page);
+  };
+
+  for (const [progress, chapter] of [
+    [0.1, "applications"],
+    [0.3, "interviews"],
+    [0.55, "preparation"],
+    [0.92, "action-center"],
+  ] as const) {
+    await moveTo(progress);
+    await expect(story).toHaveAttribute("data-active-chapter", chapter);
+    await expect(stage.locator(`[data-scroll-copy-stage="${chapter}"]`)).toBeVisible();
+    await expectContained();
+  }
+  await expect(stage.getByRole("button", { name: /Workspace/ })).toBeVisible();
+  await expect(stage).toHaveScreenshot("scroll-story-adapted-action-center.png");
+  await moveTo(0.55);
+  await expect(story).toHaveAttribute("data-active-chapter", "preparation");
+  await expect(stage.locator('[data-scroll-copy-stage="preparation"]')).toBeVisible();
+  await moveTo(0.3);
+  await expect(story).toHaveAttribute("data-active-chapter", "interviews");
+  await expect(stage.locator('[data-scroll-copy-stage="interviews"]')).toBeVisible();
+  await expectContained();
+  await expect(stage).toHaveScreenshot("scroll-story-adapted-interviews.png");
+
+  await moveTo(0.98);
+  await expect(page.getByRole("button", { name: /Workspace/ }).last()).toBeVisible();
+  await page.evaluate(({ start, travel }) => window.scrollTo(0, start + travel + 1), metrics);
+  await page.waitForTimeout(900);
+  expect(await stage.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
+  expect(await shell.count()).toBe(1);
+  expect(await envelope.count()).toBe(1);
 });
 
 test("footer enters only after the 1440 desktop story releases", async ({ page }, testInfo) => {

@@ -4,13 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ScrollProductStory } from "./ScrollProductStory";
 import {
   scrollChapterForProgress,
+  scrollStoryAdaptedQuery,
+  scrollStoryAdaptedTravelViewportHeights,
   scrollStoryDesktopQuery,
+  scrollStoryFullQuery,
+  scrollStoryModeConfiguration,
   scrollStoryTimelineLabels,
   scrollStoryTravelViewportHeights,
 } from "./scrollStoryConfig";
 
 const gsapMocks = vi.hoisted(() => {
-  let desktopMatches = true;
+  let matchedMode: "full" | "adapted" | "static" = "full";
   let activeContexts = 0;
   let maximumActiveContexts = 0;
   let lastTimelineConfiguration: unknown;
@@ -29,8 +33,13 @@ const gsapMocks = vi.hoisted(() => {
   }
 
   const media = {
-    add: vi.fn((_query: string, setup: () => void | (() => void)) => {
-      if (!desktopMatches) return;
+    add: vi.fn((query: string, setup: () => void | (() => void)) => {
+      const matches = matchedMode === "full"
+        ? query.includes("min-height: 720px")
+        : matchedMode === "adapted"
+          ? query.includes("min-width: 900px")
+          : false;
+      if (!matches) return;
       const cleanup = setup();
       if (cleanup) branchCleanups.push(cleanup);
     }),
@@ -55,12 +64,12 @@ const gsapMocks = vi.hoisted(() => {
       setup();
       return { revert: vi.fn(() => { activeContexts -= 1; }) };
     }),
-    setDesktopMatches: (matches: boolean) => { desktopMatches = matches; },
+    setMatchedMode: (mode: "full" | "adapted" | "static") => { matchedMode = mode; },
     getActiveContexts: () => activeContexts,
     getMaximumActiveContexts: () => maximumActiveContexts,
     getLastTimelineConfiguration: () => lastTimelineConfiguration,
     reset: () => {
-      desktopMatches = true;
+      matchedMode = "full";
       activeContexts = 0;
       maximumActiveContexts = 0;
       lastTimelineConfiguration = undefined;
@@ -122,6 +131,14 @@ describe("scroll story configuration", () => {
       "action-center",
     ]);
     expect(scrollStoryTravelViewportHeights).toBe(2.5);
+    expect(scrollStoryAdaptedTravelViewportHeights).toBe(2);
+    expect(scrollStoryDesktopQuery).toBe(scrollStoryFullQuery);
+    expect(scrollStoryModeConfiguration.adapted).toMatchObject({
+      travelViewportHeights: 2,
+      interviewEnterX: 32,
+      preparationEnterY: 20,
+      actionEnterY: 8,
+    });
   });
 });
 
@@ -132,7 +149,8 @@ describe("ScrollProductStory", () => {
     setReducedMotion(false);
     render(<ScrollProductStory {...storyProps} />);
 
-    expect(gsapMocks.media.add).toHaveBeenCalledWith(scrollStoryDesktopQuery, expect.any(Function));
+    expect(gsapMocks.media.add).toHaveBeenCalledWith(scrollStoryFullQuery, expect.any(Function));
+    expect(gsapMocks.media.add).toHaveBeenCalledWith(scrollStoryAdaptedQuery, expect.any(Function));
     expect(gsapMocks.timelineFactory).toHaveBeenCalledOnce();
     expect(gsapMocks.timelineFactory).toHaveBeenCalledWith(expect.objectContaining({
       scrollTrigger: expect.objectContaining({
@@ -234,6 +252,38 @@ describe("ScrollProductStory", () => {
       expect.objectContaining({ autoAlpha: 1 }),
       0.8,
     );
+    expect(screen.getByTestId("desktop-product-story").closest("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "full");
+  });
+
+  it("uses one compact timeline for adapted-capability viewports", () => {
+    setReducedMotion(false);
+    gsapMocks.setMatchedMode("adapted");
+    const { container } = render(<ScrollProductStory {...storyProps} />);
+
+    expect(gsapMocks.timelineFactory).toHaveBeenCalledOnce();
+    expect(container.querySelector("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "adapted");
+    const configuration = gsapMocks.getLastTimelineConfiguration() as {
+      scrollTrigger: { end: () => string };
+    };
+    expect(configuration.scrollTrigger.end()).toBe(`+=${Math.round(window.innerHeight * 2)}`);
+    expect(gsapMocks.timeline.fromTo).toHaveBeenCalledWith(
+      "[data-workspace-interviews]",
+      expect.objectContaining({ x: 32 }),
+      expect.anything(),
+      0.15,
+    );
+    expect(gsapMocks.timeline.fromTo).toHaveBeenCalledWith(
+      "[data-workspace-preparation]",
+      expect.objectContaining({ y: 20 }),
+      expect.anything(),
+      0.41,
+    );
+    expect(gsapMocks.timeline.fromTo).toHaveBeenCalledWith(
+      "[data-workspace-actions]",
+      expect.objectContaining({ y: 8 }),
+      expect.anything(),
+      0.67,
+    );
   });
 
   it("commits React chapter state only when semantic boundaries change", () => {
@@ -257,12 +307,13 @@ describe("ScrollProductStory", () => {
     expect(story).toHaveAttribute("data-active-chapter", "interviews");
   });
 
-  it("creates no pinned timeline outside the desktop media query", () => {
+  it("creates no pinned timeline for static-capability viewports", () => {
     setReducedMotion(false);
-    gsapMocks.setDesktopMatches(false);
-    render(<ScrollProductStory {...storyProps} />);
+    gsapMocks.setMatchedMode("static");
+    const { container } = render(<ScrollProductStory {...storyProps} />);
 
     expect(gsapMocks.timelineFactory).not.toHaveBeenCalled();
+    expect(container.querySelector("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "static");
     expect(screen.getByTestId("mobile-product-story")).toBeInTheDocument();
   });
 

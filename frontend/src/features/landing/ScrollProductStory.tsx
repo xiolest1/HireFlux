@@ -6,9 +6,11 @@ import { useReducedMotion } from "../../components/ui/motionHooks";
 import { landingScrollChapters, landingStory, landingWorkspace, type LandingScrollChapter, type LandingWorkspaceStage } from "./landingStoryModel";
 import {
   scrollChapterForProgress,
-  scrollStoryDesktopQuery,
+  scrollStoryAdaptedQuery,
+  scrollStoryFullQuery,
+  scrollStoryModeConfiguration,
   scrollStoryTimelineLabels,
-  scrollStoryTravelViewportHeights,
+  type ScrollStoryChoreographyMode,
 } from "./scrollStoryConfig";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -33,7 +35,7 @@ function OpportunityRows({ compact = false }: { compact?: boolean }) {
 }
 
 function WorkspaceNavigation() {
-  return <nav className="border-r border-line bg-surface px-2 py-3 dark:bg-slate-950/45" aria-label="Product story navigation">
+  return <nav className="border-r border-line bg-surface px-2 py-3 dark:bg-slate-950/45" aria-label="Product story navigation" data-workspace-navigation>
     <p className="px-2 text-[0.52rem] font-black uppercase tracking-[0.14em] text-ink-muted">Workspace</p>
     <ul className="mt-3 space-y-1">{workspaceNavigation.map(({ stage, label, icon: Icon }) => <li key={stage}><div className="relative flex items-center gap-2 rounded-lg px-2 py-2 text-[0.6rem] font-bold text-ink-muted" data-workspace-nav={stage}><span className="absolute inset-0 rounded-lg bg-accent-soft opacity-0" data-workspace-nav-active={stage} /><Icon className="relative size-3.5 shrink-0" /><span className="relative truncate">{label}</span></div></li>)}</ul>
   </nav>;
@@ -42,7 +44,7 @@ function WorkspaceNavigation() {
 function InterviewSurface({ compact = false }: { compact?: boolean }) {
   return <div className={compact ? "flex min-w-0 items-center gap-3" : "grid h-full min-w-0 grid-rows-[auto_1fr]"} data-workspace-interview-content={!compact || undefined}>
     <div className={`flex min-w-0 items-center gap-3 ${compact ? "" : "border-b border-line px-5 py-4"}`}><span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-soft text-violet"><CalendarCheck2 className="size-4" /></span><div className="min-w-0 flex-1"><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-violet">Northstar Labs · Interview</p><p className="truncate text-sm font-black text-ink dark:text-white">Technical screen</p></div><p className="shrink-0 text-right text-[0.58rem] font-bold leading-4 text-ink-muted">Sep 2<br />10:00 AM</p></div>
-    {!compact ? <div className="grid min-h-0 grid-cols-[1.1fr_0.9fr] gap-5 p-5"><div className="min-w-0"><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-ink-muted">Conversation context</p><h4 className="mt-2 text-lg font-black text-ink dark:text-white">Platform architecture and collaboration</h4><p className="mt-2 text-xs leading-5 text-ink-muted">The referral source, role scope, and saved platform notes followed Northstar into this interview.</p><div className="mt-5 border-t border-line pt-4"><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-ink-muted">From Applications</p><p className="mt-2 text-xs font-bold text-ink">Referral · Remote · $145k–$165k</p></div></div><div className="rounded-xl bg-surface-muted p-4"><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-accent-strong">Next preparation action</p><p className="mt-2 text-sm font-black text-ink dark:text-white">{landingStory.preparation.remainingAction}</p><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-line"><div className="h-full w-2/3 rounded-full bg-violet" /></div><p className="mt-2 text-[0.6rem] font-bold text-ink-muted">2 of 3 ready</p></div></div> : null}
+    {!compact ? <div className="grid min-h-0 grid-cols-[1.1fr_0.9fr] gap-5 p-5" data-workspace-interview-body><div className="min-w-0"><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-ink-muted">Conversation context</p><h4 className="mt-2 text-lg font-black text-ink dark:text-white" data-workspace-interview-title>Platform architecture and collaboration</h4><p className="mt-2 text-xs leading-5 text-ink-muted" data-workspace-interview-description>The referral source, role scope, and saved platform notes followed Northstar into this interview.</p><div className="mt-5 border-t border-line pt-4" data-workspace-interview-origin><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-ink-muted">From Applications</p><p className="mt-2 text-xs font-bold text-ink">Referral · Remote · $145k–$165k</p></div></div><div className="rounded-xl bg-surface-muted p-4" data-workspace-interview-next-action><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-accent-strong">Next preparation action</p><p className="mt-2 text-sm font-black text-ink dark:text-white">{landingStory.preparation.remainingAction}</p><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-line"><div className="h-full w-2/3 rounded-full bg-violet" /></div><p className="mt-2 text-[0.6rem] font-bold text-ink-muted">2 of 3 ready</p></div></div> : null}
   </div>;
 }
 
@@ -121,7 +123,7 @@ function ActionCenterSurface({ compact = false }: { compact?: boolean }) {
 function ConnectedWorkspaceVisual() {
   return <div className="hf-connected-workspace relative h-[32rem] w-full min-w-0 overflow-hidden rounded-[1.6rem] border border-line-strong bg-surface-muted shadow-panel dark:border-slate-700 dark:bg-slate-950/70" data-connected-workspace data-workspace-shell data-landing-clip-check aria-hidden="true">
     <header className="flex h-12 items-center justify-between border-b border-line bg-surface-raised px-4 dark:bg-slate-900"><div className="flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-lg bg-accent text-[0.55rem] font-black text-white">HF</span><span className="text-xs font-black text-ink dark:text-white">HireFlux</span></div><div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[0.58rem] font-semibold text-ink-muted"><Search className="size-3" />Search your workspace</div></header>
-    <div className="grid h-[calc(100%-3rem)] grid-cols-[7.5rem_minmax(0,1fr)]"><WorkspaceNavigation /><div className="relative min-w-0 overflow-hidden p-4">
+    <div className="grid h-[calc(100%-3rem)] grid-cols-[7.5rem_minmax(0,1fr)]" data-workspace-layout><WorkspaceNavigation /><div className="relative min-w-0 overflow-hidden p-4">
       <div className="absolute inset-x-4 top-3 flex items-end justify-between" data-workspace-heading><div><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-ink-muted">Your search</p><p className="mt-0.5 text-base font-black text-ink dark:text-white">Connected workspace</p></div><span className="rounded-full border border-line bg-surface-raised px-2.5 py-1 text-[0.56rem] font-bold text-ink-muted">3 active</span></div>
       <section className="absolute inset-x-4 top-[4.1rem] h-[17.5rem] overflow-hidden rounded-2xl border border-line-strong bg-surface-raised px-5 py-4 dark:border-slate-700 dark:bg-slate-900" data-workspace-applications data-workspace-panel><div className="flex items-center justify-between gap-4"><div><p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-accent-strong">Applications workspace</p><p className="mt-1 text-sm font-black text-ink dark:text-white">Three opportunities moving at different speeds</p></div><span className="text-[0.58rem] font-bold text-ink-muted">Updated today</span></div><OpportunityRows /></section>
       <aside className="invisible absolute bottom-4 left-4 top-[4.1rem] z-20 w-[9.5rem] overflow-hidden rounded-2xl border border-line bg-surface-raised p-3 dark:bg-slate-900" data-workspace-recent data-workspace-panel><p className="text-[0.52rem] font-black uppercase tracking-[0.12em] text-ink-muted">Recent opportunities</p><OpportunityRows compact /></aside>
@@ -156,9 +158,11 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
     const stage = stageRef.current;
     const media = gsap.matchMedia();
     const context = gsap.context(() => {
-      media.add(scrollStoryDesktopQuery, () => {
+      const createChoreography = (mode: ScrollStoryChoreographyMode) => {
+        const configuration = scrollStoryModeConfiguration[mode];
+        root.dataset.scrollMode = mode;
         const selectChapter = (progress: number) => { const next = scrollChapterForProgress(progress); if (activeChapterRef.current !== next) { activeChapterRef.current = next; setActiveChapter(next); } };
-        const timeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * scrollStoryTravelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onUpdate: (self) => selectChapter(self.progress) } });
+        const timeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * configuration.travelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onUpdate: (self) => selectChapter(self.progress) } });
         timeline
           .addLabel("applications", scrollStoryTimelineLabels.applications)
           .set('[data-scroll-copy-stage]:not([data-scroll-copy-stage="applications"])', { autoAlpha: 0 }, 0)
@@ -175,15 +179,15 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .set('[data-scroll-copy-stage="interviews"]', { autoAlpha: 1, y: 0 }, 0.226)
           .to('[data-workspace-nav-active="applications"]', { opacity: 0, duration: 0.04 }, 0.205)
           .to('[data-workspace-nav-active="interviews"]', { opacity: 1, duration: 0.04 }, 0.225)
-          .to("[data-workspace-applications]", { x: -10, scaleX: 0.28, scaleY: 1.06, duration: 0.13, transformOrigin: "left top" }, 0.08)
+          .to("[data-workspace-applications]", { x: configuration.applicationCompressX, scaleX: 0.28, scaleY: 1.06, duration: 0.13, transformOrigin: "left top" }, 0.08)
           .to("[data-workspace-applications]", { autoAlpha: 0, duration: 0.04 }, 0.17)
           .set("[data-workspace-recent]", { zIndex: 20 }, 0.095)
           .set("[data-workspace-interviews]", { zIndex: 30, autoAlpha: 1 }, 0.15)
-          .fromTo("[data-workspace-recent]", { x: -18, y: 5, scale: 0.92, autoAlpha: 0 }, { x: 0, y: 0, scale: 1, autoAlpha: 1, duration: 0.12 }, 0.095)
+          .fromTo("[data-workspace-recent]", { x: configuration.recentEnterX, y: 5, scale: 0.92, autoAlpha: 0 }, { x: 0, y: 0, scale: 1, autoAlpha: 1, duration: 0.12 }, 0.095)
           .fromTo("[data-workspace-handoff]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.05 }, 0.12)
           .to("[data-workspace-handoff-line]", { scaleX: 1, duration: 0.17, ease: "power2.inOut" }, 0.12)
           .fromTo("[data-workspace-handoff-node]", { x: -8, scale: 0.72 }, { x: 0, scale: 1, duration: 0.17, ease: "power3.out" }, 0.13)
-          .fromTo("[data-workspace-interviews]", { x: 48, scaleX: 0.82, scaleY: 0.96 }, { x: 0, scaleX: 1, scaleY: 1, duration: 0.19, ease: "power3.out", transformOrigin: "right center" }, 0.15)
+          .fromTo("[data-workspace-interviews]", { x: configuration.interviewEnterX, scaleX: 0.82, scaleY: 0.96 }, { x: 0, scaleX: 1, scaleY: 1, duration: 0.19, ease: "power3.out", transformOrigin: "right center" }, 0.15)
           .fromTo("[data-workspace-interview-content]", { y: 4, autoAlpha: 0.4 }, { y: 0, autoAlpha: 1, duration: 0.18, ease: "power3.out" }, 0.15)
 
           .addLabel("preparation", scrollStoryTimelineLabels.preparation)
@@ -197,7 +201,7 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .set("[data-workspace-interview-context]", { zIndex: 30 }, 0.39)
           .set("[data-workspace-preparation]", { zIndex: 40 }, 0.41)
           .fromTo("[data-workspace-interview-context]", { y: 18, scaleX: 0.82, scaleY: 0.74, autoAlpha: 0 }, { y: 0, scaleX: 1, scaleY: 1, autoAlpha: 1, duration: 0.135, ease: "power3.out", transformOrigin: "top center" }, 0.39)
-          .fromTo("[data-workspace-preparation]", { y: 30, scaleX: 0.94, scaleY: 0.62, autoAlpha: 0, clipPath: "inset(18% 0% 0% 0% round 1rem)" }, { y: 0, scaleX: 1, scaleY: 1, autoAlpha: 1, clipPath: "inset(0% 0% 0% 0% round 1rem)", duration: 0.18, ease: "power3.out", transformOrigin: "top center" }, 0.41)
+          .fromTo("[data-workspace-preparation]", { y: configuration.preparationEnterY, scaleX: 0.94, scaleY: 0.62, autoAlpha: 0, clipPath: "inset(18% 0% 0% 0% round 1rem)" }, { y: 0, scaleX: 1, scaleY: 1, autoAlpha: 1, clipPath: "inset(0% 0% 0% 0% round 1rem)", duration: 0.18, ease: "power3.out", transformOrigin: "top center" }, 0.41)
           .fromTo("[data-workspace-preparation-primary]", { y: 8, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.12 }, 0.42)
           .fromTo("[data-workspace-preparation-supporting]", { x: 10, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.11 }, 0.44)
           .fromTo("[data-workspace-preparation-readiness]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.1 }, 0.415)
@@ -216,19 +220,25 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .set("[data-workspace-history]", { zIndex: 30 }, 0.655)
           .set("[data-workspace-actions]", { zIndex: 40, autoAlpha: 1 }, 0.67)
           .fromTo("[data-workspace-history]", { y: 10, scaleX: 0.9, autoAlpha: 0 }, { y: 0, scaleX: 1, autoAlpha: 1, duration: 0.11, ease: "power3.out", transformOrigin: "top center" }, 0.655)
-          .fromTo("[data-workspace-actions]", { y: 12, scaleX: 0.94, scaleY: 0.78, clipPath: "inset(12% 0% 0% 0% round 1rem)" }, { y: 0, scaleX: 1, scaleY: 1, clipPath: "inset(0% 0% 0% 0% round 1rem)", duration: 0.135, ease: "power3.out", transformOrigin: "top center" }, 0.67)
+          .fromTo("[data-workspace-actions]", { y: configuration.actionEnterY, scaleX: 0.94, scaleY: 0.78, clipPath: "inset(12% 0% 0% 0% round 1rem)" }, { y: 0, scaleX: 1, scaleY: 1, clipPath: "inset(0% 0% 0% 0% round 1rem)", duration: 0.135, ease: "power3.out", transformOrigin: "top center" }, 0.67)
           .fromTo("[data-workspace-action-content]", { y: 6, autoAlpha: 0.45 }, { y: 0, autoAlpha: 1, duration: 0.11, ease: "power3.out" }, 0.68)
           .fromTo("[data-workspace-priority-primary]", { y: 8 }, { y: 0, duration: 0.08 }, 0.7)
           .fromTo("[data-workspace-priority-supporting]", { y: 10 }, { y: 0, duration: 0.09 }, 0.735)
           .fromTo("[data-workspace-story-cta]", { y: 10, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.08 }, 0.8)
           .addLabel("settled", scrollStoryTimelineLabels.settled);
-        return () => { timeline.scrollTrigger?.kill(); timeline.kill(); };
-      });
+        return () => {
+          if (root.dataset.scrollMode === mode) root.dataset.scrollMode = "static";
+          timeline.scrollTrigger?.kill();
+          timeline.kill();
+        };
+      };
+      media.add(scrollStoryFullQuery, () => createChoreography("full"));
+      media.add(scrollStoryAdaptedQuery, () => createChoreography("adapted"));
     }, root);
     return () => { media.revert(); context.revert(); };
   }, [reducedMotion]);
 
-  return <div ref={rootRef} className="hf-scroll-story mt-12 sm:mt-14 lg:mt-12" data-scroll-story data-active-chapter={activeChapter} data-reduced-motion={reducedMotion}>
+  return <div ref={rootRef} className="hf-scroll-story mt-12 sm:mt-14 lg:mt-12" data-scroll-story data-scroll-mode="static" data-active-chapter={activeChapter} data-reduced-motion={reducedMotion}>
     <div className="hf-scroll-story-desktop" data-testid="desktop-product-story">
       <div ref={stageRef} className="hf-scroll-story-stage relative grid h-[min(43rem,100vh)] min-h-[40rem] grid-cols-[minmax(0,0.52fr)_minmax(0,1.18fr)] items-center gap-8 xl:grid-cols-[minmax(0,0.48fr)_minmax(0,1.22fr)] xl:gap-6" data-scroll-story-pin>
         <div className="relative min-h-[31rem] min-w-0">
