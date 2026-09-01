@@ -30,10 +30,14 @@ const narrativeHandoffOffset = 4;
 const actionEndpointHoldStart = 0.825;
 const actionEndpointHoldDuration = 0.055;
 
+function NorthstarMark({ compact = false }: { compact?: boolean }) {
+  return <span className={`flex shrink-0 items-center justify-center rounded-lg border border-violet/25 bg-violet-soft font-black tracking-[-0.04em] text-violet ${compact ? "size-7 text-[0.5rem]" : "size-9 text-[0.58rem]"}`} data-northstar-mark aria-hidden="true">NS</span>;
+}
+
 function OpportunityRows({ compact = false }: { compact?: boolean }) {
   return <div className={compact ? "divide-y divide-line" : "mt-3 divide-y divide-line"}>
-    {landingWorkspace.opportunities.map((opportunity, index) => <div key={opportunity.company} className={`flex min-w-0 items-center gap-3 ${compact ? "py-2" : "py-3"} ${!compact && index === 0 ? "-mx-2 rounded-xl bg-violet-soft/45 px-2" : ""}`} data-workspace-opportunity={opportunity.company} data-workspace-opportunity-primary={index === 0 || undefined}>
-      <span className={`flex shrink-0 items-center justify-center rounded-lg font-black ${compact ? "size-7 text-[0.55rem]" : "size-9 text-[0.62rem]"} ${index === 0 ? "bg-violet-soft text-violet" : index === 1 ? "bg-surface-muted text-ink-muted" : "bg-accent-soft text-accent-strong"}`}>{opportunity.company.slice(0, 2).toUpperCase()}</span>
+    {landingWorkspace.opportunities.map((opportunity, index) => <div key={opportunity.company} className={`flex min-w-0 items-center gap-3 ${compact ? "py-2" : "py-3"} ${index === 0 ? compact ? "-mx-1 rounded-lg bg-violet-soft/35 px-1" : "-mx-2 rounded-xl bg-violet-soft/45 px-2" : ""}`} data-workspace-opportunity={opportunity.company} data-workspace-opportunity-primary={index === 0 || undefined} data-northstar-identity={index === 0 ? "applications" : undefined}>
+      {index === 0 ? <NorthstarMark compact={compact} /> : <span className={`flex shrink-0 items-center justify-center rounded-lg font-black ${compact ? "size-7 text-[0.55rem]" : "size-9 text-[0.62rem]"} ${index === 1 ? "bg-surface-muted text-ink-muted" : "bg-accent-soft text-accent-strong"}`}>{opportunity.company.slice(0, 2).toUpperCase()}</span>}
       <div className="min-w-0 flex-1"><p className={`${compact ? "text-[0.62rem]" : "text-xs"} truncate font-black text-ink dark:text-white`}>{opportunity.company}</p>{!compact ? <p className="truncate text-[0.62rem] font-semibold text-ink-muted">{opportunity.role}</p> : null}</div>
       <div className="shrink-0 text-right"><p className={`${compact ? "text-[0.54rem]" : "text-[0.6rem]"} font-bold ${index === 0 ? "text-violet" : "text-ink-muted"}`}>{opportunity.status}</p>{!compact ? <p className="mt-0.5 text-[0.55rem] text-ink-muted">{opportunity.next}</p> : null}</div>
     </div>)}
@@ -49,7 +53,7 @@ function WorkspaceNavigation() {
 
 function InterviewSurface({ compact = false }: { compact?: boolean }) {
   return <div className={compact ? "flex min-w-0 items-center gap-3" : "grid h-full min-w-0 grid-rows-[auto_1fr]"} data-workspace-interview-content={!compact || undefined}>
-    <div className={`flex min-w-0 items-center gap-3 ${compact ? "" : "border-b border-line px-5 py-4"}`}><span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-soft text-violet"><CalendarCheck2 className="size-4" /></span><div className="min-w-0 flex-1"><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-violet">Northstar Labs · Interview</p><p className="truncate text-sm font-black text-ink dark:text-white">Technical screen</p></div><p className="shrink-0 text-right text-[0.58rem] font-bold leading-4 text-ink-muted">Sep 2<br />10:00 AM</p></div>
+    <div className={`flex min-w-0 items-center gap-3 ${compact ? "" : "border-b border-line px-5 py-4"}`} data-northstar-identity="interviews"><NorthstarMark compact={compact} /><div className="min-w-0 flex-1"><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-violet">Northstar Labs · Interview</p><p className="truncate text-sm font-black text-ink dark:text-white">Technical screen</p></div><p className="shrink-0 text-right text-[0.58rem] font-bold leading-4 text-ink-muted">Sep 2<br />10:00 AM</p></div>
     {!compact ? <div className="grid min-h-0 grid-cols-[1.1fr_0.9fr] gap-5 p-5" data-workspace-interview-body><div className="min-w-0"><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-ink-muted">Conversation context</p><h4 className="mt-2 text-lg font-black text-ink dark:text-white" data-workspace-interview-title>Platform architecture and collaboration</h4><p className="mt-2 text-xs leading-5 text-ink-muted" data-workspace-interview-description>The referral source, role scope, and saved platform notes followed Northstar into this interview.</p><div className="mt-5 border-t border-line pt-4" data-workspace-interview-origin><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-ink-muted">From Applications</p><p className="mt-2 text-xs font-bold text-ink">Referral · Remote · $145k–$165k</p></div></div><div className="rounded-xl bg-surface-muted p-4" data-workspace-interview-next-action><p className="text-[0.56rem] font-black uppercase tracking-[0.12em] text-accent-strong">Next preparation action</p><p className="mt-2 text-sm font-black text-ink dark:text-white">{landingStory.preparation.remainingAction}</p><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-line"><div className="h-full w-2/3 rounded-full bg-violet" /></div><p className="mt-2 text-[0.6rem] font-bold text-ink-muted">2 of 3 ready</p></div></div> : null}
   </div>;
 }
@@ -57,9 +61,12 @@ function InterviewSurface({ compact = false }: { compact?: boolean }) {
 function PreparationSurface() {
   return <div className="grid h-full min-w-0 grid-rows-[auto_1fr]" data-workspace-preparation-content>
     <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-3.5">
-      <div className="min-w-0">
-        <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-violet">Preparation workspace</p>
-        <p className="mt-1 truncate text-sm font-black text-ink dark:text-white">Technical screen · Northstar Labs</p>
+      <div className="flex min-w-0 items-center gap-3" data-northstar-identity="preparation">
+        <NorthstarMark />
+        <div className="min-w-0">
+          <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-violet">Preparation workspace</p>
+          <p className="mt-1 truncate text-sm font-black text-ink dark:text-white">Technical screen · Northstar Labs</p>
+        </div>
       </div>
       <div className="min-w-[7.25rem] shrink-0" data-workspace-preparation-readiness>
         <div className="flex items-center justify-between gap-2">
@@ -100,7 +107,7 @@ function PreparationSurface() {
 
 function ActionCenterSurface({ compact = false }: { compact?: boolean }) {
   if (compact) {
-    return <div className="divide-y divide-line">{landingWorkspace.priorities.map((priority, index) => <div key={priority.company} className="flex min-w-0 items-start gap-3 py-2.5" data-workspace-priority={priority.priority}><span className={`mt-0.5 size-2.5 shrink-0 rounded-full ${index === 0 ? "bg-accent" : index === 1 ? "bg-line-strong" : "bg-violet"}`} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className="text-[0.65rem] font-black text-ink dark:text-white">{priority.company}</p><span className={`shrink-0 text-[0.52rem] font-black uppercase tracking-[0.08em] ${index === 0 ? "text-accent-strong" : "text-ink-muted"}`}>{priority.timing}</span></div><p className="mt-0.5 text-[0.58rem] font-bold text-ink">{priority.action}</p></div></div>)}</div>;
+    return <div className="divide-y divide-line">{landingWorkspace.priorities.map((priority, index) => <div key={priority.company} className="flex min-w-0 items-start gap-3 py-2.5" data-workspace-priority={priority.priority} data-northstar-identity={index === 0 ? "action-center" : undefined}>{index === 0 ? <NorthstarMark compact /> : <span className={`mt-0.5 size-2.5 shrink-0 rounded-full ${index === 1 ? "bg-line-strong" : "bg-violet"}`} />}<div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className="text-[0.65rem] font-black text-ink dark:text-white">{priority.company}</p><span className={`shrink-0 text-[0.52rem] font-black uppercase tracking-[0.08em] ${index === 0 ? "text-accent-strong" : "text-ink-muted"}`}>{priority.timing}</span></div><p className="mt-0.5 text-[0.58rem] font-bold text-ink">{priority.action}</p></div></div>)}</div>;
   }
 
   const [primaryPriority, ...supportingPriorities] = landingWorkspace.priorities;
@@ -109,9 +116,9 @@ function ActionCenterSurface({ compact = false }: { compact?: boolean }) {
       <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-accent-strong">Action Center</p>
       <p className="mt-1 text-sm font-black text-ink dark:text-white">What deserves attention right now</p>
     </div>
-    <div className="border-b border-line bg-accent-soft/20 px-5 py-3.5" data-workspace-priority={primaryPriority.priority} data-workspace-priority-primary>
+    <div className="border-b border-line bg-accent-soft/20 px-5 py-3.5" data-workspace-priority={primaryPriority.priority} data-workspace-priority-primary data-northstar-identity="action-center">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-1 size-2.5 shrink-0 rounded-full bg-accent" />
+        <NorthstarMark />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0"><p className="text-[0.54rem] font-black uppercase tracking-[0.1em] text-accent-strong">Do now</p><p className="mt-0.5 text-sm font-black text-ink dark:text-white">{primaryPriority.company}</p></div>
@@ -144,7 +151,7 @@ function ConnectedWorkspaceVisual() {
 }
 
 function StaticWorkspaceVisual({ stage }: { stage: LandingWorkspaceStage }) {
-  return <div className="hf-static-workspace mt-5 min-w-0 overflow-hidden rounded-2xl border border-line-strong bg-surface-muted p-3 dark:border-slate-700 dark:bg-slate-950/70" data-scroll-static-stage={stage} aria-hidden="true"><div className="flex items-center justify-between border-b border-line pb-2"><span className="text-[0.58rem] font-black text-ink dark:text-white">HireFlux</span><span className="text-[0.52rem] font-bold text-accent-strong">{workspaceNavigation.find((item) => item.stage === stage)?.label}</span></div><div className="mt-2 rounded-xl bg-surface-raised px-3 dark:bg-slate-900">{stage === "applications" ? <OpportunityRows compact /> : null}{stage === "interviews" ? <div className="py-3"><InterviewSurface compact /><p className="mt-3 border-t border-line pt-2 text-[0.58rem] font-semibold text-ink-muted">Application context retained</p></div> : null}{stage === "preparation" ? <div className="py-3"><p className="text-[0.6rem] font-black text-ink dark:text-white">Technical screen · Northstar Labs</p><div className="mt-3 h-1.5 rounded-full bg-line"><div className="h-full w-2/3 rounded-full bg-violet" /></div><p className="mt-2 text-[0.58rem] font-bold text-ink-muted">Company context and evidence ready · One question remaining</p></div> : null}{stage === "action-center" ? <ActionCenterSurface compact /> : null}</div></div>;
+  return <div className="hf-static-workspace mt-5 min-w-0 overflow-hidden rounded-2xl border border-line-strong bg-surface-muted p-3 dark:border-slate-700 dark:bg-slate-950/70" data-scroll-static-stage={stage} aria-hidden="true"><div className="flex items-center justify-between border-b border-line pb-2"><span className="text-[0.58rem] font-black text-ink dark:text-white">HireFlux</span><span className="text-[0.52rem] font-bold text-accent-strong">{workspaceNavigation.find((item) => item.stage === stage)?.label}</span></div><div className="mt-2 rounded-xl bg-surface-raised px-3 dark:bg-slate-900">{stage === "applications" ? <OpportunityRows compact /> : null}{stage === "interviews" ? <div className="py-3"><InterviewSurface compact /><p className="mt-3 border-t border-line pt-2 text-[0.58rem] font-semibold text-ink-muted">Application context retained</p></div> : null}{stage === "preparation" ? <div className="flex items-center gap-3 py-3" data-northstar-identity="preparation"><NorthstarMark compact /><div className="min-w-0 flex-1"><p className="truncate text-[0.6rem] font-black text-ink dark:text-white">Technical screen · Northstar Labs</p><div className="mt-3 h-1.5 rounded-full bg-line"><div className="h-full w-2/3 rounded-full bg-violet" /></div><p className="mt-2 text-[0.58rem] font-bold text-ink-muted">Company context and evidence ready · One question remaining</p></div></div> : null}{stage === "action-center" ? <ActionCenterSurface compact /> : null}</div></div>;
 }
 
 function ChapterCopy({ chapter, visual = false }: { chapter: LandingScrollChapter; visual?: boolean }) {

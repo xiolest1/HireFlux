@@ -1,5 +1,75 @@
 # HireFlux development log
 
+## 2026-09-01 — L4 Northstar opportunity continuity
+
+Strengthened Northstar Labs as the visual protagonist of the lower Connected
+Workspace story without changing the story's words, product geometry, or
+motion. The pre-edit audit found that the company name survived all four
+chapters, but its identity did not: Applications generated the ambiguous
+initials `NO`, Interviews replaced the company cue with a generic calendar,
+Preparation relied on small provenance text, and Action Center used the same
+generic priority dot vocabulary as unrelated opportunities. Typography and
+container placement also changed by product context, which is appropriate;
+the avoidable continuity loss was the disappearing company marker.
+
+One private `NorthstarMark` now provides a restrained violet `NS` monogram in
+each scene's native identity area. Applications gives the Northstar row a
+subtle selected surface while keeping Atlas Systems and Harborline fully
+readable. Interviews places the compact mark beside the existing
+`Northstar Labs · Interview` and `Technical screen` hierarchy. Preparation
+uses a compact 28px mark on the retained Interview context and a 36px mark on
+the active Preparation header, making provenance visible without competing
+with the checklist. Action Center carries the 36px mark into the featured
+Northstar `Do now` row while the existing cyan urgency surface, `Due today`,
+retained-history text, and quieter supporting priorities keep their semantic
+roles. Static/reduced-motion cards use the compact treatment so identity
+survives narrow layouts without consuming task space. Existing visible text
+remains the accessible source of meaning; the repeated monogram is decorative
+and `aria-hidden`, so no duplicate announcement or false selection semantic
+was introduced.
+
+No continuity-specific animation was added. The identity cues inherit the
+existing panel choreography, which avoided duplicate emphasis during handoffs
+and kept the product task—not the marker—as the scene owner. Slow, fast,
+forward, reverse, and freeze-frame checks confirmed that Northstar can be
+recognized immediately in each settled chapter. At Preparation, the compact
+retained cue and larger active cue communicate context → task rather than two
+equal owners. At Action, Atlas and Harborline remain visible and usable while
+Northstar resolves as the earned next action.
+
+Responsive QA covered Full 1440×900, 1280×800, and 1024×768; Adapted
+1280×650, 1024×700, 960×720, and 900×768; and Static 768×1024, 390×844, and
+320×568. The compact marker survives Adapted and Static layouts, all tested
+pages remain horizontally contained, Full/Adapted retain one pin spacer, and
+Static/reduced motion retain none. Dark and light review found the existing
+violet surface/ink tokens visible but restrained, with textual company and
+role/provenance context preventing color-only recognition. Two intentional
+references were refreshed: the dark desktop Preparation endpoint and the
+light mobile-390 full landing page; all other references remained within the
+approved visual threshold.
+
+Focused component coverage now requires a marked Northstar identity in all
+four static chapters. The existing desktop journey additionally asserts the
+same cue at each choreographed endpoint, the smaller retained marker versus
+the active Preparation marker, and preserved Atlas/Harborline context. ESLint,
+TypeScript, all 187 Vitest tests, the 13-test focused accessibility suite,
+production build, three hosting-header tests, the focused 1024/1280 journey,
+and the complete Playwright/Axe matrix pass (121 passed, 54 intentional
+project-filtered skips). `git diff --check` is clean.
+
+Against L3, the production main entry remains 282.91 kB raw / 84.78 kB gzip.
+The lazy landing chunk moves from 159.66 / 56.15 to 160.30 / 56.29 kB
+(+0.64 / +0.14), and CSS moves from 110.64 / 18.15 to 111.19 / 18.19 kB
+(+0.55 / +0.04). No dependency, route, backend, or authenticated bundle
+boundary changed; generated `dist` output remains uncommitted.
+
+Regression boundary: L1's 21.5rem narrative envelope and anchors, L2's 4px
+crossfades and 24% / 46% / 76% ownership boundaries, L3's progress geometry,
+Action hold, removed lower CTA, and release timing, E6 stage geometry, E7
+Full/Adapted/Static thresholds and travel, E8 lifecycle behavior, one master
+timeline, and one ScrollTrigger per active choreographed mode are unchanged.
+L4 stops here; no L5 chapter-focus work was introduced.
+
 ## 2026-09-01 — L3 lower-story resolution and progress cleanup
 
 Removed the duplicate lower-story conversion beat so Connected Workspace now

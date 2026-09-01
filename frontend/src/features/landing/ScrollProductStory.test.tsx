@@ -432,6 +432,24 @@ describe("ScrollProductStory", () => {
 
   });
 
+  it("keeps one shared Northstar identity cue in every workspace context", () => {
+    setReducedMotion(true);
+    const { container } = render(<ScrollProductStory />);
+
+    for (const stage of ["applications", "interviews", "preparation", "action-center"]) {
+      const identities = container.querySelectorAll(`[data-northstar-identity="${stage}"]`);
+      expect(identities.length).toBeGreaterThan(0);
+      identities.forEach((identity) => {
+        expect(identity.querySelector("[data-northstar-mark]")).toHaveTextContent("NS");
+      });
+    }
+    expect(container.querySelectorAll("[data-northstar-mark]").length).toBeGreaterThanOrEqual(4);
+    expect(container.querySelector('[data-northstar-identity="applications"]')).toHaveTextContent("Senior Frontend Platform Engineer");
+    expect(container.querySelector('[data-northstar-identity="interviews"]')).toHaveTextContent("Northstar Labs · Interview");
+    expect(container.querySelector('[data-northstar-identity="preparation"]')).toHaveTextContent("Technical screen · Northstar Labs");
+    expect(container.querySelector('[data-northstar-identity="action-center"]')).toHaveTextContent("Northstar Labs");
+  });
+
   it("cleans its owned trigger and never overlaps contexts in Strict Mode", () => {
     setReducedMotion(false);
     const { unmount } = render(<StrictMode><ScrollProductStory /></StrictMode>);
