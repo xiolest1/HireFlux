@@ -170,7 +170,7 @@ test("landing story becomes a stable complete state with reduced motion", async 
   await expect(page.locator(".pin-spacer")).toHaveCount(0);
 });
 
-test("desktop scroll story reorganizes one workspace and releases with its CTA", async ({
+test("desktop scroll story reorganizes one workspace and releases from Action Center", async ({
   page,
 }, testInfo) => {
   test.skip(!["desktop-1024", "desktop-1280"].includes(testInfo.project.name));
@@ -191,6 +191,8 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
     (element) => Number(getComputedStyle(element).opacity),
   )).toBeGreaterThan(0.98);
   await expect(stage.locator('[data-scroll-copy-stage="applications"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: /Explore the Demo|Continue Demo/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /Start Demo Workspace|Return to Workspace/ })).toHaveCount(0);
 
   const metrics = await stage.evaluate((element) => ({
     start: element.getBoundingClientRect().top + window.scrollY,
@@ -257,12 +259,46 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
     expect(Math.abs(current.transform.scaleX - 1)).toBeLessThan(0.001);
     expect(Math.abs(current.transform.scaleY - 1)).toBeLessThan(0.001);
   };
+  const readProgressState = async () => stage.locator("[data-scroll-progress]").evaluate((element) => {
+    const container = element.getBoundingClientRect();
+    const segments = Array.from(element.querySelectorAll<HTMLElement>("[data-scroll-progress-segment]")).map((segment) => {
+      const rect = segment.getBoundingClientRect();
+      return {
+        stage: segment.dataset.scrollProgressSegment,
+        active: segment.hasAttribute("data-active"),
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+    });
+    return { left: container.left, top: container.top, width: container.width, height: container.height, segments };
+  });
+  const expectProgressState = async (
+    chapter: string,
+    baseline: Awaited<ReturnType<typeof readProgressState>>,
+  ) => {
+    const current = await readProgressState();
+    for (const key of ["left", "top", "width", "height"] as const) {
+      expect(Math.abs(current[key] - baseline[key])).toBeLessThan(1);
+    }
+    expect(current.segments.filter((segment) => segment.active).map((segment) => segment.stage)).toEqual([chapter]);
+    expect(current.segments).toHaveLength(4);
+    current.segments.forEach((segment, index) => {
+      const expected = baseline.segments[index];
+      for (const key of ["left", "top", "width", "height"] as const) {
+        expect(Math.abs(segment[key] - expected[key])).toBeLessThan(1);
+      }
+    });
+  };
 
   await moveTo(0.1);
   await expect(story).toHaveAttribute("data-active-chapter", "applications");
   const applicationsGeometry = await readStageGeometry();
   const applicationsNarrative = await readNarrativeAnchors();
+  const applicationsProgress = await readProgressState();
   expectStableGeometry(applicationsGeometry, applicationsGeometry);
+  await expectProgressState("applications", applicationsProgress);
   await moveTo(0.25);
   await expect(story).toHaveAttribute("data-active-chapter", "interviews");
   await expect(stage.locator("[data-workspace-applications]")).toBeHidden();
@@ -283,6 +319,7 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
   expectStableGeometry(await readStageGeometry(), applicationsGeometry);
   expectAnchoredNarrative(await readNarrativeAnchors(), applicationsNarrative);
+  await expectProgressState("interviews", applicationsProgress);
   await page.evaluate(({ start }) => window.scrollTo(0, start - 100), metrics);
   await page.waitForTimeout(450);
   await expect(stage.locator("[data-workspace-applications]")).toBeVisible();
@@ -299,10 +336,12 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   await expect(stage.locator("[data-workspace-preparation-primary]")).toBeVisible();
   expectStableGeometry(await readStageGeometry(), applicationsGeometry);
   expectAnchoredNarrative(await readNarrativeAnchors(), applicationsNarrative);
+  await expectProgressState("preparation", applicationsProgress);
   expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
   expect(Math.abs(await stage.evaluate((element) => element.getBoundingClientRect().top))).toBeLessThan(3);
   await moveTo(0.81);
   await expect(story).toHaveAttribute("data-active-chapter", "action-center");
+  await expectProgressState("action-center", applicationsProgress);
   await expect(stage.locator("[data-workspace-history]")).toBeVisible();
   await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
   await expect(stage.locator("[data-workspace-priority-primary]")).toBeVisible();
@@ -364,8 +403,9 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   await moveTo(0.98);
   await page.waitForTimeout(600);
   await expect(story).toHaveAttribute("data-active-chapter", "action-center");
-  await expect(stage.getByRole("button", { name: /Workspace/ })).toBeVisible();
-  expect(await stage.locator("[data-workspace-story-cta]").evaluate((element) => Number(getComputedStyle(element).opacity))).toBeGreaterThan(0.98);
+  await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
+  await expect(stage.locator("[data-workspace-story-cta]")).toHaveCount(0);
+  await expectProgressState("action-center", applicationsProgress);
 
   const footer = page.locator("footer");
   const release = await footer.evaluate((element) => ({
@@ -384,8 +424,7 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
     metrics,
   );
   await page.waitForTimeout(450);
-  const workspaceCta = page.getByRole("button", { name: /Workspace/ }).last();
-  await expect(workspaceCta).toBeVisible();
+  await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
   expect(await stage.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
   await page.evaluate(
     ({ footerTop, viewportHeight }) => window.scrollTo(0, footerTop - viewportHeight + 1),
@@ -556,7 +595,8 @@ test("adapted scroll story remains progressive, contained, and reversible", asyn
       expect(Math.abs(anchor - narrativeBaseline![index])).toBeLessThan(1.5);
     });
   }
-  await expect(stage.getByRole("button", { name: /Workspace/ })).toBeVisible();
+  await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
+  await expect(stage.locator("[data-workspace-story-cta]")).toHaveCount(0);
   await expect(stage).toHaveScreenshot("scroll-story-adapted-action-center.png");
   await moveTo(0.55);
   await expect(story).toHaveAttribute("data-active-chapter", "preparation");
@@ -568,7 +608,7 @@ test("adapted scroll story remains progressive, contained, and reversible", asyn
   await expect(stage).toHaveScreenshot("scroll-story-adapted-interviews.png");
 
   await moveTo(0.98);
-  await expect(page.getByRole("button", { name: /Workspace/ }).last()).toBeVisible();
+  await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
   await page.evaluate(({ start, travel }) => window.scrollTo(0, start + travel + 1), metrics);
   await page.waitForTimeout(900);
   expect(await stage.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");

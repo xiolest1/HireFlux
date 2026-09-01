@@ -1,4 +1,4 @@
-import { ArrowRight, BriefcaseBusiness, CalendarCheck2, Check, ChevronRight, CircleCheckBig, Clock3, ListChecks, MessageSquareText, Search } from "lucide-react";
+import { BriefcaseBusiness, CalendarCheck2, Check, ChevronRight, CircleCheckBig, Clock3, ListChecks, MessageSquareText, Search } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -27,8 +27,8 @@ const narrativeIncomingProgress = 0.012;
 const narrativeOutgoingLead = 0.012;
 const narrativeIncomingLead = 0.004;
 const narrativeHandoffOffset = 4;
-
-interface ScrollProductStoryProps { ctaLabel: string; ctaDisabled?: boolean; onCta: () => void; }
+const actionEndpointHoldStart = 0.825;
+const actionEndpointHoldDuration = 0.055;
 
 function OpportunityRows({ compact = false }: { compact?: boolean }) {
   return <div className={compact ? "divide-y divide-line" : "mt-3 divide-y divide-line"}>
@@ -151,7 +151,7 @@ function ChapterCopy({ chapter, visual = false }: { chapter: LandingScrollChapte
   return <div aria-hidden={visual || undefined} data-scroll-copy-content={visual || undefined}><p className="text-xs font-black uppercase tracking-[0.14em] text-accent-strong" data-scroll-copy-label={visual || undefined}>{chapter.number} · {chapter.label}</p><p className="mt-4 text-sm font-bold leading-6 text-ink-muted dark:text-slate-300" data-scroll-copy-question={visual || undefined}>{chapter.question}</p><h3 className="mt-3 text-3xl font-black tracking-tight text-ink dark:text-white" data-scroll-copy-headline={visual || undefined}>{chapter.title}</h3><p className="mt-4 max-w-xl leading-7 text-ink-muted dark:text-slate-300" data-scroll-copy-body={visual || undefined}>{chapter.description}</p></div>;
 }
 
-export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: ScrollProductStoryProps) {
+export function ScrollProductStory() {
   const reducedMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -228,7 +228,7 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .fromTo("[data-workspace-action-content]", { y: 6, autoAlpha: 0.45 }, { y: 0, autoAlpha: 1, duration: 0.11, ease: "power3.out" }, 0.68)
           .fromTo("[data-workspace-priority-primary]", { y: 8 }, { y: 0, duration: 0.08 }, 0.7)
           .fromTo("[data-workspace-priority-supporting]", { y: 10 }, { y: 0, duration: 0.09 }, 0.735)
-          .fromTo("[data-workspace-story-cta]", { y: 10, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.08 }, 0.8)
+          .to("[data-workspace-actions]", { duration: actionEndpointHoldDuration }, actionEndpointHoldStart)
           .addLabel("settled", scrollStoryTimelineLabels.settled);
         const timelineDuration = timeline.duration();
         const addNarrativeHandoff = (outgoing: LandingWorkspaceStage, incoming: LandingWorkspaceStage, boundary: number) => {
@@ -267,8 +267,7 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           <ol className="sr-only">{landingScrollChapters.map((chapter) => <li key={chapter.stage}><ChapterCopy chapter={chapter} /></li>)}</ol>
           <div className="absolute inset-x-0 top-8" data-scroll-narrative>
             <div className="grid" data-scroll-copy-stack>{landingScrollChapters.map((chapter) => <div key={chapter.stage} className="invisible col-start-1 row-start-1" data-scroll-copy-stage={chapter.stage}><ChapterCopy chapter={chapter} visual /></div>)}</div>
-            <ol className="mt-7 grid grid-cols-4 gap-2" data-scroll-progress aria-hidden="true">{landingScrollChapters.map((chapter) => <li key={chapter.stage} className={`h-1 rounded-full transition-colors ${chapter.stage === activeChapter ? "bg-accent" : "bg-line-strong/60"}`} />)}</ol>
-            <div className="invisible mt-5" data-workspace-story-cta><p className="mb-3 text-xs font-semibold leading-5 text-ink-muted">Your next move is already in view.</p><button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60" disabled={ctaDisabled} onClick={onCta}>{ctaLabel}<ArrowRight className="size-4" /></button></div>
+            <ol className="mt-7 grid grid-cols-4 gap-2" data-scroll-progress aria-hidden="true">{landingScrollChapters.map((chapter) => <li key={chapter.stage} className={`h-1 rounded-full ${chapter.stage === activeChapter ? "bg-accent" : "bg-line-strong/60"}`} data-scroll-progress-segment={chapter.stage} data-active={chapter.stage === activeChapter || undefined} />)}</ol>
           </div>
         </div>
         <div className="relative flex h-[36rem] min-w-0 items-center overflow-hidden p-1" data-workspace-stage-envelope>
@@ -277,6 +276,6 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
       </div>
       <div className="hf-scroll-story-release-buffer" data-scroll-story-release-buffer aria-hidden="true" />
     </div>
-    <ol className="hf-scroll-story-fallback grid gap-8 md:grid-cols-2" data-testid="mobile-product-story">{landingScrollChapters.map((chapter) => <li key={chapter.stage} className="min-w-0"><article className="h-full min-w-0 border-t border-line pt-6" data-scroll-fallback-chapter={chapter.stage} data-landing-clip-check><ChapterCopy chapter={chapter} /><StaticWorkspaceVisual stage={chapter.stage} />{chapter.stage === "action-center" ? <button type="button" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60" disabled={ctaDisabled} onClick={onCta}>{ctaLabel}<ArrowRight className="size-4" /></button> : null}</article></li>)}</ol>
+    <ol className="hf-scroll-story-fallback grid gap-8 md:grid-cols-2" data-testid="mobile-product-story">{landingScrollChapters.map((chapter) => <li key={chapter.stage} className="min-w-0"><article className="h-full min-w-0 border-t border-line pt-6" data-scroll-fallback-chapter={chapter.stage} data-landing-clip-check><ChapterCopy chapter={chapter} /><StaticWorkspaceVisual stage={chapter.stage} /></article></li>)}</ol>
   </div>;
 }

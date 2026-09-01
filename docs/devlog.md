@@ -1,5 +1,71 @@
 # HireFlux development log
 
+## 2026-09-01 — L3 lower-story resolution and progress cleanup
+
+Removed the duplicate lower-story conversion beat so Connected Workspace now
+resolves directly from Applications → Interviews → Preparation → Action Center
+and releases. The hero remains the single conversion surface: its Explore the
+Demo / Continue Demo behavior, session handling, styling, and destination are
+unchanged. The lower `Start Demo Workspace` / `Return to Workspace` button was
+removed from both the pinned composition and the Static Action card, along with
+its component props, LandingPage wiring, GSAP selector, hidden-state CSS, and
+button-focused tests. No empty or focusable wrapper remains.
+
+The retired CTA animated from raw timeline `0.80–0.88`; the final Action
+priority settles at `0.825`. Removing that tween outright would have shortened
+the master timeline from `0.88` to `0.825`, remapping normalized product and L2
+narrative timing. L3 therefore preserves the exact `0.825–0.88` interval as a
+property-free hold on the already-mounted Action surface. Live slow, fast,
+reverse, and release QA showed that this 0.055 interval reads as a brief chance
+to absorb the completed Action Center—not an empty pause—so the ScrollTrigger
+distance, release point, semantic boundaries, and overall timeline duration
+remain unchanged.
+
+The four bars continue to represent Applications, Interviews, Preparation,
+and Action. Their individual grid tracks were already equal and changed only
+tone, but their shared container lived inside the narrator whose chapter CSS
+changed max-width and horizontal offset. As a result, the whole indicator
+quietly resized and shifted between chapters. Chapter-specific width/offset
+styling now applies only to the fixed-height copy stack; the progress row keeps
+one full-column origin, total width, four equal segments, gap pattern, baseline,
+and L1 vertical position. The active segment uses the existing accent while the
+other three use the existing muted line tone. The old color transition was
+removed so progress ownership resolves immediately with React at the frozen
+24%, 46%, and 76% L2 boundaries. The bars remain decorative and
+non-interactive; Static/reduced-motion layouts continue to use the four visible
+numbered chapters instead of a redundant indicator.
+
+At 1280×800, live measurements across all four chapters recorded the same
+332.32px container and the same four 77.07–77.08px segment tracks at identical
+coordinates. Full QA covered 1440×900, 1280×800, and 1024×768; Adapted covered
+1280×650, 1024×700, 960×720, and 900×768; Static covered 768×1024, 390×844,
+and 320×568. Every viewport had zero horizontal overflow. Full and Adapted kept
+one pin spacer; Static kept none. Dark and light modes retained identical
+geometry with visible muted segments and one clear active segment. Release QA
+confirmed Action is complete before the former CTA interval, remains the sole
+final owner through the end, releases before the footer, and restores directly
+to Action when reversed.
+
+Eight intentional baselines were refreshed: the desktop landing page, dark
+Full and Adapted Action endpoints, the light Action endpoint, and four
+light-theme full-page references at 320, 390, 768, and 1280px. No unrelated
+snapshot changed.
+
+Against L2, the production main entry remains 282.91 kB raw / 84.78 kB gzip.
+The lazy landing chunk decreases from 160.70 / 56.33 to 159.66 / 56.15 kB
+(-1.04 / -0.18), and CSS decreases from 110.88 / 18.21 to 110.64 / 18.15 kB
+(-0.24 / -0.06). ESLint, TypeScript, all 186 Vitest tests, the 13-test focused
+accessibility suite, production build, three hosting-header tests, focused
+forward/reverse/release browser checks, and the complete Playwright/Axe matrix
+pass (121 passed, 54 intentional project-filtered skips).
+
+Regression boundary: hero CTA and demo flow, product stage and choreography,
+E6 geometry, E7 Full/Adapted/Static thresholds and travel, E8 lifecycle
+ownership, L1 21.5rem envelope and anchors, L2 4px crossfades and semantic
+boundaries, one master timeline, one ScrollTrigger per active choreographed
+mode, reduced-motion priority, pin/release ordering, and footer behavior are
+unchanged. L3 stops here; no L4 work was introduced.
+
 ## 2026-09-01 — L2 lower-story narrative handoff polish
 
 Replaced the Connected Workspace narrator's three instant whole-message swaps
