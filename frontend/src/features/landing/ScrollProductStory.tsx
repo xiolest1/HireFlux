@@ -22,6 +22,12 @@ const workspaceNavigation = [
   { stage: "action-center", label: "Action Center", icon: Clock3 },
 ] as const;
 
+const narrativeOutgoingProgress = 0.012;
+const narrativeIncomingProgress = 0.012;
+const narrativeOutgoingLead = 0.012;
+const narrativeIncomingLead = 0.004;
+const narrativeHandoffOffset = 4;
+
 interface ScrollProductStoryProps { ctaLabel: string; ctaDisabled?: boolean; onCta: () => void; }
 
 function OpportunityRows({ compact = false }: { compact?: boolean }) {
@@ -169,7 +175,7 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
         timeline.eventCallback("onUpdate", () => selectChapter(timeline.progress()));
         timeline
           .addLabel("applications", scrollStoryTimelineLabels.applications)
-          .set('[data-scroll-copy-stage]:not([data-scroll-copy-stage="applications"])', { autoAlpha: 0 }, 0)
+          .set('[data-scroll-copy-stage]:not([data-scroll-copy-stage="applications"])', { autoAlpha: 0, y: narrativeHandoffOffset }, 0)
           .set("[data-workspace-panel]:not([data-workspace-applications])", { autoAlpha: 0 }, 0)
           .set("[data-workspace-handoff]", { autoAlpha: 0 }, 0)
           .set("[data-workspace-handoff-line]", { scaleX: 0, transformOrigin: "left center" }, 0)
@@ -179,8 +185,6 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .fromTo("[data-workspace-applications]", { y: 8 }, { y: 0, duration: 0.12 }, 0)
 
           .addLabel("interviews", scrollStoryTimelineLabels.interviews)
-          .set('[data-scroll-copy-stage="applications"]', { autoAlpha: 0, y: -7 }, 0.226)
-          .set('[data-scroll-copy-stage="interviews"]', { autoAlpha: 1, y: 0 }, 0.226)
           .to('[data-workspace-nav-active="applications"]', { opacity: 0, duration: 0.04 }, 0.205)
           .to('[data-workspace-nav-active="interviews"]', { opacity: 1, duration: 0.04 }, 0.225)
           .to("[data-workspace-applications]", { x: configuration.applicationCompressX, scaleX: 0.28, scaleY: 1.06, duration: 0.13, transformOrigin: "left top" }, 0.08)
@@ -195,8 +199,6 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .fromTo("[data-workspace-interview-content]", { y: 4, autoAlpha: 0.4 }, { y: 0, autoAlpha: 1, duration: 0.18, ease: "power3.out" }, 0.15)
 
           .addLabel("preparation", scrollStoryTimelineLabels.preparation)
-          .set('[data-scroll-copy-stage="interviews"]', { autoAlpha: 0, y: -7 }, 0.432)
-          .set('[data-scroll-copy-stage="preparation"]', { autoAlpha: 1, y: 0 }, 0.432)
           .to('[data-workspace-nav-active="interviews"]', { opacity: 0, duration: 0.04 }, 0.415)
           .to('[data-workspace-nav-active="preparation"]', { opacity: 1, duration: 0.05 }, 0.435)
           .to("[data-workspace-recent]", { x: -14, autoAlpha: 0, duration: 0.055 }, 0.375)
@@ -212,8 +214,6 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .fromTo("[data-workspace-preparation-readiness-bar]", { scaleX: 0.48 }, { scaleX: 1, duration: 0.13, ease: "power2.inOut", transformOrigin: "left center" }, 0.425)
 
           .addLabel("action-center", scrollStoryTimelineLabels.actionCenter)
-          .set('[data-scroll-copy-stage="preparation"]', { autoAlpha: 0, y: -7 }, 0.714)
-          .set('[data-scroll-copy-stage="action-center"]', { autoAlpha: 1, y: 0 }, 0.714)
           .to('[data-workspace-nav-active="preparation"]', { opacity: 0, duration: 0.04 }, 0.7)
           .to('[data-workspace-nav-active="action-center"]', { opacity: 1, duration: 0.05 }, 0.72)
           .to("[data-workspace-preparation-primary]", { y: -6, autoAlpha: 0, duration: 0.05 }, 0.66)
@@ -230,6 +230,15 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .fromTo("[data-workspace-priority-supporting]", { y: 10 }, { y: 0, duration: 0.09 }, 0.735)
           .fromTo("[data-workspace-story-cta]", { y: 10, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.08 }, 0.8)
           .addLabel("settled", scrollStoryTimelineLabels.settled);
+        const timelineDuration = timeline.duration();
+        const addNarrativeHandoff = (outgoing: LandingWorkspaceStage, incoming: LandingWorkspaceStage, boundary: number) => {
+          timeline
+            .to(`[data-scroll-copy-stage="${outgoing}"]`, { autoAlpha: 0, y: -narrativeHandoffOffset, duration: timelineDuration * narrativeOutgoingProgress, ease: "power1.out" }, timelineDuration * (boundary - narrativeOutgoingLead))
+            .to(`[data-scroll-copy-stage="${incoming}"]`, { autoAlpha: 1, y: 0, duration: timelineDuration * narrativeIncomingProgress, ease: "power2.out" }, timelineDuration * (boundary - narrativeIncomingLead));
+        };
+        addNarrativeHandoff("applications", "interviews", scrollStoryTimelineLabels.interviews);
+        addNarrativeHandoff("interviews", "preparation", scrollStoryTimelineLabels.preparation);
+        addNarrativeHandoff("preparation", "action-center", scrollStoryTimelineLabels.actionCenter);
         return () => {
           if (activeBranch === branch) {
             activeBranch = null;

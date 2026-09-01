@@ -27,6 +27,7 @@ const gsapMocks = vi.hoisted(() => {
     to: vi.fn(),
     eventCallback: vi.fn(),
     progress: vi.fn(() => 0),
+    duration: vi.fn(() => 0.88),
     kill: vi.fn(),
     scrollTrigger: trigger,
   };
@@ -187,8 +188,29 @@ describe("ScrollProductStory", () => {
     );
     expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
       '[data-scroll-copy-stage]:not([data-scroll-copy-stage="applications"])',
-      expect.objectContaining({ autoAlpha: 0 }),
+      expect.objectContaining({ autoAlpha: 0, y: 4 }),
       0,
+    );
+    for (const [outgoing, incoming, boundary] of [
+      ["applications", "interviews", scrollStoryTimelineLabels.interviews],
+      ["interviews", "preparation", scrollStoryTimelineLabels.preparation],
+      ["preparation", "action-center", scrollStoryTimelineLabels.actionCenter],
+    ] as const) {
+      expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+        `[data-scroll-copy-stage="${outgoing}"]`,
+        expect.objectContaining({ autoAlpha: 0, y: -4, duration: 0.88 * 0.012, ease: "power1.out" }),
+        0.88 * (boundary - 0.012),
+      );
+      expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+        `[data-scroll-copy-stage="${incoming}"]`,
+        expect.objectContaining({ autoAlpha: 1, y: 0, duration: 0.88 * 0.012, ease: "power2.out" }),
+        0.88 * (boundary - 0.004),
+      );
+    }
+    expect(gsapMocks.timeline.set).not.toHaveBeenCalledWith(
+      expect.stringContaining("data-scroll-copy-stage"),
+      expect.objectContaining({ y: -7 }),
+      expect.any(Number),
     );
     expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
       "[data-workspace-panel]:not([data-workspace-applications])",

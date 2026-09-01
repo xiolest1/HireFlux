@@ -576,6 +576,81 @@ test("adapted scroll story remains progressive, contained, and reversible", asyn
   expect(await envelope.count()).toBe(1);
 });
 
+test("narrative handoffs transfer ownership at the semantic chapter boundaries", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; });
+
+  const story = page.locator("[data-scroll-story]");
+  const stage = page.locator("[data-scroll-story-pin]");
+  const transitions = [
+    { outgoing: "applications", incoming: "interviews", boundary: 0.24 },
+    { outgoing: "interviews", incoming: "preparation", boundary: 0.46 },
+    { outgoing: "preparation", incoming: "action-center", boundary: 0.76 },
+  ] as const;
+  const verifyMode = async (travelViewportHeights: number) => {
+    const metrics = await stage.evaluate((element, travelViewportHeights) => ({
+      start: element.getBoundingClientRect().top + window.scrollY,
+      travel: window.innerHeight * travelViewportHeights,
+    }), travelViewportHeights);
+    const moveTo = async (progress: number) => {
+      await page.evaluate(
+        ({ start, travel, progress }) => window.scrollTo(0, start + travel * progress),
+        { ...metrics, progress },
+      );
+      await page.waitForTimeout(700);
+    };
+    const opacity = (chapter: string) => stage.locator(`[data-scroll-copy-stage="${chapter}"]`).evaluate(
+      (element) => Number(getComputedStyle(element).opacity),
+    );
+
+    for (const { outgoing, incoming, boundary } of transitions) {
+      await moveTo(boundary - 0.01);
+      await expect(story).toHaveAttribute("data-active-chapter", outgoing);
+      expect(await opacity(outgoing)).toBeGreaterThan(0.65);
+      expect(await opacity(incoming)).toBeLessThan(0.05);
+
+      await moveTo(boundary + 0.003);
+      await expect(story).toHaveAttribute("data-active-chapter", incoming);
+      expect(await opacity(outgoing)).toBeLessThan(0.1);
+      expect(await opacity(incoming)).toBeGreaterThan(0.85);
+    }
+
+    for (const { outgoing, incoming, boundary } of [...transitions].reverse()) {
+      await moveTo(boundary + 0.006);
+      expect(await opacity(incoming)).toBeGreaterThan(0.98);
+      await moveTo(boundary - 0.01);
+      await expect(story).toHaveAttribute("data-active-chapter", outgoing);
+      expect(await opacity(outgoing)).toBeGreaterThan(0.65);
+      expect(await opacity(incoming)).toBeLessThan(0.05);
+    }
+
+    await page.evaluate(
+      ({ start, travel }) => {
+        window.scrollTo(0, start + travel * 0.763);
+        window.scrollTo(0, start + travel * 0.453);
+        window.scrollTo(0, start + travel * 0.243);
+      },
+      metrics,
+    );
+    await page.waitForTimeout(750);
+    await expect(story).toHaveAttribute("data-active-chapter", "interviews");
+    expect(await opacity("applications")).toBeLessThan(0.1);
+    expect(await opacity("interviews")).toBeGreaterThan(0.85);
+  };
+
+  await expect(story).toHaveAttribute("data-scroll-mode", "full");
+  await verifyMode(2.5);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.setViewportSize({ width: 900, height: 680 });
+  await page.goto("/");
+  await expect(story).toHaveAttribute("data-scroll-mode", "adapted");
+  await verifyMode(2);
+  await expectNoHorizontalPageOverflow(page);
+});
+
 test("scroll chapter semantics stay synchronized during large scrubbed jumps", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1280");
   await page.setViewportSize({ width: 1280, height: 800 });

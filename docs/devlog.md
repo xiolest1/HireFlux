@@ -1,5 +1,64 @@
 # HireFlux development log
 
+## 2026-09-01 — L2 lower-story narrative handoff polish
+
+Replaced the Connected Workspace narrator's three instant whole-message swaps
+with short, shared ownership handoffs. The previous copy changed at raw GSAP
+positions `0.226`, `0.432`, and `0.714`, before React's normalized semantic
+boundaries at `0.24`, `0.46`, and `0.76`. That made the product workspace and
+narrative briefly describe different chapters, and a stopped or reversed scrub
+could read as an abrupt replacement rather than a causal handoff.
+
+Each transition now uses the same bounded model: the outgoing message moves up
+4px and fades over 1.2% of normalized timeline progress, beginning 1.2% before
+the chapter boundary; the incoming message starts 4px below, begins 0.4% before
+the boundary, and settles over 1.2%. Outgoing copy uses `power1.out`; incoming
+copy uses `power2.out`. The complete message moves as one unit, with no internal
+stagger, horizontal travel, blur, scale, or extra motion authority. At the
+boundary the outgoing owner is gone and the incoming owner is already legible,
+while the overlap window remains too short for two competing headlines.
+
+GSAP child positions are expressed in raw timeline time, whereas the existing
+chapter selector reads normalized `timeline.progress()`. The handoff positions
+therefore derive from `timeline.duration()` after the frozen product
+choreography is assembled. This aligns visual ownership with the semantic
+boundaries without moving any product tween, label, CTA event, or release
+timing. Forward, reverse, and rapid multi-boundary scrubbing remain
+deterministic because the same timeline owns both directions and React still
+updates only when a chapter boundary is crossed.
+
+The L1 21.5rem narrative envelope, four fixed text rows, progress placement,
+CTA placement, Full/Adapted/Static capability model, E6 stage geometry, E7
+travel values, one-timeline/one-ScrollTrigger ownership, reduced-motion
+fallback, and product workspace choreography are unchanged. The only refreshed
+visual baseline is the Preparation-to-Action frame: its old image paired
+Preparation copy with an already-settled Action Center surface, while the new
+baseline correctly gives both product and narrative to Action Center. L3 CTA
+removal remains unimplemented.
+
+Live QA covered all three handoffs in dark and light Full mode at 1280×800,
+including reverse traversal and the narrow ownership window. Automated browser
+coverage checks the same boundaries in Full 1280×800 and Adapted 900×680,
+reverse restoration, rapid jumps, chapter semantics, and horizontal
+containment. Static and reduced-motion rendering remain unaffected and are
+covered by the complete accessibility/browser matrix.
+
+Against the L1 baseline, the production main entry remains 282.91 kB raw /
+84.78 kB gzip, CSS remains 110.88 / 18.21, and the lazy landing chunk remains
+160.70 kB raw with gzip moving from 56.28 to 56.33 kB (+0.05). ESLint,
+TypeScript, all 186 Vitest tests, the 13-test focused accessibility suite,
+production build, three hosting-header tests, and the L2-focused browser tests
+pass. The complete Playwright/Axe matrix initially reported only the intentional
+Preparation-to-Action baseline change (120 passed, 54 project-filtered skips);
+that single baseline was visually reviewed, refreshed, and its focused test
+passed. The clean complete rerun passed 121 tests with 54 intentional skips.
+
+Regression boundary: hero composition, lower-story words and chapter order,
+chapter endpoints, workspace panel transforms and timings, L1 anchors,
+responsive capability thresholds, CTA behavior, pin duration, release buffer,
+footer ordering, route cleanup, and authenticated landing-chunk isolation are
+unchanged.
+
 ## 2026-09-01 — L1 lower-story narrative anchoring
 
 Stabilized the Connected Workspace narrator without changing its copy,
