@@ -1,5 +1,89 @@
 # HireFlux development log
 
+## 2026-09-01 — L5 chapter-specific visual focus
+
+Refined only the internal hierarchy of the lower Connected Workspace product
+scenes so each chapter has one immediate focal object. The pre-edit audit found
+that Applications was already closest to the target but its heading, statuses,
+and rows remained similar in weight; Interviews let its dark next-preparation
+card compete with the Technical Screen and retained context; Preparation gave
+the checklist and candidate-question column nearly equal prominence; and
+Action distributed attention too evenly among its section heading, company,
+due state, action title, history strip, and supporting priorities.
+
+L5 introduces no new visual language. Existing semantic surface, line, violet,
+accent, warning, and ink tokens now establish a small primary / secondary /
+tertiary model inside the existing markup. Private
+`data-workspace-focus-primary` and `data-workspace-focus-supporting` targets
+describe the intended hierarchy for tests without changing accessibility
+semantics or making decorative product UI interactive.
+
+Applications strengthens the selected Northstar row with a restrained violet
+surface, inset edge, and clearer company/role hierarchy. Atlas Systems and
+Harborline retain their icons, states, and next-step metadata at a quieter but
+fully readable weight. The compact Recent Opportunities strip deliberately
+uses a softer version of the same selection treatment so it supports rather
+than competes with the active Interview.
+
+Interviews gives the Northstar / Technical Screen header a light violet tone,
+raises the active title and Conversation Context hierarchy, and separates the
+retained application facts with an existing divider. The recent-opportunities
+strip and next-preparation card remain legible but use muted surfaces and text,
+so the active interview and inherited context read first in dark and light
+themes.
+
+Preparation keeps the L4 provenance header and NS markers intact while making
+the checklist the clear working area. Its heading is stronger, its primary
+column receives a very light violet surface, and the one unfinished candidate
+question uses the existing warning surface. The candidate-question/context
+column and compact retained Interview header remain visible at a supporting
+weight. Static/reduced-motion cards use the same readiness bar and emphasize
+the existing `One question remaining` phrase without adding or changing copy.
+
+Action now resolves around `Send a thoughtful follow-up`: the featured row uses
+the existing accent surface and edge, while the action title is larger than
+the Northstar company label and due-today/provenance metadata. The section
+heading, retained-history strip, and Atlas/Harborline priorities remain
+credible but quieter. Compact Static Action cards preserve the same title-first
+hierarchy. No CTA was added.
+
+No motion was introduced. The GSAP timeline, ScrollTrigger, chapter transforms,
+crossfades, semantic boundaries, Action hold, and release sequence are byte-for-
+byte untouched. Forward, reverse, rapid traversal, and all three transition
+freeze frames showed no stale emphasis or simultaneous full-strength focal
+surfaces.
+
+Exact responsive QA covered Full 1440×900, 1280×800, 1180×800, and 1024×768;
+Adapted 1280×650, 1024×700, 960×720, 900×768, and 900×680; and Static
+768×1024, 430×932, 390×844, and 320×568. Every size exposed the expected four
+focus targets, kept its correct capability mode and pin count, and had zero
+horizontal overflow. Dark and light visual review confirmed that border and
+surface contrast—not opacity or hue alone—create hierarchy while all secondary
+content remains readable. The browser console remained clear.
+
+Sixteen intentionally affected references were reviewed and refreshed: four
+dark settled/handoff chapter frames, three dark handoffs, both Adapted frames,
+light Interview handoff and Action, the dark desktop landing page, and four
+light Static full-page sizes. No unrelated product baseline changed.
+
+ESLint, TypeScript, all 188 Vitest tests, the 13-test focused accessibility
+suite, production build, three hosting-header tests, the exact-size responsive
+audit, and the complete Playwright/Axe matrix pass (121 passed, 54 intentional
+project-filtered skips). `git diff --check` is clean.
+
+Against L4, the production main entry remains 282.91 kB raw / 84.78 kB gzip.
+The lazy landing chunk moves from 160.30 / 56.29 to 162.06 / 56.62 kB
+(+1.76 / +0.33), and CSS moves from 111.19 / 18.19 to 113.90 / 18.41 kB
+(+2.71 / +0.22). No dependency, route, backend, or authenticated bundle
+boundary changed; generated `dist` output remains uncommitted.
+
+Regression boundary: L1's narrative geometry and progress placement, L2's 4px
+handoffs and 24% / 46% / 76% ownership boundaries, L3's progress/release and
+removed lower CTA, L4's NS identity/provenance system, E6 stage geometry, E7
+capability thresholds, E8 lifecycle ownership, one master timeline, and one
+ScrollTrigger per active choreographed mode are unchanged. L5 stops here; no
+L6 Action-resolution work was introduced.
+
 ## 2026-09-01 — L4 Northstar opportunity continuity
 
 Strengthened Northstar Labs as the visual protagonist of the lower Connected

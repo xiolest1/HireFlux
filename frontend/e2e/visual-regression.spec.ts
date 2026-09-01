@@ -294,6 +294,7 @@ test("desktop scroll story reorganizes one workspace and releases from Action Ce
 
   await moveTo(0.1);
   await expect(story).toHaveAttribute("data-active-chapter", "applications");
+  await expect(stage.locator('[data-workspace-focus-primary="applications"]')).toBeVisible();
   await expect(stage.locator('[data-workspace-applications] [data-northstar-identity="applications"] [data-northstar-mark]')).toHaveText("NS");
   await expect(stage.locator('[data-workspace-applications] [data-workspace-opportunity="Atlas Systems"]')).toBeVisible();
   await expect(stage.locator('[data-workspace-applications] [data-workspace-opportunity="Harborline"]')).toBeVisible();
@@ -331,6 +332,8 @@ test("desktop scroll story reorganizes one workspace and releases from Action Ce
   await moveTo(0.32);
   await expect(story).toHaveAttribute("data-active-chapter", "interviews");
   await expect(stage.locator("[data-workspace-interviews]")).toBeVisible();
+  await expect(stage.locator('[data-workspace-interviews] [data-workspace-focus-primary="interviews"]')).toContainText("Platform architecture and collaboration");
+  await expect(stage.locator('[data-workspace-interviews] [data-workspace-focus-supporting="interviews"]')).toContainText("Next preparation action");
   await expect(stage.locator('[data-workspace-interviews] [data-northstar-identity="interviews"] [data-northstar-mark]')).toHaveText("NS");
   expectStableGeometry(await readStageGeometry(), applicationsGeometry);
   await moveTo(0.55);
@@ -338,6 +341,8 @@ test("desktop scroll story reorganizes one workspace and releases from Action Ce
   await expect(stage.locator("[data-workspace-interview-context]")).toBeVisible();
   await expect(stage.locator("[data-workspace-preparation]")).toBeVisible();
   await expect(stage.locator("[data-workspace-preparation-primary]")).toBeVisible();
+  await expect(stage.locator('[data-workspace-preparation] [data-workspace-focus-primary="preparation"]')).toContainText("Write one more candidate question");
+  await expect(stage.locator('[data-workspace-preparation] [data-workspace-focus-supporting="preparation"]')).toContainText("Candidate question");
   const retainedNorthstarMark = stage.locator('[data-workspace-interview-context] [data-northstar-mark]');
   const preparationNorthstarMark = stage.locator('[data-workspace-preparation] [data-northstar-identity="preparation"] [data-northstar-mark]');
   await expect(retainedNorthstarMark).toHaveText("NS");
@@ -358,6 +363,8 @@ test("desktop scroll story reorganizes one workspace and releases from Action Ce
   await expect(stage.locator("[data-workspace-history]")).toBeVisible();
   await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
   await expect(stage.locator("[data-workspace-priority-primary]")).toBeVisible();
+  await expect(stage.locator('[data-workspace-actions] [data-workspace-focus-primary="action-center"]')).toContainText("Send a thoughtful follow-up");
+  await expect(stage.locator('[data-workspace-actions] [data-workspace-focus-supporting="action-center"]')).toContainText("Atlas Systems");
   await expect(stage.locator('[data-workspace-actions] [data-northstar-identity="action-center"] [data-northstar-mark]')).toHaveText("NS");
   await expect(stage.locator('[data-workspace-actions] [data-workspace-priority="waiting"]')).toContainText("Atlas Systems");
   await expect(stage.locator('[data-workspace-actions] [data-workspace-priority="later"]')).toContainText("Harborline");

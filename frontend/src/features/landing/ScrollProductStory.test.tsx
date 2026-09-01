@@ -450,6 +450,24 @@ describe("ScrollProductStory", () => {
     expect(container.querySelector('[data-northstar-identity="action-center"]')).toHaveTextContent("Northstar Labs");
   });
 
+  it("gives every static chapter one task-specific focal region", () => {
+    setReducedMotion(true);
+    const { container } = render(<ScrollProductStory />);
+
+    const expectedFocus = {
+      applications: "Northstar Labs",
+      interviews: "Technical screen",
+      preparation: "One question remaining",
+      "action-center": "Send a thoughtful follow-up",
+    } as const;
+
+    for (const [stage, content] of Object.entries(expectedFocus)) {
+      const chapter = container.querySelector(`[data-scroll-static-stage="${stage}"]`);
+      expect(chapter).toBeInTheDocument();
+      expect(chapter?.querySelector(`[data-workspace-focus-primary="${stage}"]`)).toHaveTextContent(content);
+    }
+  });
+
   it("cleans its owned trigger and never overlaps contexts in Strict Mode", () => {
     setReducedMotion(false);
     const { unmount } = render(<StrictMode><ScrollProductStory /></StrictMode>);
