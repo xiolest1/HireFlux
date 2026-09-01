@@ -1,5 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HeroApplicationStory } from "./LandingProductStory";
 
@@ -19,95 +18,56 @@ function matchMedia(reducedMotion: boolean) {
   );
 }
 
-afterEach(() => {
-  vi.useRealTimers();
-  vi.unstubAllGlobals();
-});
+afterEach(() => vi.unstubAllGlobals());
 
 describe("HeroApplicationStory", () => {
-  it("advances through all internal scenes and settles at Act", () => {
+  it("presents one resolved opportunity-to-action promise without stage controls", () => {
     matchMedia(false);
-    vi.useFakeTimers();
-    render(<HeroApplicationStory />);
+    const { container } = render(<HeroApplicationStory />);
 
-    const story = document.querySelector("[data-hero-story]");
-    const frame = story?.querySelector("[aria-live='off']");
-    expect(story).toHaveAttribute("data-story-step", "capture");
-    expect(frame).toHaveClass("min-h-[29.75rem]");
-
-    for (const expected of ["context", "progress", "prepare", "resolve", "act"]) {
-      act(() => vi.runOnlyPendingTimers());
-      expect(story).toHaveAttribute("data-story-scene", expected);
-    }
-
-    expect(story).toHaveAttribute("data-story-step", "act");
-    expect(screen.getByRole("button", { name: "Replay application story" })).toBeVisible();
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("lets keyboard users pause and resume the self-running story", async () => {
-    matchMedia(false);
-    const user = userEvent.setup();
-    render(<HeroApplicationStory />);
-
-    const pause = screen.getByRole("button", { name: "Pause application story" });
-    await user.tab();
-    expect(pause).toHaveFocus();
-    await user.keyboard("{Enter}");
-    expect(screen.getByRole("button", { name: "Play application story" })).toBeVisible();
-  });
-
-  it("keeps a manually selected stage from being overwritten by autoplay", () => {
-    matchMedia(false);
-    vi.useFakeTimers();
-    render(<HeroApplicationStory />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Show Prepare stage" }));
-    expect(document.querySelector("[data-hero-story]")).toHaveAttribute("data-story-step", "prepare");
-    expect(screen.getByRole("button", { name: "Show Prepare stage" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Play application story" })).toBeVisible();
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("replays from Capture after the story completes", () => {
-    matchMedia(false);
-    vi.useFakeTimers();
-    render(<HeroApplicationStory />);
-
-    for (let index = 0; index < 5; index += 1) {
-      act(() => vi.runOnlyPendingTimers());
-    }
-    fireEvent.click(screen.getByRole("button", { name: "Replay application story" }));
-
-    expect(document.querySelector("[data-hero-story]")).toHaveAttribute("data-story-step", "capture");
-    expect(screen.getByRole("button", { name: "Pause application story" })).toBeVisible();
-  });
-
-  it("renders Act in the persistent advanced composition", () => {
-    matchMedia(false);
-    render(<HeroApplicationStory />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Show Act stage" }));
-
-    expect(document.querySelector("[data-hero-story]")).toHaveAttribute("data-story-step", "act");
-    expect(document.querySelector("[data-flux-story]")).toHaveAttribute("data-visual-stage", "act");
-    expect(document.querySelector("[data-flux-action]")).toBeInTheDocument();
-    expect(document.querySelector("[aria-live='off']")).toHaveClass("min-h-[29.75rem]");
-    expect(screen.getByRole("button", { name: "Replay application story" })).toBeVisible();
-  });
-
-  it("renders a stable selectable story with reduced motion", () => {
-    matchMedia(true);
-    vi.useFakeTimers();
-    render(<HeroApplicationStory />);
-
-    expect(document.querySelector("[data-hero-story]")).toHaveAttribute("data-story-step", "act");
-    expect(document.querySelector("[data-flux-story]")).toHaveAttribute("data-visual-stage", "act");
-    expect(document.querySelector("[data-flux-action]")).toBeInTheDocument();
+    expect(container.querySelector("[data-hero-story]")).toHaveAttribute(
+      "data-story-scene",
+      "resolved",
+    );
+    expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
+      "data-visual-stage",
+      "resolved",
+    );
+    expect(container.querySelector("[data-persistent-opportunity]")).toBeInTheDocument();
+    expect(container.querySelector("[data-flux-provenance]")).toBeInTheDocument();
+    expect(container.querySelector("[data-flux-next-action]")).toBeInTheDocument();
+    expect(container.querySelector("[data-flux-interview]")).not.toBeInTheDocument();
+    expect(container.querySelector("[data-flux-preparation]")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /application story/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /show (capture|progress|prepare|act)/i })).not.toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "Show Capture stage" }));
-    expect(document.querySelector("[data-hero-story]")).toHaveAttribute("data-story-step", "capture");
-    expect(vi.getTimerCount()).toBe(0);
+  it("keeps Northstar, retained history, and the next action in one composition", () => {
+    matchMedia(false);
+    const { container } = render(<HeroApplicationStory />);
+
+    expect(container).toHaveTextContent("Northstar Labs");
+    expect(container).toHaveTextContent("Senior Frontend Platform Engineer");
+    expect(container).toHaveTextContent("Interview complete · Preparation retained");
+    expect(container).toHaveTextContent("Send a thoughtful follow-up");
+    expect(container).toHaveTextContent("One opportunity, connected from capture to action.");
+    expect(container.querySelector("[aria-live]")).not.toBeInTheDocument();
+  });
+
+  it("renders the same resolved meaning immediately for reduced motion", () => {
+    matchMedia(true);
+    const { container } = render(<HeroApplicationStory />);
+
+    expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
+      "data-reduced-motion",
+      "true",
+    );
+    expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
+      "data-hero-settled",
+      "true",
+    );
+    expect(container.querySelector("[data-persistent-opportunity]")).toBeInTheDocument();
+    expect(container.querySelector("[data-flux-next-action]")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /application story/i })).not.toBeInTheDocument();
   });
 });

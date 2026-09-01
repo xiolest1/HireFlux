@@ -84,7 +84,7 @@ function useAnalyticsFixture() {
 
 describe("principal route accessibility", () => {
   it.each([
-    ["landing", "/", false, "Keep every opportunity moving forward."],
+    ["landing", "/", false, "Keep every opportunity connected to what comes next."],
     ["dashboard", "/dashboard", true, "Welcome back"],
     ["applications", "/applications", true, "Applications"],
     ["interviews", "/interviews", true, "Interviews"],

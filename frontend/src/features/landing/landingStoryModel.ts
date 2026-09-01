@@ -1,36 +1,3 @@
-export const landingStoryStageOrder = [
-  "orientation",
-  "capture",
-  "context",
-  "progress",
-  "prepare",
-  "resolve",
-  "act",
-] as const;
-
-export type LandingStoryStage = (typeof landingStoryStageOrder)[number];
-
-export const landingHeroStageOrder = [
-  "capture",
-  "progress",
-  "prepare",
-  "act",
-] as const satisfies readonly LandingStoryStage[];
-
-export type LandingHeroStage = (typeof landingHeroStageOrder)[number];
-
-export const landingHeroAutoplayStageOrder = [
-  "capture",
-  "context",
-  "progress",
-  "prepare",
-  "resolve",
-  "act",
-] as const satisfies readonly LandingStoryStage[];
-
-export type LandingAdvancedHeroStage =
-  (typeof landingHeroAutoplayStageOrder)[number];
-
 export const landingStory = {
   opportunity: {
     company: "Northstar Labs",
@@ -61,60 +28,6 @@ export const landingStory = {
     proofAction: "Send a concise follow-up while the interview is fresh.",
   },
 } as const;
-
-export interface LandingHeroMilestone {
-  stage: LandingHeroStage;
-  label: string;
-  eyebrow: string;
-  status: string;
-  title: string;
-  detail: string;
-  nextLabel: string;
-  nextAction: string;
-}
-
-export const landingHeroMilestones: readonly LandingHeroMilestone[] = [
-  {
-    stage: "capture",
-    label: "Capture",
-    eyebrow: "Opportunity captured",
-    status: "Draft",
-    title: "Role details are together",
-    detail: `${landingStory.opportunity.source} · ${landingStory.opportunity.workMode} · ${landingStory.opportunity.compensation}`,
-    nextLabel: "Next",
-    nextAction: "Review role details",
-  },
-  {
-    stage: "progress",
-    label: "Progress",
-    eyebrow: "Application progressing",
-    status: "Interview",
-    title: landingStory.interview.title,
-    detail: landingStory.interview.dateLabel,
-    nextLabel: "Next",
-    nextAction: "Prepare for the interview",
-  },
-  {
-    stage: "prepare",
-    label: "Prepare",
-    eyebrow: "Interview preparation",
-    status: `${landingStory.preparation.readyCount} of ${landingStory.preparation.totalCount} ready`,
-    title: "Your prep has a clear finish line",
-    detail: landingStory.preparation.savedContext,
-    nextLabel: "Remaining",
-    nextAction: landingStory.preparation.remainingAction,
-  },
-  {
-    stage: "act",
-    label: "Act",
-    eyebrow: "Action center",
-    status: landingStory.action.status,
-    title: "The next move is visible",
-    detail: landingStory.action.context,
-    nextLabel: "Do now",
-    nextAction: landingStory.action.nextAction,
-  },
-] as const;
 
 export const landingWorkspaceStageOrder = [
   "applications",
@@ -217,7 +130,3 @@ export const landingWorkspace = {
     },
   ],
 } as const;
-
-export const landingHeroMilestoneByStage = Object.fromEntries(
-  landingHeroMilestones.map((milestone) => [milestone.stage, milestone]),
-) as Record<LandingHeroStage, LandingHeroMilestone>;

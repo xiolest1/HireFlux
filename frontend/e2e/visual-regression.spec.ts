@@ -74,7 +74,7 @@ const routes = [
   {
     name: "landing",
     path: "/",
-    heading: "Keep every opportunity moving forward.",
+    heading: "Keep every opportunity connected to what comes next.",
   },
   { name: "dashboard", path: "/dashboard", heading: "Welcome back" },
   { name: "applications", path: "/applications", heading: "Applications" },
@@ -150,30 +150,21 @@ test("landing story becomes a stable complete state with reduced motion", async 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await expect(page.locator("[data-hero-story]")).toHaveAttribute(
-    "data-story-step",
-    "act",
+    "data-story-scene",
+    "resolved",
   );
   await expect(
     page.getByRole("button", { name: /application story/i }),
   ).toHaveCount(0);
-  await expect(page.locator("[data-flux-action]")).toHaveCount(1);
-  await page.getByRole("button", { name: "Show Prepare stage" }).click();
-  await expect(page.locator("[data-hero-story]")).toHaveAttribute(
-    "data-story-step",
-    "prepare",
-  );
-  await expect(
-    page.getByRole("button", { name: "Show Prepare stage" }),
-  ).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("[data-flux-story]")).toHaveAttribute(
-    "data-flux-settled",
+    "data-hero-settled",
     "true",
   );
-  await expect(page.locator("[data-flux-metadata]")).toBeHidden();
-  await expect(page.locator("[data-flux-context]")).toBeHidden();
-  await expect(page.locator("[data-flux-preparation]")).toBeVisible();
-  await expect(page.locator("[data-flux-interview]")).toHaveCSS("opacity", "0.72");
-  await expect(page.locator("[data-flux-interview-detail]")).toBeHidden();
+  await expect(page.locator("[data-persistent-opportunity]")).toBeVisible();
+  await expect(page.locator("[data-flux-provenance]")).toBeVisible();
+  await expect(page.locator("[data-flux-next-action]")).toBeVisible();
+  await expect(page.locator("[data-flux-interview]")).toHaveCount(0);
+  await expect(page.locator("[data-flux-preparation]")).toHaveCount(0);
   await expect(page.getByTestId("mobile-product-story")).toBeVisible();
   await expect(page.getByTestId("desktop-product-story")).toBeHidden();
   await expect(page.locator(".pin-spacer")).toHaveCount(0);
@@ -689,7 +680,7 @@ test("desktop transition and Action Center remain defined in light mode", async 
   await expect(stage).toHaveScreenshot("scroll-story-action-center-light.png");
 });
 
-test("Flux Rail scenes preserve one opportunity through Capture, Progress, Prepare, and Act", async ({
+test("connected hero resolves one opportunity into one useful action", async ({
   page,
 }, testInfo) => {
   test.skip(!["mobile-390", "desktop-1280"].includes(testInfo.project.name));
@@ -701,62 +692,48 @@ test("Flux Rail scenes preserve one opportunity through Capture, Progress, Prepa
   }
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Keep every opportunity moving forward.", level: 1 }),
+    page.getByRole("heading", {
+      name: "Keep every opportunity connected to what comes next.",
+      level: 1,
+    }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Pause application story" }).click();
 
   const story = page.locator("[data-flux-story]");
-  const opportunity = story.locator("[data-persistent-opportunity]");
-  const opacity = async (selector: string) =>
-    story.locator(selector).evaluate((element) =>
-      Number(getComputedStyle(element).opacity),
-    );
-  await expect(opportunity).toHaveCount(1);
-
-  for (const stage of ["Capture", "Progress", "Prepare", "Act"] as const) {
-    await page.getByRole("button", { name: `Show ${stage} stage` }).click();
-    await expect(story).toHaveAttribute("data-visual-stage", stage.toLowerCase());
-    await expect(story).toHaveAttribute("data-flux-settled", "true");
-    await expect(opportunity).toHaveCount(1);
-
-    if (stage === "Capture") {
-      expect(await opacity("[data-flux-metadata]")).toBeGreaterThan(0.95);
-      expect(await opacity("[data-flux-interview]")).toBeLessThan(0.05);
-      expect(await opacity("[data-flux-preparation]")).toBeLessThan(0.05);
-    } else if (stage === "Progress") {
-      expect(await opacity("[data-flux-metadata]")).toBeLessThan(0.05);
-      expect(await opacity("[data-flux-context]")).toBeLessThan(0.05);
-      expect(await opacity("[data-flux-interview]")).toBeGreaterThan(0.95);
-      expect(await opacity("[data-flux-interview-content]")).toBeGreaterThan(0.95);
-      expect(await opacity("[data-flux-preparation]")).toBeLessThan(0.05);
-    } else if (stage === "Prepare") {
-      expect(await opacity("[data-flux-metadata]")).toBeLessThan(0.05);
-      expect(await opacity("[data-flux-context]")).toBeLessThan(0.05);
-      expect(await opacity("[data-flux-interview]")).toBeGreaterThan(0.68);
-      expect(await opacity("[data-flux-interview]")).toBeLessThan(0.76);
-      expect(await opacity("[data-flux-interview-detail]")).toBeLessThan(0.05);
-      expect(await opacity("[data-flux-preparation]")).toBeGreaterThan(0.95);
-    }
-    await expect(story).toHaveScreenshot(`flux-${stage.toLowerCase()}.png`);
-  }
-
-  await page.getByRole("button", { name: "Show Progress stage" }).click();
-  await expect(story).toHaveAttribute("data-flux-settled", "true");
-  expect(await opacity("[data-flux-interview]")).toBeGreaterThan(0.95);
-  expect(await opacity("[data-flux-preparation]")).toBeLessThan(0.05);
-
-  await page.getByRole("button", { name: "Show Capture stage" }).click();
-  await page.getByRole("button", { name: "Show Prepare stage" }).click();
-  await page.getByRole("button", { name: "Show Progress stage" }).click();
-  await expect(story).toHaveAttribute("data-flux-settled", "true");
-  expect(await opacity("[data-flux-context]")).toBeLessThan(0.05);
-  expect(await opacity("[data-flux-interview]")).toBeGreaterThan(0.95);
-  expect(await opacity("[data-flux-preparation]")).toBeLessThan(0.05);
+  await expect(story).toHaveAttribute("data-visual-stage", "resolved");
+  await expect(story).toHaveAttribute("data-hero-settled", "true");
+  await expect(story.locator("[data-persistent-opportunity]")).toHaveCount(1);
+  await expect(story.locator("[data-flux-provenance]")).toContainText(
+    "Interview complete · Preparation retained",
+  );
+  await expect(story.locator("[data-flux-next-action]")).toContainText(
+    "Send a thoughtful follow-up",
+  );
+  await expect(
+    page.getByRole("button", { name: /application story/i }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /show (capture|progress|prepare|act)/i }),
+  ).toHaveCount(0);
+  await expect(story.locator("[data-flux-interview]")).toHaveCount(0);
+  await expect(story.locator("[data-flux-preparation]")).toHaveCount(0);
+  await expect(story.locator("[data-flux-action]")).toHaveCount(0);
+  await expect(story).toHaveScreenshot("connected-hero-resolved.png");
 
   await expectNoHorizontalPageOverflow(page);
+  await page.reload();
+  await expect(story).toHaveAttribute("data-hero-settled", "true");
+  await expect(story.locator("[data-flux-next-action]")).toBeVisible();
+
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "Welcome back", level: 1 })).toBeVisible();
   await expect(page.locator("[data-flux-story]")).toHaveCount(0);
+
+  await page.goto("/");
+  await expect(page.locator("[data-flux-story]")).toHaveAttribute(
+    "data-hero-settled",
+    "true",
+  );
+  await expect(page.locator("[data-persistent-opportunity]")).toHaveCount(1);
 });
 
 test("authenticated entry does not download the lazy landing route", async ({
@@ -776,7 +753,7 @@ test("authenticated entry does not download the lazy landing route", async ({
 
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Keep every opportunity moving forward.", level: 1 }),
+    page.getByRole("heading", { name: "Keep every opportunity connected to what comes next.", level: 1 }),
   ).toBeVisible();
   expect(landingChunkRequests.length).toBeGreaterThanOrEqual(1);
 });

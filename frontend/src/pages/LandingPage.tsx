@@ -61,8 +61,8 @@ export function LandingPage() {
           <div className="mx-auto grid max-w-7xl min-w-0 gap-12 px-4 py-14 sm:px-6 sm:py-24 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:gap-14 lg:px-8 lg:py-28">
             <div className="min-w-0" data-landing-clip-check>
               <p className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-line bg-surface-raised px-3 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.11em] text-accent-strong shadow-sm backdrop-blur dark:border-cyan-900 dark:bg-slate-900/70 sm:text-xs sm:tracking-[0.16em]"><Sparkles aria-hidden="true" className="size-3.5 shrink-0" />A focused job-search workspace</p>
-              <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-[-0.045em] text-slate-950 sm:text-6xl sm:leading-[1.03] dark:text-white">Keep every opportunity moving forward.</h1>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300">Capture an opportunity, move it through the search, prepare with context, and act on the next step—without creating an account.</p>
+              <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-[-0.045em] text-slate-950 sm:text-6xl sm:leading-[1.03] dark:text-white">Keep every opportunity connected to what comes next.</h1>
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300">HireFlux keeps each opportunity’s context intact and turns its history into a clear next action—without creating an account.</p>
 
               {notice ? <div className="mt-7 max-w-xl rounded-xl border border-line border-l-4 border-l-warning bg-warning-soft px-4 py-3 text-sm font-medium text-warning" role="status">{notice}</div> : null}
               {error ? <div className="mt-7 max-w-xl"><ErrorPanel compact title="Demo workspace could not be prepared" error={error} /></div> : null}

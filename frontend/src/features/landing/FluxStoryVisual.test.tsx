@@ -4,24 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FluxStoryVisual } from "./FluxStoryVisual";
 
 const gsapMocks = vi.hoisted(() => {
-  const targetTweens: Array<{ kill: ReturnType<typeof vi.fn> }> = [];
   let activeContexts = 0;
   let maximumActiveContexts = 0;
   const timeline = {
     addLabel: vi.fn(),
-    set: vi.fn(),
     to: vi.fn(),
-    tweenTo: vi.fn(),
     kill: vi.fn(),
   };
   timeline.addLabel.mockReturnValue(timeline);
-  timeline.set.mockReturnValue(timeline);
   timeline.to.mockReturnValue(timeline);
-  timeline.tweenTo.mockImplementation(() => {
-    const tween = { kill: vi.fn() };
-    targetTweens.push(tween);
-    return tween;
-  });
   return {
     context: vi.fn((setup: () => void) => {
       activeContexts += 1;
@@ -34,9 +25,11 @@ const gsapMocks = vi.hoisted(() => {
       };
     }),
     set: vi.fn(),
-    timelineFactory: vi.fn(() => timeline),
+    timelineFactory: vi.fn((configuration: unknown) => {
+      void configuration;
+      return timeline;
+    }),
     timeline,
-    targetTweens,
     getActiveContexts: () => activeContexts,
     getMaximumActiveContexts: () => maximumActiveContexts,
     resetContextCounts: () => {
@@ -56,118 +49,70 @@ vi.mock("gsap", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  gsapMocks.targetTweens.length = 0;
   gsapMocks.resetContextCounts();
   gsapMocks.timeline.addLabel.mockReturnValue(gsapMocks.timeline);
-  gsapMocks.timeline.set.mockReturnValue(gsapMocks.timeline);
   gsapMocks.timeline.to.mockReturnValue(gsapMocks.timeline);
-  gsapMocks.timeline.tweenTo.mockImplementation(() => {
-    const tween = { kill: vi.fn() };
-    gsapMocks.targetTweens.push(tween);
-    return tween;
-  });
 });
 
 describe("FluxStoryVisual", () => {
-  it("builds one readable six-scene timeline", () => {
-    render(<FluxStoryVisual stage="capture" reducedMotion={false} />);
+  it("builds one short opportunity-to-action timeline", () => {
+    render(<FluxStoryVisual reducedMotion={false} />);
 
-    for (const label of [
-      "capture:start",
-      "context:start",
-      "progress:start",
-      "prepare:start",
-      "resolve:start",
-      "act:start",
-      "act:settled",
-    ]) {
-      expect(gsapMocks.timeline.addLabel).toHaveBeenCalledWith(
-        label,
-        ...(label === "capture:start" ? [0] : []),
-      );
-    }
+    expect(gsapMocks.timeline.addLabel).toHaveBeenCalledWith("opportunity", 0);
+    expect(gsapMocks.timeline.addLabel).toHaveBeenCalledWith("connection", 0.28);
+    expect(gsapMocks.timeline.addLabel).toHaveBeenCalledWith("action", 0.7);
+    expect(gsapMocks.timeline.addLabel).toHaveBeenCalledWith("settled", 1.28);
+    expect(gsapMocks.timelineFactory).toHaveBeenCalledOnce();
   });
 
-  it("keeps one persistent opportunity while semantic stages change", () => {
-    const { container, rerender } = render(
-      <FluxStoryVisual stage="capture" reducedMotion={false} />,
-    );
-    const opportunity = container.querySelector("[data-persistent-opportunity]");
+  it("keeps only the opportunity, provenance bridge, and next action", () => {
+    const { container } = render(<FluxStoryVisual reducedMotion={false} />);
 
-    rerender(<FluxStoryVisual stage="progress" reducedMotion={false} />);
-    rerender(<FluxStoryVisual stage="prepare" reducedMotion={false} />);
-    rerender(<FluxStoryVisual stage="resolve" reducedMotion={false} />);
-    rerender(<FluxStoryVisual stage="act" reducedMotion={false} />);
-
-    expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
-      "data-visual-stage",
-      "act",
-    );
-    expect(container.querySelector("[data-persistent-opportunity]")).toBe(opportunity);
+    expect(container.querySelector("[data-persistent-opportunity]")).toBeInTheDocument();
+    expect(container.querySelector("[data-flux-connection]")).toBeInTheDocument();
+    expect(container.querySelector("[data-flux-provenance]")).toBeInTheDocument();
+    expect(container.querySelector("[data-flux-next-action]")).toBeInTheDocument();
+    expect(container.querySelector("[data-flux-interview]")).not.toBeInTheDocument();
+    expect(container.querySelector("[data-flux-preparation]")).not.toBeInTheDocument();
+    expect(container.querySelector("[data-flux-action]")).not.toBeInTheDocument();
     expect(container.querySelector("[aria-live]")).not.toBeInTheDocument();
   });
 
-  it("assigns one persistent owner and explicit scene-owned surfaces", () => {
-    const { container } = render(
-      <FluxStoryVisual stage="capture" reducedMotion={false} />,
-    );
-
-    expect(
-      container.querySelector('[data-flux-scene-owner="opportunity"]'),
-    ).toHaveAttribute("data-persistent-opportunity");
-    for (const owner of ["context", "progress", "prepare", "act"]) {
-      expect(
-        container.querySelector(`[data-flux-scene-owner="${owner}"]`),
-      ).toBeInTheDocument();
-    }
-    expect(
-      container.querySelector("[data-flux-interview-content]"),
-    ).toBeInTheDocument();
-  });
-
-  it("yields outgoing chrome before the next solid surface takes ownership", () => {
-    render(<FluxStoryVisual stage="capture" reducedMotion={false} />);
+  it("reveals connection before resolving the primary action", () => {
+    render(<FluxStoryVisual reducedMotion={false} />);
 
     expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
-      expect.stringContaining("[data-flux-metadata]"),
-      expect.objectContaining({ autoAlpha: 0, duration: 0.22 }),
-    );
-    expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
-      "[data-flux-interview]",
-      { autoAlpha: 1 },
-      "<+0.14",
+      "[data-flux-connection-line]",
+      expect.objectContaining({ strokeDashoffset: 0, duration: 0.5 }),
+      0.32,
     );
     expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
-      "[data-flux-interview-content]",
-      expect.objectContaining({ autoAlpha: 0.8, duration: 0.22 }),
-      "<",
+      "[data-flux-provenance]",
+      expect.objectContaining({ autoAlpha: 1, duration: 0.32 }),
+      0.5,
     );
-    expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
-      "[data-flux-preparation]",
-      { autoAlpha: 1 },
-      "<+0.14",
-    );
-  });
-
-  it("kills an in-flight target tween before moving to a newer selection", () => {
-    const { rerender } = render(
-      <FluxStoryVisual stage="capture" reducedMotion={false} />,
-    );
-    const captureTween = gsapMocks.targetTweens[0];
-
-    rerender(<FluxStoryVisual stage="act" reducedMotion={false} />);
-
-    expect(captureTween.kill).toHaveBeenCalledOnce();
-    expect(gsapMocks.timeline.tweenTo).toHaveBeenLastCalledWith(
-      "act:settled",
-      expect.objectContaining({ duration: 1.02 }),
+    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+      "[data-flux-next-action]",
+      expect.objectContaining({ autoAlpha: 1, duration: 0.58 }),
+      0.7,
     );
   });
 
-  it("does not create GSAP choreography for reduced motion", () => {
-    const { container } = render(
-      <FluxStoryVisual stage="act" reducedMotion />,
+  it("marks the composition settled when the one-shot timeline completes", () => {
+    const { container } = render(<FluxStoryVisual reducedMotion={false} />);
+    const configuration = gsapMocks.timelineFactory.mock.calls[0]?.[0] as {
+      onComplete: () => void;
+    };
+
+    configuration.onComplete();
+    expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
+      "data-hero-settled",
+      "true",
     );
+  });
+
+  it("creates no GSAP choreography for reduced motion", () => {
+    const { container } = render(<FluxStoryVisual reducedMotion />);
 
     expect(gsapMocks.context).not.toHaveBeenCalled();
     expect(gsapMocks.timelineFactory).not.toHaveBeenCalled();
@@ -175,13 +120,16 @@ describe("FluxStoryVisual", () => {
       "data-reduced-motion",
       "true",
     );
-    expect(container.querySelector("[data-flux-action]")).toBeInTheDocument();
+    expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
+      "data-hero-settled",
+      "true",
+    );
   });
 
   it("cleans Strict Mode contexts and leaves none active after unmount", () => {
     const { unmount } = render(
       <StrictMode>
-        <FluxStoryVisual stage="capture" reducedMotion={false} />
+        <FluxStoryVisual reducedMotion={false} />
       </StrictMode>,
     );
 

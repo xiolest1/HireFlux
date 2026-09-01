@@ -1,5 +1,73 @@
 # HireFlux development log
 
+## 2026-09-01 — Hero narrative simplification
+
+Reframed the public landing hero around one product promise: HireFlux keeps an
+opportunity connected to what comes next. The previous hero asked visitors to
+operate a second four-stage product demo while the Connected Workspace section
+below already provided the detailed mechanism. That duplication made the first
+screen cognitively dense and blurred the distinction between the promise and
+its proof. The hero now communicates the outcome in one compact Northstar Labs
+composition; the lower scroll story remains the unchanged Applications →
+Interviews → Preparation → Action Center proof.
+
+The resolved composition keeps the shared Northstar Labs identity, Product
+Designer role, location/work-mode metadata, and captured status. A restrained
+Flux connection carries a concise provenance statement—“Interview complete ·
+Preparation retained”—into one featured “Do now” follow-up due today. This is
+deliberately not a miniature interview, preparation, or Action Center screen.
+The visible caption summarizes the relationship as “One opportunity, connected
+from capture to action,” while a semantic figure description provides the same
+meaning without placing automatic motion in a live region.
+
+Removed the hero-only Capture / Progress / Prepare / Act milestone controls,
+pause/play/replay behavior, six-scene controller, managed autoplay timer,
+manual stage selection, resolve bridge, keyed intermediate surfaces, and their
+tests. The obsolete controller files and eight scene-specific visual baselines
+were deleted. The landing story model now retains only the data shared by the
+hero and lower proof plus the frozen lower-story chapter model. This cleanup
+removed 836 net lines from the tracked text diff, including 235 lines of
+obsolete hero CSS, without adding a dependency or public interface.
+
+Motion is now one scoped, one-shot GSAP timeline with four readable phases:
+opportunity at 0, connection at 0.28, action at 0.70, and settled at 1.28. The
+opportunity settles first, the line and provenance establish causality, and the
+action resolves last. React owns the persistent semantic composition; GSAP
+only adjusts transform, opacity, line-dash, and emphasis on mounted targets.
+The scoped context and timeline are reverted on unmount and remain isolated to
+the lazy landing route. Reduced motion creates no GSAP context or timeline and
+renders the identical resolved endpoint immediately.
+
+Responsive live QA covered dark and light presentation at 1440×900, 1280×800,
+1024×768, 900×768, 768×1024, 430×932, 390×844, and 320×568. The composition
+remained contained with zero horizontal overflow, a clear opportunity →
+provenance → action hierarchy, and no retired stage controls or intermediate
+surfaces. At 320px the visual uses stacked geometry and omits the redundant
+captured-status pill while preserving the opportunity metadata and complete
+causal story. Direct load, reload, route-away cleanup, route re-entry, explicit
+light/dark themes, and reduced-motion endpoint behavior were also checked.
+
+Component-level screenshots were added for the resolved dark desktop-1280 and
+light mobile-390 hero. The five intentionally affected full-landing baselines
+were refreshed after visual review; no Connected Workspace endpoint or
+transition baseline changed. `ScrollProductStory.tsx`, `scrollStoryConfig.ts`,
+the lower timeline, chapter copy, breakpoints, CTA, release behavior, and E5–E8
+story snapshots remain untouched.
+
+Against the E8 baseline, the production main entry is 282.91 kB raw / 84.78 kB
+gzip (-0.04 / -0.02), the lazy landing chunk is 160.52 / 56.23 (-21.66 /
+-4.66), and CSS is 110.25 / 18.11 (-12.53 / -1.16). ESLint, TypeScript, all
+186 Vitest tests, the production build, three hosting-header tests, and the
+complete Playwright/Axe matrix pass (120 passed, 50 intentional
+project-filtered skips). One unrelated tablet interview fixture/navigation
+miss occurred in the first matrix run; its focused rerun passed, followed by a
+clean complete 120-test rerun.
+
+Final narrative verdict: the hero now makes one legible promise and stops. The
+Connected Workspace section earns the detailed explanation as the visitor
+scrolls, so the page reveals new information instead of replaying the same
+four-state product tour twice.
+
 ## 2026-09-01 — E8 adversarial landing-story QA and defect correction
 
 Completed the requested defect-finding pass against the frozen E5 scene

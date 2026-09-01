@@ -1,44 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
-  landingHeroAutoplayStageOrder,
-  landingHeroMilestones,
-  landingHeroStageOrder,
   landingScrollChapters,
   landingStory,
-  landingStoryStageOrder,
   landingWorkspace,
   landingWorkspaceStageOrder,
 } from "./landingStoryModel";
 
 describe("landing story model", () => {
-  it("defines the complete future narrative in deterministic order", () => {
-    expect(landingStoryStageOrder).toEqual([
-      "orientation",
-      "capture",
-      "context",
-      "progress",
-      "prepare",
-      "resolve",
-      "act",
-    ]);
-  });
-
-  it("preserves the four visible landing milestones", () => {
-    expect(landingHeroStageOrder).toEqual(["capture", "progress", "prepare", "act"]);
-    expect(landingHeroAutoplayStageOrder).toEqual([
-      "capture",
-      "context",
-      "progress",
-      "prepare",
-      "resolve",
-      "act",
-    ]);
-    expect(landingHeroMilestones.map(({ stage }) => stage)).toEqual(landingHeroStageOrder);
+  it("defines one concrete opportunity and its resolved next action", () => {
+    expect(landingStory.opportunity.company).toBe("Northstar Labs");
+    expect(landingStory.opportunity.role).toBe("Senior Frontend Platform Engineer");
+    expect(landingStory.action.nextAction).toBe("Send a thoughtful follow-up");
   });
 
   it("defines a four-workspace body story across multiple opportunities", () => {
-    expect(landingHeroMilestones[0].detail).toContain(landingStory.opportunity.source);
-    expect(landingHeroMilestones[1].detail).toBe(landingStory.interview.dateLabel);
     expect(landingScrollChapters.map(({ stage }) => stage)).toEqual([
       "applications",
       "interviews",

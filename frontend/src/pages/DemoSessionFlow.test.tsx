@@ -19,7 +19,7 @@ describe("demo workspace flow", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Keep every opportunity moving forward.",
+        name: "Keep every opportunity connected to what comes next.",
       }),
     ).toBeVisible();
     expect(
