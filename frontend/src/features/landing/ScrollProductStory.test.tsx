@@ -388,6 +388,18 @@ describe("ScrollProductStory", () => {
     expect(container.querySelectorAll("[data-workspace-priority]")).not.toHaveLength(0);
     expect(container.querySelector("[data-scroll-narrative]")).toBeInTheDocument();
     expect(container.querySelector("[data-scroll-progress]")).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-scroll-copy-content]")).toHaveLength(4);
+    expect(container.querySelectorAll("[data-scroll-copy-label]")).toHaveLength(4);
+    expect(container.querySelectorAll("[data-scroll-copy-question]")).toHaveLength(4);
+    expect(container.querySelectorAll("[data-scroll-copy-headline]")).toHaveLength(4);
+    expect(container.querySelectorAll("[data-scroll-copy-body]")).toHaveLength(4);
+    const narrative = container.querySelector("[data-scroll-narrative]")!;
+    expect(narrative.querySelector("[data-scroll-copy-stack]")?.nextElementSibling).toBe(
+      narrative.querySelector("[data-scroll-progress]"),
+    );
+    expect(narrative.querySelector("[data-scroll-progress]")?.nextElementSibling).toBe(
+      narrative.querySelector("[data-workspace-story-cta]"),
+    );
     expect(container.querySelector("[data-scroll-story-release-buffer]")).toBeInTheDocument();
     expect(container.querySelector("[data-flux-rail]")).not.toBeInTheDocument();
 

@@ -1,5 +1,71 @@
 # HireFlux development log
 
+## 2026-09-01 — L1 lower-story narrative anchoring
+
+Stabilized the Connected Workspace narrator without changing its copy,
+product workspace, chapter transitions, CTA, release sequence, or responsive
+capability model. The previous desktop narrator already kept all four visual
+chapter wrappers mounted in one overlaid CSS-grid cell and anchored the group
+at `top: 2rem`; it was not vertically centering each active chapter. The
+movement came from changing the entire narrator's width for each chapter.
+Those width changes rewrapped every overlaid copy, changed the shared grid
+track's maximum natural height, and moved the progress indicator and CTA that
+followed the copy stack in normal flow. GSAP's existing 7px outgoing offset
+was limited to the handoff and was not the settled-position cause.
+
+The desktop copy stack is now a fixed 21.5rem narrative envelope. Every visual
+chapter uses the same internal four-row grid: a 1rem chapter-label row, a 4rem
+question row, a 7.5rem headline row, and the remaining body-copy region.
+Existing typography and words remain unchanged. The label, question,
+headline, and body therefore begin at stable vertical anchors even when a
+question, title, or paragraph wraps differently. Progress remains the next
+normal-flow row, 28px after the fixed envelope, so it no longer follows the
+active copy's natural height.
+
+The Action CTA remains immediately after progress and retains its existing
+markup, timing, destination, disabled state, and GSAP entrance. Because the
+copy envelope and progress row now establish the core stage geometry before
+the CTA, Action's extra content cannot move the label, question, headline,
+body, or progress anchors. L3's planned CTA removal was intentionally not
+implemented.
+
+Bounding-box QA compared all four settled chapters at 1440×900, 1280×800,
+1180×800, 1100×800, 1024×900, and 1024×768 in Full mode, plus 1280×650,
+1180×650, 1024×700, 1000×720, 960×720, 900×768, and 900×680 in Adapted mode.
+Within each viewport, chapter label, question, headline, body, and progress
+tops were identical across Applications, Interviews, Preparation, and Action
+Center. Body-to-progress clearance remained 16–28px and every measured page
+had zero horizontal overflow. Forward, reverse, and rapid-scrub coverage
+continued to expose exactly one visual copy. Static checks at 768×1024,
+390×844, and 320×568 retained four naturally flowing chapters, the existing
+CTA, zero pin spacers, and zero overflow; desktop-only slot styling does not
+apply to the fallback.
+
+The component now exposes private data targets for the five narrative slots.
+Unit coverage verifies four persistent copies and the copy → progress → CTA
+order. Browser coverage asserts that all six major vertical anchors stay
+within 1.5px of the Applications baseline in both Full and Adapted modes.
+Seven intentionally affected lower-story snapshots were refreshed after dark
+Full/Adapted and light Action review; unchanged Preparation and other frames
+remained pixel-identical.
+
+Against the completed hero-simplification baseline, the production main entry
+remains 282.91 kB raw / 84.78 kB gzip. The lazy landing chunk is 160.70 / 56.28
+(+0.18 / +0.05), and CSS is 110.88 / 18.21 (+0.63 / +0.10). ESLint,
+TypeScript, all 186 Vitest tests, the 13-test focused accessibility suite,
+production build, three hosting-header tests, and the complete Playwright/Axe
+matrix pass (120 passed, 50 intentional project-filtered skips). The initial
+parallel Vitest run had one five-second landing accessibility timeout; that
+file passed 13/13 in isolation and the complete serialized rerun passed
+186/186.
+
+Regression boundary: `ConnectedWorkspaceVisual`, product dimensions and
+transforms, E6 stage geometry, E7 Full/Adapted/Static queries and travel,
+chapter labels/boundaries, one master timeline, one ScrollTrigger per active
+choreographed branch, CTA timing, pin duration, release buffer, route cleanup,
+and reduced-motion priority are unchanged. L2 text-handoff polish and L3 CTA
+removal remain deliberately unimplemented.
+
 ## 2026-09-01 — Hero narrative simplification
 
 Reframed the public landing hero around one product promise: HireFlux keeps an

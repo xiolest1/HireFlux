@@ -568,6 +568,36 @@
   transition: max-width 180ms var(--ease-standard), transform 180ms var(--ease-standard);
 }
 
+.hf-scroll-story-desktop [data-scroll-copy-stack] {
+  height: 21.5rem;
+}
+
+.hf-scroll-story-desktop [data-scroll-copy-content] {
+  display: grid;
+  height: 100%;
+  grid-template-rows: 1rem 4rem 7.5rem minmax(0, 1fr);
+}
+
+.hf-scroll-story-desktop [data-scroll-copy-label],
+.hf-scroll-story-desktop [data-scroll-copy-question],
+.hf-scroll-story-desktop [data-scroll-copy-headline],
+.hf-scroll-story-desktop [data-scroll-copy-body] {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.hf-scroll-story-desktop [data-scroll-copy-question] {
+  padding-top: 1rem;
+}
+
+.hf-scroll-story-desktop [data-scroll-copy-headline] {
+  padding-top: 0.75rem;
+}
+
+.hf-scroll-story-desktop [data-scroll-copy-body] {
+  padding-top: 1rem;
+}
+
 .hf-scroll-story[data-active-chapter="interviews"] [data-scroll-narrative] {
   max-width: 92%;
   transform: translateX(8px);

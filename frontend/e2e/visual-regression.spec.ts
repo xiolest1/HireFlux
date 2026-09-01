@@ -216,6 +216,32 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
       transform: { x: matrix.m41, y: matrix.m42, scaleX: matrix.a, scaleY: matrix.d },
     };
   });
+  const readNarrativeAnchors = async () => stage.evaluate((element) => {
+    const activeCopy = Array.from(element.querySelectorAll<HTMLElement>("[data-scroll-copy-stage]"))
+      .find((copy) => {
+        const style = getComputedStyle(copy);
+        return style.visibility !== "hidden" && Number(style.opacity) > 0.5;
+      });
+    if (!activeCopy) throw new Error("No visible narrative chapter");
+    const top = (selector: string, root: ParentNode = activeCopy) =>
+      (root.querySelector(selector) as HTMLElement).getBoundingClientRect().top;
+    return {
+      narrative: top("[data-scroll-narrative]", element),
+      label: top("[data-scroll-copy-label]"),
+      question: top("[data-scroll-copy-question]"),
+      headline: top("[data-scroll-copy-headline]"),
+      body: top("[data-scroll-copy-body]"),
+      progress: top("[data-scroll-progress]", element),
+    };
+  });
+  const expectAnchoredNarrative = (
+    current: Awaited<ReturnType<typeof readNarrativeAnchors>>,
+    baseline: Awaited<ReturnType<typeof readNarrativeAnchors>>,
+  ) => {
+    for (const anchor of ["narrative", "label", "question", "headline", "body", "progress"] as const) {
+      expect(Math.abs(current[anchor] - baseline[anchor])).toBeLessThan(1.5);
+    }
+  };
   const expectStableGeometry = (current: Awaited<ReturnType<typeof readStageGeometry>>, baseline: Awaited<ReturnType<typeof readStageGeometry>>) => {
     expect(current.gap).toBeGreaterThanOrEqual(16);
     expect(current.shell.left).toBeGreaterThanOrEqual(current.envelope.left);
@@ -235,6 +261,7 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   await moveTo(0.1);
   await expect(story).toHaveAttribute("data-active-chapter", "applications");
   const applicationsGeometry = await readStageGeometry();
+  const applicationsNarrative = await readNarrativeAnchors();
   expectStableGeometry(applicationsGeometry, applicationsGeometry);
   await moveTo(0.25);
   await expect(story).toHaveAttribute("data-active-chapter", "interviews");
@@ -255,6 +282,7 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   )).toBeGreaterThan(0.7);
   expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
   expectStableGeometry(await readStageGeometry(), applicationsGeometry);
+  expectAnchoredNarrative(await readNarrativeAnchors(), applicationsNarrative);
   await page.evaluate(({ start }) => window.scrollTo(0, start - 100), metrics);
   await page.waitForTimeout(450);
   await expect(stage.locator("[data-workspace-applications]")).toBeVisible();
@@ -270,6 +298,7 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   await expect(stage.locator("[data-workspace-preparation]")).toBeVisible();
   await expect(stage.locator("[data-workspace-preparation-primary]")).toBeVisible();
   expectStableGeometry(await readStageGeometry(), applicationsGeometry);
+  expectAnchoredNarrative(await readNarrativeAnchors(), applicationsNarrative);
   expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
   expect(Math.abs(await stage.evaluate((element) => element.getBoundingClientRect().top))).toBeLessThan(3);
   await moveTo(0.81);
@@ -294,6 +323,7 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   await expect(stage.locator("[data-workspace-priority]")).toHaveCount(3);
   await expect(stage.locator("[data-workspace-priority-supporting]")).toBeVisible();
   expectStableGeometry(await readStageGeometry(), applicationsGeometry);
+  expectAnchoredNarrative(await readNarrativeAnchors(), applicationsNarrative);
   await moveTo(0.68);
   await expect(story).toHaveAttribute("data-active-chapter", "preparation");
   await expect(stage.locator("[data-workspace-interview-context]")).toBeVisible();
@@ -490,6 +520,25 @@ test("adapted scroll story remains progressive, contained, and reversible", asyn
     expect(geometry.contained).toBe(true);
     await expectNoHorizontalPageOverflow(page);
   };
+  const readNarrativeAnchors = async () => stage.evaluate((element) => {
+    const activeCopy = Array.from(element.querySelectorAll<HTMLElement>("[data-scroll-copy-stage]"))
+      .find((copy) => {
+        const style = getComputedStyle(copy);
+        return style.visibility !== "hidden" && Number(style.opacity) > 0.5;
+      });
+    if (!activeCopy) throw new Error("No visible narrative chapter");
+    const top = (selector: string, root: ParentNode = activeCopy) =>
+      (root.querySelector(selector) as HTMLElement).getBoundingClientRect().top;
+    return [
+      top("[data-scroll-narrative]", element),
+      top("[data-scroll-copy-label]"),
+      top("[data-scroll-copy-question]"),
+      top("[data-scroll-copy-headline]"),
+      top("[data-scroll-copy-body]"),
+      top("[data-scroll-progress]", element),
+    ];
+  });
+  let narrativeBaseline: number[] | undefined;
 
   for (const [progress, chapter] of [
     [0.1, "applications"],
@@ -501,6 +550,11 @@ test("adapted scroll story remains progressive, contained, and reversible", asyn
     await expect(story).toHaveAttribute("data-active-chapter", chapter);
     await expect(stage.locator(`[data-scroll-copy-stage="${chapter}"]`)).toBeVisible();
     await expectContained();
+    const anchors = await readNarrativeAnchors();
+    narrativeBaseline ??= anchors;
+    anchors.forEach((anchor, index) => {
+      expect(Math.abs(anchor - narrativeBaseline![index])).toBeLessThan(1.5);
+    });
   }
   await expect(stage.getByRole("button", { name: /Workspace/ })).toBeVisible();
   await expect(stage).toHaveScreenshot("scroll-story-adapted-action-center.png");

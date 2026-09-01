@@ -142,7 +142,7 @@ function StaticWorkspaceVisual({ stage }: { stage: LandingWorkspaceStage }) {
 }
 
 function ChapterCopy({ chapter, visual = false }: { chapter: LandingScrollChapter; visual?: boolean }) {
-  return <div aria-hidden={visual || undefined}><p className="text-xs font-black uppercase tracking-[0.14em] text-accent-strong">{chapter.number} · {chapter.label}</p><p className="mt-4 text-sm font-bold leading-6 text-ink-muted dark:text-slate-300">{chapter.question}</p><h3 className="mt-3 text-3xl font-black tracking-tight text-ink dark:text-white">{chapter.title}</h3><p className="mt-4 max-w-xl leading-7 text-ink-muted dark:text-slate-300">{chapter.description}</p></div>;
+  return <div aria-hidden={visual || undefined} data-scroll-copy-content={visual || undefined}><p className="text-xs font-black uppercase tracking-[0.14em] text-accent-strong" data-scroll-copy-label={visual || undefined}>{chapter.number} · {chapter.label}</p><p className="mt-4 text-sm font-bold leading-6 text-ink-muted dark:text-slate-300" data-scroll-copy-question={visual || undefined}>{chapter.question}</p><h3 className="mt-3 text-3xl font-black tracking-tight text-ink dark:text-white" data-scroll-copy-headline={visual || undefined}>{chapter.title}</h3><p className="mt-4 max-w-xl leading-7 text-ink-muted dark:text-slate-300" data-scroll-copy-body={visual || undefined}>{chapter.description}</p></div>;
 }
 
 export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: ScrollProductStoryProps) {
