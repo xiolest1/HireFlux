@@ -6,7 +6,7 @@ export const scrollStoryFullQuery =
   "(min-width: 1024px) and (min-height: 720px) and (prefers-reduced-motion: no-preference)";
 
 export const scrollStoryAdaptedQuery =
-  "(min-width: 900px) and (max-width: 1023px) and (min-height: 680px) and (prefers-reduced-motion: no-preference), (min-width: 1024px) and (min-height: 640px) and (max-height: 719px) and (prefers-reduced-motion: no-preference)";
+  "(min-width: 900px) and (max-width: 1023.99px) and (min-height: 680px) and (prefers-reduced-motion: no-preference), (min-width: 1024px) and (min-height: 640px) and (max-height: 719.99px) and (prefers-reduced-motion: no-preference)";
 
 export const scrollStoryDesktopQuery = scrollStoryFullQuery;
 

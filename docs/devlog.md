@@ -1,5 +1,82 @@
 # HireFlux development log
 
+## 2026-09-01 — E8 adversarial landing-story QA and defect correction
+
+Completed the requested defect-finding pass against the frozen E5 scene
+ownership, E6 stage geometry, and E7 Full / Adapted / Static capability model.
+The review deliberately exercised exact media-query edges, large scrubbed
+jumps, reverse traversal, repeated Full / Adapted / Static crossings, route
+re-entry, reload, reduced motion, theme changes, unusual aspect ratios, and
+mobile/static fallbacks. It found three reproducible P2 defects; no P1 defect
+or design regression was found.
+
+The first defect occurred at the documented inclusive Adapted edges. Chromium
+reported a nominal 1023×720 or 1024×719 layout viewport while evaluating exact
+integer `max-width: 1023px` or `max-height: 719px` media features as false due
+to fractional CSS-pixel precision. Those two capable windows therefore fell
+through to Static. The JavaScript capability query and its matching CSS media
+query now use `1023.99px` and `719.99px` maxima. Post-fix checks select Adapted
+at 1023×720, 1024×719, 900×768, 1000×680, and 1280×640; Full at 1024×720; and
+Static at 899×768, 1000×679, and 1280×639.
+
+The second defect was a semantic/visual desynchronization during long jumps.
+React chapter state and the progress indicator followed raw ScrollTrigger
+progress while the rendered master timeline intentionally trailed it through
+the existing `scrub: 0.35`. A fast jump could consequently expose an Action
+label while the visible scene and narrative were still Preparation. The
+timeline now samples its own rendered progress through one `onUpdate` event
+callback; the existing ref guard still commits React state only when a chapter
+boundary is crossed. ScrollTrigger remains the sole scroll authority and does
+not trigger per-frame React renders. Automated alternating jumps to 92%, 10%,
+55%, 30%, and 98%, plus live forward/reverse checks, keep the visible narrative
+and `data-active-chapter` synchronized throughout the scrub.
+
+The third defect was a responsive lifecycle race exposed by repeatedly cycling
+Full → Adapted → Adapted-at-the-other-edge → Full → Adapted. A stale cleanup
+could reset a newer same-mode instance to Static, and separately registered
+match-media callbacks could briefly leave a matching Adapted query without the
+correct branch. The two conditions now share one `gsap.matchMedia()` condition
+map and one branch selector. Each created branch receives a private ownership
+token, so only the current branch may clear the root mode during cleanup. The
+timeline builder, persistent DOM, one active timeline, one active
+ScrollTrigger, owned cleanup, and reduced-motion no-GSAP path remain unchanged.
+
+Adversarial viewport coverage included 1920×1080, 1920×800, 1600×700,
+1536×864, 1440×900, 1440×600, 1366×768, 1280×900, 1280×720, 1280×640/639,
+1152×720, 1025×720, 1024×721/720/719/700, 1023×720, 1000×680/679, 960×720,
+901×768, 900×768/680/640, 899×768, 844×390, 800×430, 768×1024, 667×375,
+600×800, 430×932, 390×844, 360×800, and 320×568. Every endpoint retained the
+expected capability mode, one pin spacer for Full or Adapted and none for
+Static, zero horizontal overflow, and the complete four-chapter fallback where
+pinning is disabled. Repeated mid-story width and height thrashing left no
+duplicate wrapper, stale branch, or escaped content.
+
+Visual and motion QA covered all four lower-story endpoints, both handoff
+regions, partial stops, fast jumps, slow progression, reverse and rapid
+reversal, CTA dwell, pin release, and light/dark theme changes. The E5 hero
+also settled correctly after rapid mixed stage selections with no visible
+overlap or overflow. A development-only `data-flux-settled` probe did not
+consistently flip after a live manual selection, but the rendered endpoint was
+correct, production lifecycle coverage passed, no semantic behavior depends on
+that private probe, and no user-visible defect was reproduced; it was therefore
+not changed. Reload in the local harness returned to a clean Applications
+endpoint, and the browser console contained no warnings or errors. Existing
+screenshots remained correct, so E8 refreshes no visual baseline.
+
+Against E7, the production main entry remains 282.95 kB raw / 84.80 kB gzip
+(0.00 / +0.01). The lazy landing chunk is 182.18 / 60.89 (+0.10 / +0.05), and
+CSS is 122.78 / 19.27 (0.00 / +0.01). No dependency, animation chunk, route
+payload, or authenticated-route landing download was added. ESLint,
+TypeScript, all 197 Vitest tests, production build, three hosting-header tests,
+`git diff --check`, and the complete Playwright/Axe matrix pass (120 passed,
+50 intentional project-filtered skips).
+
+Final verdict: ready to feature-freeze. E5/E6/E7 visual endpoints and story
+timing remain intact; E8 changes only capability-edge precision, semantic
+timeline synchronization, lifecycle ownership, and regression coverage. No E9
+is justified unless a new reproducible P1 usability or accessibility defect is
+found.
+
 ## 2026-08-31 — E7 responsive choreography preservation
 
 Replaced the lower Connected Workspace story's former binary responsive rule

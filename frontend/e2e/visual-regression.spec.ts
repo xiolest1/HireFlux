@@ -386,9 +386,22 @@ test("scroll story breakpoint changes do not duplicate pin wrappers", async ({
   await expect(page.locator(".pin-spacer")).toHaveCount(1);
   await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "full");
 
+  await page.setViewportSize({ width: 1023, height: 720 });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "adapted");
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+
+  await page.setViewportSize({ width: 1024, height: 719 });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "adapted");
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+
+  await page.setViewportSize({ width: 1024, height: 720 });
+  await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "full");
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+
   const stage = page.locator("[data-scroll-story-pin]");
   await stage.scrollIntoViewIfNeeded();
   await page.setViewportSize({ width: 900, height: 768 });
+  expect(await page.evaluate(() => matchMedia("(min-width: 900px) and (max-width: 1023.99px) and (min-height: 680px) and (prefers-reduced-motion: no-preference)").matches)).toBe(true);
   await expect(page.locator("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "adapted");
   await expect(page.locator(".pin-spacer")).toHaveCount(1);
   await expect(page.getByTestId("desktop-product-story")).toBeVisible();
@@ -516,6 +529,44 @@ test("adapted scroll story remains progressive, contained, and reversible", asyn
   expect(await stage.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
   expect(await shell.count()).toBe(1);
   expect(await envelope.count()).toBe(1);
+});
+
+test("scroll chapter semantics stay synchronized during large scrubbed jumps", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; });
+
+  const story = page.locator("[data-scroll-story]");
+  const stage = page.locator("[data-scroll-story-pin]");
+  const metrics = await stage.evaluate((element) => ({
+    start: element.getBoundingClientRect().top + window.scrollY,
+    travel: window.innerHeight * 2.5,
+  }));
+  const assertSemanticVisualSync = async () => {
+    const state = await story.evaluate((element) => ({
+      active: element.getAttribute("data-active-chapter"),
+      visibleCopies: Array.from(element.querySelectorAll<HTMLElement>("[data-scroll-copy-stage]"))
+        .filter((copy) => {
+          const styles = getComputedStyle(copy);
+          return styles.visibility !== "hidden" && Number(styles.opacity) > 0.5;
+        })
+        .map((copy) => copy.dataset.scrollCopyStage),
+    }));
+    expect(state.visibleCopies).toEqual([state.active]);
+  };
+
+  for (const progress of [0.92, 0.1, 0.55, 0.3, 0.98] as const) {
+    await page.evaluate(
+      ({ start, travel, progress }) => window.scrollTo(0, start + travel * progress),
+      { ...metrics, progress },
+    );
+    for (let sample = 0; sample < 4; sample += 1) {
+      await page.waitForTimeout(80);
+      await assertSemanticVisualSync();
+    }
+  }
 });
 
 test("footer enters only after the 1440 desktop story releases", async ({ page }, testInfo) => {

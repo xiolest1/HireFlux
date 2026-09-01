@@ -809,8 +809,8 @@
   transform: translateX(6px);
 }
 
-@media (min-width: 56.25rem) and (max-width: 63.9375rem) and (min-height: 42.5rem) and (prefers-reduced-motion: no-preference),
-  (min-width: 64rem) and (min-height: 40rem) and (max-height: 44.9375rem) and (prefers-reduced-motion: no-preference) {
+@media (min-width: 56.25rem) and (max-width: 1023.99px) and (min-height: 42.5rem) and (prefers-reduced-motion: no-preference),
+  (min-width: 64rem) and (min-height: 40rem) and (max-height: 719.99px) and (prefers-reduced-motion: no-preference) {
   .hf-scroll-story[data-reduced-motion="false"][data-scroll-mode="adapted"] .hf-scroll-story-desktop {
     display: block;
   }

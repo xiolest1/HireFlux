@@ -25,22 +25,24 @@ const gsapMocks = vi.hoisted(() => {
     set: vi.fn(),
     fromTo: vi.fn(),
     to: vi.fn(),
+    eventCallback: vi.fn(),
+    progress: vi.fn(() => 0),
     kill: vi.fn(),
     scrollTrigger: trigger,
   };
-  for (const method of [timeline.addLabel, timeline.set, timeline.fromTo, timeline.to]) {
+  for (const method of [timeline.addLabel, timeline.set, timeline.fromTo, timeline.to, timeline.eventCallback]) {
     method.mockReturnValue(timeline);
   }
 
   const media = {
-    add: vi.fn((query: string, setup: () => void | (() => void)) => {
-      const matches = matchedMode === "full"
-        ? query.includes("min-height: 720px")
-        : matchedMode === "adapted"
-          ? query.includes("min-width: 900px")
-          : false;
-      if (!matches) return;
-      const cleanup = setup();
+    add: vi.fn((_conditions: Record<string, string>, setup: (context: { conditions: Record<string, boolean> }) => void | (() => void)) => {
+      if (matchedMode === "static") return;
+      const cleanup = setup({
+        conditions: {
+          full: matchedMode === "full",
+          adapted: matchedMode === "adapted",
+        },
+      });
       if (cleanup) branchCleanups.push(cleanup);
     }),
     revert: vi.fn(() => {
@@ -108,9 +110,10 @@ function setReducedMotion(reducedMotion: boolean) {
 beforeEach(() => {
   vi.clearAllMocks();
   gsapMocks.reset();
-  for (const method of [gsapMocks.timeline.addLabel, gsapMocks.timeline.set, gsapMocks.timeline.fromTo, gsapMocks.timeline.to]) {
+  for (const method of [gsapMocks.timeline.addLabel, gsapMocks.timeline.set, gsapMocks.timeline.fromTo, gsapMocks.timeline.to, gsapMocks.timeline.eventCallback]) {
     method.mockReturnValue(gsapMocks.timeline);
   }
+  gsapMocks.timeline.progress.mockReturnValue(0);
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -133,6 +136,8 @@ describe("scroll story configuration", () => {
     expect(scrollStoryTravelViewportHeights).toBe(2.5);
     expect(scrollStoryAdaptedTravelViewportHeights).toBe(2);
     expect(scrollStoryDesktopQuery).toBe(scrollStoryFullQuery);
+    expect(scrollStoryAdaptedQuery).toContain("max-width: 1023.99px");
+    expect(scrollStoryAdaptedQuery).toContain("max-height: 719.99px");
     expect(scrollStoryModeConfiguration.adapted).toMatchObject({
       travelViewportHeights: 2,
       interviewEnterX: 32,
@@ -149,8 +154,10 @@ describe("ScrollProductStory", () => {
     setReducedMotion(false);
     render(<ScrollProductStory {...storyProps} />);
 
-    expect(gsapMocks.media.add).toHaveBeenCalledWith(scrollStoryFullQuery, expect.any(Function));
-    expect(gsapMocks.media.add).toHaveBeenCalledWith(scrollStoryAdaptedQuery, expect.any(Function));
+    expect(gsapMocks.media.add).toHaveBeenCalledWith(
+      { full: scrollStoryFullQuery, adapted: scrollStoryAdaptedQuery },
+      expect.any(Function),
+    );
     expect(gsapMocks.timelineFactory).toHaveBeenCalledOnce();
     expect(gsapMocks.timelineFactory).toHaveBeenCalledWith(expect.objectContaining({
       scrollTrigger: expect.objectContaining({
@@ -286,24 +293,28 @@ describe("ScrollProductStory", () => {
     );
   });
 
-  it("commits React chapter state only when semantic boundaries change", () => {
+  it("commits React chapter state from the rendered timeline only when semantic boundaries change", () => {
     setReducedMotion(false);
     const { container } = render(<ScrollProductStory {...storyProps} />);
-    const configuration = gsapMocks.getLastTimelineConfiguration() as {
-      scrollTrigger: { onUpdate: (self: { progress: number }) => void };
-    };
-    const update = configuration.scrollTrigger.onUpdate as (self: { progress: number }) => void;
+    const update = gsapMocks.timeline.eventCallback.mock.calls.find(
+      ([event]) => event === "onUpdate",
+    )?.[1] as () => void;
     const story = container.querySelector("[data-scroll-story]");
 
-    act(() => update({ progress: 0.1 }));
+    gsapMocks.timeline.progress.mockReturnValue(0.1);
+    act(() => update());
     expect(story).toHaveAttribute("data-active-chapter", "applications");
-    act(() => update({ progress: 0.25 }));
+    gsapMocks.timeline.progress.mockReturnValue(0.25);
+    act(() => update());
     expect(story).toHaveAttribute("data-active-chapter", "interviews");
-    act(() => update({ progress: 0.7 }));
+    gsapMocks.timeline.progress.mockReturnValue(0.7);
+    act(() => update());
     expect(story).toHaveAttribute("data-active-chapter", "preparation");
-    act(() => update({ progress: 0.9 }));
+    gsapMocks.timeline.progress.mockReturnValue(0.9);
+    act(() => update());
     expect(story).toHaveAttribute("data-active-chapter", "action-center");
-    act(() => update({ progress: 0.3 }));
+    gsapMocks.timeline.progress.mockReturnValue(0.3);
+    act(() => update());
     expect(story).toHaveAttribute("data-active-chapter", "interviews");
   });
 
@@ -315,6 +326,24 @@ describe("ScrollProductStory", () => {
     expect(gsapMocks.timelineFactory).not.toHaveBeenCalled();
     expect(container.querySelector("[data-scroll-story]")).toHaveAttribute("data-scroll-mode", "static");
     expect(screen.getByTestId("mobile-product-story")).toBeInTheDocument();
+  });
+
+  it("prevents a stale same-mode cleanup from clearing the current branch", () => {
+    setReducedMotion(false);
+    gsapMocks.setMatchedMode("static");
+    const { container } = render(<ScrollProductStory {...storyProps} />);
+    const responsiveSetup = gsapMocks.media.add.mock.calls[0]?.[1] as (
+      context: { conditions: { full: boolean; adapted: boolean } },
+    ) => (() => void);
+    const story = container.querySelector("[data-scroll-story]");
+
+    const adaptedContext = { conditions: { full: false, adapted: true } };
+    const cleanupPrevious = responsiveSetup(adaptedContext);
+    const cleanupCurrent = responsiveSetup(adaptedContext);
+    cleanupPrevious();
+    expect(story).toHaveAttribute("data-scroll-mode", "adapted");
+    cleanupCurrent();
+    expect(story).toHaveAttribute("data-scroll-mode", "static");
   });
 
   it("creates no GSAP lifecycle for reduced motion and exposes every chapter", () => {

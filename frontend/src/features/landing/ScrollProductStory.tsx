@@ -158,11 +158,15 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
     const stage = stageRef.current;
     const media = gsap.matchMedia();
     const context = gsap.context(() => {
+      let activeBranch: symbol | null = null;
       const createChoreography = (mode: ScrollStoryChoreographyMode) => {
+        const branch = Symbol(mode);
         const configuration = scrollStoryModeConfiguration[mode];
+        activeBranch = branch;
         root.dataset.scrollMode = mode;
         const selectChapter = (progress: number) => { const next = scrollChapterForProgress(progress); if (activeChapterRef.current !== next) { activeChapterRef.current = next; setActiveChapter(next); } };
-        const timeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * configuration.travelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onUpdate: (self) => selectChapter(self.progress) } });
+        const timeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * configuration.travelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true } });
+        timeline.eventCallback("onUpdate", () => selectChapter(timeline.progress()));
         timeline
           .addLabel("applications", scrollStoryTimelineLabels.applications)
           .set('[data-scroll-copy-stage]:not([data-scroll-copy-stage="applications"])', { autoAlpha: 0 }, 0)
@@ -227,13 +231,22 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .fromTo("[data-workspace-story-cta]", { y: 10, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.08 }, 0.8)
           .addLabel("settled", scrollStoryTimelineLabels.settled);
         return () => {
-          if (root.dataset.scrollMode === mode) root.dataset.scrollMode = "static";
+          if (activeBranch === branch) {
+            activeBranch = null;
+            root.dataset.scrollMode = "static";
+          }
           timeline.scrollTrigger?.kill();
           timeline.kill();
         };
       };
-      media.add(scrollStoryFullQuery, () => createChoreography("full"));
-      media.add(scrollStoryAdaptedQuery, () => createChoreography("adapted"));
+      media.add(
+        { full: scrollStoryFullQuery, adapted: scrollStoryAdaptedQuery },
+        (mediaContext) => {
+          const conditions = mediaContext.conditions as { full?: boolean; adapted?: boolean };
+          if (conditions.full) return createChoreography("full");
+          if (conditions.adapted) return createChoreography("adapted");
+        },
+      );
     }, root);
     return () => { media.revert(); context.revert(); };
   }, [reducedMotion]);
