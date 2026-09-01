@@ -212,13 +212,39 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
     );
     await page.waitForTimeout(450);
   };
+  const readStageGeometry = async () => stage.evaluate((element) => {
+    const rect = (selector: string) => element.querySelector(selector)!.getBoundingClientRect();
+    const shell = rect("[data-workspace-shell]");
+    const envelope = rect("[data-workspace-stage-envelope]");
+    const narrative = rect("[data-scroll-narrative]");
+    const matrix = new DOMMatrix(getComputedStyle(element.querySelector("[data-workspace-shell]")!).transform);
+    return {
+      shell: { left: shell.left, right: shell.right, top: shell.top, bottom: shell.bottom, width: shell.width, height: shell.height },
+      envelope: { left: envelope.left, right: envelope.right, top: envelope.top, bottom: envelope.bottom },
+      gap: shell.left - narrative.right,
+      transform: { x: matrix.m41, y: matrix.m42, scaleX: matrix.a, scaleY: matrix.d },
+    };
+  });
+  const expectStableGeometry = (current: Awaited<ReturnType<typeof readStageGeometry>>, baseline: Awaited<ReturnType<typeof readStageGeometry>>) => {
+    expect(current.gap).toBeGreaterThanOrEqual(16);
+    expect(current.shell.left).toBeGreaterThanOrEqual(current.envelope.left);
+    expect(current.shell.right).toBeLessThanOrEqual(current.envelope.right);
+    expect(current.shell.top).toBeGreaterThanOrEqual(current.envelope.top);
+    expect(current.shell.bottom).toBeLessThanOrEqual(current.envelope.bottom);
+    expect(Math.abs(current.shell.left - baseline.shell.left)).toBeLessThan(1);
+    expect(Math.abs(current.shell.top - baseline.shell.top)).toBeLessThan(1);
+    expect(Math.abs(current.shell.width - baseline.shell.width)).toBeLessThan(1);
+    expect(Math.abs(current.shell.height - baseline.shell.height)).toBeLessThan(1);
+    expect(Math.abs(current.transform.x)).toBeLessThan(0.1);
+    expect(Math.abs(current.transform.y)).toBeLessThan(0.1);
+    expect(Math.abs(current.transform.scaleX - 1)).toBeLessThan(0.001);
+    expect(Math.abs(current.transform.scaleY - 1)).toBeLessThan(0.001);
+  };
 
   await moveTo(0.1);
   await expect(story).toHaveAttribute("data-active-chapter", "applications");
-  const applicationsShell = await stage.locator("[data-workspace-shell]").evaluate((element) => {
-    const matrix = new DOMMatrix(getComputedStyle(element).transform);
-    return { x: matrix.m41, scale: matrix.a };
-  });
+  const applicationsGeometry = await readStageGeometry();
+  expectStableGeometry(applicationsGeometry, applicationsGeometry);
   await moveTo(0.25);
   await expect(story).toHaveAttribute("data-active-chapter", "interviews");
   await expect(stage.locator("[data-workspace-applications]")).toBeHidden();
@@ -237,6 +263,7 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
     (element) => Number(getComputedStyle(element).opacity),
   )).toBeGreaterThan(0.7);
   expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
+  expectStableGeometry(await readStageGeometry(), applicationsGeometry);
   await page.evaluate(({ start }) => window.scrollTo(0, start - 100), metrics);
   await page.waitForTimeout(450);
   await expect(stage.locator("[data-workspace-applications]")).toBeVisible();
@@ -245,23 +272,13 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   await moveTo(0.32);
   await expect(story).toHaveAttribute("data-active-chapter", "interviews");
   await expect(stage.locator("[data-workspace-interviews]")).toBeVisible();
-  const interviewsShell = await stage.locator("[data-workspace-shell]").evaluate((element) => {
-    const matrix = new DOMMatrix(getComputedStyle(element).transform);
-    return { x: matrix.m41, scale: matrix.a };
-  });
-  expect(interviewsShell.x).toBeLessThan(applicationsShell.x);
-  expect(interviewsShell.scale).toBeGreaterThan(applicationsShell.scale);
+  expectStableGeometry(await readStageGeometry(), applicationsGeometry);
   await moveTo(0.55);
   await expect(story).toHaveAttribute("data-active-chapter", "preparation");
   await expect(stage.locator("[data-workspace-interview-context]")).toBeVisible();
   await expect(stage.locator("[data-workspace-preparation]")).toBeVisible();
   await expect(stage.locator("[data-workspace-preparation-primary]")).toBeVisible();
-  const preparationShell = await stage.locator("[data-workspace-shell]").evaluate((element) => {
-    const matrix = new DOMMatrix(getComputedStyle(element).transform);
-    return { x: matrix.m41, scale: matrix.a };
-  });
-  expect(preparationShell.x).toBeLessThan(interviewsShell.x);
-  expect(preparationShell.scale).toBeGreaterThan(interviewsShell.scale);
+  expectStableGeometry(await readStageGeometry(), applicationsGeometry);
   expect(await stage.locator("[data-scroll-copy-stage]").filter({ visible: true }).count()).toBe(1);
   expect(Math.abs(await stage.evaluate((element) => element.getBoundingClientRect().top))).toBeLessThan(3);
   await moveTo(0.81);
@@ -285,12 +302,7 @@ test("desktop scroll story reorganizes one workspace and releases with its CTA",
   await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
   await expect(stage.locator("[data-workspace-priority]")).toHaveCount(3);
   await expect(stage.locator("[data-workspace-priority-supporting]")).toBeVisible();
-  const actionShell = await stage.locator("[data-workspace-shell]").evaluate((element) => {
-    const matrix = new DOMMatrix(getComputedStyle(element).transform);
-    return { x: matrix.m41, scale: matrix.a };
-  });
-  expect(actionShell.x).toBeGreaterThan(preparationShell.x);
-  expect(actionShell.scale).toBeLessThan(preparationShell.scale);
+  expectStableGeometry(await readStageGeometry(), applicationsGeometry);
   await moveTo(0.68);
   await expect(story).toHaveAttribute("data-active-chapter", "preparation");
   await expect(stage.locator("[data-workspace-interview-context]")).toBeVisible();

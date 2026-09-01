@@ -119,7 +119,7 @@ function ActionCenterSurface({ compact = false }: { compact?: boolean }) {
 }
 
 function ConnectedWorkspaceVisual() {
-  return <div className="hf-connected-workspace relative h-[32rem] min-w-0 overflow-hidden rounded-[1.6rem] border border-line-strong bg-surface-muted shadow-panel dark:border-slate-700 dark:bg-slate-950/70" data-connected-workspace data-workspace-shell data-landing-clip-check aria-hidden="true">
+  return <div className="hf-connected-workspace relative h-[32rem] w-full min-w-0 overflow-hidden rounded-[1.6rem] border border-line-strong bg-surface-muted shadow-panel dark:border-slate-700 dark:bg-slate-950/70" data-connected-workspace data-workspace-shell data-landing-clip-check aria-hidden="true">
     <header className="flex h-12 items-center justify-between border-b border-line bg-surface-raised px-4 dark:bg-slate-900"><div className="flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-lg bg-accent text-[0.55rem] font-black text-white">HF</span><span className="text-xs font-black text-ink dark:text-white">HireFlux</span></div><div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[0.58rem] font-semibold text-ink-muted"><Search className="size-3" />Search your workspace</div></header>
     <div className="grid h-[calc(100%-3rem)] grid-cols-[7.5rem_minmax(0,1fr)]"><WorkspaceNavigation /><div className="relative min-w-0 overflow-hidden p-4">
       <div className="absolute inset-x-4 top-3 flex items-end justify-between" data-workspace-heading><div><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-ink-muted">Your search</p><p className="mt-0.5 text-base font-black text-ink dark:text-white">Connected workspace</p></div><span className="rounded-full border border-line bg-surface-raised px-2.5 py-1 text-[0.56rem] font-bold text-ink-muted">3 active</span></div>
@@ -158,11 +158,6 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
     const context = gsap.context(() => {
       media.add(scrollStoryDesktopQuery, () => {
         const selectChapter = (progress: number) => { const next = scrollChapterForProgress(progress); if (activeChapterRef.current !== next) { activeChapterRef.current = next; setActiveChapter(next); } };
-        // E1 moves through a 44–60px viewport relationship change while the
-        // Applications surface physically compresses into supporting context.
-        const interviewShift = () => Math.min(46, Math.max(30, window.innerWidth * 0.04));
-        const preparationShift = () => interviewShift() + Math.min(14, Math.max(10, window.innerWidth * 0.01));
-        const actionShift = () => Math.min(22, Math.max(16, window.innerWidth * 0.015));
         const timeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * scrollStoryTravelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onUpdate: (self) => selectChapter(self.progress) } });
         timeline
           .addLabel("applications", scrollStoryTimelineLabels.applications)
@@ -172,7 +167,7 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .set("[data-workspace-handoff-line]", { scaleX: 0, transformOrigin: "left center" }, 0)
           .set('[data-workspace-nav-active]:not([data-workspace-nav-active="applications"])', { opacity: 0 }, 0)
           .set("[data-workspace-applications]", { zIndex: 10 }, 0)
-          .set("[data-workspace-shell]", { x: 14, y: 8, scale: 0.975, transformOrigin: "center center" }, 0)
+          .set("[data-workspace-shell]", { x: 0, y: 0, scale: 1, transformOrigin: "center center" }, 0)
           .fromTo("[data-workspace-applications]", { y: 8 }, { y: 0, duration: 0.12 }, 0)
 
           .addLabel("interviews", scrollStoryTimelineLabels.interviews)
@@ -180,7 +175,6 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .set('[data-scroll-copy-stage="interviews"]', { autoAlpha: 1, y: 0 }, 0.226)
           .to('[data-workspace-nav-active="applications"]', { opacity: 0, duration: 0.04 }, 0.205)
           .to('[data-workspace-nav-active="interviews"]', { opacity: 1, duration: 0.04 }, 0.225)
-          .to("[data-workspace-shell]", { x: () => -interviewShift(), y: 0, scale: 1.035, duration: 0.3, transformOrigin: "center center" }, 0.1)
           .to("[data-workspace-applications]", { x: -10, scaleX: 0.28, scaleY: 1.06, duration: 0.13, transformOrigin: "left top" }, 0.08)
           .to("[data-workspace-applications]", { autoAlpha: 0, duration: 0.04 }, 0.17)
           .set("[data-workspace-recent]", { zIndex: 20 }, 0.095)
@@ -197,7 +191,6 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .set('[data-scroll-copy-stage="preparation"]', { autoAlpha: 1, y: 0 }, 0.432)
           .to('[data-workspace-nav-active="interviews"]', { opacity: 0, duration: 0.04 }, 0.415)
           .to('[data-workspace-nav-active="preparation"]', { opacity: 1, duration: 0.05 }, 0.435)
-          .to("[data-workspace-shell]", { x: () => -preparationShift(), y: -6, scale: 1.065, duration: 0.24, ease: "power2.inOut", transformOrigin: "center center" }, 0.37)
           .to("[data-workspace-recent]", { x: -14, autoAlpha: 0, duration: 0.055 }, 0.375)
           .to("[data-workspace-handoff]", { autoAlpha: 0, duration: 0.055 }, 0.375)
           .to("[data-workspace-interviews]", { y: -10, scaleX: 0.9, scaleY: 0.74, autoAlpha: 0, duration: 0.07, ease: "power2.inOut", transformOrigin: "top center" }, 0.38)
@@ -215,7 +208,6 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
           .set('[data-scroll-copy-stage="action-center"]', { autoAlpha: 1, y: 0 }, 0.714)
           .to('[data-workspace-nav-active="preparation"]', { opacity: 0, duration: 0.04 }, 0.7)
           .to('[data-workspace-nav-active="action-center"]', { opacity: 1, duration: 0.05 }, 0.72)
-          .to("[data-workspace-shell]", { x: () => -actionShift(), y: 2, scale: 1.01, duration: 0.17, ease: "power2.inOut", transformOrigin: "center center" }, 0.69)
           .to("[data-workspace-preparation-primary]", { y: -6, autoAlpha: 0, duration: 0.05 }, 0.66)
           .to("[data-workspace-preparation-supporting]", { x: -8, autoAlpha: 0, duration: 0.05 }, 0.665)
           .to("[data-workspace-preparation-readiness]", { autoAlpha: 0, duration: 0.05 }, 0.665)
@@ -247,7 +239,9 @@ export function ScrollProductStory({ ctaLabel, ctaDisabled = false, onCta }: Scr
             <div className="invisible mt-5" data-workspace-story-cta><p className="mb-3 text-xs font-semibold leading-5 text-ink-muted">Your next move is already in view.</p><button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60" disabled={ctaDisabled} onClick={onCta}>{ctaLabel}<ArrowRight className="size-4" /></button></div>
           </div>
         </div>
-        <ConnectedWorkspaceVisual />
+        <div className="relative flex h-[36rem] min-w-0 items-center overflow-hidden p-1" data-workspace-stage-envelope>
+          <ConnectedWorkspaceVisual />
+        </div>
       </div>
       <div className="hf-scroll-story-release-buffer" data-scroll-story-release-buffer aria-hidden="true" />
     </div>

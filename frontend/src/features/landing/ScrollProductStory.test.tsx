@@ -157,7 +157,7 @@ describe("ScrollProductStory", () => {
     }
     expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
       "[data-workspace-shell]",
-      expect.objectContaining({ x: 14, y: 8, scale: 0.975 }),
+      expect.objectContaining({ x: 0, y: 0, scale: 1 }),
       0,
     );
     expect(gsapMocks.timeline.set).toHaveBeenCalledWith(
@@ -175,10 +175,10 @@ describe("ScrollProductStory", () => {
       expect.anything(),
       0,
     );
-    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
+    expect(gsapMocks.timeline.to).not.toHaveBeenCalledWith(
       "[data-workspace-shell]",
-      expect.objectContaining({ y: 0, scale: 1.035 }),
-      0.1,
+      expect.anything(),
+      expect.anything(),
     );
     expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
       "[data-workspace-applications]",
@@ -206,21 +206,11 @@ describe("ScrollProductStory", () => {
       expect.objectContaining({ autoAlpha: 1, duration: 0.18 }),
       0.15,
     );
-    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
-      "[data-workspace-shell]",
-      expect.objectContaining({ y: -6, scale: 1.065 }),
-      0.37,
-    );
     expect(gsapMocks.timeline.fromTo).toHaveBeenCalledWith(
       "[data-workspace-preparation]",
       expect.objectContaining({ scaleY: 0.62, autoAlpha: 0 }),
       expect.objectContaining({ scaleY: 1, autoAlpha: 1 }),
       0.41,
-    );
-    expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
-      "[data-workspace-shell]",
-      expect.objectContaining({ y: 2, scale: 1.01 }),
-      0.69,
     );
     expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
       "[data-workspace-preparation]",
@@ -312,6 +302,7 @@ describe("ScrollProductStory", () => {
     expect(container.querySelector("[data-workspace-preparation-supporting]")).toBeInTheDocument();
     expect(container.querySelector("[data-workspace-history-origin]")).toBeInTheDocument();
     expect(container.querySelector("[data-workspace-action-content]")).toBeInTheDocument();
+    expect(container.querySelector("[data-workspace-stage-envelope]")).toBeInTheDocument();
     expect(container.querySelector("[data-workspace-priority-primary]")).toBeInTheDocument();
     expect(container.querySelector("[data-workspace-priority-supporting]")).toBeInTheDocument();
     expect(container.querySelectorAll("[data-workspace-priority]")).not.toHaveLength(0);

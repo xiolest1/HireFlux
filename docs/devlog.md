@@ -1,5 +1,61 @@
 # HireFlux development log
 
+## 2026-08-31 — E6 stable Connected Workspace stage geometry
+
+Completed the lower Applications → Interviews → Preparation → Action Center
+geometry pass from the clean E5 baseline. The implementation keeps the existing
+story, chapter boundaries, internal scene choreography, 2.5-viewport travel,
+CTA/release sequence, one timeline, and one ScrollTrigger. The upper E5 hero and
+the E7 responsive fallback strategy remain unchanged.
+
+The collision was caused by the workspace shell owning two incompatible jobs.
+It was both the product grid cell's layout box and the chapter-specific motion
+target. CSS Grid reserved its untransformed bounds, while GSAP moved and scaled
+the rendered shell from `0.975 / +14px` through `1.035`, `1.065 / -60px`, and
+back to `1.01`. At 1440×900 the protected narrative/product gap fell from about
+50px to 2.5px during Applications → Interviews and became negative during
+Preparation; the visually scaled shell reached approximately 1,022px while its
+layout allocation did not change. Action could therefore interpolate through
+the narrative column even though the untransformed grid itself still fit.
+
+E6 introduces a dedicated product-stage envelope in the existing product grid
+cell. The envelope is 36rem high, clips visual escape, and vertically centers a
+32rem full-width workspace shell with a small internal inset. The shell now
+retains `x: 0`, `y: 0`, `scale: 1`, and a centered transform origin throughout
+the entire master timeline. Applications, Recent Opportunities, Technical
+Screen, Preparation, retained history, and Action Center remain persistently
+mounted and continue using their approved scene-local transforms, proportions,
+clipping, and stacking inside that common coordinate system. The scene depth
+still changes; the page-level product footprint no longer does.
+
+Live rendered QA covered 1440×900, 1280×800, 1280×720, and 1024×768, including
+settled states, handoff freeze frames, forward/reverse traversal, rapid
+direction changes, and Action resolution. At the 1440 Applications → Interviews
+midpoint the shell measured approximately 951.5×512px, retained an identity
+matrix, stayed inside the envelope, and preserved about 50.2px of copy gap. At
+1280 the shell remained approximately 836.7×512px and Action preserved about
+41.9px of gap at both tested heights. At 1024 it remained approximately
+625.7×512px and Action preserved about 46.8px. Every measured state had zero
+horizontal overflow, one pin spacer, and complete envelope containment. The
+new focused browser assertions protect a minimum 16px narrative gap, constant
+shell origin and dimensions, identity outer transform, and all four envelope
+edges at endpoints and high-risk handoffs. Nine lower-story dark/light visual
+baselines were refreshed after direct review; no hero baseline changed.
+
+Against E5, the production main entry remains 282.95 kB raw / 84.80 kB gzip,
+the lazy landing chunk is 181.08 / 60.59 (-0.39 / -0.09), and CSS is 120.53 /
+18.95 (+0.02 / 0.00). No dependency or additional animation chunk was added.
+ESLint, TypeScript, the focused geometry tests, all 195 Vitest tests, production
+build, three hosting-header tests, `git diff --check`, and the complete
+Playwright/Axe matrix pass (118 passed, 42 intentional project-filtered skips).
+A parallel Vitest run briefly exceeded the landing accessibility case's
+existing five-second timeout by about 90ms; that file passed 13/13 directly and
+the serialized full suite passed 195/195 without changing the timeout or test.
+
+E5 scene ownership remains mechanically and visually intact. E7 breakpoint,
+tablet, phone, short-height, and fallback choreography work was deliberately
+left untouched.
+
 ## 2026-08-31 — E5 hero scene ownership and overlap cleanup
 
 Completed a visual-state ownership pass only for the upper Capture → Context →
