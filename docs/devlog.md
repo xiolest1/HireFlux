@@ -1,5 +1,78 @@
 # HireFlux development log
 
+## 2026-09-01 — L6 Action Center narrative payoff
+
+Refined only the lower Connected Workspace Action Center so its featured
+Northstar priority reads as the consequence of connected history rather than
+another item in a task queue. The required read-only audit found that L5 had
+already made `Send a thoughtful follow-up` the strongest object, but the
+explanation remained split between the retained-history strip and a tiny
+provenance line. `Due today` shared the same accent language as the action, so
+timing and rationale read as adjacent metadata instead of distinct answers to
+“when?” and “why?”. Atlas Systems and Harborline were already appropriately
+secondary and needed no redesign.
+
+The featured row now keeps the existing Do now, Northstar, and action-title
+hierarchy while separating urgency into a compact warning-token badge. A
+restrained divided rationale row directly beneath the recommendation groups
+the already-modeled `Technical screen complete` and `Preparation retained`
+signals with existing success semantics. No new label, event, status,
+recommendation capability, AI language, or marketing explanation was added.
+The retained-history strip remains the quiet accumulated origin above the
+Action surface, while the featured row explains why this particular priority
+exists. Atlas and Harborline retain their L5 waiting/review-later treatment.
+
+The same Action rationale component is used in Full/Adapted and compact Static
+endpoints. Reduced motion therefore exposes Northstar, the next action, due
+state, and both causal history signals immediately, without relying on reveal
+order. DOM order keeps identity and action before urgency and rationale; the
+simulated workspace remains decorative and non-interactive, and textual
+meaning does not depend on color. Dark and light review confirmed that the
+small amber urgency badge remains distinct from the green rationale cues while
+the action title keeps the highest visual weight.
+
+No motion was added or retimed. The Preparation → Action audit sampled the
+existing persistent-DOM handoff just before transition, at 25%, 50%, 75%, and
+settled. Action and its rationale remain hidden through Preparation ownership,
+resolve together over the existing opaque Action surface, and become fully
+readable within the established Action interval. Reverse and rapid traversal
+restore Preparation with the Action surface and rationale hidden. L3's
+0.825–0.88 reading hold, release point, total travel, and footer ordering are
+unchanged.
+
+Exact responsive QA covered Full 1440×900, 1280×800, 1180×800, and 1024×768;
+Adapted 1280×650, 1024×700, 960×720, 900×768, and 900×680; and Static
+768×1024, 430×932, 390×844, and 320×568. Every size rendered the decision,
+urgency, both rationale signals, and quieter Atlas/Harborline priorities in the
+expected capability mode with zero horizontal overflow. The 320px endpoint
+uses two compact rationale lines without clipping. Live browser inspection
+reported no warnings or errors.
+
+Focused component and browser coverage now require urgency and rationale to be
+separate targets in both choreographed and reduced-motion/static Action
+surfaces. Nine intentionally affected references were refreshed: the dark
+desktop landing page, four light Static full-page sizes, dark and light Full
+Action endpoints, the Adapted Action endpoint, and the Preparation → Action
+handoff. No unrelated baseline changed.
+
+ESLint, TypeScript, all 189 Vitest tests, the 13-test focused accessibility
+suite, production build, three hosting-header tests, the exact-size responsive
+audit, and the complete Playwright/Axe matrix pass (121 passed, 54 intentional
+project-filtered skips). `git diff --check` is clean.
+
+Against L5, the production main entry remains 282.91 kB raw / 84.78 kB gzip.
+The lazy landing chunk moves from 162.06 / 56.62 to 163.38 / 56.88 kB
+(+1.32 / +0.26), and CSS moves from 113.90 / 18.41 to 114.36 / 18.47 kB
+(+0.46 / +0.06). No dependency, route, backend, or authenticated bundle
+boundary changed; generated `dist` output remains uncommitted.
+
+Regression boundary: L1 narrative geometry, L2 4px handoffs and 24% / 46% /
+76% ownership boundaries, L3 progress/release and Action hold, L4 Northstar
+identity, L5 focal hierarchy, E6 stage geometry, E7 capability thresholds,
+E8 lifecycle ownership, one master timeline, and one ScrollTrigger per active
+choreographed mode are unchanged. L6 stops here; no L7 copy or pacing work was
+started.
+
 ## 2026-09-01 — L5 chapter-specific visual focus
 
 Refined only the internal hierarchy of the lower Connected Workspace product

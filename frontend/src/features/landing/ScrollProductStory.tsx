@@ -105,9 +105,16 @@ function PreparationSurface() {
   </div>;
 }
 
+function ActionRationale({ compact = false }: { compact?: boolean }) {
+  return <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-accent/20 ${compact ? "mt-1.5 pt-1.5 text-[0.5rem]" : "col-span-2 mt-2 pt-2 text-[0.58rem]"} font-semibold text-ink-muted`} data-workspace-action-rationale>
+    <span className="flex items-center gap-1.5" data-workspace-action-rationale-item="technical-screen"><CircleCheckBig className={`${compact ? "size-3" : "size-3.5"} shrink-0 text-success`} />Technical screen complete</span>
+    <span className="flex items-center gap-1.5" data-workspace-action-rationale-item="preparation"><Check className={`${compact ? "size-3" : "size-3.5"} shrink-0 text-success`} />Preparation retained</span>
+  </div>;
+}
+
 function ActionCenterSurface({ compact = false }: { compact?: boolean }) {
   if (compact) {
-    return <div className="divide-y divide-line">{landingWorkspace.priorities.map((priority, index) => <div key={priority.company} className={`flex min-w-0 items-start gap-3 py-2.5 ${index === 0 ? "-mx-1 rounded-lg bg-accent-soft/55 px-1 ring-1 ring-inset ring-accent/20" : ""}`} data-workspace-priority={priority.priority} data-northstar-identity={index === 0 ? "action-center" : undefined} data-workspace-focus-primary={index === 0 ? "action-center" : undefined}>{index === 0 ? <NorthstarMark compact /> : <span className={`mt-0.5 size-2.5 shrink-0 rounded-full ${index === 1 ? "bg-line-strong" : "bg-violet"}`} />}<div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className={`${index === 0 ? "text-[0.58rem] font-bold text-ink-muted" : "text-[0.62rem] font-bold text-ink"} dark:text-white`}>{priority.company}</p><span className={`shrink-0 text-[0.52rem] font-black uppercase tracking-[0.08em] ${index === 0 ? "text-accent-strong" : "text-ink-muted"}`}>{priority.timing}</span></div><p className={`mt-0.5 ${index === 0 ? "text-[0.68rem] font-black text-ink" : "text-[0.56rem] font-semibold text-ink-muted"}`}>{priority.action}</p></div></div>)}</div>;
+    return <div className="divide-y divide-line">{landingWorkspace.priorities.map((priority, index) => <div key={priority.company} className={`flex min-w-0 items-start gap-3 py-2.5 ${index === 0 ? "-mx-1 rounded-lg bg-accent-soft/55 px-1 ring-1 ring-inset ring-accent/20" : ""}`} data-workspace-priority={priority.priority} data-workspace-priority-primary={index === 0 || undefined} data-northstar-identity={index === 0 ? "action-center" : undefined} data-workspace-focus-primary={index === 0 ? "action-center" : undefined}>{index === 0 ? <NorthstarMark compact /> : <span className={`mt-0.5 size-2.5 shrink-0 rounded-full ${index === 1 ? "bg-line-strong" : "bg-violet"}`} />}<div className="min-w-0 flex-1">{index === 0 ? <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-2"><p className="min-w-0 truncate text-[0.58rem] font-bold text-ink-muted dark:text-white">{priority.company}</p><p className="col-span-2 mt-0.5 text-[0.68rem] font-black text-ink" data-workspace-action-decision>{priority.action}</p><span className="col-start-2 row-start-1 shrink-0 rounded-full border border-warning/25 bg-warning-soft/70 px-1.5 py-0.5 text-[0.48rem] font-black uppercase tracking-[0.07em] text-warning" data-workspace-action-urgency>{priority.timing}</span><ActionRationale compact /></div> : <><div className="flex items-start justify-between gap-3"><p className="text-[0.62rem] font-bold text-ink dark:text-white">{priority.company}</p><span className="shrink-0 text-[0.52rem] font-black uppercase tracking-[0.08em] text-ink-muted">{priority.timing}</span></div><p className="mt-0.5 text-[0.56rem] font-semibold text-ink-muted">{priority.action}</p></>}</div></div>)}</div>;
   }
 
   const [primaryPriority, ...supportingPriorities] = landingWorkspace.priorities;
@@ -119,13 +126,11 @@ function ActionCenterSurface({ compact = false }: { compact?: boolean }) {
     <div className="border-b border-accent/20 bg-accent-soft/50 px-5 py-3.5 shadow-sm ring-1 ring-inset ring-accent/20" data-workspace-priority={primaryPriority.priority} data-workspace-priority-primary data-northstar-identity="action-center" data-workspace-focus-primary="action-center">
       <div className="flex min-w-0 items-start gap-3">
         <NorthstarMark />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0"><p className="text-[0.54rem] font-black uppercase tracking-[0.1em] text-accent-strong">Do now</p><p className="mt-0.5 text-xs font-bold text-ink dark:text-white">{primaryPriority.company}</p></div>
-            <span className="shrink-0 text-[0.58rem] font-black uppercase tracking-[0.08em] text-accent-strong">{primaryPriority.timing}</span>
-          </div>
-          <p className="mt-1 text-base font-black tracking-tight text-ink dark:text-white">{primaryPriority.action}</p>
-          <p className="mt-1 flex items-center gap-1 text-[0.58rem] font-semibold text-ink-muted"><ChevronRight className="size-3" />{primaryPriority.provenance}</p>
+        <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] gap-x-3">
+          <div className="min-w-0"><p className="text-[0.54rem] font-black uppercase tracking-[0.1em] text-accent-strong">Do now</p><p className="mt-0.5 text-xs font-bold text-ink dark:text-white">{primaryPriority.company}</p></div>
+          <p className="col-span-2 mt-1 text-base font-black tracking-tight text-ink dark:text-white" data-workspace-action-decision>{primaryPriority.action}</p>
+          <span className="col-start-2 row-start-1 shrink-0 self-start rounded-full border border-warning/25 bg-warning-soft/70 px-2 py-1 text-[0.56rem] font-black uppercase tracking-[0.08em] text-warning" data-workspace-action-urgency>{primaryPriority.timing}</span>
+          <ActionRationale />
         </div>
       </div>
     </div>

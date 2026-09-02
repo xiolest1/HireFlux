@@ -468,6 +468,29 @@ describe("ScrollProductStory", () => {
     }
   });
 
+  it("keeps Action urgency distinct from the retained history that explains the decision", () => {
+    setReducedMotion(true);
+    const { container } = render(<ScrollProductStory />);
+
+    const featuredPriorities = container.querySelectorAll('[data-workspace-priority="now"][data-workspace-priority-primary]');
+    expect(featuredPriorities.length).toBeGreaterThanOrEqual(2);
+    featuredPriorities.forEach((priority) => {
+      expect(priority).toHaveAttribute("data-workspace-focus-primary", "action-center");
+      expect(priority.querySelector("[data-workspace-action-decision]")).toHaveTextContent("Send a thoughtful follow-up");
+      expect(priority.querySelector("[data-workspace-action-urgency]")).toHaveTextContent("Due today");
+      const rationale = priority.querySelector("[data-workspace-action-rationale]");
+      expect(rationale).toHaveTextContent("Technical screen complete");
+      expect(rationale).toHaveTextContent("Preparation retained");
+      expect(rationale).not.toHaveTextContent("Due today");
+    });
+
+    expect(container.querySelectorAll('[data-workspace-action-rationale-item="technical-screen"]')).toHaveLength(featuredPriorities.length);
+    expect(container.querySelectorAll('[data-workspace-action-rationale-item="preparation"]')).toHaveLength(featuredPriorities.length);
+    expect(container.querySelectorAll('[data-workspace-priority="waiting"]')).not.toHaveLength(0);
+    expect(container.querySelectorAll('[data-workspace-priority="later"]')).not.toHaveLength(0);
+    expect(container.textContent).not.toMatch(/AI suggested|smart recommendation|confidence/i);
+  });
+
   it("cleans its owned trigger and never overlaps contexts in Strict Mode", () => {
     setReducedMotion(false);
     const { unmount } = render(<StrictMode><ScrollProductStory /></StrictMode>);

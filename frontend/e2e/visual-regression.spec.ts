@@ -168,6 +168,11 @@ test("landing story becomes a stable complete state with reduced motion", async 
   await expect(page.getByTestId("mobile-product-story")).toBeVisible();
   await expect(page.getByTestId("desktop-product-story")).toBeHidden();
   await expect(page.locator(".pin-spacer")).toHaveCount(0);
+  const staticAction = page.locator('[data-scroll-static-stage="action-center"]');
+  await expect(staticAction.locator("[data-workspace-action-decision]")).toContainText("Send a thoughtful follow-up");
+  await expect(staticAction.locator("[data-workspace-action-urgency]")).toHaveText("Due today");
+  await expect(staticAction.locator("[data-workspace-action-rationale]")).toContainText("Technical screen complete");
+  await expect(staticAction.locator("[data-workspace-action-rationale]")).toContainText("Preparation retained");
 });
 
 test("desktop scroll story reorganizes one workspace and releases from Action Center", async ({
@@ -364,6 +369,11 @@ test("desktop scroll story reorganizes one workspace and releases from Action Ce
   await expect(stage.locator("[data-workspace-actions]")).toBeVisible();
   await expect(stage.locator("[data-workspace-priority-primary]")).toBeVisible();
   await expect(stage.locator('[data-workspace-actions] [data-workspace-focus-primary="action-center"]')).toContainText("Send a thoughtful follow-up");
+  const featuredAction = stage.locator('[data-workspace-actions] [data-workspace-priority-primary]');
+  await expect(featuredAction.locator("[data-workspace-action-decision]")).toHaveText("Send a thoughtful follow-up");
+  await expect(featuredAction.locator("[data-workspace-action-urgency]")).toHaveText("Due today");
+  await expect(featuredAction.locator("[data-workspace-action-rationale]")).toContainText("Technical screen complete");
+  await expect(featuredAction.locator("[data-workspace-action-rationale]")).toContainText("Preparation retained");
   await expect(stage.locator('[data-workspace-actions] [data-workspace-focus-supporting="action-center"]')).toContainText("Atlas Systems");
   await expect(stage.locator('[data-workspace-actions] [data-northstar-identity="action-center"] [data-northstar-mark]')).toHaveText("NS");
   await expect(stage.locator('[data-workspace-actions] [data-workspace-priority="waiting"]')).toContainText("Atlas Systems");
