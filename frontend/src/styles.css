@@ -559,9 +559,9 @@
 }
 
 .hf-scroll-story-desktop [data-scroll-copy-stack] {
+  width: 100%;
   max-width: 100%;
   height: 21.5rem;
-  transition: max-width 180ms var(--ease-standard), transform 180ms var(--ease-standard);
 }
 
 .hf-scroll-story-desktop [data-scroll-copy-content] {
@@ -578,6 +578,17 @@
   margin-top: 0;
 }
 
+.hf-scroll-story-desktop [data-scroll-copy-label] {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  column-gap: 0.35em;
+}
+
+.hf-scroll-story-desktop [data-scroll-copy-index] {
+  font-variant-numeric: tabular-nums;
+}
+
 .hf-scroll-story-desktop [data-scroll-copy-question] {
   padding-top: 1rem;
 }
@@ -590,27 +601,12 @@
   padding-top: 1rem;
 }
 
-.hf-scroll-story[data-active-chapter="interviews"] [data-scroll-copy-stack] {
-  max-width: 92%;
-  transform: translateX(8px);
-}
-
-.hf-scroll-story[data-active-chapter="preparation"] [data-scroll-copy-stack] {
-  max-width: 78%;
-  transform: translateX(18px);
-}
-
 .hf-scroll-story[data-active-chapter="preparation"] [data-workspace-preparation] {
   box-shadow: 0 18px 38px color-mix(in srgb, var(--hf-ink) 12%, transparent);
 }
 
 .dark .hf-scroll-story[data-active-chapter="preparation"] [data-workspace-preparation] {
   box-shadow: 0 18px 38px rgb(0 0 0 / 34%);
-}
-
-.hf-scroll-story[data-active-chapter="action-center"] [data-scroll-copy-stack] {
-  max-width: 94%;
-  transform: translateX(6px);
 }
 
 @media (min-width: 56.25rem) and (max-width: 1023.99px) and (min-height: 42.5rem) and (prefers-reduced-motion: no-preference),
@@ -675,21 +671,6 @@
 
   .hf-scroll-story[data-scroll-mode="adapted"] [data-workspace-interview-next-action] {
     padding: 0.75rem;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"][data-active-chapter="interviews"] [data-scroll-copy-stack] {
-    max-width: 95%;
-    transform: translateX(4px);
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"][data-active-chapter="preparation"] [data-scroll-copy-stack] {
-    max-width: 88%;
-    transform: translateX(6px);
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"][data-active-chapter="action-center"] [data-scroll-copy-stack] {
-    max-width: 96%;
-    transform: translateX(2px);
   }
 
   .hf-scroll-story[data-reduced-motion="false"][data-scroll-mode="adapted"] .hf-scroll-story-release-buffer {

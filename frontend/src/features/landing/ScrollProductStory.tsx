@@ -26,7 +26,6 @@ const narrativeOutgoingProgress = 0.012;
 const narrativeIncomingProgress = 0.012;
 const narrativeOutgoingLead = 0.012;
 const narrativeIncomingLead = 0.004;
-const narrativeHandoffOffset = 4;
 const actionEndpointHoldStart = 0.825;
 const actionEndpointHoldDuration = 0.055;
 
@@ -160,7 +159,7 @@ function StaticWorkspaceVisual({ stage }: { stage: LandingWorkspaceStage }) {
 }
 
 function ChapterCopy({ chapter, visual = false }: { chapter: LandingScrollChapter; visual?: boolean }) {
-  return <div aria-hidden={visual || undefined} data-scroll-copy-content={visual || undefined}><p className="text-xs font-black uppercase tracking-[0.14em] text-accent-strong" data-scroll-copy-label={visual || undefined}>{chapter.number} · {chapter.label}</p><p className="mt-4 text-sm font-bold leading-6 text-ink-muted dark:text-slate-300" data-scroll-copy-question={visual || undefined}>{chapter.question}</p><h3 className="mt-3 text-3xl font-black tracking-tight text-ink dark:text-white" data-scroll-copy-headline={visual || undefined}>{chapter.title}</h3><p className="mt-4 max-w-xl leading-7 text-ink-muted dark:text-slate-300" data-scroll-copy-body={visual || undefined}>{chapter.description}</p></div>;
+  return <div aria-hidden={visual || undefined} data-scroll-copy-content={visual || undefined}><p className="text-xs font-black uppercase tracking-[0.14em] text-accent-strong" data-scroll-copy-label={visual || undefined}><span className="tabular-nums" data-scroll-copy-index={visual || undefined}>{chapter.number}</span><span> · {chapter.label}</span></p><p className="mt-4 text-sm font-bold leading-6 text-ink-muted dark:text-slate-300" data-scroll-copy-question={visual || undefined}>{chapter.question}</p><h3 className="mt-3 text-3xl font-black tracking-tight text-ink dark:text-white" data-scroll-copy-headline={visual || undefined}>{chapter.title}</h3><p className="mt-4 max-w-xl leading-7 text-ink-muted dark:text-slate-300" data-scroll-copy-body={visual || undefined}>{chapter.description}</p></div>;
 }
 
 export function ScrollProductStory() {
@@ -187,7 +186,7 @@ export function ScrollProductStory() {
         timeline.eventCallback("onUpdate", () => selectChapter(timeline.progress()));
         timeline
           .addLabel("applications", scrollStoryTimelineLabels.applications)
-          .set('[data-scroll-copy-stage]:not([data-scroll-copy-stage="applications"])', { autoAlpha: 0, y: narrativeHandoffOffset }, 0)
+          .set('[data-scroll-copy-stage]:not([data-scroll-copy-stage="applications"])', { autoAlpha: 0 }, 0)
           .set("[data-workspace-panel]:not([data-workspace-applications])", { autoAlpha: 0 }, 0)
           .set("[data-workspace-handoff]", { autoAlpha: 0 }, 0)
           .set("[data-workspace-handoff-line]", { scaleX: 0, transformOrigin: "left center" }, 0)
@@ -245,8 +244,8 @@ export function ScrollProductStory() {
         const timelineDuration = timeline.duration();
         const addNarrativeHandoff = (outgoing: LandingWorkspaceStage, incoming: LandingWorkspaceStage, boundary: number) => {
           timeline
-            .to(`[data-scroll-copy-stage="${outgoing}"]`, { autoAlpha: 0, y: -narrativeHandoffOffset, duration: timelineDuration * narrativeOutgoingProgress, ease: "power1.out" }, timelineDuration * (boundary - narrativeOutgoingLead))
-            .to(`[data-scroll-copy-stage="${incoming}"]`, { autoAlpha: 1, y: 0, duration: timelineDuration * narrativeIncomingProgress, ease: "power2.out" }, timelineDuration * (boundary - narrativeIncomingLead));
+            .to(`[data-scroll-copy-stage="${outgoing}"]`, { autoAlpha: 0, duration: timelineDuration * narrativeOutgoingProgress, ease: "power1.out" }, timelineDuration * (boundary - narrativeOutgoingLead))
+            .to(`[data-scroll-copy-stage="${incoming}"]`, { autoAlpha: 1, duration: timelineDuration * narrativeIncomingProgress, ease: "power2.out" }, timelineDuration * (boundary - narrativeIncomingLead));
         };
         addNarrativeHandoff("applications", "interviews", scrollStoryTimelineLabels.interviews);
         addNarrativeHandoff("interviews", "preparation", scrollStoryTimelineLabels.preparation);

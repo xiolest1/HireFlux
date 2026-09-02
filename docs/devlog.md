@@ -1,5 +1,127 @@
 # HireFlux development log
 
+## 2026-09-02 — L7.2 typographic grid lock
+
+Completed the lower Connected Workspace narrative fix at the rendered-text
+level. L7.1 correctly removed GSAP's 4px Y handoff transforms, but its browser
+assertion recorded only `top` coordinates. The narrator's parent stack still
+changed `max-width` and translated horizontally according to the active
+chapter. Full mode moved Interviews 8px, Preparation 18px, and Action Center
+6px from Applications; Adapted mode moved them 4px, 6px, and 2px. Those rules
+also changed each text row's available width and wrapping. Separately, the
+Inter Variable chapter numerals used proportional metrics: `01`, `02`, `03`,
+and `04` measured 17.323, 19.656, 19.927, and 20.323px respectively.
+
+The pre-fix settled-state browser measurements were:
+
+```text
+Viewport       Role origins (Applications / Interviews / Preparation / Action)
+1280×800 Full  X 32 / 40 / 50 / 38; label Y 127.844; question 143.844;
+               headline 207.844; body 327.844; progress X/Y 32 / 499.844
+1024×768 Full  X 32 / 40 / 50 / 38; label Y 127.625; question 143.625;
+               headline 207.625; body 327.625; progress X/Y 32 / 499.625
+900×768 Adapt  X 24 / 28 / 30 / 26; label Y 103.531; question 119.531;
+               headline 183.531; body 303.531; progress X/Y 24 / 475.531
+```
+
+The existing 21.5rem desktop copy envelope and fixed label/question/headline/
+body grid rows were already vertically sound. L7.2 keeps them and gives every
+choreographed chapter one shared 100%-width text column. It removes all
+chapter-specific narrator widths, translations, and the obsolete width/
+transform transition, leaving no narrator transform or `will-change` layer.
+The chapter index is now isolated from its name, rendered with tabular
+numerals, and paired with a consistent label grid. All four index slots now
+measure 18.833px at the audited desktop sizes.
+
+After the fix, all four chapters share the same X, Y, and width for label,
+question, headline, body, and progress. At the three audit sizes the origins
+remain the same as the Applications values above, and the maximum per-chapter
+delta is exactly 0px. Browser regression coverage uses Applications as the
+relative baseline with a 0.25px ceiling reserved for fractional browser
+rounding; observed settled and transition deltas were 0px. It samples the
+0/25/50/75/100% points of all three opacity crossfades, plus forward, reverse,
+and rapid traversal, and also verifies zero X/Y wrapper transforms, a `none`
+stack transform, equal row widths, and equal tabular-index widths.
+
+Exact live QA covered Full 1440×900, 1280×800, 1280×720, and 1024×768;
+Adapted 1280×650, 1024×700, 960×720, 900×768, and 900×680; and Static
+768×1024, 430×932, 390×844, and 320×568. Every choreographed viewport reported
+0px maximum row-coordinate/width drift, one pin spacer, the expected travel
+mode, no stack transform, and zero horizontal overflow. Static/mobile retained
+four normal-flow chapters, zero pin spacers, 0px within-chapter left-edge
+drift, equal index widths, and zero overflow. Normal-speed pointer-guide QA
+confirmed the first letters and chapter index remain planted through the full
+arc in both directions. The browser console remained clear.
+
+Eleven Connected Workspace proof references were intentionally refreshed so
+they contain the frozen L7 copy on the new grid: Full Applications,
+Interviews, Preparation, and Action endpoints; three Full handoffs; two
+Adapted endpoints; and the light Applications-to-Interviews and Action
+references. No hero, full-page fallback, or authenticated baseline changed.
+
+ESLint and TypeScript pass. All 190 Vitest tests, the focused 13-test
+accessibility suite, three hosting-header tests, and the complete Playwright/
+Axe matrix pass (121 passed, 54 intentional project-filtered skips).
+`git diff --check` is clean.
+
+Against L7.1, the production main entry remains 282.91 / 84.78 kB raw/gzip.
+The lazy landing chunk moves from 163.27 / 56.88 to 163.39 / 56.90 kB
+(+0.12 / +0.02), and CSS remains 114.36 kB raw while moving from 18.47 to
+18.60 kB gzip. No generated `dist` artifact is committed.
+
+Regression boundary: L7 copy, L7.1 opacity-only timings, 24% / 46% / 76%
+ownership, Full 2.5-viewport travel, Adapted 2.0-viewport travel, L3 progress/
+release and 0.825–0.88 Action hold, L4 Northstar identity, L5 focus, L6 Action
+rationale, E6 product geometry, E7 capability thresholds, E8 lifecycle
+ownership, one master timeline, and one ScrollTrigger per choreographed mode
+are unchanged. Product-side markup and motion are untouched. L7.2 ends here.
+
+## 2026-09-02 — L7.1 narrative position lock
+
+Removed the lower Connected Workspace narrative's residual 4px vertical
+handoff motion while preserving the approved L7 copy and every existing story
+boundary. The defect was not content-dependent centering: the shared 21.5rem
+copy envelope and fixed label, question, headline, and body rows were already
+stable. The movement came from GSAP initializing incoming chapters at `y: 4`,
+moving outgoing chapters to `y: -4`, and returning the new owner to `y: 0`.
+Those Y transforms are now absent. Handoffs retain their existing opacity,
+duration, easing, and 24% / 46% / 76% semantic ownership boundaries.
+
+Component coverage now rejects any `y` property on narrative-stage timeline
+initialization or handoff tweens. Browser coverage freeze-frames five samples
+across each ownership boundary, from 1.2% before through 1.2% after, and checks
+the wrapper, label, question, headline, body, and progress coordinates. It runs
+the same assertions in reverse and after rapid scrub changes. Full and Adapted
+mode both report less than 0.1px permitted drift and less than 0.01px permitted
+Y translation; live inspection measured exactly 0px for both values.
+
+Exact-size live QA covered Full 1440×900, 1280×800, 1280×720, and 1024×768;
+Adapted 1280×650, 1024×700, 960×720, 900×768, and 900×680; and Static
+768×1024, 430×932, 390×844, and 320×568. Each choreographed size retained one
+pin spacer, the correct 2.5- or 2.0-viewport travel mode, boundary-only React
+chapter ownership, forward/reverse behavior, and zero narrative position
+drift. Static fallbacks retained four visible chapters, zero pin spacers, and
+zero horizontal overflow. Reduced-motion coverage remains green and creates no
+scroll choreography.
+
+No visual reference changed: all settled Full/Adapted chapter baselines and
+the dark/light handoff references pass unchanged. ESLint and TypeScript pass,
+as do all 190 Vitest tests, the focused 13-test accessibility suite, three
+hosting-header tests, and the complete Playwright/Axe matrix (121 passed, 54
+intentional project-filtered skips). `git diff --check` is clean.
+
+Against L7, the production main entry remains 282.91 kB raw and moves from
+84.79 to 84.78 kB gzip. The lazy landing chunk moves from 163.29 / 56.89 to
+163.27 / 56.88 kB raw/gzip (-0.02 / -0.01), and CSS remains 114.36 / 18.47
+kB. No generated `dist` artifact is committed.
+
+Regression boundary: L7 copy, product visuals, horizontal narrative geometry,
+progress semantics, Full/Adapted/Static thresholds, 2.5/2.0 travel, L3's
+0.825–0.88 Action reading hold, CTA/release behavior, hero choreography,
+reduced-motion fallback, lazy landing isolation, one master timeline, and one
+ScrollTrigger per active choreographed mode are unchanged. L7.1 is strictly an
+opacity-only narrative handoff correction.
+
 ## 2026-09-02 — L7 lower-story copy refinement
 
 Refined only the public landing page's lower Connected Workspace narration

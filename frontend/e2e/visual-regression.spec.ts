@@ -650,6 +650,7 @@ test("adapted scroll story remains progressive, contained, and reversible", asyn
 });
 
 test("narrative handoffs transfer ownership at the semantic chapter boundaries", async ({ page }, testInfo) => {
+  test.setTimeout(75_000);
   test.skip(testInfo.project.name !== "desktop-1280");
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -675,11 +676,74 @@ test("narrative handoffs transfer ownership at the semantic chapter boundaries",
       );
       await page.waitForTimeout(700);
     };
+    const samplePosition = async (progress: number) => {
+      await page.evaluate(
+        ({ start, travel, progress }) => window.scrollTo(0, start + travel * progress),
+        { ...metrics, progress },
+      );
+      await page.waitForTimeout(120);
+    };
     const opacity = (chapter: string) => stage.locator(`[data-scroll-copy-stage="${chapter}"]`).evaluate(
       (element) => Number(getComputedStyle(element).opacity),
     );
+    const narrativeCoordinates = () => stage.evaluate((element) => {
+      const rectangle = (target: Element) => {
+        const rect = target.getBoundingClientRect();
+        return { left: rect.left, top: rect.top, width: rect.width };
+      };
+      const progress = rectangle(element.querySelector("[data-scroll-progress]")!);
+      const stackTransform = getComputedStyle(element.querySelector("[data-scroll-copy-stack]")!).transform;
+      const chapters = Array.from(element.querySelectorAll<HTMLElement>("[data-scroll-copy-stage]")).map((copy) => {
+        const rect = (selector: string) => rectangle(copy.querySelector(selector)!);
+        const matrix = new DOMMatrix(getComputedStyle(copy).transform);
+        return {
+          stage: copy.dataset.scrollCopyStage,
+          wrapper: rectangle(copy),
+          label: rect("[data-scroll-copy-label]"),
+          index: rect("[data-scroll-copy-index]"),
+          question: rect("[data-scroll-copy-question]"),
+          headline: rect("[data-scroll-copy-headline]"),
+          body: rect("[data-scroll-copy-body]"),
+          progress,
+          translateX: matrix.m41,
+          translateY: matrix.m42,
+        };
+      });
+      return { chapters, stackTransform };
+    });
+    await moveTo(0.1);
+    const coordinateBaseline = await narrativeCoordinates();
+    const baselineChapter = coordinateBaseline.chapters.find(({ stage: baselineStage }) => baselineStage === "applications")!;
+    const expectPositionLocked = async () => {
+      const current = await narrativeCoordinates();
+      expect(current.stackTransform).toBe("none");
+      for (const chapter of current.chapters) {
+        for (const anchor of ["wrapper", "label", "index", "question", "headline", "body", "progress"] as const) {
+          for (const coordinate of ["left", "top", "width"] as const) {
+            expect(Math.abs(chapter[anchor][coordinate] - baselineChapter[anchor][coordinate])).toBeLessThanOrEqual(0.25);
+          }
+        }
+        expect(Math.abs(chapter.translateX)).toBeLessThan(0.01);
+        expect(Math.abs(chapter.translateY)).toBeLessThan(0.01);
+      }
+    };
+
+    for (const [progress, chapter] of [
+      [0.1, "applications"],
+      [0.3, "interviews"],
+      [0.55, "preparation"],
+      [0.9, "action-center"],
+    ] as const) {
+      await moveTo(progress);
+      await expect(story).toHaveAttribute("data-active-chapter", chapter);
+      await expectPositionLocked();
+    }
 
     for (const { outgoing, incoming, boundary } of transitions) {
+      for (const sample of [-0.012, -0.007, -0.002, 0.003, 0.008]) {
+        await samplePosition(boundary + sample);
+        await expectPositionLocked();
+      }
       await moveTo(boundary - 0.01);
       await expect(story).toHaveAttribute("data-active-chapter", outgoing);
       expect(await opacity(outgoing)).toBeGreaterThan(0.65);
@@ -698,6 +762,7 @@ test("narrative handoffs transfer ownership at the semantic chapter boundaries",
       await expect(story).toHaveAttribute("data-active-chapter", outgoing);
       expect(await opacity(outgoing)).toBeGreaterThan(0.65);
       expect(await opacity(incoming)).toBeLessThan(0.05);
+      await expectPositionLocked();
     }
 
     await page.evaluate(
@@ -712,6 +777,7 @@ test("narrative handoffs transfer ownership at the semantic chapter boundaries",
     await expect(story).toHaveAttribute("data-active-chapter", "interviews");
     expect(await opacity("applications")).toBeLessThan(0.1);
     expect(await opacity("interviews")).toBeGreaterThan(0.85);
+    await expectPositionLocked();
   };
 
   await expect(story).toHaveAttribute("data-scroll-mode", "full");
