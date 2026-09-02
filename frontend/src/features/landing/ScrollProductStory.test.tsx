@@ -379,9 +379,9 @@ describe("ScrollProductStory", () => {
     expect(gsapMocks.context).not.toHaveBeenCalled();
     expect(gsapMocks.timelineFactory).not.toHaveBeenCalled();
     for (const question of [
-      "How do I keep the search organized?",
-      "How does the history stay connected?",
-      "How does that context improve preparation?",
+      "How do I keep every opportunity in view?",
+      "What should carry into the interview?",
+      "How does that context help me prepare?",
       "What deserves attention next?",
     ]) {
       expect(screen.getAllByText(question).length).toBeGreaterThan(0);

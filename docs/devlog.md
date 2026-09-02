@@ -1,5 +1,65 @@
 # HireFlux development log
 
+## 2026-09-02 — L7 lower-story copy refinement
+
+Refined only the public landing page's lower Connected Workspace narration
+after the read-only L7 audit concluded that the four-part product story was
+structurally strong but that several sentences still described visible UI
+instead of explaining candidate value. The section lead-in now invites the
+visitor to follow one opportunity while the broader search stays connected;
+it no longer previews all four chapters before the proof begins.
+
+Applications keeps the approved broader-search insight while replacing generic
+organization language with a direct question about keeping every opportunity
+in view. Its body now states the practical tension: one important role should
+not take over the candidate's attention. Interviews keeps `Context follows the
+opportunity.` and now explains why that continuity matters—the candidate can
+focus on the interview instead of rebuilding details already captured.
+Preparation deliberately owns the next narrative job: retained context becomes
+useful starting material, so preparation begins from known company, role, and
+interview information rather than reconstructing it. Action keeps its existing
+question and history-to-priorities headline, but its shorter body lets L6's
+decision, urgency, and rationale presentation prove the specific result.
+`Provenance` was removed from candidate-facing chapter copy; the internal
+workspace data and visual history treatment remain unchanged.
+
+The same centralized chapter copy continues to drive Full, Adapted, Static,
+and reduced-motion layouts. Exact-size live QA covered Full 1440×900,
+1280×800, 1280×720, and 1024×768; Adapted 1280×650, 1024×700, 960×720,
+900×768, and 900×680; and Static 768×1024, 430×932, 390×844, and 320×568.
+Every viewport selected the expected capability mode, created one pin spacer
+only in choreographed modes, and had zero horizontal overflow. Full and Adapted
+preserve the 28px copy-stack-to-progress gap. The tightest rendered text case
+was the Interviews body at 900×680, which retained 17px of actual text
+clearance before the progress indicator. Static 320px wraps naturally without
+clipping. Light/dark checks at 1024×768, 900×768, and 390×844 preserved the
+same containment and mode behavior; the live console remained clear.
+
+Five intentionally affected reduced-motion/full-page references were manually
+reviewed and refreshed: dark desktop 1280 plus light 1280, 768, 390, and 320.
+The shorter shared copy reduces page height at those sizes. Product mockups,
+stage geometry, progress, chapter focus, and L6 Action rationale remain
+unchanged; all choreographed chapter and handoff references remained within
+their approved baselines without refresh.
+
+ESLint and TypeScript pass. All 190 Vitest tests, the focused 13-test
+accessibility suite, three hosting-header tests, and the complete Playwright/Axe
+matrix pass (121 passed, 54 intentional project-filtered skips).
+`git diff --check` is clean.
+
+Against L6, the production main entry remains 282.91 kB raw and moves from
+84.78 to 84.79 kB gzip. The lazy landing chunk moves from 163.38 / 56.88 to
+163.29 / 56.89 kB raw/gzip (-0.09 / +0.01), and CSS remains 114.36 / 18.47
+kB. No dependency, route, backend, authenticated bundle boundary, or generated
+artifact policy changed.
+
+Regression boundary: the 21.5rem L1 narrative envelope, L2 4px handoffs and
+24% / 46% / 76% ownership boundaries, L3 progress/release and 0.825–0.88
+Action hold, L4 Northstar identity, L5 chapter focus, L6 Action rationale,
+E6 stage geometry, E7 capability thresholds, E8 lifecycle ownership, one
+master timeline, and one ScrollTrigger per active choreographed mode are
+unchanged. `ScrollProductStory.tsx` is untouched. L7 ends here.
+
 ## 2026-09-01 — L6 Action Center narrative payoff
 
 Refined only the lower Connected Workspace Action Center so its featured
