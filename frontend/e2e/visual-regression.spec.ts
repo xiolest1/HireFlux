@@ -175,6 +175,67 @@ test("landing story becomes a stable complete state with reduced motion", async 
   await expect(staticAction.locator("[data-workspace-action-rationale]")).toContainText("Preparation retained");
 });
 
+test("static benefit signals stay compact, semantic, and internally contained", async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const viewport = region.locator("[data-benefits-viewport]");
+  const signals = region.locator("[data-benefit-signal]");
+  const expectedFullyVisible = {
+    "narrow-320": 1,
+    "mobile-390": 1,
+    "tablet-768": 2,
+    "desktop-1024": 3,
+    "desktop-1280": 4,
+  }[testInfo.project.name];
+
+  expect(expectedFullyVisible).toBeDefined();
+  await expect(region.locator("ol")).toHaveCount(1);
+  await expect(signals).toHaveCount(7);
+  await expect(region.getByRole("article")).toHaveCount(7);
+  await expect(region.getByRole("button")).toHaveCount(0);
+  await expect(region.locator('[role="carousel"], [aria-live], [data-benefit-clone], [data-active-benefit]')).toHaveCount(0);
+
+  const geometry = await viewport.evaluate((element) => {
+    const viewportRect = element.getBoundingClientRect();
+    const signalRects = Array.from(element.querySelectorAll<HTMLElement>("[data-benefit-signal]"))
+      .map((signal) => {
+        const rect = signal.getBoundingClientRect();
+        const visibleWidth = Math.max(
+          0,
+          Math.min(rect.right, viewportRect.right) - Math.max(rect.left, viewportRect.left),
+        );
+        return {
+          height: rect.height,
+          visibleWidth,
+          fullyVisible: rect.left >= viewportRect.left - 1 && rect.right <= viewportRect.right + 1,
+          textClipped: signal.scrollHeight > signal.clientHeight + 1,
+        };
+      });
+    return {
+      sectionHeight: element.closest<HTMLElement>("[data-product-benefits]")?.getBoundingClientRect().height ?? 0,
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      signalRects,
+    };
+  });
+
+  const heights = geometry.signalRects.map(({ height }) => height);
+  expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(1);
+  expect(heights[0]).toBeGreaterThanOrEqual(112);
+  expect(heights[0]).toBeLessThanOrEqual(128);
+  expect(geometry.signalRects.filter(({ fullyVisible }) => fullyVisible)).toHaveLength(expectedFullyVisible);
+  expect(geometry.signalRects.some(({ fullyVisible, visibleWidth }) => !fullyVisible && visibleWidth >= 16)).toBe(true);
+  expect(geometry.signalRects.every(({ textClipped }) => !textClipped)).toBe(true);
+  expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
+  expect(geometry.sectionHeight).toBeGreaterThanOrEqual(250);
+  expect(geometry.sectionHeight).toBeLessThanOrEqual(320);
+  await expectNoHorizontalPageOverflow(page);
+});
+
 test("desktop scroll story reorganizes one workspace and releases from Action Center", async ({
   page,
 }, testInfo) => {

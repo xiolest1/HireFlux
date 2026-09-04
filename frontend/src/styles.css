@@ -503,6 +503,24 @@
   animation: hf-story-swap 520ms var(--ease-fluid) both;
 }
 
+.hf-benefits-viewport {
+  scrollbar-color: var(--hf-line-strong) transparent;
+  scrollbar-width: thin;
+}
+
+.hf-benefits-viewport::-webkit-scrollbar {
+  height: 0.3rem;
+}
+
+.hf-benefits-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hf-benefits-viewport::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--hf-line-strong);
+}
+
 .hf-scroll-story-reveal {
   animation: none;
 }

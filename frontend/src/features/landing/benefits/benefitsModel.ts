@@ -1,103 +1,88 @@
-export type BenefitVisual =
-  | {
-      kind: "perspective";
-      stages: readonly {
-        label: string;
-        value: number;
-      }[];
-    }
-  | {
-      kind: "attention";
-      priorities: readonly {
-        level: "now" | "waiting" | "later";
-        label: string;
-        detail: string;
-      }[];
-    }
-  | {
-      kind: "preparation";
-      context: readonly string[];
-      checklist: readonly {
-        label: string;
-        complete: boolean;
-      }[];
-    }
-  | {
-      kind: "search-health";
-      responseRate: string;
-      signals: readonly {
-        label: string;
-        value: string;
-      }[];
-      movement: readonly number[];
-    };
+export type BenefitSignalTone = "neutral" | "accent" | "violet" | "success" | "warning";
 
-export interface ProductBenefit {
-  id: "search-visibility" | "attention" | "preparation" | "search-health";
-  category: string;
+export type BenefitSignalWidth = "small" | "medium" | "wide";
+
+export type BenefitSignalStateTreatment = "label" | "badge";
+
+export interface BenefitSignalContent {
+  id:
+    | "search-perspective"
+    | "immediate-attention"
+    | "context-continuity"
+    | "intentional-waiting"
+    | "informed-preparation"
+    | "follow-up-coverage"
+    | "search-movement";
+  state: string;
   headline: string;
-  body: string;
-  visual: BenefitVisual;
+  support: string;
+  tone: BenefitSignalTone;
+  width: BenefitSignalWidth;
+  stateTreatment: BenefitSignalStateTreatment;
 }
 
-export const productBenefits: readonly ProductBenefit[] = [
+export const benefitSignals: readonly BenefitSignalContent[] = [
   {
-    id: "search-visibility",
-    category: "Perspective",
-    headline: "Keep the whole search in view.",
-    body: "See every opportunity in context so one interview or deadline never hides what else is moving.",
-    visual: {
-      kind: "perspective",
-      stages: [
-        { label: "Applied", value: 8 },
-        { label: "Interviewing", value: 3 },
-        { label: "Follow-up", value: 2 },
-        { label: "Offer", value: 1 },
-      ],
-    },
+    id: "search-perspective",
+    state: "3 active interviews",
+    headline: "Keep the whole search in perspective.",
+    support: "See every opportunity without letting one role take over.",
+    tone: "accent",
+    width: "wide",
+    stateTreatment: "label",
   },
   {
-    id: "attention",
-    category: "Attention",
-    headline: "Know what deserves attention.",
-    body: "Separate what needs action now from what is waiting or can be reviewed later.",
-    visual: {
-      kind: "attention",
-      priorities: [
-        { level: "now", label: "Do now", detail: "Follow up after technical screen" },
-        { level: "waiting", label: "Waiting", detail: "Recruiter response" },
-        { level: "later", label: "Review later", detail: "Older application" },
-      ],
-    },
+    id: "immediate-attention",
+    state: "Due today",
+    headline: "Know what needs you now.",
+    support: "Separate the next action from everything else.",
+    tone: "warning",
+    width: "medium",
+    stateTreatment: "badge",
   },
   {
-    id: "preparation",
-    category: "Preparation",
-    headline: "Prepare without rebuilding everything.",
-    body: "Carry role and interview context forward so preparation starts from what you already know.",
-    visual: {
-      kind: "preparation",
-      context: ["Role", "Interview", "Notes"],
-      checklist: [
-        { label: "Evidence story", complete: true },
-        { label: "Role review", complete: true },
-        { label: "Candidate questions", complete: false },
-      ],
-    },
+    id: "context-continuity",
+    state: "Context retained",
+    headline: "Stop hunting for context.",
+    support: "Role, interview, and notes stay connected.",
+    tone: "violet",
+    width: "medium",
+    stateTreatment: "label",
   },
   {
-    id: "search-health",
-    category: "Search health",
-    headline: "Understand whether the search is working.",
-    body: "See response patterns, stalled applications, and follow-up gaps instead of judging the search by application count alone.",
-    visual: {
-      kind: "search-health",
-      responseRate: "24%",
-      signals: [
-        { label: "Stalled 15+ days", value: "4" },
-        { label: "Follow-ups due", value: "2" },
-      ],
-      movement: [38, 62, 48, 76, 68, 88],
-    },
+    id: "intentional-waiting",
+    state: "Waiting",
+    headline: "Know when not to act.",
+    support: "See when the employer owns the next move.",
+    tone: "neutral",
+    width: "small",
+    stateTreatment: "badge",
+  },
+  {
+    id: "informed-preparation",
+    state: "2 of 3 ready",
+    headline: "Prepare from what you already know.",
+    support: "Start informed instead of rebuilding the story.",
+    tone: "success",
+    width: "wide",
+    stateTreatment: "badge",
+  },
+  {
+    id: "follow-up-coverage",
+    state: "Follow-up gap",
+    headline: "Catch what still needs a response.",
+    support: "Notice silence before an opportunity slips away.",
+    tone: "warning",
+    width: "medium",
+    stateTreatment: "label",
+  },
+  {
+    id: "search-movement",
+    state: "Recent movement",
+    headline: "See what changed across your search.",
+    support: "Spot progress without opening every record.",
+    tone: "accent",
+    width: "wide",
+    stateTreatment: "label",
   },
 ];
