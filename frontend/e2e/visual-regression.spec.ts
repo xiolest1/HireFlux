@@ -236,6 +236,101 @@ test("static benefit signals stay compact, semantic, and internally contained", 
   await expectNoHorizontalPageOverflow(page);
 });
 
+test("ambient benefit stream loops on exact measured geometry and remains explicitly controllable", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const viewport = region.locator("[data-benefits-viewport]");
+  const track = region.locator("[data-benefits-track]");
+  await expect(track).toHaveAttribute("data-motion-ready", "true");
+  await expect(viewport).toHaveAttribute("data-benefits-motion", "ambient");
+  await expect(viewport).not.toHaveAttribute("tabindex");
+  await expect(region.locator("ol")).toHaveCount(1);
+  await expect(region.locator("[data-benefit-signal]")).toHaveCount(7);
+  await expect(region.locator("[data-benefit-clone]")).toHaveCount(7);
+  await expect(region.getByRole("article")).toHaveCount(7);
+  expect(await viewport.evaluate((element) => getComputedStyle(element).overflowX)).toBe("hidden");
+
+  const geometry = await region.evaluate((element) => {
+    const realGroup = element.querySelector<HTMLElement>("[data-benefit-real-group]")!;
+    const realSignals = Array.from(realGroup.querySelectorAll<HTMLElement>("[data-benefit-signal]"));
+    const cloneA = element.querySelector<HTMLElement>("[data-benefit-clone='search-perspective']")!;
+    const first = realSignals[0].getBoundingClientRect();
+    const second = realSignals[1].getBoundingClientRect();
+    const last = realSignals.at(-1)!.getBoundingClientRect();
+    const clone = cloneA.getBoundingClientRect();
+    const distance = Number(element.querySelector<HTMLElement>("[data-benefits-track]")!.dataset.loopDistance);
+    const duration = Number(element.querySelector<HTMLElement>("[data-benefits-track]")!.dataset.loopDuration);
+    return {
+      distance,
+      duration,
+      groupWidth: realGroup.getBoundingClientRect().width,
+      ordinaryGap: second.left - first.right,
+      seamGap: clone.left - last.right,
+      startToCloneStart: clone.left - first.left,
+    };
+  });
+
+  expect(Math.abs(geometry.groupWidth - geometry.distance)).toBeLessThan(0.1);
+  expect(Math.abs(geometry.startToCloneStart - geometry.distance)).toBeLessThan(0.1);
+  expect(Math.abs(geometry.seamGap - geometry.ordinaryGap)).toBeLessThan(0.1);
+  expect(Math.abs(geometry.distance / geometry.duration - 28)).toBeLessThan(0.1);
+
+  const seamContinuity = await track.evaluate((element) => {
+    const animation = element.getAnimations()[0];
+    const durationMs = Number(element.dataset.loopDuration) * 1_000;
+    const realA = element.querySelector<HTMLElement>("[data-benefit-signal='search-perspective']")!;
+    const cloneA = element.querySelector<HTMLElement>("[data-benefit-clone='search-perspective']")!;
+    animation.pause();
+    animation.currentTime = durationMs - 0.5;
+    const before = cloneA.getBoundingClientRect().left;
+    animation.currentTime = durationMs + 0.5;
+    const after = realA.getBoundingClientRect().left;
+    animation.currentTime = durationMs * 3 + 0.5;
+    const afterThreeCycles = realA.getBoundingClientRect().left;
+    return { before, after, afterThreeCycles };
+  });
+  expect(Math.abs(seamContinuity.before - seamContinuity.after)).toBeLessThan(0.1);
+  expect(Math.abs(seamContinuity.after - seamContinuity.afterThreeCycles)).toBeLessThan(0.1);
+
+  const pause = region.getByRole("button", { name: "Pause benefit stream" });
+  await pause.click();
+  await expect(track).toHaveAttribute("data-motion-state", "paused");
+  await expect(track).toHaveCSS("animation-play-state", "paused");
+  await region.getByRole("button", { name: "Play benefit stream" }).click();
+  await expect(track).toHaveAttribute("data-motion-state", "playing");
+  await expect(track).toHaveCSS("animation-play-state", "running");
+
+  const accessibility = await new AxeBuilder({ page })
+    .include("[data-product-benefits]")
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+  await expectNoHorizontalPageOverflow(page);
+});
+
+test("ambient benefit stream visual is frozen at one deterministic coordinate", async ({
+  page,
+}, testInfo) => {
+  test.skip(!["mobile-390", "desktop-1280"].includes(testInfo.project.name));
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const track = region.locator("[data-benefits-track]");
+  await expect(track).toHaveAttribute("data-motion-ready", "true");
+  await track.evaluate((element) => {
+    element.style.setProperty("--hf-benefits-test-translation", "-384px");
+    element.dataset.motionTest = "frozen";
+  });
+  const x = await track.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).m41);
+  expect(x).toBe(-384);
+  await expect(region).toHaveScreenshot("benefit-stream-frozen.png");
+});
+
 test("desktop scroll story reorganizes one workspace and releases from Action Center", async ({
   page,
 }, testInfo) => {

@@ -508,6 +508,27 @@
   scrollbar-width: thin;
 }
 
+@keyframes hf-benefits-stream {
+  to {
+    transform: translate3d(var(--hf-benefits-loop-translation), 0, 0);
+  }
+}
+
+.hf-benefits-track[data-motion-ready="true"] {
+  animation: hf-benefits-stream var(--hf-benefits-loop-duration) linear infinite;
+  will-change: transform;
+}
+
+.hf-benefits-track[data-motion-state="paused"] {
+  animation-play-state: paused;
+}
+
+.hf-benefits-track[data-motion-ready="true"][data-motion-test="frozen"] {
+  animation: none;
+  transform: translate3d(var(--hf-benefits-test-translation), 0, 0);
+  will-change: auto;
+}
+
 .hf-benefits-viewport::-webkit-scrollbar {
   height: 0.3rem;
 }
@@ -855,6 +876,12 @@
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  .hf-benefits-track {
+    animation: none !important;
+    transform: none !important;
+    will-change: auto;
   }
 
 }

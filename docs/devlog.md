@@ -1,5 +1,69 @@
 # HireFlux development log
 
+## 2026-09-04 — B5R ambient benefit signal stream
+
+Advanced the approved B4R value stream from a static proof to one calm,
+continuous CSS loop. The seven existing benefit signals, order, copy, widths,
+tones, and 126px card height remain unchanged. A measured real group and one
+visual duplicate group now travel left at a constant 28px per second. The real
+group remains the only semantic ordered list; the duplicate group is
+`aria-hidden`, has no list semantics, and omits the real articles' IDs and
+semantic signal attributes. No GSAP timeline, timer, active index, snapping,
+swipe behavior, Previous/Next action, or manual navigation state was added.
+
+The ambient viewport is now a clipped, non-scrollable motion window with no
+native scrollbar and no viewport tab stop. Its single 44px Pause/Play action is
+linked to the viewport and pauses the existing CSS animation in place; only an
+explicit Play resumes it. Pointer hover does not alter playback because hover
+behavior remains intentionally unresolved pending separate live QA. When
+`prefers-reduced-motion` is active, the visual duplicate and control are not
+rendered, animation is absent, and the original seven-signal horizontal region
+returns to native overflow, snapping, a visible thin scrollbar, and keyboard
+focusability. Runtime preference changes switch between those complete modes.
+
+Loop geometry is derived from the rendered width of the real group. Each group
+owns one trailing gap equal to its ordinary inter-signal gap, so the measured
+distance from real A to clone A—not an estimated viewport translation—is the
+animation distance. Representative geometry is:
+
+```text
+Viewport   Real-group width   Item gap   G→A seam   Translation   Cycle       Speed
+1280px     2224px             16px       16px       2224px        79.429s     28px/s
+390px      2338px             12px       12px       2338px        83.500s     28px/s
+320px      1848px             12px       12px       1848px        66.000s     28px/s
+```
+
+`ResizeObserver` recalculates only that group distance and corresponding
+duration when card geometry changes. Chromium coverage verifies the measured
+group width, real-A-to-clone-A distance, ordinary gap, seam gap, and resulting
+speed within 0.1px, then samples both the first and third loop boundaries.
+The clone-A position immediately before reset and real-A position immediately
+after reset differ by less than 0.1px. Repeated boundary sampling plus
+dark-theme reference inspection found no blank frame, overlap, acceleration,
+spacing change, or detectable G→A reset; the seam reads like every other
+neighboring-signal gap.
+
+Motion screenshots use the production track's narrowly scoped
+`data-motion-test="frozen"` state with an explicit `-384px` test translation.
+The attribute and CSS variable are applied directly by Playwright after the
+measured track is ready. This guarantees that repeated screenshots use the
+same track offset and pixels instead of depending on when Pause happened to be
+activated. Added dark 1280px and 390px component references; no existing
+landing or authenticated reference was refreshed.
+
+ESLint and TypeScript pass. All 198 Vitest tests, the focused 13-test
+accessibility suite, three hosting-header tests, and the complete Playwright/
+Axe matrix pass (133 passed, 57 intentional project-filtered skips).
+`git diff --check` is clean. Live accessibility inspection confirms one normal
+Pause/Play button and only seven exposed benefit articles.
+
+Against B4R, the production main entry remains 282.87 / 84.76 kB raw/gzip.
+The lazy landing chunk moves from 166.34 / 58.27 to 168.54 / 58.97 kB
+(+2.20 / +0.70), and CSS moves from 117.44 / 19.05 to 118.15 / 19.21 kB
+(+0.71 / +0.16). No dependency changed and no generated `dist` artifact is
+committed. Connected Workspace, the hero, authenticated routes, and the future
+B6R manual-navigation contract remain unchanged.
+
 ## 2026-09-02 — L7.2 typographic grid lock
 
 Completed the lower Connected Workspace narrative fix at the rendered-text

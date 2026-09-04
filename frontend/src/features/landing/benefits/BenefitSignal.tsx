@@ -26,14 +26,21 @@ const stateDotClasses: Record<BenefitSignalTone, string> = {
   warning: "bg-warning",
 };
 
-export function BenefitSignal({ signal }: { signal: BenefitSignalContent }) {
+interface BenefitSignalProps {
+  signal: BenefitSignalContent;
+  decorative?: boolean;
+}
+
+export function BenefitSignal({ signal, decorative = false }: BenefitSignalProps) {
   const titleId = `benefit-signal-${signal.id}-title`;
 
   return (
     <article
       className={`flex h-[7.875rem] min-w-0 flex-col rounded-[1.15rem] border border-line bg-surface-raised p-3.5 dark:border-slate-800 dark:bg-slate-900/65 sm:p-4 ${widthClasses[signal.width]}`}
-      aria-labelledby={titleId}
-      data-benefit-signal={signal.id}
+      aria-labelledby={decorative ? undefined : titleId}
+      aria-hidden={decorative || undefined}
+      data-benefit-signal={decorative ? undefined : signal.id}
+      data-benefit-clone={decorative ? signal.id : undefined}
       data-benefit-width={signal.width}
     >
       {signal.stateTreatment === "badge" ? (
@@ -52,7 +59,7 @@ export function BenefitSignal({ signal }: { signal: BenefitSignalContent }) {
           {signal.state}
         </p>
       )}
-      <h3 id={titleId} className="mt-1.5 text-base font-black leading-5 tracking-[-0.018em] text-slate-950 dark:text-white sm:text-[1.05rem]">
+      <h3 id={decorative ? undefined : titleId} className="mt-1.5 text-base font-black leading-5 tracking-[-0.018em] text-slate-950 dark:text-white sm:text-[1.05rem]">
         {signal.headline}
       </h3>
       <p className="mt-1.5 text-xs leading-4 text-slate-600 dark:text-slate-300">

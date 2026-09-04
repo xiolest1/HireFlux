@@ -1,10 +1,35 @@
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { ProductBenefitsSection } from "./ProductBenefitsSection";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  benefitStreamPixelsPerSecond,
+  ProductBenefitsSection,
+} from "./ProductBenefitsSection";
 import { benefitSignals } from "./benefitsModel";
+
+function matchMedia(reducedMotion: boolean) {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      matches: query === "(prefers-reduced-motion: reduce)" && reducedMotion,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("ProductBenefitsSection", () => {
   it("renders the seven compact benefit signals in semantic order", () => {
+    matchMedia(true);
     const { container } = render(<ProductBenefitsSection />);
 
     const region = screen.getByRole("region", { name: "A clearer way through the search." });
@@ -30,13 +55,15 @@ describe("ProductBenefitsSection", () => {
     });
   });
 
-  it("uses one real static list without carousel or product-dashboard behavior", () => {
+  it("uses one real static list without carousel or product-dashboard behavior for reduced motion", () => {
+    matchMedia(true);
     const { container } = render(<ProductBenefitsSection />);
     const region = screen.getByRole("region", { name: "A clearer way through the search." });
 
     expect(container.querySelectorAll("[data-benefits-track]")).toHaveLength(1);
     expect(container.querySelectorAll("[data-benefit-signal]")).toHaveLength(7);
     expect(within(region).getByRole("region", { name: "Benefit signals" })).toHaveAttribute("tabindex", "0");
+    expect(within(region).getByRole("region", { name: "Benefit signals" })).toHaveAttribute("data-benefits-motion", "static");
     expect(container.querySelector("[data-benefit-clone]")).not.toBeInTheDocument();
     expect(container.querySelector("[data-benefit-visual]")).not.toBeInTheDocument();
     expect(within(region).queryByText("Illustrative product view")).not.toBeInTheDocument();
@@ -47,4 +74,94 @@ describe("ProductBenefitsSection", () => {
     expect(container.querySelector('[role="tab"]')).not.toBeInTheDocument();
     expect(container.querySelector("[data-active-benefit]")).not.toBeInTheDocument();
   });
+
+  it("keeps one semantic list while a hidden visual group supplies the ambient loop", () => {
+    matchMedia(false);
+    const { container } = render(<ProductBenefitsSection />);
+    const viewport = screen.getByRole("region", { name: "Benefit signals" });
+
+    expect(viewport).toHaveAttribute("data-benefits-motion", "ambient");
+    expect(viewport).not.toHaveAttribute("tabindex");
+    expect(container.querySelectorAll("ol")).toHaveLength(1);
+    expect(container.querySelectorAll("[data-benefit-signal]")).toHaveLength(7);
+    expect(container.querySelectorAll("[data-benefit-clone]")).toHaveLength(7);
+    expect(container.querySelector("[data-benefit-clone-group]")).toHaveAttribute("aria-hidden", "true");
+    expect(within(viewport).getAllByRole("article")).toHaveLength(7);
+    expect(container.querySelectorAll("[id^='benefit-signal-']")).toHaveLength(7);
+    expect(container.querySelector("[aria-live]")).not.toBeInTheDocument();
+  });
+
+  it("lets the user pause and explicitly resume ambient motion", () => {
+    matchMedia(false);
+    const { container } = render(<ProductBenefitsSection />);
+    const track = container.querySelector("[data-benefits-track]");
+
+    expect(track).toHaveAttribute("data-motion-state", "playing");
+    fireEvent.click(screen.getByRole("button", { name: "Pause benefit stream" }));
+    expect(track).toHaveAttribute("data-motion-state", "paused");
+    fireEvent.click(screen.getByRole("button", { name: "Play benefit stream" }));
+    expect(track).toHaveAttribute("data-motion-state", "playing");
+  });
+
+  it("derives exact translation and duration from the rendered real-group width", () => {
+    matchMedia(false);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      bottom: 126,
+      height: 126,
+      left: 0,
+      right: 2240,
+      top: 0,
+      width: 2240,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const { container } = render(<ProductBenefitsSection />);
+    const track = container.querySelector<HTMLElement>("[data-benefits-track]");
+
+    expect(track).toHaveAttribute("data-motion-ready", "true");
+    expect(track).toHaveAttribute("data-loop-distance", "2240.000");
+    expect(track).toHaveAttribute(
+      "data-loop-duration",
+      (2240 / benefitStreamPixelsPerSecond).toFixed(3),
+    );
+    expect(track?.style.getPropertyValue("--hf-benefits-loop-translation")).toBe("-2240px");
+  });
+
+  it("switches live motion-preference changes to a complete static fallback", () => {
+    let reducedMotion = false;
+    const listeners = new Set<() => void>();
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        get matches() {
+          return query === "(prefers-reduced-motion: reduce)" && reducedMotion;
+        },
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: (_type: string, listener: () => void) => listeners.add(listener),
+        removeEventListener: (_type: string, listener: () => void) => listeners.delete(listener),
+        dispatchEvent: vi.fn(),
+      })),
+    );
+    const { container } = render(<ProductBenefitsSection />);
+
+    expect(container.querySelectorAll("[data-benefit-clone]")).toHaveLength(7);
+    act(() => {
+      reducedMotion = true;
+      listeners.forEach((listener) => listener());
+    });
+
+    const viewport = screen.getByRole("region", { name: "Benefit signals" });
+    expect(viewport).toHaveAttribute("data-benefits-motion", "static");
+    expect(viewport).toHaveAttribute("tabindex", "0");
+    expect(container.querySelectorAll("[data-benefit-signal]")).toHaveLength(7);
+    expect(container.querySelector("[data-benefit-clone]")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /benefit stream/i })).not.toBeInTheDocument();
+    expect(container.querySelector("[data-benefits-track]")).not.toHaveAttribute("data-motion-ready");
+  });
+
 });
