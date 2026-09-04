@@ -4,7 +4,7 @@ import { useDemoSession } from "../auth/demoSessionContext";
 import { Button } from "../components/ui/Button";
 import { ErrorPanel } from "../components/ui/Feedback";
 import { ThemeToggle } from "../components/ui/ThemeToggle";
-import { DemoTrustStrip } from "../features/landing/DemoTrustStrip";
+import { ProductBenefitsSection } from "../features/landing/benefits/ProductBenefitsSection";
 import { HeroApplicationStory, LandingReveal } from "../features/landing/LandingProductStory";
 import { ScrollProductStory } from "../features/landing/ScrollProductStory";
 
@@ -77,7 +77,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <DemoTrustStrip />
+        <ProductBenefitsSection />
 
         <LandingReveal className="hf-scroll-story-reveal">
           <section className="mx-auto max-w-[90rem] min-w-0 px-4 py-16 sm:px-6 sm:py-24 lg:px-8" aria-labelledby="proof-title">

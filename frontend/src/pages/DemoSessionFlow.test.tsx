@@ -25,9 +25,8 @@ describe("demo workspace flow", () => {
     expect(
       screen.getByText("Start a demo workspace to explore the page."),
     ).toBeVisible();
-    expect(
-      screen.getByText(/Follow one coherent workflow across applications, interviews, notes, and analytics/),
-    ).toBeVisible();
+    const benefits = screen.getByRole("region", { name: "More than tracking applications." });
+    expect(within(benefits).getByRole("heading", { name: "Keep the whole search in view." })).toBeVisible();
     expect(screen.queryByText(/Sixteen fictional opportunities/i)).toBeNull();
   });
 

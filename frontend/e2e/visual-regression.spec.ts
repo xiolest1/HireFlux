@@ -634,7 +634,7 @@ test("adapted scroll story remains progressive, contained, and reversible", asyn
   await moveTo(0.55);
   await expect(story).toHaveAttribute("data-active-chapter", "preparation");
   await expect(stage.locator('[data-scroll-copy-stage="preparation"]')).toBeVisible();
-  await moveTo(0.3);
+  await moveTo(0.36);
   await expect(story).toHaveAttribute("data-active-chapter", "interviews");
   await expect(stage.locator('[data-scroll-copy-stage="interviews"]')).toBeVisible();
   await expectContained();
