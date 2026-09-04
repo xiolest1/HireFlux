@@ -1,9 +1,10 @@
-import { ArrowRight, Check, Layers3, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDemoSession } from "../auth/demoSessionContext";
 import { Button } from "../components/ui/Button";
 import { ErrorPanel } from "../components/ui/Feedback";
 import { ThemeToggle } from "../components/ui/ThemeToggle";
+import { DemoTrustStrip } from "../features/landing/DemoTrustStrip";
 import { HeroApplicationStory, LandingReveal } from "../features/landing/LandingProductStory";
 import { ScrollProductStory } from "../features/landing/ScrollProductStory";
 
@@ -76,17 +77,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <LandingReveal>
-          <section className="border-y border-line bg-surface dark:border-slate-800 dark:bg-slate-900/80" aria-label="Demo guarantees">
-            <div className="mx-auto grid max-w-7xl gap-px bg-line dark:bg-slate-800 sm:grid-cols-3">
-              {[
-                [ShieldCheck, "Isolated by design", "Every visitor receives a separate temporary workspace."],
-                [Layers3, "Ready to explore", "Follow one coherent workflow across applications, interviews, notes, and analytics."],
-                [Check, "Safe to experiment", "Edit, archive, restore, or reset without affecting anyone else."],
-              ].map(([Icon, title, description]) => <article key={String(title)} className="min-w-0 bg-surface px-6 py-9 dark:bg-slate-900 lg:px-8" data-landing-clip-check><Icon aria-hidden="true" className="size-5 text-brand-700" /><h2 className="mt-4 font-bold text-ink dark:text-white">{String(title)}</h2><p className="mt-2 text-sm leading-6 text-ink-muted dark:text-slate-300">{String(description)}</p></article>)}
-            </div>
-          </section>
-        </LandingReveal>
+        <DemoTrustStrip />
 
         <LandingReveal className="hf-scroll-story-reveal">
           <section className="mx-auto max-w-[90rem] min-w-0 px-4 py-16 sm:px-6 sm:py-24 lg:px-8" aria-labelledby="proof-title">
