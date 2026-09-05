@@ -1,10 +1,8 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  benefitStreamPixelsPerSecond,
-  ProductBenefitsSection,
-} from "./ProductBenefitsSection";
+import { ProductBenefitsSection } from "./ProductBenefitsSection";
 import { benefitSignals } from "./benefitsModel";
+import { benefitStreamPixelsPerSecond } from "./useBenefitsStream";
 
 function matchMedia(reducedMotion: boolean) {
   vi.stubGlobal(
@@ -89,6 +87,14 @@ describe("ProductBenefitsSection", () => {
     expect(within(viewport).getAllByRole("article")).toHaveLength(7);
     expect(container.querySelectorAll("[id^='benefit-signal-']")).toHaveLength(7);
     expect(container.querySelector("[aria-live]")).not.toBeInTheDocument();
+    const controls = screen.getByRole("group", { name: "Benefit stream controls" });
+    expect(within(controls).getAllByRole("button")).toHaveLength(3);
+    expect(within(controls).getByRole("button", { name: "Previous benefit" })).toHaveAttribute(
+      "aria-controls",
+      "benefit-signals-viewport",
+    );
+    expect(within(controls).getByRole("button", { name: "Pause benefit stream" })).toBeEnabled();
+    expect(within(controls).getByRole("button", { name: "Next benefit" })).toBeEnabled();
   });
 
   it("lets the user pause and explicitly resume ambient motion", () => {
@@ -96,11 +102,11 @@ describe("ProductBenefitsSection", () => {
     const { container } = render(<ProductBenefitsSection />);
     const track = container.querySelector("[data-benefits-track]");
 
-    expect(track).toHaveAttribute("data-motion-state", "playing");
+    expect(track).toHaveAttribute("data-motion-state", "ambient");
     fireEvent.click(screen.getByRole("button", { name: "Pause benefit stream" }));
     expect(track).toHaveAttribute("data-motion-state", "paused");
     fireEvent.click(screen.getByRole("button", { name: "Play benefit stream" }));
-    expect(track).toHaveAttribute("data-motion-state", "playing");
+    expect(track).toHaveAttribute("data-motion-state", "ambient");
   });
 
   it("derives exact translation and duration from the rendered real-group width", () => {
@@ -162,6 +168,90 @@ describe("ProductBenefitsSection", () => {
     expect(container.querySelector("[data-benefit-clone]")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /benefit stream/i })).not.toBeInTheDocument();
     expect(container.querySelector("[data-benefits-track]")).not.toHaveAttribute("data-motion-ready");
+  });
+
+  it("coordinates passive visibility, document, and focus ownership and cleans up listeners", () => {
+    matchMedia(false);
+    let intersectionCallback: IntersectionObserverCallback | undefined;
+    const intersectionDisconnect = vi.fn();
+    const intersectionObserve = vi.fn();
+    const intersectionOptions: IntersectionObserverInit[] = [];
+    class IntersectionObserverMock {
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        intersectionCallback = callback;
+        intersectionOptions.push(options ?? {});
+      }
+
+      observe = intersectionObserve;
+      unobserve = vi.fn();
+      disconnect = intersectionDisconnect;
+      takeRecords = vi.fn(() => []);
+      root = null;
+      rootMargin = "0px";
+      thresholds = [0.5];
+    }
+    vi.stubGlobal(
+      "IntersectionObserver",
+      IntersectionObserverMock as unknown as typeof IntersectionObserver,
+    );
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      bottom: 126,
+      height: 126,
+      left: 0,
+      right: 2240,
+      top: 0,
+      width: 2240,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    let visibility: DocumentVisibilityState = "visible";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+    const removeListener = vi.spyOn(document, "removeEventListener");
+
+    const { container, unmount } = render(<ProductBenefitsSection />);
+    const track = container.querySelector("[data-benefits-track]");
+    expect(intersectionOptions).toEqual([{ threshold: 0.5 }]);
+
+    act(() => {
+      intersectionCallback?.(
+        [{ isIntersecting: false, intersectionRatio: 0.49 } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    });
+    expect(track).toHaveAttribute("data-passively-blocked", "true");
+    act(() => {
+      intersectionCallback?.(
+        [{ isIntersecting: true, intersectionRatio: 0.51 } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    });
+    expect(track).toHaveAttribute("data-passively-blocked", "false");
+
+    const next = screen.getByRole("button", { name: "Next benefit" });
+    fireEvent.focus(next);
+    expect(track).toHaveAttribute("data-passively-blocked", "true");
+    fireEvent.click(next);
+    expect(track).toHaveAttribute("data-motion-state", "manual");
+    fireEvent.click(screen.getByRole("button", { name: "Play benefit stream" }));
+    expect(track).toHaveAttribute("data-motion-state", "ambient");
+    expect(track).toHaveAttribute("data-passively-blocked", "false");
+
+    act(() => {
+      visibility = "hidden";
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(track).toHaveAttribute("data-passively-blocked", "true");
+    act(() => {
+      visibility = "visible";
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(track).toHaveAttribute("data-passively-blocked", "false");
+
+    unmount();
+    expect(intersectionObserve).toHaveBeenCalledTimes(1);
+    expect(intersectionDisconnect).toHaveBeenCalledTimes(1);
+    expect(removeListener).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
   });
 
 });

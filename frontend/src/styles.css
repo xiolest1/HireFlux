@@ -514,13 +514,27 @@
   }
 }
 
-.hf-benefits-track[data-motion-ready="true"] {
-  animation: hf-benefits-stream var(--hf-benefits-loop-duration) linear infinite;
+.hf-benefits-track[data-motion-ready="true"][data-motion-state="ambient"],
+.hf-benefits-track[data-motion-ready="true"][data-motion-state="paused"] {
+  animation-name: hf-benefits-stream;
+  animation-duration: var(--hf-benefits-loop-duration);
+  animation-timing-function: linear;
+  animation-delay: var(--hf-benefits-loop-delay, 0s);
+  animation-iteration-count: infinite;
   will-change: transform;
 }
 
 .hf-benefits-track[data-motion-state="paused"] {
   animation-play-state: paused;
+}
+
+.hf-benefits-track[data-passively-blocked="true"] {
+  animation-play-state: paused;
+}
+
+.hf-benefits-track[data-motion-state="manual"] {
+  animation: none;
+  will-change: transform;
 }
 
 .hf-benefits-track[data-motion-ready="true"][data-motion-test="frozen"] {

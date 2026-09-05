@@ -1,5 +1,77 @@
 # HireFlux development log
 
+## 2026-09-04 — B6R deterministic benefit-stream ownership
+
+Completed the benefit stream's transition from passive B5R motion to explicit
+manual navigation without turning the feature into a generic carousel. The
+landing-specific `useBenefitsStream` controller now owns ambient, paused,
+manual, and reduced/static modes; measured geometry; Previous/Next stepping;
+transition serialization; clone normalization; resize synchronization; and
+the intersection, document-visibility, and focus lifecycles. The section
+component is limited to semantic composition, the one real list plus its
+decorative clone, three 44px controls, and controller ref/state/action wiring.
+No dependency, product copy, signal order, card geometry, or Connected
+Workspace behavior changed.
+
+The first manual action freezes the CSS loop at its current transform and
+compares each signal's leading border edge with the viewport's stable leading
+content inset. Distance is absolute horizontal distance. Ties within 0.25px
+always choose the later rendered signal in stream direction. Focused tests
+cover immediately before, exactly/near, and immediately after a midpoint, plus
+20 repeated resolutions of identical midpoint geometry to the same requested
+destination. Previous and Next then move exactly one logical signal in 360ms;
+all three controls lock during that transition. Wraparound normalizes the
+visual clone coordinate back to the matching logical phase without exposing a
+second semantic list. Browser coverage also inspects the reverse clone-A → G
+keyframes directly, confirming a short rightward adjacent step rather than a
+full-stream traversal.
+
+Play from manual mode derives a negative CSS-animation delay from the exact
+settled transform before removing manual transform ownership. Production
+browser coverage freezes the ambient stream at -384px, requests Next, settles
+on `context-continuity`, and then samples Play immediately, through a live
+directional interval, and through a deterministic 300ms animation-time
+interval. The first resumed sample differs from the settled coordinate by less
+than 3px and never moves right; the controlled interval travels exactly 8.4px,
+confirming the 28px/s target without depending on runner scheduling.
+The same chain then advances the animation to the phase-adjusted G → A seam;
+the pre/post-reset positions remain within 0.1px. There is no opacity masking,
+old animation restoration, spacing change, or whole-rail hover pause.
+
+Ambient motion pauses passively while less than 50% of the section is visible,
+while the document is hidden, or while keyboard focus is inside the section.
+An explicit Play overrides focus-only blocking, but never visibility or hidden-
+document blocking. Repeated 120ms slow-scroll probes around the 50% boundary
+produced only alternating real state changes, no duplicate observer writes,
+and no visible stutter, so hysteresis was not added. A resize during a manual
+transition cancels stale coordinates and settles the selected logical signal
+against newly measured geometry; a settled manual resize likewise remains
+aligned before a seamless Play handoff. All observers, listeners, resize
+ownership, and Web Animations are scoped and cleaned up on preference changes
+and unmount. Reduced motion still renders only the seven-item static,
+keyboard-scrollable list with no controls, clone, CSS animation, or observer.
+
+The two existing frozen stream references were intentionally refreshed for
+the three-control composition, and deterministic manual endpoint references
+were added at dark 1280px and 390px. Desktop keeps the controls compact beside
+the heading; mobile gives them a separate row. Both endpoints preserve the
+stable content inset, visible stream direction, fixed signal height, and page
+containment. Light/dark, 320, 390, 768, 1024, 1280, reduced-motion, focus,
+hover, resize, accessibility, overflow, and authenticated lazy-route isolation
+coverage remain green.
+
+ESLint and TypeScript pass. All 205 Vitest tests, the focused 13-test
+accessibility suite, three hosting-header tests, and the complete Playwright/
+Axe matrix pass (144 passed, 76 intentional project-filtered skips).
+`git diff --check` is clean.
+
+Against B5R, the production main entry moves from 282.87 / 84.76 to
+282.92 / 84.79 kB raw/gzip (+0.05 / +0.03). The lazy landing chunk moves from
+168.54 / 58.97 to 174.40 / 60.82 kB (+5.86 / +1.85), and CSS moves from
+118.15 / 19.21 to 118.50 / 19.29 kB (+0.35 / +0.08). The controller remains
+inside the lazy landing dependency graph. No generated `dist` artifact is
+committed.
+
 ## 2026-09-04 — B5R ambient benefit signal stream
 
 Advanced the approved B4R value stream from a static proof to one calm,

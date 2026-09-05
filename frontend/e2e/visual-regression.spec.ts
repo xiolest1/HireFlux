@@ -279,6 +279,16 @@ test("ambient benefit stream loops on exact measured geometry and remains explic
   expect(Math.abs(geometry.seamGap - geometry.ordinaryGap)).toBeLessThan(0.1);
   expect(Math.abs(geometry.distance / geometry.duration - 28)).toBeLessThan(0.1);
 
+  await region.scrollIntoViewIfNeeded();
+  await expect(track).toHaveAttribute("data-passively-blocked", "false");
+  const pause = region.getByRole("button", { name: "Pause benefit stream" });
+  await pause.click();
+  await expect(track).toHaveAttribute("data-motion-state", "paused");
+  await expect(track).toHaveCSS("animation-play-state", "paused");
+  await region.getByRole("button", { name: "Play benefit stream" }).click();
+  await expect(track).toHaveAttribute("data-motion-state", "ambient");
+  await expect(track).toHaveCSS("animation-play-state", "running");
+
   const seamContinuity = await track.evaluate((element) => {
     const animation = element.getAnimations()[0];
     const durationMs = Number(element.dataset.loopDuration) * 1_000;
@@ -295,14 +305,6 @@ test("ambient benefit stream loops on exact measured geometry and remains explic
   });
   expect(Math.abs(seamContinuity.before - seamContinuity.after)).toBeLessThan(0.1);
   expect(Math.abs(seamContinuity.after - seamContinuity.afterThreeCycles)).toBeLessThan(0.1);
-
-  const pause = region.getByRole("button", { name: "Pause benefit stream" });
-  await pause.click();
-  await expect(track).toHaveAttribute("data-motion-state", "paused");
-  await expect(track).toHaveCSS("animation-play-state", "paused");
-  await region.getByRole("button", { name: "Play benefit stream" }).click();
-  await expect(track).toHaveAttribute("data-motion-state", "playing");
-  await expect(track).toHaveCSS("animation-play-state", "running");
 
   const accessibility = await new AxeBuilder({ page })
     .include("[data-product-benefits]")
@@ -329,6 +331,262 @@ test("ambient benefit stream visual is frozen at one deterministic coordinate", 
   const x = await track.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).m41);
   expect(x).toBe(-384);
   await expect(region).toHaveScreenshot("benefit-stream-frozen.png");
+});
+
+test("manual benefit stream endpoint is visually deterministic", async ({
+  page,
+}, testInfo) => {
+  test.skip(!["mobile-390", "desktop-1280"].includes(testInfo.project.name));
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const track = region.locator("[data-benefits-track]");
+  await region.scrollIntoViewIfNeeded();
+  await expect(track).toHaveAttribute("data-passively-blocked", "false");
+  await track.evaluate((element) => {
+    const animation = element.getAnimations()[0];
+    animation.pause();
+    animation.currentTime = (384 / 28) * 1_000;
+  });
+  await region.getByRole("button", { name: "Next benefit" }).click();
+  await expect(track).toHaveAttribute("data-manual-signal", "context-continuity");
+  await expect(region.getByRole("button", { name: "Next benefit" })).toBeEnabled();
+  await expect(region).toHaveScreenshot("benefit-stream-manual.png");
+});
+
+test("manual benefit stream remains usable and accessible in the light theme", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const track = region.locator("[data-benefits-track]");
+  await region.scrollIntoViewIfNeeded();
+  await region.getByRole("button", { name: "Next benefit" }).click();
+  await expect(track).toHaveAttribute("data-motion-state", "manual");
+  await expect(region.getByRole("button", { name: "Next benefit" })).toBeEnabled();
+  const accessibility = await new AxeBuilder({ page })
+    .include("[data-product-benefits]")
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+  await expectNoHorizontalPageOverflow(page);
+});
+
+test("benefit stream transfers ownership from ambient to manual and back without a phase jump", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const viewport = region.locator("[data-benefits-viewport]");
+  const track = region.locator("[data-benefits-track]");
+  await region.scrollIntoViewIfNeeded();
+  await expect(track).toHaveAttribute("data-motion-ready", "true");
+  await expect(track).toHaveAttribute("data-passively-blocked", "false");
+
+  const frozenOffset = await track.evaluate((element) => {
+    const animation = element.getAnimations()[0];
+    animation.pause();
+    animation.currentTime = (384 / 28) * 1_000;
+    return new DOMMatrix(getComputedStyle(element).transform).m41;
+  });
+  expect(Math.abs(frozenOffset + 384)).toBeLessThan(0.1);
+
+  await region.getByRole("button", { name: "Next benefit" }).click();
+  await expect(track).toHaveAttribute("data-motion-state", "manual");
+  await expect(track).toHaveAttribute("data-manual-signal", "context-continuity");
+  await expect(region.getByRole("button", { name: "Next benefit" })).toBeDisabled();
+  await expect(region.getByRole("button", { name: "Next benefit" })).toBeEnabled();
+
+  const settled = await track.evaluate((element) => {
+    const matrix = new DOMMatrix(getComputedStyle(element).transform);
+    const viewport = element.closest<HTMLElement>("[data-benefits-viewport]")!;
+    const realGroup = element.querySelector<HTMLElement>("[data-benefit-real-group]")!;
+    const real = element.querySelector<HTMLElement>("[data-benefit-signal='context-continuity']")!;
+    const clone = element.querySelector<HTMLElement>("[data-benefit-clone='context-continuity']")!;
+    const anchor = viewport.getBoundingClientRect().left + realGroup.offsetLeft;
+    const signalLefts = [real, clone].map((signal) => signal.getBoundingClientRect().left);
+    return {
+      x: matrix.m41,
+      anchor,
+      nearestSignalLeft: signalLefts.sort((a, b) => Math.abs(a - anchor) - Math.abs(b - anchor))[0],
+    };
+  });
+  expect(settled.x).toBeLessThan(frozenOffset);
+  expect(Math.abs(settled.nearestSignalLeft - settled.anchor)).toBeLessThan(0.1);
+
+  const play = region.getByRole("button", { name: "Play benefit stream" });
+  await play.click();
+  await expect(track).toHaveAttribute("data-motion-state", "ambient");
+  await expect(track).toHaveAttribute("data-passively-blocked", "false");
+  const resumed = await track.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).m41);
+  expect(resumed).toBeLessThanOrEqual(settled.x);
+  expect(Math.abs(resumed - settled.x)).toBeLessThan(3);
+
+  const travel = await track.evaluate(async (element) => {
+    const liveStartX = new DOMMatrix(getComputedStyle(element).transform).m41;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const liveEndX = new DOMMatrix(getComputedStyle(element).transform).m41;
+    const animation = element.getAnimations()[0];
+    animation.pause();
+    await animation.ready;
+    const controlledStartX = new DOMMatrix(getComputedStyle(element).transform).m41;
+    animation.currentTime = Number(animation.currentTime) + 300;
+    const controlledEndX = new DOMMatrix(getComputedStyle(element).transform).m41;
+    animation.play();
+    return { liveStartX, liveEndX, controlledStartX, controlledEndX };
+  });
+  expect(travel.liveEndX).toBeLessThan(travel.liveStartX);
+  expect(Math.abs(travel.controlledStartX - travel.controlledEndX - 8.4)).toBeLessThan(0.1);
+
+  await viewport.hover();
+  const hoverTravel = await track.evaluate(async (element) => {
+    const startX = new DOMMatrix(getComputedStyle(element).transform).m41;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const endX = new DOMMatrix(getComputedStyle(element).transform).m41;
+    return { startX, endX };
+  });
+  expect(hoverTravel.endX).toBeLessThan(hoverTravel.startX);
+
+  const seam = await track.evaluate((element) => {
+    const animation = element.getAnimations()[0];
+    const durationMs = Number(element.dataset.loopDuration) * 1_000;
+    const delayMs = Number.parseFloat(getComputedStyle(element).animationDelay) * 1_000;
+    const seamTime = ((durationMs + delayMs) % durationMs + durationMs) % durationMs;
+    const realA = element.querySelector<HTMLElement>("[data-benefit-signal='search-perspective']")!;
+    const cloneA = element.querySelector<HTMLElement>("[data-benefit-clone='search-perspective']")!;
+    animation.pause();
+    animation.currentTime = seamTime - 0.5;
+    const before = cloneA.getBoundingClientRect().left;
+    animation.currentTime = seamTime + 0.5;
+    const after = realA.getBoundingClientRect().left;
+    return { before, after };
+  });
+  expect(Math.abs(seam.before - seam.after)).toBeLessThan(0.1);
+  await expectNoHorizontalPageOverflow(page);
+});
+
+test("benefit stream steps one signal in either direction and wraps without clone ambiguity", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const track = region.locator("[data-benefits-track]");
+  await region.scrollIntoViewIfNeeded();
+  await expect(track).toHaveAttribute("data-passively-blocked", "false");
+  await track.evaluate((element) => {
+    const animation = element.getAnimations()[0];
+    animation.pause();
+    animation.currentTime = 0;
+  });
+
+  await region.getByRole("button", { name: "Previous benefit" }).click();
+  await expect(track).toHaveAttribute("data-manual-signal", "search-movement");
+  await expect(region.getByRole("button", { name: "Previous benefit" })).toBeEnabled();
+  await region.getByRole("button", { name: "Next benefit" }).click();
+  await expect(track).toHaveAttribute("data-manual-signal", "search-perspective");
+  await expect(region.getByRole("button", { name: "Next benefit" })).toBeEnabled();
+
+  const alignment = await track.evaluate((element) => {
+    const viewport = element.closest<HTMLElement>("[data-benefits-viewport]")!;
+    const realGroup = element.querySelector<HTMLElement>("[data-benefit-real-group]")!;
+    const trackRect = element.getBoundingClientRect();
+    const anchor = viewport.getBoundingClientRect().left
+      + realGroup.getBoundingClientRect().left - trackRect.left;
+    const real = element.querySelector<HTMLElement>("[data-benefit-signal='search-perspective']")!;
+    const clone = element.querySelector<HTMLElement>("[data-benefit-clone='search-perspective']")!;
+    return Math.min(
+      Math.abs(real.getBoundingClientRect().left - anchor),
+      Math.abs(clone.getBoundingClientRect().left - anchor),
+    );
+  });
+  expect(alignment).toBeLessThan(0.1);
+
+  await region.getByRole("button", { name: "Previous benefit" }).click();
+  const reverseWrap = await track.evaluate((element) => {
+    const animation = element.getAnimations()[0];
+    const frames = (animation.effect as KeyframeEffect).getKeyframes();
+    const start = new DOMMatrix(String(frames[0].transform)).m41;
+    const end = new DOMMatrix(String(frames.at(-1)?.transform)).m41;
+    return { start, end };
+  });
+  expect(reverseWrap.end).toBeGreaterThan(reverseWrap.start);
+  expect(reverseWrap.end - reverseWrap.start).toBeLessThan(700);
+  await expect(track).toHaveAttribute("data-manual-signal", "search-movement");
+  await expect(region.getByRole("button", { name: "Previous benefit" })).toBeEnabled();
+});
+
+test("manual signal ownership survives responsive geometry changes before Play", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile-390");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const track = region.locator("[data-benefits-track]");
+  await region.scrollIntoViewIfNeeded();
+  await expect(track).toHaveAttribute("data-motion-ready", "true");
+  await track.evaluate((element) => {
+    const animation = element.getAnimations()[0];
+    animation.pause();
+    animation.currentTime = (384 / 28) * 1_000;
+  });
+  await region.getByRole("button", { name: "Next benefit" }).click();
+  await page.setViewportSize({ width: 320, height: 720 });
+  await expect(track).toHaveAttribute("data-manual-signal", "context-continuity");
+  await expect(region.getByRole("button", { name: "Next benefit" })).toBeEnabled();
+
+  await expect.poll(() => track.getAttribute("data-loop-distance")).not.toBe("2338.000");
+  const settledX = await track.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).m41);
+  await region.getByRole("button", { name: "Play benefit stream" }).click();
+  const resumedX = await track.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).m41);
+  expect(resumedX).toBeLessThanOrEqual(settledX);
+  expect(Math.abs(resumedX - settledX)).toBeLessThan(3);
+  await expectNoHorizontalPageOverflow(page);
+});
+
+test("benefit stream visibility threshold remains stable during slow boundary crossings", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const track = region.locator("[data-benefits-track]");
+  await expect(track).toHaveAttribute("data-motion-ready", "true");
+  const boundary = await region.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.top + window.scrollY + rect.height * 0.5;
+  });
+  await track.evaluate((element) => {
+    const changes: string[] = [];
+    (window as typeof window & { benefitVisibilityChanges?: string[] }).benefitVisibilityChanges = changes;
+    new MutationObserver(() => changes.push(element.dataset.passivelyBlocked ?? "missing"))
+      .observe(element, { attributes: true, attributeFilter: ["data-passively-blocked"] });
+  });
+
+  for (const offset of [-3, -1, 1, 3, 1, -1, -3]) {
+    await page.evaluate((y) => window.scrollTo(0, y), boundary + offset);
+    await page.waitForTimeout(120);
+  }
+
+  const changes = await page.evaluate(
+    () => (window as typeof window & { benefitVisibilityChanges?: string[] }).benefitVisibilityChanges ?? [],
+  );
+  expect(changes.length).toBeGreaterThanOrEqual(2);
+  expect(changes.every((value, index) => index === 0 || value !== changes[index - 1])).toBe(true);
+  expect(changes.length).toBeLessThanOrEqual(4);
+  await expectNoHorizontalPageOverflow(page);
 });
 
 test("desktop scroll story reorganizes one workspace and releases from Action Center", async ({
