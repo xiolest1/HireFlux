@@ -1,5 +1,47 @@
 # HireFlux development log
 
+## 2026-09-04 — B7R peripheral benefit-stream edge fade
+
+Softened the Product Benefits stream's hard clipping boundary with one
+responsive CSS alpha mask scoped only to the moving viewport. The fade is
+10px at 320–430px, 18px from 640px, and 24px from 1024px. Those widths remain
+smaller than the corresponding 16px, 24px, and 32px stream content insets, so
+a manually presented signal begins in the fully opaque reading region rather
+than inside the dissolve. No card width, typography, spacing, controller
+state, transform, velocity, loop distance, or G → A seam geometry changed.
+
+The mask class exists only in normal-motion rendering. The eyebrow, headline,
+Previous/Pause-or-Play/Next controls, and neighboring landing content are all
+outside the masked node and retain `mask-image: none`. The treatment uses no
+overlay, creates no pointer interception, and derives its appearance from
+alpha rather than a theme-specific background color, giving light and dark
+themes the same fade geometry and strength. Reduced motion keeps its native
+horizontal overflow, scrollbar, and focusable viewport with no mask, ensuring
+that its inset focus ring cannot be clipped. Keyboard focus-visible coverage
+also confirms the normal-motion controls' 3px outline remains fully visible.
+
+Production-browser geometry checks cover 320, 390, 430, 768, 1024, and 1280px.
+At every size, the selected `context-continuity` signal clears both fade zones
+by at least 4px; mobile therefore retains one complete signal plus a restrained
+continuation preview. Moving-state checks retain leftward travel, explicit
+pause/manual ownership, and exact 28px/s geometry. The B6R deterministic
+visual architecture remains authoritative: screenshots still use the real
+production track at the fixed -384px coordinate or a fully settled manual
+endpoint. Only the four benefit-stream references were intentionally
+refreshed; hero, Connected Workspace, and full landing references remain
+unchanged.
+
+ESLint and TypeScript pass. All 205 Vitest tests, the focused 13-test
+accessibility suite, three hosting-header tests, and the complete Playwright/
+Axe matrix pass (149 passed, 76 intentional project-filtered skips).
+`git diff --check` is clean.
+
+Against B6R, the production main entry remains 282.92 / 84.79 kB raw/gzip.
+The lazy landing chunk moves from 174.40 / 60.82 to 174.44 / 60.84 kB
+(+0.04 / +0.02), and CSS moves from 118.50 / 19.29 to 119.63 / 19.39 kB
+(+1.13 / +0.10). No dependency changed and no generated `dist` artifact is
+committed.
+
 ## 2026-09-04 — B6R deterministic benefit-stream ownership
 
 Completed the benefit stream's transition from passive B5R motion to explicit

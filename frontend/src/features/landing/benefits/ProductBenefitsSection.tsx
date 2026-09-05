@@ -59,7 +59,7 @@ export function ProductBenefitsSection() {
       <div
         ref={stream.viewportRef}
         id="benefit-signals-viewport"
-        className={`hf-benefits-viewport -mx-4 mt-6 pb-2 ${reducedMotion ? "overflow-x-auto overscroll-x-contain outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas" : "overflow-hidden"} sm:-mx-6 lg:-mx-8`}
+        className={`hf-benefits-viewport -mx-4 mt-6 pb-2 ${reducedMotion ? "overflow-x-auto overscroll-x-contain outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas" : "hf-benefits-edge-fade overflow-hidden"} sm:-mx-6 lg:-mx-8`}
         role="region"
         aria-label="Benefit signals"
         tabIndex={reducedMotion ? 0 : undefined}

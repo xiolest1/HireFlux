@@ -62,6 +62,7 @@ describe("ProductBenefitsSection", () => {
     expect(container.querySelectorAll("[data-benefit-signal]")).toHaveLength(7);
     expect(within(region).getByRole("region", { name: "Benefit signals" })).toHaveAttribute("tabindex", "0");
     expect(within(region).getByRole("region", { name: "Benefit signals" })).toHaveAttribute("data-benefits-motion", "static");
+    expect(within(region).getByRole("region", { name: "Benefit signals" })).not.toHaveClass("hf-benefits-edge-fade");
     expect(container.querySelector("[data-benefit-clone]")).not.toBeInTheDocument();
     expect(container.querySelector("[data-benefit-visual]")).not.toBeInTheDocument();
     expect(within(region).queryByText("Illustrative product view")).not.toBeInTheDocument();
@@ -80,6 +81,7 @@ describe("ProductBenefitsSection", () => {
 
     expect(viewport).toHaveAttribute("data-benefits-motion", "ambient");
     expect(viewport).not.toHaveAttribute("tabindex");
+    expect(viewport).toHaveClass("hf-benefits-edge-fade");
     expect(container.querySelectorAll("ol")).toHaveLength(1);
     expect(container.querySelectorAll("[data-benefit-signal]")).toHaveLength(7);
     expect(container.querySelectorAll("[data-benefit-clone]")).toHaveLength(7);
@@ -95,6 +97,7 @@ describe("ProductBenefitsSection", () => {
     );
     expect(within(controls).getByRole("button", { name: "Pause benefit stream" })).toBeEnabled();
     expect(within(controls).getByRole("button", { name: "Next benefit" })).toBeEnabled();
+    expect(viewport.contains(controls)).toBe(false);
   });
 
   it("lets the user pause and explicitly resume ambient motion", () => {

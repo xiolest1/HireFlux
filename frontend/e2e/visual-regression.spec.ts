@@ -233,6 +233,121 @@ test("static benefit signals stay compact, semantic, and internally contained", 
   expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
   expect(geometry.sectionHeight).toBeGreaterThanOrEqual(250);
   expect(geometry.sectionHeight).toBeLessThanOrEqual(320);
+  expect(await viewport.evaluate((element) => getComputedStyle(element).maskImage)).toBe("none");
+  await expectNoHorizontalPageOverflow(page);
+});
+
+test("benefit edge fade stays peripheral and scoped to the moving viewport", async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const expectedFade = {
+    "narrow-320": 10,
+    "mobile-390": 10,
+    "tablet-768": 18,
+    "desktop-1024": 24,
+    "desktop-1280": 24,
+  }[testInfo.project.name];
+  expect(expectedFade).toBeDefined();
+
+  const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const viewport = region.locator("[data-benefits-viewport]");
+  const track = region.locator("[data-benefits-track]");
+  const controls = region.getByRole("group", { name: "Benefit stream controls" });
+  await region.scrollIntoViewIfNeeded();
+  await expect(track).toHaveAttribute("data-passively-blocked", "false");
+
+  const scope = await region.evaluate((element) => {
+    const viewport = element.querySelector<HTMLElement>("[data-benefits-viewport]")!;
+    const intro = element.querySelector<HTMLElement>("#product-benefits-title")!;
+    const controls = element.querySelector<HTMLElement>("[aria-label='Benefit stream controls']")!;
+    const button = controls.querySelector<HTMLElement>("button")!;
+    return {
+      fade: Number.parseFloat(
+        getComputedStyle(viewport).getPropertyValue("--hf-benefits-edge-fade-size"),
+      ),
+      viewportMask: getComputedStyle(viewport).maskImage,
+      introMask: getComputedStyle(intro).maskImage,
+      controlsMask: getComputedStyle(controls).maskImage,
+      buttonMask: getComputedStyle(button).maskImage,
+      controlsInsideViewport: viewport.contains(controls),
+    };
+  });
+  expect(scope.fade).toBe(expectedFade);
+  expect(scope.viewportMask).not.toBe("none");
+  expect(scope.introMask).toBe("none");
+  expect(scope.controlsMask).toBe("none");
+  expect(scope.buttonMask).toBe("none");
+  expect(scope.controlsInsideViewport).toBe(false);
+
+  await track.evaluate((element) => {
+    const animation = element.getAnimations()[0];
+    animation.pause();
+    animation.currentTime = (384 / 28) * 1_000;
+  });
+  await region.getByRole("button", { name: "Next benefit" }).click();
+  await expect(track).toHaveAttribute("data-manual-signal", "context-continuity");
+  await expect(region.getByRole("button", { name: "Next benefit" })).toBeEnabled();
+
+  const readability = await viewport.evaluate((element) => {
+    const viewportRect = element.getBoundingClientRect();
+    const fade = Number.parseFloat(
+      getComputedStyle(element).getPropertyValue("--hf-benefits-edge-fade-size"),
+    );
+    const signals = Array.from(
+      element.querySelectorAll<HTMLElement>(
+        "[data-benefit-signal='context-continuity'], [data-benefit-clone='context-continuity']",
+      ),
+    );
+    const signalRect = signals
+      .map((signal) => signal.getBoundingClientRect())
+      .sort((a, b) => {
+        const aVisible = Math.max(0, Math.min(a.right, viewportRect.right) - Math.max(a.left, viewportRect.left));
+        const bVisible = Math.max(0, Math.min(b.right, viewportRect.right) - Math.max(b.left, viewportRect.left));
+        return bVisible - aVisible;
+      })[0];
+    return {
+      leftClearance: signalRect.left - (viewportRect.left + fade),
+      rightClearance: viewportRect.right - fade - signalRect.right,
+    };
+  });
+  expect(readability.leftClearance).toBeGreaterThanOrEqual(4);
+  expect(readability.rightClearance).toBeGreaterThanOrEqual(4);
+
+  const previous = controls.getByRole("button", { name: "Previous benefit" });
+  await previous.focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(previous).toBeFocused();
+  expect(await previous.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe("solid");
+
+  if (testInfo.project.name === "desktop-1280") {
+    await page.setViewportSize({ width: 430, height: 932 });
+    await expect.poll(() => viewport.evaluate((element) =>
+      getComputedStyle(element).getPropertyValue("--hf-benefits-edge-fade-size").trim())).toBe("10px");
+    const mobileClearance = await viewport.evaluate((element) => {
+      const viewportRect = element.getBoundingClientRect();
+      const fade = Number.parseFloat(
+        getComputedStyle(element).getPropertyValue("--hf-benefits-edge-fade-size"),
+      );
+      const signals = Array.from(
+        element.querySelectorAll<HTMLElement>(
+          "[data-benefit-signal='context-continuity'], [data-benefit-clone='context-continuity']",
+        ),
+      );
+      const signalRect = signals
+        .map((signal) => signal.getBoundingClientRect())
+        .sort((a, b) => Math.abs(a.left - viewportRect.left) - Math.abs(b.left - viewportRect.left))[0];
+      return {
+        left: signalRect.left - (viewportRect.left + fade),
+        right: viewportRect.right - fade - signalRect.right,
+      };
+    });
+    expect(mobileClearance.left).toBeGreaterThanOrEqual(4);
+    expect(mobileClearance.right).toBeGreaterThanOrEqual(4);
+  }
   await expectNoHorizontalPageOverflow(page);
 });
 
@@ -363,8 +478,12 @@ test("manual benefit stream remains usable and accessible in the light theme", a
   await page.goto("/");
 
   const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const viewport = region.locator("[data-benefits-viewport]");
   const track = region.locator("[data-benefits-track]");
   await region.scrollIntoViewIfNeeded();
+  expect(await viewport.evaluate((element) => getComputedStyle(element).maskImage)).not.toBe("none");
+  expect(await viewport.evaluate((element) =>
+    getComputedStyle(element).getPropertyValue("--hf-benefits-edge-fade-size").trim())).toBe("24px");
   await region.getByRole("button", { name: "Next benefit" }).click();
   await expect(track).toHaveAttribute("data-motion-state", "manual");
   await expect(region.getByRole("button", { name: "Next benefit" })).toBeEnabled();

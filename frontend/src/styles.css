@@ -508,6 +508,38 @@
   scrollbar-width: thin;
 }
 
+.hf-benefits-edge-fade {
+  --hf-benefits-edge-fade-size: 10px;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black var(--hf-benefits-edge-fade-size),
+    black calc(100% - var(--hf-benefits-edge-fade-size)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black var(--hf-benefits-edge-fade-size),
+    black calc(100% - var(--hf-benefits-edge-fade-size)),
+    transparent 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+@media (min-width: 40rem) {
+  .hf-benefits-edge-fade {
+    --hf-benefits-edge-fade-size: 18px;
+  }
+}
+
+@media (min-width: 64rem) {
+  .hf-benefits-edge-fade {
+    --hf-benefits-edge-fade-size: 24px;
+  }
+}
+
 @keyframes hf-benefits-stream {
   to {
     transform: translate3d(var(--hf-benefits-loop-translation), 0, 0);
