@@ -401,6 +401,75 @@
   }
 }
 
+@keyframes hf-hero-enter-eyebrow {
+  0% {
+    opacity: 0.08;
+    transform: translate3d(0, var(--hf-hero-enter-distance), 0);
+  }
+
+  50%,
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hf-hero-enter-headline {
+  0%,
+  6% {
+    opacity: 0.08;
+    transform: translate3d(0, var(--hf-hero-enter-distance), 0);
+  }
+
+  60%,
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hf-hero-enter-support {
+  0%,
+  18% {
+    opacity: 0.12;
+    transform: translate3d(0, var(--hf-hero-enter-distance), 0);
+  }
+
+  70%,
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hf-hero-enter-cta {
+  0%,
+  30% {
+    opacity: 0.72;
+    transform: translate3d(0, var(--hf-hero-enter-distance), 0);
+  }
+
+  84%,
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hf-hero-enter-visual {
+  0%,
+  12% {
+    opacity: 0.76;
+    transform: translate3d(0, var(--hf-hero-enter-distance), 0);
+  }
+
+  88%,
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 @keyframes hf-fade-in {
   from { opacity: 0; transform: translateY(0.25rem); }
   to { opacity: 1; transform: translateY(0); }
@@ -479,6 +548,67 @@
 
 .hf-story-swap {
   animation: hf-story-swap 360ms var(--ease-fluid) both;
+}
+
+.hf-hero-enter {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hf-hero-enter {
+    --hf-hero-enter-distance: 8px;
+
+    animation-duration: 560ms;
+    animation-timing-function: var(--ease-enter);
+    animation-iteration-count: 1;
+  }
+
+  .hf-hero-enter-eyebrow {
+    animation-name: hf-hero-enter-eyebrow;
+  }
+
+  .hf-hero-enter-headline {
+    animation-name: hf-hero-enter-headline;
+  }
+
+  .hf-hero-enter-support {
+    --hf-hero-enter-distance: 7px;
+
+    animation-name: hf-hero-enter-support;
+  }
+
+  .hf-hero-enter-cta {
+    --hf-hero-enter-distance: 5px;
+
+    animation-name: hf-hero-enter-cta;
+  }
+
+  .hf-hero-enter-cta:focus-within {
+    animation: none;
+  }
+
+  .hf-hero-enter-visual {
+    animation-name: hf-hero-enter-visual;
+  }
+}
+
+@media (min-width: 48.0625rem) and (max-width: 64rem) and (prefers-reduced-motion: no-preference) {
+  .hf-hero-enter {
+    animation-duration: 500ms;
+  }
+}
+
+@media (max-width: 48rem) and (prefers-reduced-motion: no-preference) {
+  .hf-hero-enter {
+    --hf-hero-enter-distance: 5px;
+
+    animation-duration: 420ms;
+  }
+
+  .hf-hero-enter-cta {
+    --hf-hero-enter-distance: 4px;
+  }
 }
 
 .hf-flux-story [data-flux-connection-line] {

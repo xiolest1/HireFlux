@@ -1614,6 +1614,55 @@ test("connected hero resolves one opportunity into one useful action", async ({
   await expect(page.locator("[data-persistent-opportunity]")).toHaveCount(1);
 });
 
+test("hero entrance remains focus-safe and fails visible", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const entranceGroups = page.locator("[data-hero-entrance]");
+  const cta = page.getByRole("button", { name: /^(Explore the Demo|Continue Demo)$/ });
+  await expect(entranceGroups).toHaveCount(5);
+  await expect(cta).toBeVisible();
+
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+
+  await expect(cta).toBeFocused();
+  const focusedPresentation = await cta.evaluate((element) => {
+    const group = element.closest<HTMLElement>('[data-hero-entrance="cta"]');
+    if (!group) return null;
+    const style = getComputedStyle(group);
+    return { opacity: style.opacity, transform: style.transform };
+  });
+  expect(focusedPresentation).toEqual({ opacity: "1", transform: "none" });
+
+  await page.reload();
+  await expect(entranceGroups).toHaveCount(5);
+  const fallbackPresentation = await entranceGroups.evaluateAll((elements) => {
+    for (const element of elements) {
+      element.getAnimations().forEach((animation) => animation.cancel());
+    }
+    return elements.map((element) => {
+      const style = getComputedStyle(element);
+      return {
+        beat: element.getAttribute("data-hero-entrance"),
+        opacity: style.opacity,
+        transform: style.transform,
+      };
+    });
+  });
+  expect(fallbackPresentation).toEqual([
+    { beat: "eyebrow", opacity: "1", transform: "none" },
+    { beat: "headline", opacity: "1", transform: "none" },
+    { beat: "support", opacity: "1", transform: "none" },
+    { beat: "cta", opacity: "1", transform: "none" },
+    { beat: "visual", opacity: "1", transform: "none" },
+  ]);
+});
+
 test("authenticated entry does not download the lazy landing route", async ({
   page,
 }, testInfo) => {

@@ -61,19 +61,21 @@ export function LandingPage() {
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_16%_12%,rgba(34,211,238,0.08),transparent_28rem),radial-gradient(circle_at_82%_4%,rgba(139,92,246,0.07),transparent_30rem)] dark:bg-[radial-gradient(circle_at_16%_12%,rgba(34,211,238,0.12),transparent_28rem),radial-gradient(circle_at_82%_4%,rgba(139,92,246,0.13),transparent_30rem)]" />
           <div className="mx-auto grid max-w-7xl min-w-0 gap-12 px-4 py-14 sm:px-6 sm:py-24 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:gap-14 lg:px-8 lg:py-28">
             <div className="min-w-0" data-landing-clip-check>
-              <p className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-line bg-surface-raised px-3 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.11em] text-accent-strong shadow-sm backdrop-blur dark:border-cyan-900 dark:bg-slate-900/70 sm:text-xs sm:tracking-[0.16em]"><Sparkles aria-hidden="true" className="size-3.5 shrink-0" />A focused job-search workspace</p>
-              <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-[-0.045em] text-slate-950 sm:text-6xl sm:leading-[1.03] dark:text-white">Keep every opportunity connected to what comes next.</h1>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300">HireFlux keeps each opportunity’s context intact and turns its history into a clear next action—without creating an account.</p>
+              <p className="hf-hero-enter hf-hero-enter-eyebrow inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-line bg-surface-raised px-3 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.11em] text-accent-strong shadow-sm backdrop-blur dark:border-cyan-900 dark:bg-slate-900/70 sm:text-xs sm:tracking-[0.16em]" data-hero-entrance="eyebrow"><Sparkles aria-hidden="true" className="size-3.5 shrink-0" />A focused job-search workspace</p>
+              <h1 className="hf-hero-enter hf-hero-enter-headline mt-6 max-w-3xl text-4xl font-black tracking-[-0.045em] text-slate-950 sm:text-6xl sm:leading-[1.03] dark:text-white" data-hero-entrance="headline">Keep every opportunity connected to what comes next.</h1>
+              <p className="hf-hero-enter hf-hero-enter-support mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300" data-hero-entrance="support">HireFlux keeps each opportunity’s context intact and turns its history into a clear next action—without creating an account.</p>
 
               {notice ? <div className="mt-7 max-w-xl rounded-xl border border-line border-l-4 border-l-warning bg-warning-soft px-4 py-3 text-sm font-medium text-warning" role="status">{notice}</div> : null}
               {error ? <div className="mt-7 max-w-xl"><ErrorPanel compact title="Demo workspace could not be prepared" error={error} /></div> : null}
 
-              <div className="mt-8 flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center">
+              <div className="hf-hero-enter hf-hero-enter-cta mt-8 flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center" data-hero-entrance="cta">
                 <Button className="group min-w-48 gap-2 shadow-lg shadow-cyan-950/10" disabled={isCreating} onClick={() => void enterDemo()}>{isCreating ? "Preparing your workspace…" : status === "active" ? "Continue Demo" : "Explore the Demo"}<ArrowRight aria-hidden="true" className="size-4 transition-transform group-hover:translate-x-1 group-focus-visible:translate-x-1" /></Button>
                 <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">No sign-up · Fictional data · Resets anytime</p>
               </div>
             </div>
-            <HeroApplicationStory />
+            <div className="hf-hero-enter hf-hero-enter-visual min-w-0" data-hero-entrance="visual">
+              <HeroApplicationStory />
+            </div>
           </div>
         </section>
 
