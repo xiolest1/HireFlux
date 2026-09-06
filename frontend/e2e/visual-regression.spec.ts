@@ -1663,6 +1663,185 @@ test("hero entrance remains focus-safe and fails visible", async ({
   ]);
 });
 
+test("hero motion eligibility only decreases during one landing mount", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+
+  const entranceGroups = page.locator("[data-hero-entrance]");
+  const hero = page.locator("[data-hero-motion]");
+  const story = page.locator("[data-flux-story]");
+  const cta = page.getByRole("button", {
+    name: /^(Explore the Demo|Continue Demo)$/,
+  });
+
+  async function expectSettledRevokedHero() {
+    await expect(hero).toHaveAttribute("data-hero-motion", "settled");
+    await expect(hero).toHaveAttribute("data-hero-motion-eligible", "false");
+    await expect(story).toHaveAttribute("data-hero-settled", "true");
+    await expect(cta).toBeVisible();
+    const presentations = await entranceGroups.evaluateAll((elements) =>
+      elements.map((element) => {
+        const style = getComputedStyle(element);
+        return {
+          opacity: style.opacity,
+          transform: style.transform,
+          animations: element.getAnimations().length,
+        };
+      }),
+    );
+    expect(presentations).toEqual(Array.from({ length: 5 }, () => ({
+      opacity: "1",
+      transform: "none",
+      animations: 0,
+    })));
+  }
+
+  async function installLateMotionProbe() {
+    await page.evaluate(() => {
+      const probe = { animationStarts: 0, settledValues: [] as string[] };
+      (window as typeof window & { __heroMotionProbe?: typeof probe }).__heroMotionProbe = probe;
+      document.addEventListener("animationstart", (event) => {
+        if ((event.target as HTMLElement | null)?.hasAttribute("data-hero-entrance")) {
+          probe.animationStarts += 1;
+        }
+      }, { capture: true, once: false });
+      const visual = document.querySelector("[data-flux-story]");
+      if (visual) {
+        new MutationObserver(() => {
+          probe.settledValues.push(visual.getAttribute("data-hero-settled") ?? "missing");
+        }).observe(visual, { attributes: true, attributeFilter: ["data-hero-settled"] });
+      }
+    });
+  }
+
+  async function expectNoLateMotion() {
+    await page.waitForTimeout(180);
+    const probe = await page.evaluate(() =>
+      (window as typeof window & {
+        __heroMotionProbe?: { animationStarts: number; settledValues: string[] };
+      }).__heroMotionProbe,
+    );
+    expect(probe).toEqual({ animationStarts: 0, settledValues: [] });
+    await expectSettledRevokedHero();
+  }
+
+  // A: a fresh normal-motion mount keeps the approved entrance authorities.
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await expect(hero).toHaveAttribute("data-hero-motion", "active");
+  await expect(hero).toHaveAttribute("data-hero-motion-eligible", "true");
+  expect(await entranceGroups.first().evaluate((element) =>
+    getComputedStyle(element).animationName,
+  )).toBe("hf-hero-enter-eyebrow");
+  await expect(story).toHaveAttribute("data-hero-settled", "true");
+
+  // B/C: a reduced mount is settled and preference expansion cannot start motion.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  await expect(story).toHaveAttribute("data-reduced-motion", "true");
+  await expectSettledRevokedHero();
+  await installLateMotionProbe();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expectNoLateMotion();
+
+  // D/E1: reducing active motion settles it and permanently revokes this mount.
+  await page.reload();
+  await expect(hero).toHaveAttribute("data-hero-motion", "active");
+  await page.waitForTimeout(80);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expectSettledRevokedHero();
+  await installLateMotionProbe();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expectNoLateMotion();
+
+  // E2: preference changes after full settlement also remain motionless.
+  await page.reload();
+  await expect(story).toHaveAttribute("data-hero-settled", "true");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expectSettledRevokedHero();
+  await installLateMotionProbe();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expectNoLateMotion();
+
+  // Repeated preference changes cannot queue or restore either motion authority.
+  await installLateMotionProbe();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expectNoLateMotion();
+
+  // F: a fresh Landing mount under normal motion resets eligibility locally.
+  await page.evaluate(() => {
+    window.history.pushState({}, "", "/m3-f1-remount");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+  await page.evaluate(() => {
+    window.history.pushState({}, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(hero).toHaveAttribute("data-hero-motion", "active");
+  await expect(hero).toHaveAttribute("data-hero-motion-eligible", "true");
+  expect(await entranceGroups.first().evaluate((element) =>
+    getComputedStyle(element).animationName,
+  )).toBe("hf-hero-enter-eyebrow");
+  await expect(story).toHaveAttribute("data-hero-settled", "true");
+});
+
+test("hero motion-session policy remains stable at responsive boundaries", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+
+  for (const viewport of [
+    { width: 1280, height: 800 },
+    { width: 390, height: 844 },
+    { width: 320, height: 568 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    await expect(page.locator("[data-hero-motion]")).toHaveAttribute(
+      "data-hero-motion",
+      "active",
+    );
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(page.locator("[data-hero-motion]")).toHaveAttribute(
+      "data-hero-motion-eligible",
+      "false",
+    );
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await expect(page.locator("[data-hero-motion]")).toHaveAttribute(
+      "data-hero-motion",
+      "settled",
+    );
+    await expect(page.locator("[data-flux-story]")).toHaveAttribute(
+      "data-hero-settled",
+      "true",
+    );
+    await expectNoHorizontalPageOverflow(page);
+    await expect(page.getByRole("button", {
+      name: /^(Explore the Demo|Continue Demo)$/,
+    })).toBeVisible();
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.reload();
+    await expect(page.locator("[data-hero-motion]")).toHaveAttribute(
+      "data-hero-motion-eligible",
+      "false",
+    );
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await expect(page.locator("[data-hero-motion]")).toHaveAttribute(
+      "data-hero-motion",
+      "settled",
+    );
+    await expectNoHorizontalPageOverflow(page);
+  }
+});
+
 test("authenticated entry does not download the lazy landing route", async ({
   page,
 }, testInfo) => {

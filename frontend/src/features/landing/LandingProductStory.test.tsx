@@ -23,7 +23,9 @@ afterEach(() => vi.unstubAllGlobals());
 describe("HeroApplicationStory", () => {
   it("presents one resolved opportunity-to-action promise without stage controls", () => {
     matchMedia(false);
-    const { container } = render(<HeroApplicationStory />);
+    const { container } = render(
+      <HeroApplicationStory reducedMotion={false} motionEligible />,
+    );
 
     expect(container.querySelector("[data-hero-story]")).toHaveAttribute(
       "data-story-scene",
@@ -44,7 +46,9 @@ describe("HeroApplicationStory", () => {
 
   it("keeps Northstar, retained history, and the next action in one composition", () => {
     matchMedia(false);
-    const { container } = render(<HeroApplicationStory />);
+    const { container } = render(
+      <HeroApplicationStory reducedMotion={false} motionEligible />,
+    );
 
     expect(container).toHaveTextContent("Northstar Labs");
     expect(container).toHaveTextContent("Senior Frontend Platform Engineer");
@@ -56,7 +60,9 @@ describe("HeroApplicationStory", () => {
 
   it("renders the same resolved meaning immediately for reduced motion", () => {
     matchMedia(true);
-    const { container } = render(<HeroApplicationStory />);
+    const { container } = render(
+      <HeroApplicationStory reducedMotion motionEligible={false} />,
+    );
 
     expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
       "data-reduced-motion",

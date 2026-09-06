@@ -56,7 +56,7 @@ beforeEach(() => {
 
 describe("FluxStoryVisual", () => {
   it("builds one short opportunity-to-action timeline", () => {
-    render(<FluxStoryVisual reducedMotion={false} />);
+    render(<FluxStoryVisual reducedMotion={false} motionEligible />);
 
     expect(gsapMocks.timeline.addLabel).toHaveBeenCalledWith("opportunity", 0);
     expect(gsapMocks.timeline.addLabel).toHaveBeenCalledWith("connection", 0.28);
@@ -66,7 +66,9 @@ describe("FluxStoryVisual", () => {
   });
 
   it("keeps only the opportunity, provenance bridge, and next action", () => {
-    const { container } = render(<FluxStoryVisual reducedMotion={false} />);
+    const { container } = render(
+      <FluxStoryVisual reducedMotion={false} motionEligible />,
+    );
 
     expect(container.querySelector("[data-persistent-opportunity]")).toBeInTheDocument();
     expect(container.querySelector("[data-flux-connection]")).toBeInTheDocument();
@@ -79,7 +81,7 @@ describe("FluxStoryVisual", () => {
   });
 
   it("reveals connection before resolving the primary action", () => {
-    render(<FluxStoryVisual reducedMotion={false} />);
+    render(<FluxStoryVisual reducedMotion={false} motionEligible />);
 
     expect(gsapMocks.timeline.to).toHaveBeenCalledWith(
       "[data-flux-connection-line]",
@@ -99,7 +101,9 @@ describe("FluxStoryVisual", () => {
   });
 
   it("marks the composition settled when the one-shot timeline completes", () => {
-    const { container } = render(<FluxStoryVisual reducedMotion={false} />);
+    const { container } = render(
+      <FluxStoryVisual reducedMotion={false} motionEligible />,
+    );
     const configuration = gsapMocks.timelineFactory.mock.calls[0]?.[0] as {
       onComplete: () => void;
     };
@@ -112,7 +116,9 @@ describe("FluxStoryVisual", () => {
   });
 
   it("creates no GSAP choreography for reduced motion", () => {
-    const { container } = render(<FluxStoryVisual reducedMotion />);
+    const { container } = render(
+      <FluxStoryVisual reducedMotion motionEligible={false} />,
+    );
 
     expect(gsapMocks.context).not.toHaveBeenCalled();
     expect(gsapMocks.timelineFactory).not.toHaveBeenCalled();
@@ -126,10 +132,23 @@ describe("FluxStoryVisual", () => {
     );
   });
 
+  it("does not create choreography when a reduced mount later permits motion", () => {
+    const { rerender } = render(
+      <FluxStoryVisual reducedMotion motionEligible={false} />,
+    );
+
+    rerender(
+      <FluxStoryVisual reducedMotion={false} motionEligible={false} />,
+    );
+
+    expect(gsapMocks.context).not.toHaveBeenCalled();
+    expect(gsapMocks.timelineFactory).not.toHaveBeenCalled();
+  });
+
   it("cleans Strict Mode contexts and leaves none active after unmount", () => {
     const { unmount } = render(
       <StrictMode>
-        <FluxStoryVisual reducedMotion={false} />
+        <FluxStoryVisual reducedMotion={false} motionEligible />
       </StrictMode>,
     );
 
@@ -139,5 +158,32 @@ describe("FluxStoryVisual", () => {
     unmount();
     expect(gsapMocks.getActiveContexts()).toBe(0);
     expect(gsapMocks.timeline.kill).toHaveBeenCalled();
+  });
+
+  it("does not recreate choreography after motion eligibility is revoked", () => {
+    const { container, rerender } = render(
+      <FluxStoryVisual reducedMotion={false} motionEligible />,
+    );
+
+    expect(gsapMocks.timelineFactory).toHaveBeenCalledOnce();
+
+    rerender(<FluxStoryVisual reducedMotion motionEligible={false} />);
+    expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
+      "data-hero-settled",
+      "true",
+    );
+
+    rerender(
+      <FluxStoryVisual reducedMotion={false} motionEligible={false} />,
+    );
+    expect(gsapMocks.timelineFactory).toHaveBeenCalledOnce();
+    expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
+      "data-hero-motion-eligible",
+      "false",
+    );
+    expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
+      "data-hero-settled",
+      "true",
+    );
   });
 });

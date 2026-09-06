@@ -7,6 +7,7 @@ import { ThemeToggle } from "../components/ui/ThemeToggle";
 import { ProductBenefitsSection } from "../features/landing/benefits/ProductBenefitsSection";
 import { HeroApplicationStory, LandingReveal } from "../features/landing/LandingProductStory";
 import { ScrollProductStory } from "../features/landing/ScrollProductStory";
+import { useHeroMotionSession } from "../features/landing/useHeroMotionSession";
 
 interface LandingLocationState {
   from?: string;
@@ -26,6 +27,11 @@ export function LandingPage() {
   const location = useLocation();
   const { status, isCreating, error, start } = useDemoSession();
   const routeState = locationState(location.state);
+  const {
+    currentReducedMotion,
+    heroMotionEligible,
+    heroMotionActive,
+  } = useHeroMotionSession();
 
   async function enterDemo() {
     if (status === "active") {
@@ -57,7 +63,11 @@ export function LandingPage() {
       </header>
 
       <main id="landing-main">
-        <section className="relative isolate overflow-x-clip">
+        <section
+          className="relative isolate overflow-x-clip"
+          data-hero-motion={heroMotionActive ? "active" : "settled"}
+          data-hero-motion-eligible={heroMotionEligible ? "true" : "false"}
+        >
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_16%_12%,rgba(34,211,238,0.08),transparent_28rem),radial-gradient(circle_at_82%_4%,rgba(139,92,246,0.07),transparent_30rem)] dark:bg-[radial-gradient(circle_at_16%_12%,rgba(34,211,238,0.12),transparent_28rem),radial-gradient(circle_at_82%_4%,rgba(139,92,246,0.13),transparent_30rem)]" />
           <div className="mx-auto grid max-w-7xl min-w-0 gap-12 px-4 py-14 sm:px-6 sm:py-24 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:gap-14 lg:px-8 lg:py-28">
             <div className="min-w-0" data-landing-clip-check>
@@ -74,7 +84,10 @@ export function LandingPage() {
               </div>
             </div>
             <div className="hf-hero-enter hf-hero-enter-visual min-w-0" data-hero-entrance="visual">
-              <HeroApplicationStory />
+              <HeroApplicationStory
+                reducedMotion={currentReducedMotion}
+                motionEligible={heroMotionEligible}
+              />
             </div>
           </div>
         </section>

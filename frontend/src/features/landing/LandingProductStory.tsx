@@ -1,10 +1,16 @@
 import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
-import { useReducedMotion } from "../../components/ui/motionHooks";
 import { FluxStoryVisual } from "./FluxStoryVisual";
 
-export function HeroApplicationStory() {
-  const reducedMotion = useReducedMotion();
+interface HeroApplicationStoryProps {
+  reducedMotion: boolean;
+  motionEligible: boolean;
+}
+
+export function HeroApplicationStory({
+  reducedMotion,
+  motionEligible,
+}: HeroApplicationStoryProps) {
 
   return (
     <figure
@@ -18,7 +24,10 @@ export function HeroApplicationStory() {
         aria-hidden="true"
         className="absolute -inset-4 -z-10 rotate-2 rounded-[2rem] bg-gradient-to-br from-cyan-200/60 to-violet-200/60 blur-sm dark:from-cyan-950/50 dark:to-violet-950/50 sm:-inset-5 sm:rounded-[2.25rem]"
       />
-      <FluxStoryVisual reducedMotion={reducedMotion} />
+      <FluxStoryVisual
+        reducedMotion={reducedMotion}
+        motionEligible={motionEligible}
+      />
       <div className="mt-3 flex items-center gap-2 px-1 text-xs font-medium text-ink-muted">
         <Sparkles aria-hidden="true" className="size-3.5 text-accent-strong" />
         One opportunity, connected from capture to action.

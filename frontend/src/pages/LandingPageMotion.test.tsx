@@ -12,6 +12,14 @@ describe("LandingPage hero entrance boundary", () => {
     });
 
     expect(container.querySelectorAll("[data-hero-entrance]")).toHaveLength(5);
+    expect(container.querySelector("[data-hero-motion]")).toHaveAttribute(
+      "data-hero-motion",
+      "active",
+    );
+    expect(container.querySelector("[data-hero-motion]")).toHaveAttribute(
+      "data-hero-motion-eligible",
+      "true",
+    );
     expect(container.querySelector('[data-hero-entrance="eyebrow"]')).toHaveClass(
       "hf-hero-enter-eyebrow",
     );
@@ -29,6 +37,10 @@ describe("LandingPage hero entrance boundary", () => {
     );
     expect(container.querySelector("[data-flux-story]")).not.toHaveAttribute(
       "data-hero-entrance",
+    );
+    expect(container.querySelector("[data-flux-story]")).toHaveAttribute(
+      "data-hero-motion-eligible",
+      "true",
     );
     expect(container.querySelectorAll("[data-flux-opportunity][data-hero-entrance]")).toHaveLength(0);
     expect(container.querySelectorAll("[data-flux-next-action][data-hero-entrance]")).toHaveLength(0);

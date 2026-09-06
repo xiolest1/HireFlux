@@ -6,15 +6,20 @@ import { FluxRail } from "./FluxRail";
 
 export interface FluxStoryVisualProps {
   reducedMotion: boolean;
+  motionEligible: boolean;
 }
 
-export function FluxStoryVisual({ reducedMotion }: FluxStoryVisualProps) {
+export function FluxStoryVisual({
+  reducedMotion,
+  motionEligible,
+}: FluxStoryVisualProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
+  const motionActive = motionEligible && !reducedMotion;
 
   useLayoutEffect(() => {
     const root = rootRef.current;
-    if (!root || reducedMotion) return;
+    if (!root || !motionActive) return;
 
     root.dataset.heroSettled = "false";
     const context = gsap.context(() => {
@@ -107,7 +112,7 @@ export function FluxStoryVisual({ reducedMotion }: FluxStoryVisualProps) {
       timelineRef.current = null;
       context.revert();
     };
-  }, [reducedMotion]);
+  }, [motionActive]);
 
   return (
     <div
@@ -116,7 +121,8 @@ export function FluxStoryVisual({ reducedMotion }: FluxStoryVisualProps) {
       data-flux-story
       data-visual-stage="resolved"
       data-reduced-motion={reducedMotion || undefined}
-      data-hero-settled={reducedMotion ? "true" : "false"}
+      data-hero-motion-eligible={motionEligible ? "true" : "false"}
+      data-hero-settled={motionActive ? "false" : "true"}
       aria-hidden="true"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_8%_4%,color-mix(in_srgb,var(--hf-accent)_9%,transparent),transparent_42%),radial-gradient(circle_at_92%_94%,color-mix(in_srgb,var(--hf-violet)_7%,transparent),transparent_38%)]" />
