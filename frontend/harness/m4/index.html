@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>M4 viewport reveal harness</title>
+    <script>
+      window.__m4PaintFrames = {};
+      window.__m4AnimationStarts = {};
+
+      const observedElements = new WeakSet();
+      const collectFrames = (element, id) => {
+        if (observedElements.has(element)) return;
+        observedElements.add(element);
+        window.__m4PaintFrames[id] = [];
+        let remaining = 16;
+        const sample = () => {
+          const style = getComputedStyle(element);
+          window.__m4PaintFrames[id].push({
+            state: element.getAttribute("data-reveal-state"),
+            motion: element.getAttribute("data-reveal-motion"),
+            opacity: style.opacity,
+            transform: style.transform,
+            top: element.getBoundingClientRect().top,
+          });
+          remaining -= 1;
+          if (remaining > 0) requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      };
+
+      new MutationObserver(() => {
+        document.querySelectorAll("[data-m4-id]").forEach((host) => {
+          const element = host.querySelector("[data-landing-viewport-reveal]");
+          const id = host.getAttribute("data-m4-id");
+          if (element && id) collectFrames(element, id);
+        });
+      }).observe(document.documentElement, { childList: true, subtree: true });
+
+      document.addEventListener("animationstart", (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const id = target.closest("[data-m4-id]")?.getAttribute("data-m4-id");
+        if (!id) return;
+        window.__m4AnimationStarts[id] = (window.__m4AnimationStarts[id] || 0) + 1;
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/harness/m4/main.tsx"></script>
+  </body>
+</html>
