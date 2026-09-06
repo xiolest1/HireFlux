@@ -508,6 +508,19 @@
   scrollbar-width: thin;
 }
 
+[data-benefits-control][aria-disabled="true"],
+[data-benefits-control][aria-disabled="true"]:hover {
+  border-color: var(--hf-line-subtle);
+  background: var(--hf-surface-muted);
+  color: var(--hf-ink-disabled);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+[data-benefits-control][aria-disabled="true"]:active {
+  transform: none;
+}
+
 .hf-benefits-edge-fade {
   --hf-benefits-edge-fade-size: 10px;
   -webkit-mask-image: linear-gradient(

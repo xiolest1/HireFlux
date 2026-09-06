@@ -9,6 +9,7 @@ export function ProductBenefitsSection() {
   const stream = useBenefitsStream(benefitSignals.length);
   const reducedMotion = stream.mode === "static";
   const ambientPlaying = stream.mode === "ambient";
+  const controlLocked = stream.isTransitioning || undefined;
 
   return (
     <section
@@ -29,7 +30,7 @@ export function ProductBenefitsSection() {
             <IconButton
               label="Previous benefit"
               aria-controls="benefit-signals-viewport"
-              disabled={stream.isTransitioning}
+              aria-disabled={controlLocked}
               onClick={stream.previous}
               data-benefits-control="previous"
             >
@@ -38,7 +39,7 @@ export function ProductBenefitsSection() {
             <IconButton
               label={ambientPlaying ? "Pause benefit stream" : "Play benefit stream"}
               aria-controls="benefit-signals-viewport"
-              disabled={stream.isTransitioning}
+              aria-disabled={controlLocked}
               onClick={ambientPlaying ? stream.pause : stream.play}
               data-benefits-control="play-pause"
             >
@@ -47,7 +48,7 @@ export function ProductBenefitsSection() {
             <IconButton
               label="Next benefit"
               aria-controls="benefit-signals-viewport"
-              disabled={stream.isTransitioning}
+              aria-disabled={controlLocked}
               onClick={stream.next}
               data-benefits-control="next"
             >

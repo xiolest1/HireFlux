@@ -1,5 +1,42 @@
 # HireFlux development log
 
+## 2026-09-06 — B8R-F1 native focus preservation
+
+Changed the Product Benefits stream's serialized-navigation state from native
+`disabled` buttons to stable native button nodes carrying `aria-disabled` only
+while a manual transition is active. The controller's existing synchronous
+transition guard remains the interaction authority: repeated pointer or
+keyboard activations are ignored rather than queued. Previous,
+Pause-or-Play, and Next are never conditionally replaced, made unfocusable, or
+removed from pointer hit testing, so a focused control keeps native focus on
+the same DOM instance from transition start through settlement. A scoped
+locked-state treatment communicates temporary unavailability without using
+`pointer-events: none` or obscuring the existing focus-visible outline.
+
+Production-browser regression coverage now stores the exact focused Next
+button node, issues three rapid keyboard activations and three rapid pointer
+activations, and verifies one logical move, no hidden follow-up movement,
+active hit testing, native enabled/focusable state, removal of
+`aria-disabled` after settlement, uninterrupted focus, and strict DOM identity.
+The full ambient → Next → settle → Play → ambient → G-to-A ownership test also
+remains intact. Its Play sample is captured atomically with activation so test
+runner latency cannot be mistaken for a phase jump.
+
+ESLint, TypeScript, the focused 13-test Product Benefits component suite,
+three hosting-header tests, and the complete Playwright/Axe matrix pass (150
+passed, 80 intentional project-filtered skips). The ownership/browser tests
+also pass twice consecutively (12 passed, 8 intentional skips). The default
+parallel Vitest run encountered the same two timing-sensitive failures in the
+demo-session and landing-accessibility suites; the complete single-worker run
+passes all 205 tests. `git diff --check` is clean, and no visual snapshot or
+generated `dist` artifact changed.
+
+Against B7R, the production main entry is 282.92 / 84.78 kB raw/gzip and the
+lazy landing chunk remains 174.44 / 60.84 kB. CSS moves from 119.63 / 19.39 to
+119.92 / 19.45 kB (+0.29 / +0.06) for the scoped locked-control presentation.
+No dependency, stream geometry, motion timing, copy, or neighboring landing
+feature changed.
+
 ## 2026-09-04 — B7R peripheral benefit-stream edge fade
 
 Softened the Product Benefits stream's hard clipping boundary with one

@@ -516,11 +516,27 @@ test("benefit stream transfers ownership from ambient to manual and back without
   });
   expect(Math.abs(frozenOffset + 384)).toBeLessThan(0.1);
 
-  await region.getByRole("button", { name: "Next benefit" }).click();
+  const next = region.getByRole("button", { name: "Next benefit" });
+  await next.evaluate((element) => {
+    (window as typeof window & { benefitsFocusedControl?: Element }).benefitsFocusedControl = element;
+  });
+  await next.focus();
+  await expect(next).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
   await expect(track).toHaveAttribute("data-motion-state", "manual");
   await expect(track).toHaveAttribute("data-manual-signal", "context-continuity");
-  await expect(region.getByRole("button", { name: "Next benefit" })).toBeDisabled();
-  await expect(region.getByRole("button", { name: "Next benefit" })).toBeEnabled();
+  await expect(next).toHaveAttribute("aria-disabled", "true");
+  await expect(next).toBeEnabled();
+  await expect(next).toBeFocused();
+  expect(await next.evaluate((element) => getComputedStyle(element).pointerEvents)).not.toBe("none");
+  await expect(next).not.toHaveAttribute("aria-disabled");
+  await expect(next).toBeFocused();
+  expect(await next.evaluate(
+    (element) => element
+      === (window as typeof window & { benefitsFocusedControl?: Element }).benefitsFocusedControl,
+  )).toBe(true);
 
   const settled = await track.evaluate((element) => {
     const matrix = new DOMMatrix(getComputedStyle(element).transform);
@@ -538,12 +554,22 @@ test("benefit stream transfers ownership from ambient to manual and back without
   });
   expect(settled.x).toBeLessThan(frozenOffset);
   expect(Math.abs(settled.nearestSignalLeft - settled.anchor)).toBeLessThan(0.1);
+  await page.waitForTimeout(450);
+  const afterIgnoredActivations = await track.evaluate(
+    (element) => new DOMMatrix(getComputedStyle(element).transform).m41,
+  );
+  expect(Math.abs(afterIgnoredActivations - settled.x)).toBeLessThan(0.1);
+  await expect(next).toBeFocused();
 
-  const play = region.getByRole("button", { name: "Play benefit stream" });
-  await play.click();
+  const resumed = await track.evaluate((element) => {
+    const playControl = element
+      .closest<HTMLElement>("[data-product-benefits]")
+      ?.querySelector<HTMLButtonElement>("[data-benefits-control='play-pause']");
+    playControl?.click();
+    return new DOMMatrix(getComputedStyle(element).transform).m41;
+  });
   await expect(track).toHaveAttribute("data-motion-state", "ambient");
   await expect(track).toHaveAttribute("data-passively-blocked", "false");
-  const resumed = await track.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).m41);
   expect(resumed).toBeLessThanOrEqual(settled.x);
   expect(Math.abs(resumed - settled.x)).toBeLessThan(3);
 
@@ -588,6 +614,57 @@ test("benefit stream transfers ownership from ambient to manual and back without
   });
   expect(Math.abs(seam.before - seam.after)).toBeLessThan(0.1);
   await expectNoHorizontalPageOverflow(page);
+});
+
+test("serialized benefit controls ignore rapid pointer activation without losing focus", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const region = page.getByRole("region", { name: "A clearer way through the search." });
+  const track = region.locator("[data-benefits-track]");
+  const next = region.getByRole("button", { name: "Next benefit" });
+  await region.scrollIntoViewIfNeeded();
+  await expect(track).toHaveAttribute("data-passively-blocked", "false");
+  await track.evaluate((element) => {
+    const animation = element.getAnimations()[0];
+    animation.pause();
+    animation.currentTime = (384 / 28) * 1_000;
+  });
+  await next.focus();
+  await next.evaluate((element) => {
+    (window as typeof window & { benefitsPointerControl?: Element }).benefitsPointerControl = element;
+  });
+
+  const box = await next.boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) return;
+  for (let activation = 0; activation < 3; activation += 1) {
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  }
+
+  await expect(track).toHaveAttribute("data-manual-signal", "context-continuity");
+  await expect(next).toHaveAttribute("aria-disabled", "true");
+  await expect(next).toBeEnabled();
+  await expect(next).toBeFocused();
+  expect(await next.evaluate((element) => getComputedStyle(element).pointerEvents)).not.toBe("none");
+  await expect(next).not.toHaveAttribute("aria-disabled");
+  await expect(next).toBeFocused();
+  expect(await next.evaluate(
+    (element) => element
+      === (window as typeof window & { benefitsPointerControl?: Element }).benefitsPointerControl,
+  )).toBe(true);
+
+  const settledX = await track.evaluate(
+    (element) => new DOMMatrix(getComputedStyle(element).transform).m41,
+  );
+  await page.waitForTimeout(450);
+  const afterIgnoredActivations = await track.evaluate(
+    (element) => new DOMMatrix(getComputedStyle(element).transform).m41,
+  );
+  expect(Math.abs(afterIgnoredActivations - settledX)).toBeLessThan(0.1);
 });
 
 test("benefit stream steps one signal in either direction and wraps without clone ambiguity", async ({

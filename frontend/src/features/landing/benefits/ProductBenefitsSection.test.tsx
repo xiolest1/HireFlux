@@ -97,6 +97,7 @@ describe("ProductBenefitsSection", () => {
     );
     expect(within(controls).getByRole("button", { name: "Pause benefit stream" })).toBeEnabled();
     expect(within(controls).getByRole("button", { name: "Next benefit" })).toBeEnabled();
+    expect(within(controls).getByRole("button", { name: "Next benefit" })).not.toHaveAttribute("aria-disabled");
     expect(viewport.contains(controls)).toBe(false);
   });
 
