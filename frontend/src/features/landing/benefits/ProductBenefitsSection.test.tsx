@@ -101,6 +101,30 @@ describe("ProductBenefitsSection", () => {
     expect(viewport.contains(controls)).toBe(false);
   });
 
+  it("limits the viewport reveal boundary to the static intro", () => {
+    matchMedia(false);
+    const { container } = render(<ProductBenefitsSection />);
+    const section = container.querySelector<HTMLElement>("[data-product-benefits]");
+    const reveal = section?.querySelector<HTMLElement>("[data-landing-viewport-reveal]");
+    const viewport = section?.querySelector<HTMLElement>("[data-benefits-viewport]");
+    const controls = screen.getByRole("group", { name: "Benefit stream controls" });
+
+    expect(reveal).not.toBeNull();
+    expect(section).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    if (!section || !reveal || !viewport) throw new Error("Benefits integration boundary is missing");
+    expect(reveal).toContainElement(screen.getByText("Why HireFlux"));
+    expect(reveal).toContainElement(
+      screen.getByRole("heading", { level: 2, name: "A clearer way through the search." }),
+    );
+    expect(reveal).not.toContainElement(controls);
+    expect(reveal).not.toContainElement(viewport);
+    expect(viewport).not.toContainElement(reveal);
+    expect(section).toContainElement(reveal);
+    expect(section).toContainElement(viewport);
+    expect(section).toHaveAttribute("aria-labelledby", "product-benefits-title");
+  });
+
   it("lets the user pause and explicitly resume ambient motion", () => {
     matchMedia(false);
     const { container } = render(<ProductBenefitsSection />);

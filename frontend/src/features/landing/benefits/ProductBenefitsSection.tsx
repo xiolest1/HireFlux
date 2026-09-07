@@ -1,6 +1,7 @@
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex -- The reduced-motion fallback is a native horizontal scroll region. */
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { IconButton } from "../../../components/ui/IconButton";
+import { LandingViewportReveal } from "../LandingViewportReveal";
 import { BenefitSignal } from "./BenefitSignal";
 import { benefitSignals } from "./benefitsModel";
 import { useBenefitsStream } from "./useBenefitsStream";
@@ -19,12 +20,12 @@ export function ProductBenefitsSection() {
       data-product-benefits
     >
       <div className="flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-end sm:justify-between" data-landing-clip-check>
-        <div className="max-w-xl">
+        <LandingViewportReveal className="max-w-xl">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700 sm:text-sm">Why HireFlux</p>
           <h2 id="product-benefits-title" className="mt-2.5 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl dark:text-white">
             A clearer way through the search.
           </h2>
-        </div>
+        </LandingViewportReveal>
         {!reducedMotion ? (
           <div className="flex shrink-0 gap-2" aria-label="Benefit stream controls" role="group">
             <IconButton
