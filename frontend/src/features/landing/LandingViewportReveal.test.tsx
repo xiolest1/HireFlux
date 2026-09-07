@@ -23,6 +23,12 @@ function bounds(top: number, bottom: number): DOMRect {
   };
 }
 
+let currentBounds = bounds(900, 1000);
+
+function setCurrentBounds(top: number, bottom: number) {
+  currentBounds = bounds(top, bottom);
+}
+
 function motionPreference(initialReducedMotion = false) {
   let reducedMotion = initialReducedMotion;
   const listeners = new Set<(event: MediaQueryListEvent) => void>();
@@ -106,8 +112,9 @@ beforeEach(() => {
   ObserverStub.instances = [];
   motionPreference(false);
   vi.stubGlobal("IntersectionObserver", ObserverStub);
-  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
-    bounds(900, 1000),
+  setCurrentBounds(900, 1000);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    () => currentBounds,
   );
   Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 });
 });
@@ -152,9 +159,7 @@ describe("LandingViewportReveal", () => {
     ["already passed", -200, -10],
     ["just below the viewport boundary", 800.5, 900],
   ])("leaves %s geometry immediately revealed", (_label, top, bottom) => {
-    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
-      bounds(top, bottom),
-    );
+    setCurrentBounds(top, bottom);
     renderReveal();
 
     expect(reveal()).toHaveAttribute("data-reveal-state", "revealed");
@@ -165,6 +170,7 @@ describe("LandingViewportReveal", () => {
     renderReveal();
     const observer = ObserverStub.instances[0] as ObserverStub;
 
+    setCurrentBounds(700, 800);
     act(() => observer.emit(reveal(), { intersecting: true, top: 700, bottom: 800 }));
     expect(reveal()).toHaveAttribute("data-reveal-state", "revealed");
     expect(reveal()).toHaveAttribute("data-reveal-motion", "entry");
@@ -180,9 +186,71 @@ describe("LandingViewportReveal", () => {
     renderReveal();
     const observer = ObserverStub.instances[0] as ObserverStub;
 
+    setCurrentBounds(-200, -1);
     act(() => observer.emit(reveal(), { top: -200, bottom: -1 }));
     expect(reveal()).toHaveAttribute("data-reveal-state", "revealed");
     expect(reveal()).toHaveAttribute("data-reveal-motion", "none");
+    expect(observer.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it("reconciles a stale first negative against currently passed geometry", () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
+    renderReveal();
+    const observer = ObserverStub.instances[0] as ObserverStub;
+
+    setCurrentBounds(-200, -1);
+    act(() => observer.emit(reveal(), { intersecting: false, top: 900, bottom: 1000 }));
+
+    expect(reveal()).toHaveAttribute("data-reveal-state", "revealed");
+    expect(reveal()).toHaveAttribute("data-reveal-motion", "none");
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    expect(observer.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it("fails open directly when a stale first negative finds currently reached geometry", () => {
+    renderReveal();
+    const observer = ObserverStub.instances[0] as ObserverStub;
+
+    setCurrentBounds(700, 800);
+    act(() => observer.emit(reveal(), { intersecting: false, top: 900, bottom: 1000 }));
+
+    expect(reveal()).toHaveAttribute("data-reveal-state", "revealed");
+    expect(reveal()).toHaveAttribute("data-reveal-motion", "none");
+    expect(observer.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it("accepts a safely-below first handshake and preserves a later genuine entry", () => {
+    vi.useFakeTimers();
+    renderReveal();
+    const observer = ObserverStub.instances[0] as ObserverStub;
+
+    act(() => observer.emit(reveal(), { intersecting: false, top: 900, bottom: 1000 }));
+    act(() => vi.advanceTimersByTime(landingRevealHandshakeMs * 2));
+    expect(reveal()).toHaveAttribute("data-reveal-state", "pending");
+    expect(observer.disconnect).not.toHaveBeenCalled();
+
+    setCurrentBounds(700, 800);
+    act(() => observer.emit(reveal(), { intersecting: true, top: 700, bottom: 800 }));
+    expect(reveal()).toHaveAttribute("data-reveal-state", "revealed");
+    expect(reveal()).toHaveAttribute("data-reveal-motion", "entry");
+    expect(observer.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a stale first positive while currently safely below", () => {
+    vi.useFakeTimers();
+    renderReveal();
+    const observer = ObserverStub.instances[0] as ObserverStub;
+
+    act(() => observer.emit(reveal(), { intersecting: true, top: 700, bottom: 800 }));
+    act(() => vi.advanceTimersByTime(landingRevealHandshakeMs * 2));
+    expect(reveal()).toHaveAttribute("data-reveal-state", "pending");
+    expect(observer.disconnect).not.toHaveBeenCalled();
+
+    setCurrentBounds(700, 800);
+    act(() => observer.emit(reveal(), { intersecting: true, top: 700, bottom: 800 }));
+    expect(reveal()).toHaveAttribute("data-reveal-state", "revealed");
+    expect(reveal()).toHaveAttribute("data-reveal-motion", "entry");
     expect(observer.disconnect).toHaveBeenCalledOnce();
   });
 
@@ -311,16 +379,19 @@ describe("LandingViewportReveal", () => {
 
     act(() => ObserverStub.instances[0]?.emit(reveal(), { intersecting: true }));
     expect(reveal()).toHaveAttribute("data-reveal-state", "pending");
+    setCurrentBounds(700, 800);
     act(() => ObserverStub.instances[1]?.emit(reveal(), { intersecting: true }));
     expect(reveal()).toHaveAttribute("data-reveal-state", "revealed");
   });
 
   it("starts a fresh lifecycle only after a fresh mount", () => {
     const first = renderReveal();
+    setCurrentBounds(700, 800);
     act(() => ObserverStub.instances[0]?.emit(reveal(), { intersecting: true }));
     expect(reveal()).toHaveAttribute("data-reveal-state", "revealed");
     first.unmount();
 
+    setCurrentBounds(900, 1000);
     renderReveal();
     expect(reveal()).toHaveAttribute("data-reveal-state", "pending");
     expect(ObserverStub.instances).toHaveLength(2);

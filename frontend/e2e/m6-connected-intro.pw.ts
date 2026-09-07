@@ -63,6 +63,33 @@ async function expectNoHorizontalOverflow(page: Page) {
   )).toBeLessThanOrEqual(0);
 }
 
+async function installRestoredScrollHandshake(page: Page) {
+  await page.addInitScript(() => {
+    const storedTarget = window.sessionStorage.getItem("m6-f1-restored-y");
+    if (storedTarget === null) return;
+    window.sessionStorage.removeItem("m6-f1-restored-y");
+    const targetY = Number(storedTarget);
+    window.addEventListener("DOMContentLoaded", () => {
+      let attempts = 60;
+      const restore = () => {
+        if (document.documentElement.scrollHeight >= targetY + innerHeight || attempts <= 0) {
+          window.scrollTo(0, targetY);
+          return;
+        }
+        attempts -= 1;
+        requestAnimationFrame(restore);
+      };
+      requestAnimationFrame(restore);
+    }, { once: true });
+  });
+}
+
+async function queueRestoredScroll(page: Page, targetY: number) {
+  await page.evaluate((nextY) => {
+    window.sessionStorage.setItem("m6-f1-restored-y", String(nextY));
+  }, targetY);
+}
+
 test.beforeEach(async ({ page }) => {
   await installDeterministicApi(page);
   await page.addInitScript(() => {
@@ -70,6 +97,13 @@ test.beforeEach(async ({ page }) => {
       animationStarts: number;
       initialDocumentHeight: number;
       pinSpacerHeights: number[];
+      revealCallbackSamples: Array<{
+        currentBottom: number;
+        currentTop: number;
+        entryIntersecting: boolean;
+        entryTop: number;
+      }>;
+      revealDisconnects: number;
       revealFrames: Array<{ opacity: number; state: string | null; transform: string }>;
       revealObserveHeights: number[];
       revealRootMargins: string[];
@@ -79,6 +113,8 @@ test.beforeEach(async ({ page }) => {
       animationStarts: 0,
       initialDocumentHeight: 0,
       pinSpacerHeights: [],
+      revealCallbackSamples: [],
+      revealDisconnects: 0,
       revealFrames: [],
       revealObserveHeights: [],
       revealRootMargins: [],
@@ -101,17 +137,39 @@ test.beforeEach(async ({ page }) => {
       readonly rootMargin: string;
       readonly thresholds: readonly number[];
       private readonly observer: IntersectionObserver;
+      private observesConnectedReveal = false;
 
       constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
-        this.observer = new NativeIntersectionObserver(callback, options);
+        this.observer = new NativeIntersectionObserver((entries) => {
+          const revealEntry = entries.find((entry) =>
+            entry.target.parentElement?.matches('section[aria-labelledby="proof-title"]'),
+          );
+          if (revealEntry) {
+            const current = revealEntry.target.getBoundingClientRect();
+            browserState.m6Runtime!.revealCallbackSamples.push({
+              currentBottom: current.bottom,
+              currentTop: current.top,
+              entryIntersecting: revealEntry.isIntersecting,
+              entryTop: revealEntry.boundingClientRect.top,
+            });
+          }
+          callback(entries, this);
+        }, options);
         this.root = this.observer.root;
         this.rootMargin = this.observer.rootMargin;
         this.thresholds = this.observer.thresholds;
       }
 
-      disconnect() { this.observer.disconnect(); }
+      disconnect() {
+        if (this.observesConnectedReveal) {
+          browserState.m6Runtime!.revealDisconnects += 1;
+          this.observesConnectedReveal = false;
+        }
+        this.observer.disconnect();
+      }
       observe(target: Element) {
         if (target.parentElement?.matches('section[aria-labelledby="proof-title"]')) {
+          this.observesConnectedReveal = true;
           browserState.m6Runtime!.revealObserveHeights.push(document.documentElement.scrollHeight);
           browserState.m6Runtime!.revealRootMargins.push(this.rootMargin);
         }
@@ -222,6 +280,10 @@ test("keeps the intro boundary and frozen geometry exact across the mode matrix"
   const entryY = await revealEntryY(page);
   await scrollInstantly(page, entryY + 4);
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "revealed");
+  await expect(connectedReveal(page)).toHaveAttribute("data-reveal-motion", "entry");
+  await expect.poll(() => page.evaluate(() =>
+    (window as typeof window & { m6Runtime?: { animationStarts: number } })
+      .m6Runtime!.animationStarts)).toBe(1);
   await scrollInstantly(page, 0);
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "revealed");
   await expectNoHorizontalOverflow(page);
@@ -408,11 +470,11 @@ test("pending intro survives resize boundaries, reduced motion, and route remoun
 
 test("restored and throttled entry stays fail-visible while page-level motion remains independent", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "full-1280", "Rendered handoff and restoration run once.");
-  test.fail(true, "A pre-observer-sample restored scroll can strand the M4 reveal in PENDING.");
   const session = await page.context().newCDPSession(page);
   await session.send("Network.enable");
   await session.send("Network.setCacheDisabled", { cacheDisabled: true });
   await session.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await installRestoredScrollHandshake(page);
   await page.goto("/");
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "pending");
   const benefitsTrack = page.locator("[data-benefits-track]");
@@ -441,25 +503,30 @@ test("restored and throttled entry stays fail-visible while page-level motion re
   await page.waitForTimeout(600);
   await expect(story(page)).toHaveAttribute("data-active-chapter", "preparation");
   const restoredY = await page.evaluate(() => scrollY);
-  await page.addInitScript((targetY) => {
-    window.addEventListener("DOMContentLoaded", () => {
-      let attempts = 60;
-      const restore = () => {
-        if (document.documentElement.scrollHeight >= targetY + innerHeight || attempts <= 0) {
-          window.scrollTo(0, targetY);
-          return;
-        }
-        attempts -= 1;
-        requestAnimationFrame(restore);
-      };
-      requestAnimationFrame(restore);
-    }, { once: true });
-  }, restoredY);
+  await queueRestoredScroll(page, restoredY);
   await page.reload();
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(restoredY - 2);
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "revealed");
+  await expect(connectedReveal(page)).toHaveAttribute("data-reveal-motion", "none");
   await expect(story(page)).toHaveAttribute("data-active-chapter", "preparation");
   await expect(page.locator(".pin-spacer")).toHaveCount(1);
+  const fullRuntime = await page.evaluate(() => (window as typeof window & {
+    m6Runtime?: {
+      animationStarts: number;
+      revealCallbackSamples: Array<{
+        currentBottom: number;
+        entryIntersecting: boolean;
+      }>;
+      revealDisconnects: number;
+      revealObserveHeights: number[];
+    };
+  }).m6Runtime!);
+  expect(fullRuntime.revealCallbackSamples[0]?.entryIntersecting).toBe(false);
+  expect(fullRuntime.revealCallbackSamples[0]?.currentBottom).toBeLessThanOrEqual(0);
+  expect(fullRuntime.revealDisconnects).toBe(1);
+  expect(fullRuntime.animationStarts).toBe(0);
+  expect(fullRuntime.revealObserveHeights).toEqual([2395]);
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(4395);
   await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.9);
   await page.waitForTimeout(500);
   await expect(story(page)).toHaveAttribute("data-active-chapter", "action-center");
@@ -474,6 +541,54 @@ test("restored and throttled entry stays fail-visible while page-level motion re
   await expect(story(page)).toHaveAttribute("data-active-chapter", "preparation");
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "revealed");
   await expect(page.locator(".pin-spacer")).toHaveCount(1);
+  await expectNoHorizontalOverflow(page);
+  await session.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+});
+
+test("adapted runtime spacing reconciles a stale restored-scroll handshake", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "full-1280", "Adapted restored-scroll reproduction runs once.");
+  const session = await page.context().newCDPSession(page);
+  await session.send("Network.enable");
+  await session.send("Network.setCacheDisabled", { cacheDisabled: true });
+  await session.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await installRestoredScrollHandshake(page);
+  await page.setViewportSize({ width: 900, height: 720 });
+  await page.goto("/");
+
+  const adaptedBaseline = baselines["adapted-900"];
+  await expect(story(page)).toHaveAttribute("data-scroll-mode", "adapted");
+  await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "pending");
+  await scrollInstantly(page, adaptedBaseline.storyTop + adaptedBaseline.travel * 0.55);
+  await page.waitForTimeout(600);
+  await expect(story(page)).toHaveAttribute("data-active-chapter", "preparation");
+  const restoredY = await page.evaluate(() => scrollY);
+  await queueRestoredScroll(page, restoredY);
+  await page.reload();
+
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(restoredY - 2);
+  await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "revealed");
+  await expect(connectedReveal(page)).toHaveAttribute("data-reveal-motion", "none");
+  await expect(story(page)).toHaveAttribute("data-active-chapter", "preparation");
+  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+  const runtime = await page.evaluate(() => (window as typeof window & {
+    m6Runtime?: {
+      animationStarts: number;
+      revealCallbackSamples: Array<{
+        currentBottom: number;
+        entryIntersecting: boolean;
+      }>;
+      revealDisconnects: number;
+      revealObserveHeights: number[];
+    };
+  }).m6Runtime!);
+  expect(runtime.revealCallbackSamples[0]?.entryIntersecting).toBe(false);
+  expect(runtime.revealCallbackSamples[0]?.currentBottom).toBeLessThanOrEqual(0);
+  expect(runtime.revealDisconnects).toBe(1);
+  expect(runtime.animationStarts).toBe(0);
+  expect(runtime.revealObserveHeights).toEqual([2875]);
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(4106);
+  await scrollInstantly(page, 0);
+  await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "revealed");
   await expectNoHorizontalOverflow(page);
   await session.send("Emulation.setCPUThrottlingRate", { rate: 1 });
 });

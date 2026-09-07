@@ -7,6 +7,15 @@ import {
 
 type RevealLifecycle = "uninitialized" | "pending" | "revealed";
 type RevealMotion = "none" | "entry";
+type RevealGeometry = "passed" | "reached" | "safely-below";
+
+function classifyRevealGeometry(bounds: DOMRect, viewportHeight: number): RevealGeometry {
+  // A one-pixel guard keeps near-boundary content fail-visible instead of
+  // risking a visible final-to-pending paint during the layout handshake.
+  if (bounds.top >= viewportHeight + 1) return "safely-below";
+  if (bounds.bottom <= 0) return "passed";
+  return "reached";
+}
 
 interface LandingViewportRevealProps {
   children: ReactNode;
@@ -59,11 +68,11 @@ export function LandingViewportReveal({
       return;
     }
 
-    const bounds = root.getBoundingClientRect();
-    // A one-pixel guard keeps near-boundary content fail-visible instead of
-    // risking a visible final-to-pending paint during the layout handshake.
-    const safelyBelowViewport = bounds.top >= window.innerHeight + 1;
-    if (!safelyBelowViewport) {
+    const geometry = classifyRevealGeometry(
+      root.getBoundingClientRect(),
+      window.innerHeight,
+    );
+    if (geometry !== "safely-below") {
       reveal();
       return;
     }
@@ -91,8 +100,27 @@ export function LandingViewportReveal({
         if (!active) return;
         const entry = entries.find((candidate) => candidate.target === root);
         if (!entry || lifecycleRef.current !== "pending") return;
-        initialResultReceived = true;
-        clearWatchdog();
+
+        if (!initialResultReceived) {
+          // Scroll restoration and runtime pin spacing can invalidate the
+          // observer's queued first sample. Reconcile that handshake against
+          // the element's live position before accepting or acting on it.
+          const currentGeometry = classifyRevealGeometry(
+            root.getBoundingClientRect(),
+            window.innerHeight,
+          );
+          initialResultReceived = true;
+          clearWatchdog();
+
+          if (currentGeometry === "safely-below") return;
+          if (currentGeometry === "passed" || !entry.isIntersecting) {
+            reveal();
+            return;
+          }
+
+          reveal("entry");
+          return;
+        }
 
         if (entry.boundingClientRect.bottom <= 0) {
           reveal();
