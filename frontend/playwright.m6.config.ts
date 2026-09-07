@@ -1,0 +1,42 @@
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "./e2e",
+  testMatch: "m6-connected-intro.pw.ts",
+  fullyParallel: false,
+  workers: 1,
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
+  reporter: [["line"]],
+  use: {
+    baseURL: "http://127.0.0.1:4173",
+    colorScheme: "dark",
+    reducedMotion: "no-preference",
+    locale: "en-US",
+    timezoneId: "UTC",
+    screenshot: "only-on-failure",
+    trace: "retain-on-failure",
+  },
+  projects: [
+    { name: "full-1440", use: { viewport: { width: 1440, height: 900 } } },
+    { name: "full-1280", use: { viewport: { width: 1280, height: 800 } } },
+    { name: "full-1024-768", use: { viewport: { width: 1024, height: 768 } } },
+    { name: "full-1024-720", use: { viewport: { width: 1024, height: 720 } } },
+    { name: "adapted-1023", use: { viewport: { width: 1023, height: 720 } } },
+    { name: "adapted-900", use: { viewport: { width: 900, height: 720 } } },
+    { name: "adapted-1024-719", use: { viewport: { width: 1024, height: 719 } } },
+    { name: "adapted-1280-700", use: { viewport: { width: 1280, height: 700 } } },
+    { name: "static-899", use: { viewport: { width: 899, height: 720 } } },
+    { name: "static-768", use: { viewport: { width: 768, height: 1024 } } },
+    { name: "static-430", use: { viewport: { width: 430, height: 932 } } },
+    { name: "static-390", use: { viewport: { width: 390, height: 844 } } },
+    { name: "static-320", use: { viewport: { width: 320, height: 568 } } },
+    { name: "static-1024-639", use: { viewport: { width: 1024, height: 639 } } },
+  ],
+  webServer: {
+    command: "npm run build && npm run preview -- --host 127.0.0.1 --port 4173",
+    url: "http://127.0.0.1:4173",
+    reuseExistingServer: false,
+    timeout: 120_000,
+  },
+});

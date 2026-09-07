@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { renderApp } from "../test/renderApp";
 
-describe("LandingPage hero entrance boundary", () => {
+describe("LandingPage motion ownership boundaries", () => {
   it("uses five semantic presentation groups without changing the inner product targets", async () => {
     const { container } = renderApp("/", { withSession: false });
 
@@ -58,5 +58,34 @@ describe("LandingPage hero entrance boundary", () => {
     );
     expect(cta).not.toHaveAttribute("tabindex", "-1");
     expect(cta).not.toHaveAttribute("aria-hidden");
+  });
+
+  it("limits the Connected Workspace viewport reveal to its static intro", async () => {
+    renderApp("/", { withSession: false });
+    const heading = await screen.findByRole("heading", {
+      name: "The workspace adapts around your search.",
+      level: 2,
+    });
+    const section = heading.closest<HTMLElement>("section");
+    const reveal = heading.closest<HTMLElement>("[data-landing-viewport-reveal]");
+    const story = section?.querySelector<HTMLElement>("[data-scroll-story]");
+    const legacyWrapper = section?.parentElement;
+
+    expect(section).not.toBeNull();
+    expect(reveal).not.toBeNull();
+    expect(story).not.toBeNull();
+    if (!section || !reveal || !story) throw new Error("Connected Workspace boundary is missing");
+    expect(reveal).toHaveTextContent("Connected workspace");
+    expect(reveal).toHaveTextContent(
+      "Follow one opportunity through the search while the bigger picture stays connected.",
+    );
+    expect(reveal.parentElement).toBe(section);
+    expect(story.parentElement).toBe(section);
+    expect(reveal).not.toContainElement(story);
+    expect(story.closest("[data-landing-viewport-reveal]")).toBeNull();
+    expect(legacyWrapper).toHaveClass("hf-section-reveal", "hf-scroll-story-reveal");
+    expect(legacyWrapper).toContainElement(reveal);
+    expect(legacyWrapper).toContainElement(story);
+    expect(reveal).not.toHaveAttribute("aria-hidden");
   });
 });
