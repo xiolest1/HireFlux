@@ -863,13 +863,14 @@
   box-shadow: 0 18px 38px rgb(0 0 0 / 34%);
 }
 
-@media (min-width: 56.25rem) and (max-width: 1023.99px) and (min-height: 42.5rem) and (prefers-reduced-motion: no-preference),
-  (min-width: 64rem) and (min-height: 40rem) and (max-height: 719.99px) and (prefers-reduced-motion: no-preference) {
-  .hf-scroll-story[data-reduced-motion="false"][data-scroll-mode="adapted"] .hf-scroll-story-desktop {
+/* The Connected-local transaction owns mode visibility, so CSS cannot collapse
+   pin spacing before reading position has been captured. */
+@media all {
+  .hf-scroll-story[data-scroll-mode="adapted"] .hf-scroll-story-desktop {
     display: block;
   }
 
-  .hf-scroll-story[data-reduced-motion="false"][data-scroll-mode="adapted"] .hf-scroll-story-fallback {
+  .hf-scroll-story[data-scroll-mode="adapted"] .hf-scroll-story-fallback {
     display: none;
   }
 
@@ -927,22 +928,22 @@
     padding: 0.75rem;
   }
 
-  .hf-scroll-story[data-reduced-motion="false"][data-scroll-mode="adapted"] .hf-scroll-story-release-buffer {
+  .hf-scroll-story[data-scroll-mode="adapted"] .hf-scroll-story-release-buffer {
     display: block;
     min-height: max(8rem, calc(100svh - 42rem));
   }
 }
 
-@media (min-width: 64rem) and (min-height: 45rem) and (prefers-reduced-motion: no-preference) {
-  .hf-scroll-story[data-reduced-motion="false"] .hf-scroll-story-desktop {
+@media all {
+  .hf-scroll-story[data-scroll-mode="full"] .hf-scroll-story-desktop {
     display: block;
   }
 
-  .hf-scroll-story[data-reduced-motion="false"] .hf-scroll-story-fallback {
+  .hf-scroll-story[data-scroll-mode="full"] .hf-scroll-story-fallback {
     display: none;
   }
 
-  .hf-scroll-story[data-reduced-motion="false"] .hf-scroll-story-release-buffer {
+  .hf-scroll-story[data-scroll-mode="full"] .hf-scroll-story-release-buffer {
     display: block;
     min-height: max(10rem, calc(100svh - 48rem));
   }

@@ -68,25 +68,17 @@ async function installRestoredScrollHandshake(page: Page) {
     const storedTarget = window.sessionStorage.getItem("m6-f1-restored-y");
     if (storedTarget === null) return;
     window.sessionStorage.removeItem("m6-f1-restored-y");
-    const targetY = Number(storedTarget);
-    window.addEventListener("DOMContentLoaded", () => {
-      let attempts = 60;
-      const restore = () => {
-        if (document.documentElement.scrollHeight >= targetY + innerHeight || attempts <= 0) {
-          window.scrollTo(0, targetY);
-          return;
-        }
-        attempts -= 1;
-        requestAnimationFrame(restore);
-      };
-      requestAnimationFrame(restore);
-    }, { once: true });
+    // Deliver restoration between the real native sample and the application
+    // callback. rAF-vs-IO ordering never guaranteed this stale-sample scenario.
+    (window as typeof window & { m6RestoreTarget?: number }).m6RestoreTarget = Number(storedTarget);
   });
 }
 
 async function queueRestoredScroll(page: Page, targetY: number) {
   await page.evaluate((nextY) => {
     window.sessionStorage.setItem("m6-f1-restored-y", String(nextY));
+    window.history.scrollRestoration = "manual";
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, targetY);
 }
 
@@ -145,6 +137,11 @@ test.beforeEach(async ({ page }) => {
             entry.target.parentElement?.matches('section[aria-labelledby="proof-title"]'),
           );
           if (revealEntry) {
+            const restoration = window as typeof window & { m6RestoreTarget?: number };
+            if (restoration.m6RestoreTarget !== undefined) {
+              window.scrollTo({ top: restoration.m6RestoreTarget, behavior: "instant" });
+              delete restoration.m6RestoreTarget;
+            }
             const current = revealEntry.target.getBoundingClientRect();
             browserState.m6Runtime!.revealCallbackSamples.push({
               currentBottom: current.bottom,
@@ -525,7 +522,8 @@ test("restored and throttled entry stays fail-visible while page-level motion re
   expect(fullRuntime.revealCallbackSamples[0]?.currentBottom).toBeLessThanOrEqual(0);
   expect(fullRuntime.revealDisconnects).toBe(1);
   expect(fullRuntime.animationStarts).toBe(0);
-  expect(fullRuntime.revealObserveHeights).toEqual([2395]);
+  // Content-fit eligibility starts from the fail-visible Static DOM before pinning.
+  expect(fullRuntime.revealObserveHeights).toEqual([2460]);
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(4395);
   await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.9);
   await page.waitForTimeout(500);
@@ -550,7 +548,8 @@ test("adapted runtime spacing reconciles a stale restored-scroll handshake", asy
   const session = await page.context().newCDPSession(page);
   await session.send("Network.enable");
   await session.send("Network.setCacheDisabled", { cacheDisabled: true });
-  await session.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  // This test controls sample -> restoration -> callback ordering, not elapsed
+  // watchdog time. The preceding test retains the 4x-CPU fail-visible coverage.
   await installRestoredScrollHandshake(page);
   await page.setViewportSize({ width: 900, height: 720 });
   await page.goto("/");

@@ -3,14 +3,12 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useReducedMotion } from "../../components/ui/motionHooks";
+import { mountConnectedStory, type ConnectedAnimation } from "./connectedStoryLifecycle";
 import { landingScrollChapters, landingStory, landingWorkspace, type LandingScrollChapter, type LandingWorkspaceStage } from "./landingStoryModel";
 import {
   scrollChapterForProgress,
-  scrollStoryAdaptedQuery,
-  scrollStoryFullQuery,
   scrollStoryModeConfiguration,
   scrollStoryTimelineLabels,
-  type ScrollStoryChoreographyMode,
 } from "./scrollStoryConfig";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -170,20 +168,23 @@ export function ScrollProductStory() {
   const [activeChapter, setActiveChapter] = useState<LandingWorkspaceStage>("applications");
 
   useLayoutEffect(() => {
-    if (reducedMotion || !rootRef.current || !stageRef.current) return;
+    if (!rootRef.current || !stageRef.current) return;
     const root = rootRef.current;
     const stage = stageRef.current;
-    const media = gsap.matchMedia();
-    const context = gsap.context(() => {
-      let activeBranch: symbol | null = null;
-      const createChoreography = (mode: ScrollStoryChoreographyMode) => {
-        const branch = Symbol(mode);
+    return mountConnectedStory(root, stage, (mode) => {
+      const media = gsap.matchMedia();
+      let owned: ConnectedAnimation;
+      const context = gsap.context(() => {
+        // Native mode ownership completes capture/revert/remap synchronously.
+        // An all-media GSAP scope retains cleanup without a second media-refresh
+        // owner resetting document scroll after the local transaction finishes.
+        media.add("all", () => {
         const configuration = scrollStoryModeConfiguration[mode];
-        activeBranch = branch;
         root.dataset.scrollMode = mode;
         const selectChapter = (progress: number) => { const next = scrollChapterForProgress(progress); if (activeChapterRef.current !== next) { activeChapterRef.current = next; setActiveChapter(next); } };
-        const timeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * configuration.travelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true } });
-        timeline.eventCallback("onUpdate", () => selectChapter(timeline.progress()));
+        let refreshing = false;
+        const timeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * configuration.travelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onRefreshInit: () => { refreshing = true; }, onRefresh: (trigger) => { refreshing = false; selectChapter(trigger.progress); } } });
+        timeline.eventCallback("onUpdate", () => { if (!refreshing) selectChapter(timeline.progress()); });
         timeline
           .addLabel("applications", scrollStoryTimelineLabels.applications)
           .set('[data-scroll-copy-stage]:not([data-scroll-copy-stage="applications"])', { autoAlpha: 0 }, 0)
@@ -250,28 +251,23 @@ export function ScrollProductStory() {
         addNarrativeHandoff("applications", "interviews", scrollStoryTimelineLabels.interviews);
         addNarrativeHandoff("interviews", "preparation", scrollStoryTimelineLabels.preparation);
         addNarrativeHandoff("preparation", "action-center", scrollStoryTimelineLabels.actionCenter);
+        owned = {
+          trigger: timeline.scrollTrigger!,
+          settle: (progress) => { timeline.scrollTrigger?.getTween()?.pause(); timeline.progress(progress); },
+          dispose: () => { media.revert(); context.revert(); },
+        };
         return () => {
-          if (activeBranch === branch) {
-            activeBranch = null;
-            root.dataset.scrollMode = "static";
-          }
           timeline.scrollTrigger?.kill();
           timeline.kill();
         };
-      };
-      media.add(
-        { full: scrollStoryFullQuery, adapted: scrollStoryAdaptedQuery },
-        (mediaContext) => {
-          const conditions = mediaContext.conditions as { full?: boolean; adapted?: boolean };
-          if (conditions.full) return createChoreography("full");
-          if (conditions.adapted) return createChoreography("adapted");
-        },
-      );
-    }, root);
-    return () => { media.revert(); context.revert(); };
-  }, [reducedMotion]);
+        });
+      }, root);
+      return owned!;
+    });
+  }, []);
 
   return <div ref={rootRef} className="hf-scroll-story mt-12 sm:mt-14 lg:mt-12" data-scroll-story data-scroll-mode="static" data-active-chapter={activeChapter} data-reduced-motion={reducedMotion}>
+    <span className="pointer-events-none invisible absolute size-[1rem]" data-scroll-fit-probe aria-hidden="true" />
     <div className="hf-scroll-story-desktop" data-testid="desktop-product-story">
       <div ref={stageRef} className="hf-scroll-story-stage relative grid h-[min(43rem,100vh)] min-h-[40rem] grid-cols-[minmax(0,0.52fr)_minmax(0,1.18fr)] items-center gap-8 xl:grid-cols-[minmax(0,0.48fr)_minmax(0,1.22fr)] xl:gap-6" data-scroll-story-pin>
         <div className="relative min-h-[31rem] min-w-0">

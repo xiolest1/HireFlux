@@ -19,7 +19,7 @@ const gsapMocks = vi.hoisted(() => {
   let maximumActiveContexts = 0;
   let lastTimelineConfiguration: unknown;
   const branchCleanups: Array<() => void> = [];
-  const trigger = { kill: vi.fn() };
+  const trigger = { kill: vi.fn(), refresh: vi.fn(), update: vi.fn() };
   const timeline = {
     addLabel: vi.fn(),
     set: vi.fn(),
@@ -68,6 +68,7 @@ const gsapMocks = vi.hoisted(() => {
       return { revert: vi.fn(() => { activeContexts -= 1; }) };
     }),
     setMatchedMode: (mode: "full" | "adapted" | "static") => { matchedMode = mode; },
+    getMatchedMode: () => matchedMode,
     getActiveContexts: () => activeContexts,
     getMaximumActiveContexts: () => maximumActiveContexts,
     getLastTimelineConfiguration: () => lastTimelineConfiguration,
@@ -96,7 +97,9 @@ function setReducedMotion(reducedMotion: boolean) {
   vi.stubGlobal(
     "matchMedia",
     vi.fn((query: string) => ({
-      matches: query === "(prefers-reduced-motion: reduce)" && reducedMotion,
+      matches: query === "(prefers-reduced-motion: reduce)" ? reducedMotion
+        : !reducedMotion && (query === scrollStoryFullQuery ? gsapMocks.getMatchedMode() === "full"
+          : query === scrollStoryAdaptedQuery && gsapMocks.getMatchedMode() === "adapted"),
       media: query,
       onchange: null,
       addListener: vi.fn(),
@@ -115,9 +118,11 @@ beforeEach(() => {
     method.mockReturnValue(gsapMocks.timeline);
   }
   gsapMocks.timeline.progress.mockReturnValue(0);
+  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(640);
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(640);
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("scroll story configuration", () => {
   it("maps the four semantic workspaces and settled endpoint", () => {
@@ -154,7 +159,7 @@ describe("ScrollProductStory", () => {
     render(<ScrollProductStory />);
 
     expect(gsapMocks.media.add).toHaveBeenCalledWith(
-      { full: scrollStoryFullQuery, adapted: scrollStoryAdaptedQuery },
+      "all",
       expect.any(Function),
     );
     expect(gsapMocks.timelineFactory).toHaveBeenCalledOnce();
@@ -360,21 +365,13 @@ describe("ScrollProductStory", () => {
     expect(screen.getByTestId("mobile-product-story")).toBeInTheDocument();
   });
 
-  it("prevents a stale same-mode cleanup from clearing the current branch", () => {
+  it("keeps static capability outside the GSAP lifecycle", () => {
     setReducedMotion(false);
     gsapMocks.setMatchedMode("static");
     const { container } = render(<ScrollProductStory />);
-    const responsiveSetup = gsapMocks.media.add.mock.calls[0]?.[1] as (
-      context: { conditions: { full: boolean; adapted: boolean } },
-    ) => (() => void);
     const story = container.querySelector("[data-scroll-story]");
-
-    const adaptedContext = { conditions: { full: false, adapted: true } };
-    const cleanupPrevious = responsiveSetup(adaptedContext);
-    const cleanupCurrent = responsiveSetup(adaptedContext);
-    cleanupPrevious();
-    expect(story).toHaveAttribute("data-scroll-mode", "adapted");
-    cleanupCurrent();
+    expect(gsapMocks.context).not.toHaveBeenCalled();
+    expect(gsapMocks.media.add).not.toHaveBeenCalled();
     expect(story).toHaveAttribute("data-scroll-mode", "static");
   });
 
