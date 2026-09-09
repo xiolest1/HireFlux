@@ -177,6 +177,7 @@ test("Quiet Coda is a static semantic sibling between Connected Workspace and th
   const structure = await page.evaluate(() => {
     const main = document.querySelector("main")!;
     const story = document.querySelector("[data-scroll-story]")!;
+    const storySection = story.closest("section")!;
     const coda = document.querySelector("[data-quiet-coda]")!;
     const footer = document.querySelector("footer")!;
     const headline = coda.querySelector("h2")!;
@@ -192,6 +193,14 @@ test("Quiet Coda is a static semantic sibling between Connected Workspace and th
       semanticOrder: follows(headline, support) && follows(support, action) && follows(action, reassurance),
       actionHeight: action.getBoundingClientRect().height,
       animations: coda.getAnimations({ subtree: true }).length,
+      storyToHeadline:
+        headline.getBoundingClientRect().top - story.getBoundingClientRect().bottom,
+      sectionToCoda:
+        coda.getBoundingClientRect().top - storySection.getBoundingClientRect().bottom,
+      codaToHeadline:
+        headline.getBoundingClientRect().top - coda.getBoundingClientRect().top,
+      reassuranceToFooter:
+        footer.getBoundingClientRect().top - reassurance.getBoundingClientRect().bottom,
     };
   });
   expect(structure.mainContainsCoda).toBe(true);
@@ -200,6 +209,11 @@ test("Quiet Coda is a static semantic sibling between Connected Workspace and th
   expect(structure.semanticOrder).toBe(true);
   expect(structure.actionHeight).toBeGreaterThanOrEqual(44);
   expect(structure.animations).toBe(0);
+  expect(Math.abs(structure.sectionToCoda)).toBeLessThanOrEqual(1);
+  expect(Math.abs(structure.codaToHeadline)).toBeLessThanOrEqual(1);
+  expect(structure.storyToHeadline).toBeGreaterThanOrEqual(63);
+  expect(structure.storyToHeadline).toBeLessThanOrEqual(97);
+  expect(structure.reassuranceToFooter).toBeGreaterThanOrEqual(79);
   await expect(main).toContainText("What happened should help you see what matters now.");
   await expect(story).toBeVisible();
   await footer.scrollIntoViewIfNeeded();

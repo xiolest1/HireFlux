@@ -1,5 +1,64 @@
 # HireFlux development log
 
+## 2026-09-09 — Stage 6-F1 Quiet Coda rhythm remediation
+
+Rendered review found that the lower landing page stacked two ordinary section
+gaps after the frozen Connected Workspace release: the Connected section's
+96px desktop bottom padding and Quiet Coda's separate 96px desktop top padding.
+That 192px post-story gap sat downstream of the required story stage and
+160px release buffer, making the Coda feel detached even though no negative
+margin, transform offset, positioned overlap, or other visual compensation was
+present. The Coda-to-Footer gap was only 96px, which reinforced the imbalance.
+The full story's release buffer remains viewport-relative in definition but is
+clamped to 160px throughout the validated 720–900px desktop heights; the
+adapted buffer remains 128px at 900×720.
+
+Three controlled rendered treatments were compared: the Stage 6 baseline;
+Coda top 48px with a 128px footer-side buffer; and a single-boundary treatment
+with 96px total post-story spacing and 128px before the Footer. The selected
+implementation keeps Connected Workspace completely unchanged and lets its
+existing bottom padding own the handoff. Quiet Coda now has no top padding and
+uses Coda-local bottom padding of 80px mobile, 96px from `sm`, and 128px from
+`lg`. The correction is entirely normal-flow and preserves the existing
+`max-w-7xl` alignment and text measure. No shared landing spacing primitive,
+Footer component/style, story geometry, copy, semantic structure, CTA
+lifecycle, or motion system changed.
+
+Stable Chromium measurements after fonts and ScrollTrigger initialization
+show the full-mode story at 1365.17 → 3365.17 for 1280×800 (2000px travel, one
+pin spacer) and the adapted story at 1712.85 → 3152.85 for 900×720 (1440px,
+one spacer), unchanged from Stage 6. Connected-section-end → Coda-headline is
+now 0px because the section's own 96px/64px bottom padding supplies the full
+exhale; story-end → headline is 96px desktop/adapted and 64px mobile. The
+perceptual Action surface → headline distance is 360.67px in full mode and
+304.67px in adapted mode, down by exactly 96px. Internal rhythm remains
+20px headline-to-support, 32px support-to-action, and 12px
+action-to-reassurance. Reassurance → Footer increases from 96px to 128px on
+large desktop, 80px to 96px at 900px, and 64px to 80px on mobile. The same
+results held at 1280×720, 1280×800, 1440×900, 900×720, and 390×844.
+
+Live dark/light desktop and dark mobile review confirmed a finite exhale after
+Action Center, a clearer referent for “What happened,” and stronger separation
+between narrative closure and the operational Footer. The 320px 200%-text test
+retains normal flow, touch-target sizing, source order, and containment. Five
+deterministic landing baselines changed only in the approved lower-page region:
+dark desktop 1280 and light desktop 1280, tablet 768, mobile 390, and narrow
+320. They were inspected, updated, and rerun successfully; frozen Hero,
+Product Benefits, Connected Workspace, and Action Center imagery remained
+unchanged.
+
+ESLint, TypeScript, all 249 Vitest tests, 13 focused accessibility tests, the
+focused Coda browser checks, the deterministic landing set (10/10), the full
+Playwright/Axe matrix (159 passed, 96 intentional skips), M7-F1 lifecycle
+coverage (11/11), production build, and `git diff --check` pass. The M6 matrix
+completed 18 applicable passes with 65 skips and one synthetic full-mode
+restoration timeout under 4× CPU throttling; the same assertion reproduced
+against the untouched Stage 6 spacing and passed unchanged without CPU
+throttling, isolating a harness timing limit rather than an F1 regression. The
+build remains effectively unchanged at 283.02/84.81 kB main,
+182.01/63.19 kB lazy landing, and 122.18/19.77 kB CSS raw/gzip. Generated
+`dist` output remains untracked.
+
 ## 2026-09-09 — Stage 6 Quiet Coda implementation and freeze
 
 Implemented the approved Quiet Coda as a dedicated, static landing component

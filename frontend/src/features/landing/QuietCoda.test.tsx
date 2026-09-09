@@ -74,4 +74,19 @@ describe("QuietCoda", () => {
     expect(section.querySelector(".hf-content-enter")).toBeNull();
     expect(section.querySelector("[data-hero-entrance]")).toBeNull();
   });
+
+  it("owns the post-story handoff without duplicating top spacing", () => {
+    const { container } = render(
+      <QuietCoda
+        actionLabel="Continue Demo"
+        error={null}
+        isCreating={false}
+        onAction={vi.fn()}
+      />,
+    );
+    const section = container.querySelector<HTMLElement>("[data-quiet-coda]")!;
+
+    expect(section).toHaveClass("pb-20", "sm:pb-24", "lg:pb-32");
+    expect(section.className).not.toMatch(/(?:^|\s)(?:p|m)[ty]-/);
+  });
 });

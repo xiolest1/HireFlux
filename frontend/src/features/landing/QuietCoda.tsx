@@ -16,7 +16,7 @@ export function QuietCoda({
 }: QuietCodaProps) {
   return (
     <section
-      className="mx-auto max-w-7xl min-w-0 px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24"
+      className="mx-auto max-w-7xl min-w-0 px-4 pb-20 sm:px-6 sm:pb-24 lg:px-8 lg:pb-32"
       aria-labelledby="quiet-coda-title"
       data-quiet-coda
     >
