@@ -1,5 +1,51 @@
 # HireFlux development log
 
+## 2026-09-09 — M6-T1 restored-scroll harness determinism remediation
+
+Retired the remaining synthetic M6 restored-scroll harness timing debt without
+changing production code. Repeated 4× CPU-throttled reproduction showed the old
+fixture coupled its restoration to a native `IntersectionObserver` delivery:
+the Connected reveal observer registered, the unchanged 300ms fail-visible
+watchdog resolved the reveal and disconnected the observer, the native callback
+never arrived, and the harness-owned restoration therefore remained queued at
+`scrollY = 0`. The failure was a test scheduling assumption, not a failure of
+the rendered restored-scroll contract.
+
+The M6 browser fixture now gives the restored handshake explicit causal
+ownership. When the Connected reveal is observed, it snapshots the
+pre-restoration rectangle into an immutable `DOMRect`, applies the queued
+restoration, confirms the element's real post-restoration rectangle, and
+releases exactly one stale-negative observer entry from a controlled microtask.
+The test waits on recorded lifecycle facts rather than elapsed time:
+observer creation, stale capture, restoration, current-geometry confirmation,
+callback release, observer cleanup, and reconciliation return. Production still
+performs the authoritative live `getBoundingClientRect()` read; the fixture does
+not force reveal state or invoke an internal reconciliation helper. The real
+300ms watchdog remains active, unchanged, and unmocked.
+
+The repaired full-mode scenario recorded stale geometry at top/bottom
+1162.19/1318.19px before restoration and live geometry at
+-803.81/-647.81px when the stale entry was processed, proving the two geometry
+sources remain independent. A temporary negative control made the affected
+production branch trust stale entry geometry; the repaired test then failed at
+the expected `pending` versus `revealed` assertion. That mutation and its
+temporary control setting were fully reverted before normal validation, and
+`LandingViewportReveal.tsx` has no final diff.
+
+An initial repeatability run exposed one remaining observation-only race in the
+test's transient `pending` assertion (9 passes, 1 failure). Replacing that check
+with a condition-based observer-registration assertion removed the incidental
+sampling requirement without weakening the lifecycle contract. The final exact
+test then passed 10/10 first attempts under identical 4× throttling with no
+retries or timeout increase. The complete M6 matrix passed 19 cases with 65
+intentional skips; M7-F1 passed 11/11; focused `LandingViewportReveal` tests
+passed 20/20; all 249 Vitest tests and 13 accessibility tests passed; and the
+full Playwright/Axe matrix passed 159 cases with 96 intentional skips. ESLint,
+TypeScript, production build, and final diff checks also pass. Bundle output is
+unchanged at 283.02/84.81 kB main, 182.01/63.19 kB lazy landing, and
+122.18/19.77 kB CSS raw/gzip. M6-T1 changes only its browser harness and this
+log; it creates no production visual or snapshot delta.
+
 ## 2026-09-09 — Stage 6-F1 Quiet Coda rhythm remediation
 
 Rendered review found that the lower landing page stacked two ordinary section

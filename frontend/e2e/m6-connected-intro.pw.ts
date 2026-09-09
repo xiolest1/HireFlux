@@ -99,6 +99,16 @@ test.beforeEach(async ({ page }) => {
       revealFrames: Array<{ opacity: number; state: string | null; transform: string }>;
       revealObserveHeights: number[];
       revealRootMargins: string[];
+      restoredHandshake: {
+        callbackDeliveries: number;
+        currentBottom: number;
+        currentTop: number;
+        eventOrder: string[];
+        phase: string;
+        staleBottom: number;
+        staleTop: number;
+        targetY: number;
+      } | null;
     };
     const browserState = window as typeof window & { m6Runtime?: Runtime };
     browserState.m6Runtime = {
@@ -110,6 +120,7 @@ test.beforeEach(async ({ page }) => {
       revealFrames: [],
       revealObserveHeights: [],
       revealRootMargins: [],
+      restoredHandshake: null,
     };
     document.addEventListener("DOMContentLoaded", () => {
       browserState.m6Runtime!.initialDocumentHeight = document.documentElement.scrollHeight;
@@ -129,19 +140,16 @@ test.beforeEach(async ({ page }) => {
       readonly rootMargin: string;
       readonly thresholds: readonly number[];
       private readonly observer: IntersectionObserver;
+      private readonly callback: IntersectionObserverCallback;
       private observesConnectedReveal = false;
 
       constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        this.callback = callback;
         this.observer = new NativeIntersectionObserver((entries) => {
           const revealEntry = entries.find((entry) =>
             entry.target.parentElement?.matches('section[aria-labelledby="proof-title"]'),
           );
           if (revealEntry) {
-            const restoration = window as typeof window & { m6RestoreTarget?: number };
-            if (restoration.m6RestoreTarget !== undefined) {
-              window.scrollTo({ top: restoration.m6RestoreTarget, behavior: "instant" });
-              delete restoration.m6RestoreTarget;
-            }
             const current = revealEntry.target.getBoundingClientRect();
             browserState.m6Runtime!.revealCallbackSamples.push({
               currentBottom: current.bottom,
@@ -150,7 +158,7 @@ test.beforeEach(async ({ page }) => {
               entryTop: revealEntry.boundingClientRect.top,
             });
           }
-          callback(entries, this);
+          this.callback(entries, this);
         }, options);
         this.root = this.observer.root;
         this.rootMargin = this.observer.rootMargin;
@@ -159,6 +167,7 @@ test.beforeEach(async ({ page }) => {
 
       disconnect() {
         if (this.observesConnectedReveal) {
+          browserState.m6Runtime!.restoredHandshake?.eventOrder.push("observer-disconnected");
           browserState.m6Runtime!.revealDisconnects += 1;
           this.observesConnectedReveal = false;
         }
@@ -169,6 +178,68 @@ test.beforeEach(async ({ page }) => {
           this.observesConnectedReveal = true;
           browserState.m6Runtime!.revealObserveHeights.push(document.documentElement.scrollHeight);
           browserState.m6Runtime!.revealRootMargins.push(this.rootMargin);
+          const restoration = window as typeof window & { m6RestoreTarget?: number };
+          if (restoration.m6RestoreTarget !== undefined) {
+            const staleRect = target.getBoundingClientRect();
+            const staleBounds = DOMRect.fromRect({
+              height: staleRect.height,
+              width: staleRect.width,
+              x: staleRect.x,
+              y: staleRect.y,
+            });
+            const targetY = restoration.m6RestoreTarget;
+            const handshake = {
+              callbackDeliveries: 0,
+              currentBottom: staleBounds.bottom,
+              currentTop: staleBounds.top,
+              eventOrder: ["observer-created", "stale-snapshot-captured"],
+              phase: "stale-snapshot-captured",
+              staleBottom: staleBounds.bottom,
+              staleTop: staleBounds.top,
+              targetY,
+            };
+            browserState.m6Runtime!.restoredHandshake = handshake;
+
+            window.scrollTo({ top: targetY, behavior: "instant" });
+            delete restoration.m6RestoreTarget;
+            handshake.eventOrder.push("restoration-applied");
+            const current = target.getBoundingClientRect();
+            handshake.currentBottom = current.bottom;
+            handshake.currentTop = current.top;
+            handshake.phase = "current-geometry-confirmed";
+            handshake.eventOrder.push("current-geometry-confirmed");
+
+            queueMicrotask(() => {
+              if (!this.observesConnectedReveal) {
+                handshake.phase = "delivery-cancelled";
+                handshake.eventOrder.push("delivery-cancelled");
+                return;
+              }
+              handshake.phase = "callback-released";
+              handshake.eventOrder.push("callback-released");
+              handshake.callbackDeliveries += 1;
+              const staleEntry: IntersectionObserverEntry = {
+                boundingClientRect: staleBounds,
+                intersectionRatio: 0,
+                intersectionRect: DOMRect.fromRect(),
+                isIntersecting: false,
+                rootBounds: null,
+                target,
+                time: performance.now(),
+              };
+              const currentAtDelivery = target.getBoundingClientRect();
+              browserState.m6Runtime!.revealCallbackSamples.push({
+                currentBottom: currentAtDelivery.bottom,
+                currentTop: currentAtDelivery.top,
+                entryIntersecting: staleEntry.isIntersecting,
+                entryTop: staleEntry.boundingClientRect.top,
+              });
+              this.callback([staleEntry], this);
+              handshake.phase = "reconciliation-returned";
+              handshake.eventOrder.push("reconciliation-returned");
+            });
+            return;
+          }
         }
         this.observer.observe(target);
       }
@@ -483,7 +554,11 @@ test("restored and throttled entry stays fail-visible while page-level motion re
   await session.send("Emulation.setCPUThrottlingRate", { rate: 4 });
   await installRestoredScrollHandshake(page);
   await page.goto("/");
-  await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "pending");
+  await expect.poll(() => page.evaluate(() =>
+    (window as typeof window & {
+      m6Runtime?: { revealObserveHeights: number[] };
+    }).m6Runtime?.revealObserveHeights.length ?? 0,
+  )).toBeGreaterThan(0);
   const benefitsTrack = page.locator("[data-benefits-track]");
   await expect(benefitsTrack).toHaveAttribute("data-motion-ready", "true");
   const entryY = await revealEntryY(page);
@@ -505,18 +580,22 @@ test("restored and throttled entry stays fail-visible while page-level motion re
 
   const baseline = baselines["full-1280"];
   await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.05);
-  await page.waitForTimeout(500);
+  await expect(story(page)).toHaveAttribute("data-active-chapter", "applications");
   // Keep this synthetic native-restoration target reachable before runtime pin
   // spacing exists. The adapted companion below restores directly into
   // Preparation, while this throttled branch verifies the stale-sample
   // handshake within the full-mode pin.
   await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.3);
-  await page.waitForTimeout(600);
   await expect(story(page)).toHaveAttribute("data-active-chapter", "interviews");
   const restoredY = await page.evaluate(() => scrollY);
   await queueRestoredScroll(page, restoredY);
   await page.reload();
-  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(restoredY - 2);
+  await expect.poll(() => page.evaluate(() =>
+    (window as typeof window & {
+      m6Runtime?: { restoredHandshake: { phase: string } | null };
+    }).m6Runtime?.restoredHandshake?.phase,
+  )).toBe("reconciliation-returned");
+  expect(await page.evaluate(() => scrollY)).toBeGreaterThan(restoredY - 2);
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "revealed");
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-motion", "none");
   await expect(story(page)).toHaveAttribute("data-active-chapter", "interviews");
@@ -530,10 +609,39 @@ test("restored and throttled entry stays fail-visible while page-level motion re
       }>;
       revealDisconnects: number;
       revealObserveHeights: number[];
+      restoredHandshake: {
+        callbackDeliveries: number;
+        currentBottom: number;
+        currentTop: number;
+        eventOrder: string[];
+        phase: string;
+        staleBottom: number;
+        staleTop: number;
+        targetY: number;
+      } | null;
     };
   }).m6Runtime!);
   expect(fullRuntime.revealCallbackSamples[0]?.entryIntersecting).toBe(false);
   expect(fullRuntime.revealCallbackSamples[0]?.currentBottom).toBeLessThanOrEqual(0);
+  expect(fullRuntime.restoredHandshake).toMatchObject({
+    callbackDeliveries: 1,
+    eventOrder: [
+      "observer-created",
+      "stale-snapshot-captured",
+      "restoration-applied",
+      "current-geometry-confirmed",
+      "callback-released",
+      "observer-disconnected",
+      "reconciliation-returned",
+    ],
+    phase: "reconciliation-returned",
+    targetY: restoredY,
+  });
+  expect(fullRuntime.restoredHandshake!.staleTop).toBeGreaterThanOrEqual(801);
+  expect(fullRuntime.restoredHandshake!.currentBottom).toBeLessThanOrEqual(0);
+  expect(fullRuntime.restoredHandshake!.staleTop).toBeGreaterThan(
+    fullRuntime.restoredHandshake!.currentTop,
+  );
   expect(fullRuntime.revealDisconnects).toBe(1);
   expect(fullRuntime.animationStarts).toBe(0);
   // Content-fit eligibility starts from the fail-visible Static DOM before pinning.
@@ -547,16 +655,14 @@ test("restored and throttled entry stays fail-visible while page-level motion re
     await page.evaluate(() => document.documentElement.scrollHeight) - fullCodaHeight,
   ).toBe(4395);
   await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.9);
-  await page.waitForTimeout(500);
   await expect(story(page)).toHaveAttribute("data-active-chapter", "action-center");
   await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.3);
-  await page.waitForTimeout(500);
   await expect(story(page)).toHaveAttribute("data-active-chapter", "interviews");
   await scrollInstantly(page, baseline.storyTop + baseline.travel + 2);
-  await page.waitForTimeout(500);
-  expect(await stage(page).evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
+  await expect.poll(() => stage(page).evaluate(
+    (element) => getComputedStyle(element).position,
+  )).not.toBe("fixed");
   await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.68);
-  await page.waitForTimeout(500);
   await expect(story(page)).toHaveAttribute("data-active-chapter", "preparation");
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "revealed");
   await expect(page.locator(".pin-spacer")).toHaveCount(1);
@@ -579,7 +685,6 @@ test("adapted runtime spacing reconciles a stale restored-scroll handshake", asy
   await expect(story(page)).toHaveAttribute("data-scroll-mode", "adapted");
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "pending");
   await scrollInstantly(page, adaptedBaseline.storyTop + adaptedBaseline.travel * 0.55);
-  await page.waitForTimeout(600);
   await expect(story(page)).toHaveAttribute("data-active-chapter", "preparation");
   const restoredY = await page.evaluate(() => scrollY);
   await queueRestoredScroll(page, restoredY);
@@ -599,10 +704,25 @@ test("adapted runtime spacing reconciles a stale restored-scroll handshake", asy
       }>;
       revealDisconnects: number;
       revealObserveHeights: number[];
+      restoredHandshake: {
+        callbackDeliveries: number;
+        currentBottom: number;
+        eventOrder: string[];
+        phase: string;
+        staleTop: number;
+        targetY: number;
+      } | null;
     };
   }).m6Runtime!);
   expect(runtime.revealCallbackSamples[0]?.entryIntersecting).toBe(false);
   expect(runtime.revealCallbackSamples[0]?.currentBottom).toBeLessThanOrEqual(0);
+  expect(runtime.restoredHandshake).toMatchObject({
+    callbackDeliveries: 1,
+    phase: "reconciliation-returned",
+    targetY: restoredY,
+  });
+  expect(runtime.restoredHandshake!.staleTop).toBeGreaterThanOrEqual(721);
+  expect(runtime.restoredHandshake!.currentBottom).toBeLessThanOrEqual(0);
   expect(runtime.revealDisconnects).toBe(1);
   expect(runtime.animationStarts).toBe(0);
   const adaptedCodaHeight = await page.locator("[data-quiet-coda]").evaluate(
