@@ -22,6 +22,8 @@ interface ErrorPanelProps {
   title?: string;
   onRetry?: () => void;
   compact?: boolean;
+  animate?: boolean;
+  headingLevel?: 2 | 3;
 }
 
 export function ErrorPanel({
@@ -29,19 +31,22 @@ export function ErrorPanel({
   title = "Something went wrong",
   onRetry,
   compact = false,
+  animate = true,
+  headingLevel = 2,
 }: ErrorPanelProps) {
   const message =
     error instanceof Error
       ? error.message
       : "The request could not be completed. Please try again.";
   const requestId = error instanceof ApiError ? error.requestId : null;
+  const Heading = headingLevel === 3 ? "h3" : "h2";
 
   return (
     <div
-      className={`hf-content-enter rounded-2xl border border-danger/30 bg-danger-soft text-danger ${compact ? "p-4" : "p-6"}`}
+      className={`${animate ? "hf-content-enter " : ""}rounded-2xl border border-danger/30 bg-danger-soft text-danger ${compact ? "p-4" : "p-6"}`}
       role="alert"
     >
-      <h2 className="font-semibold">{title}</h2>
+      <Heading className="font-semibold">{title}</Heading>
       <p className="mt-1 text-sm leading-6">{message}</p>
       {requestId ? (
         <p className="mt-1 text-xs">Reference: {requestId}</p>

@@ -96,7 +96,7 @@ test("live text scaling preserves Preparation and unmount leaves no correction",
   for(const setting of ["normal","reduced","large"]) {
     await page.emulateMedia({reducedMotion:setting==="reduced"?"reduce":"no-preference"});
     await page.evaluate(setting=>document.documentElement.style.fontSize=setting==="large"?"200%":"100%",setting);
-    await page.getByRole("button",{name:"Continue Demo"}).click();await expect(page).toHaveURL(/dashboard/);
+    await page.getByRole("button",{name:"Continue Demo"}).first().click();await expect(page).toHaveURL(/dashboard/);
     // The authenticated AppLayout owns a normal scroll-to-top on route entry.
     // Wait for that navigation contract, then look for stale landing corrections.
     await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(0);

@@ -46,29 +46,36 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const startKeyRef = useRef<string | null>(null);
+  const startPromiseRef = useRef<Promise<DemoSession> | null>(null);
   const resetKeyRef = useRef<string | null>(null);
 
-  const start = useCallback(async () => {
-    setIsCreating(true);
-    setError(null);
-    clearManualTimeZonePreference();
-    const idempotencyKey = startKeyRef.current ?? createDemoOperationKey();
-    startKeyRef.current = idempotencyKey;
-    try {
-      const session = await createDemoSession(idempotencyKey);
-      queryClient.clear();
+  const start = useCallback(() => {
+    if (startPromiseRef.current) return startPromiseRef.current;
+    const operation = (async () => {
+      setIsCreating(true);
+      setError(null);
       clearManualTimeZonePreference();
-      saveDemoSession(session);
-      setState({ session, status: "active" });
-      startKeyRef.current = null;
-      return session;
-    } catch (creationError) {
-      if (!shouldRetainOperationKey(creationError)) startKeyRef.current = null;
-      setError(creationError);
-      throw creationError;
-    } finally {
-      setIsCreating(false);
-    }
+      const idempotencyKey = startKeyRef.current ?? createDemoOperationKey();
+      startKeyRef.current = idempotencyKey;
+      try {
+        const session = await createDemoSession(idempotencyKey);
+        queryClient.clear();
+        clearManualTimeZonePreference();
+        saveDemoSession(session);
+        setState({ session, status: "active" });
+        startKeyRef.current = null;
+        return session;
+      } catch (creationError) {
+        if (!shouldRetainOperationKey(creationError)) startKeyRef.current = null;
+        setError(creationError);
+        throw creationError;
+      } finally {
+        startPromiseRef.current = null;
+        setIsCreating(false);
+      }
+    })();
+    startPromiseRef.current = operation;
+    return operation;
   }, [queryClient]);
 
   const reset = useCallback(async () => {

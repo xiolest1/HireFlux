@@ -51,12 +51,90 @@ describe("demo workspace flow", () => {
     );
 
     const { user } = renderApp("/", { withSession: false });
-    await user.click(screen.getByRole("button", { name: "Explore the Demo" }));
+    await user.click(screen.getAllByRole("button", { name: "Explore the Demo" })[0]);
 
     expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
     expect(authorization).toBe(`Bearer ${issuedSession.access_token}`);
     expect(idempotencyKey).toMatch(/^[0-9a-f-]{36}$/i);
     expect(getDemoSession()?.access_token).toBe(issuedSession.access_token);
+  });
+
+  it("keeps both landing actions synchronized and serializes Coda provisioning", async () => {
+    let requestCount = 0;
+    let releaseRequest: (() => void) | undefined;
+    const responseGate = new Promise<void>((resolve) => {
+      releaseRequest = resolve;
+    });
+    server.use(
+      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, async () => {
+        requestCount += 1;
+        await responseGate;
+        return HttpResponse.json(issuedSession, { status: 201 });
+      }),
+    );
+
+    const { user } = renderApp("/", { withSession: false });
+    const exploreActions = await screen.findAllByRole("button", {
+      name: "Explore the Demo",
+    });
+    expect(exploreActions).toHaveLength(2);
+    const heroAction = exploreActions[0];
+    const codaAction = exploreActions[1];
+
+    const activation = user.click(codaAction);
+    await waitFor(() => expect(requestCount).toBe(1));
+    const pendingActions = screen.getAllByRole("button", {
+      name: "Preparing your workspace…",
+    });
+    expect(pendingActions).toHaveLength(2);
+    expect(pendingActions[0]).toBe(heroAction);
+    expect(pendingActions[1]).toBe(codaAction);
+    pendingActions.forEach((action) => {
+      expect(action).toBeDisabled();
+      expect(action).toHaveAttribute("aria-busy", "true");
+      action.click();
+    });
+    expect(requestCount).toBe(1);
+
+    releaseRequest?.();
+    await activation;
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(requestCount).toBe(1);
+  });
+
+  it("renders both landing actions as Continue for an active workspace", async () => {
+    renderApp("/", { withSession: true });
+
+    expect(await screen.findAllByRole("button", { name: "Continue Demo" })).toHaveLength(2);
+  });
+
+  it("reports a Coda provisioning failure once at the initiating context", async () => {
+    server.use(
+      http.post(`${API_ORIGIN}/api/v1/demo-sessions`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "DEMO_UNAVAILABLE",
+              message: "The demo service is unavailable.",
+              request_id: "coda-start-failure",
+            },
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+
+    const { user, container } = renderApp("/", { withSession: false });
+    const actions = await screen.findAllByRole("button", { name: "Explore the Demo" });
+    await user.click(actions[1]);
+
+    const alerts = await screen.findAllByRole("alert");
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toHaveTextContent("The demo service is unavailable.");
+    expect(container.querySelector("[data-quiet-coda]")).toContainElement(alerts[0]);
+    expect(container.querySelector('[data-hero-entrance="cta"]')?.parentElement).not.toContainElement(alerts[0]);
+    expect(screen.getAllByRole("button", { name: "Explore the Demo" })).toHaveLength(2);
+    expect(container.querySelector("[data-quiet-coda-error] .hf-content-enter")).toBeNull();
   });
 
   it("preserves the landing-page theme when entering a SYSTEM-preference demo", async () => {
@@ -75,7 +153,7 @@ describe("demo workspace flow", () => {
     );
     expect(document.documentElement).not.toHaveClass("dark");
 
-    await user.click(screen.getByRole("button", { name: "Explore the Demo" }));
+    await user.click(screen.getAllByRole("button", { name: "Explore the Demo" })[0]);
     expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
     await waitFor(() => expect(document.documentElement).not.toHaveClass("dark"));
   });
@@ -203,10 +281,10 @@ describe("demo workspace flow", () => {
     );
 
     const { user } = renderApp("/", { withSession: false });
-    await user.click(screen.getByRole("button", { name: "Explore the Demo" }));
+    await user.click(screen.getAllByRole("button", { name: "Explore the Demo" })[0]);
     expect(await screen.findByText(/HireFlux could not reach the API/)).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Explore the Demo" }));
+    await user.click(screen.getAllByRole("button", { name: "Explore the Demo" })[0]);
     expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
     expect(idempotencyKeys).toHaveLength(2);
     expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
@@ -234,10 +312,10 @@ describe("demo workspace flow", () => {
     );
 
     const { user } = renderApp("/", { withSession: false });
-    await user.click(screen.getByRole("button", { name: "Explore the Demo" }));
+    await user.click(screen.getAllByRole("button", { name: "Explore the Demo" })[0]);
     expect(await screen.findByText(/still in progress/)).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Explore the Demo" }));
+    await user.click(screen.getAllByRole("button", { name: "Explore the Demo" })[0]);
     expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
     expect(idempotencyKeys).toHaveLength(2);
     expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);

@@ -30,7 +30,7 @@ describe("LandingPage motion ownership boundaries", () => {
       "hf-hero-enter-support",
     );
     expect(container.querySelector('[data-hero-entrance="cta"]')).toContainElement(
-      screen.getByRole("button", { name: "Explore the Demo" }),
+      screen.getAllByRole("button", { name: "Explore the Demo" })[0],
     );
     expect(container.querySelector('[data-hero-entrance="visual"]')).toContainElement(
       container.querySelector("[data-flux-story]"),
@@ -48,7 +48,7 @@ describe("LandingPage motion ownership boundaries", () => {
 
   it("keeps the native CTA node focusable throughout its presentation state", async () => {
     renderApp("/", { withSession: false });
-    const cta = await screen.findByRole("button", { name: "Explore the Demo" });
+    const cta = (await screen.findAllByRole("button", { name: "Explore the Demo" }))[0];
 
     cta.focus();
 
@@ -58,6 +58,28 @@ describe("LandingPage motion ownership boundaries", () => {
     );
     expect(cta).not.toHaveAttribute("tabindex", "-1");
     expect(cta).not.toHaveAttribute("aria-hidden");
+  });
+
+  it("places the static Quiet Coda after Connected Workspace inside main and before the footer", async () => {
+    const { container } = renderApp("/", { withSession: false });
+    const codaHeading = await screen.findByRole("heading", {
+      name: "What happened should help you see what matters now.",
+      level: 2,
+    });
+    const coda = codaHeading.closest<HTMLElement>("[data-quiet-coda]")!;
+    const connected = screen
+      .getByRole("heading", { name: "The workspace adapts around your search.", level: 2 })
+      .closest("section")!;
+    const main = container.querySelector("main")!;
+    const footer = container.querySelector("footer")!;
+
+    expect(main).toContainElement(coda);
+    expect(connected.compareDocumentPosition(coda)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(coda.compareDocumentPosition(footer)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(coda.closest("[data-scroll-story]")).toBeNull();
+    expect(coda.closest("[data-landing-viewport-reveal]")).toBeNull();
+    expect(coda.closest(".hf-section-reveal")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Explore the Demo" })).toHaveLength(2);
   });
 
   it("limits the Connected Workspace viewport reveal to its static intro", async () => {

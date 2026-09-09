@@ -144,6 +144,108 @@ for (const route of routes) {
   });
 }
 
+test("Quiet Coda is a static semantic sibling between Connected Workspace and the footer", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+
+  const main = page.locator("main");
+  const story = page.locator("[data-scroll-story]");
+  const coda = page.locator("[data-quiet-coda]");
+  const footer = page.locator("footer");
+  const action = coda.getByRole("button", { name: "Continue Demo" });
+
+  await expect(coda.getByRole("heading", {
+    name: "What happened should help you see what matters now.",
+    level: 2,
+  })).toBeVisible();
+  await expect(coda.getByText(
+    "When each opportunity keeps its context, you can return without rebuilding the story—and recognize whether the next move is yours.",
+  )).toBeVisible();
+  await expect(coda.getByText(
+    "No sign-up. The temporary demo starts with fictional data.",
+  )).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue Demo" })).toHaveCount(2);
+  await expect(action).toBeVisible();
+  await expect(coda.locator("[data-quiet-coda-beat]")).toHaveCount(2);
+  await expect(coda.locator(
+    "[data-landing-viewport-reveal], .hf-section-reveal, .hf-content-enter, [data-hero-entrance]",
+  )).toHaveCount(0);
+
+  const structure = await page.evaluate(() => {
+    const main = document.querySelector("main")!;
+    const story = document.querySelector("[data-scroll-story]")!;
+    const coda = document.querySelector("[data-quiet-coda]")!;
+    const footer = document.querySelector("footer")!;
+    const headline = coda.querySelector("h2")!;
+    const support = coda.querySelector('[data-quiet-coda-beat="narrative"] p')!;
+    const action = coda.querySelector("button")!;
+    const reassurance = coda.querySelector('[data-quiet-coda-beat="action"] p')!;
+    const follows = (first: Element, second: Element) =>
+      Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+    return {
+      mainContainsCoda: main.contains(coda),
+      storyBeforeCoda: follows(story, coda),
+      codaBeforeFooter: follows(coda, footer),
+      semanticOrder: follows(headline, support) && follows(support, action) && follows(action, reassurance),
+      actionHeight: action.getBoundingClientRect().height,
+      animations: coda.getAnimations({ subtree: true }).length,
+    };
+  });
+  expect(structure.mainContainsCoda).toBe(true);
+  expect(structure.storyBeforeCoda).toBe(true);
+  expect(structure.codaBeforeFooter).toBe(true);
+  expect(structure.semanticOrder).toBe(true);
+  expect(structure.actionHeight).toBeGreaterThanOrEqual(44);
+  expect(structure.animations).toBe(0);
+  await expect(main).toContainText("What happened should help you see what matters now.");
+  await expect(story).toBeVisible();
+  await footer.scrollIntoViewIfNeeded();
+  await expect(footer).toBeVisible();
+  await expectNoHorizontalPageOverflow(page);
+  await expectLandingContentInsideViewport(page);
+});
+
+test("Quiet Coda reflows at enlarged text without clipping or changing its source order", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "narrow-320");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.locator("html").evaluate((element) => {
+    element.style.fontSize = "200%";
+  });
+
+  const coda = page.locator("[data-quiet-coda]");
+  const footer = page.locator("footer");
+  await coda.scrollIntoViewIfNeeded();
+  await expect(coda.getByRole("heading", {
+    name: "What happened should help you see what matters now.",
+    level: 2,
+  })).toBeVisible();
+  await expect(coda.getByRole("button", { name: "Continue Demo" })).toBeVisible();
+  const geometry = await coda.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const action = element.querySelector("button")!.getBoundingClientRect();
+    return {
+      height: rect.height,
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+      actionHeight: action.height,
+      actionRight: action.right,
+      viewportWidth: window.innerWidth,
+    };
+  });
+  expect(geometry.height).toBeGreaterThan(0);
+  expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+  expect(geometry.actionHeight).toBeGreaterThanOrEqual(44);
+  expect(geometry.actionRight).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+  await footer.scrollIntoViewIfNeeded();
+  await expect(footer).toBeVisible();
+});
+
 test("landing story becomes a stable complete state with reduced motion", async ({
   page,
 }) => {
@@ -806,7 +908,7 @@ test("desktop scroll story reorganizes one workspace and releases from Action Ce
     (element) => Number(getComputedStyle(element).opacity),
   )).toBeGreaterThan(0.98);
   await expect(stage.locator('[data-scroll-copy-stage="applications"]')).toBeVisible();
-  await expect(page.getByRole("button", { name: /Explore the Demo|Continue Demo/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /Explore the Demo|Continue Demo/ })).toHaveCount(2);
   await expect(page.getByRole("button", { name: /Start Demo Workspace|Return to Workspace/ })).toHaveCount(0);
 
   const metrics = await stage.evaluate((element) => ({
@@ -1622,7 +1724,9 @@ test("hero entrance remains focus-safe and fails visible", async ({
   await page.goto("/");
 
   const entranceGroups = page.locator("[data-hero-entrance]");
-  const cta = page.getByRole("button", { name: /^(Explore the Demo|Continue Demo)$/ });
+  const cta = page.locator("[data-hero-motion]").getByRole("button", {
+    name: /^(Explore the Demo|Continue Demo)$/,
+  });
   await expect(entranceGroups).toHaveCount(5);
   await expect(cta).toBeVisible();
 
@@ -1671,7 +1775,7 @@ test("hero motion eligibility only decreases during one landing mount", async ({
   const entranceGroups = page.locator("[data-hero-entrance]");
   const hero = page.locator("[data-hero-motion]");
   const story = page.locator("[data-flux-story]");
-  const cta = page.getByRole("button", {
+  const cta = page.locator("[data-hero-motion]").getByRole("button", {
     name: /^(Explore the Demo|Continue Demo)$/,
   });
 
@@ -1823,7 +1927,7 @@ test("hero motion-session policy remains stable at responsive boundaries", async
       "true",
     );
     await expectNoHorizontalPageOverflow(page);
-    await expect(page.getByRole("button", {
+    await expect(page.locator("[data-hero-motion]").getByRole("button", {
       name: /^(Explore the Demo|Continue Demo)$/,
     })).toBeVisible();
 

@@ -1,5 +1,80 @@
 # HireFlux development log
 
+## 2026-09-09 — Stage 6 Quiet Coda implementation and freeze
+
+Implemented the approved Quiet Coda as a dedicated, static landing component
+inside the primary `<main>`, after the complete Connected Workspace section and
+before the unchanged Footer. The section preserves the frozen two-beat,
+four-element source order: the insight “What happened should help you see what
+matters now.” and its personal-relevance sentence form the narrative beat; the
+single demo action and “No sign-up. The temporary demo starts with fictional
+data.” form the integrated action beat. It is left-aligned, open,
+typography-led, and uses existing landing spacing, type, color, and secondary
+button treatments. It has no fixed text height, forced line break, alternate
+responsive copy, decorative surface, icon, or product imagery.
+
+The Hero and Coda now render two views of the same `DemoSessionProvider`
+lifecycle and one landing navigation handler. Both expose Explore, Preparing,
+and Continue from the same session/pending state and resolve through the same
+destination logic. The provider now coalesces concurrent `start()` calls around
+one in-flight promise, preserving the existing idempotency key and preventing
+competing provisioning requests. A small page-local origin value places one
+accessible failure panel beside the initiating control without producing
+duplicate live announcements. The Coda error instance disables the shared
+content-entrance class and uses an `h3`; existing `ErrorPanel` callers retain
+their previous animation and heading defaults. Both action buttons remain
+stable native nodes and become `disabled`/`aria-busy` together while the shared
+operation is pending. The Hero CTA's ancestry, entrance wrappers, classes,
+focus behavior, and reduced-motion eligibility were not restructured.
+
+Quiet Coda is final-state-first and consumes no `LandingViewportReveal`, legacy
+`LandingReveal`, `.hf-section-reveal`, GSAP, ScrollTrigger, observer, timer, or
+new animation class. Browser inspection in dark and light themes confirmed the
+section is visually quieter than Action Center and remains distinct from the
+operational Footer. Responsive checks covered 1440/1280 desktop, 1024, 900,
+768, 430, 390, and 320 widths. The headline uses the established responsive
+display scale so 320px resolves to three balanced lines instead of an orphaned
+final word. The action keeps its normal 12rem width while `max-width: 100%`
+prevents escape under 200% text. The Coda-specific enlarged-text check confirms
+normal reflow, semantic order, focusable/visible action, readable reassurance,
+and no local overflow.
+
+Connected Workspace geometry remained frozen. Direct production-browser
+measurements were 1365.17 → 3365.17 at 1280×800 (2000px travel, one pin spacer,
+full mode) and 1712.85 → 3152.85 at 900×720 (1440px travel, one pin spacer,
+adapted mode). The M6 geometry matrix also passed its established source
+baselines after subtracting only the downstream Coda height from total document
+height. It verified unchanged section/story/stage/pin geometry, chapter mapping,
+reverse traversal, pin release, and one-spacer ownership across full, adapted,
+static, breakpoint, and short-height modes. Its throttled synthetic restoration
+uses a reachable full-mode Interviews coordinate before pin spacing exists;
+the companion adapted test restores directly into Preparation. Together with
+the complete browser and M7-F1 suites, coverage traverses Connected intro,
+inside-pin chapters, Action Center, reverse/rapid changes, release, Coda, and
+Footer without a stale reveal, duplicate pin, late correction, or unmount
+scroll mutation.
+
+Five deterministic full-page baselines changed intentionally because the new
+Coda adds approved lower-page content and displaces the Footer:
+`landing-desktop-1280-win32.png`, `landing-light-desktop-1280-win32.png`,
+`landing-light-tablet-768-win32.png`, `landing-light-mobile-390-win32.png`, and
+`landing-light-narrow-320-win32.png`. Each diff was inspected before acceptance.
+Hero, Product Benefits, Connected Workspace, and Action Center component/state
+references did not change. The affected deterministic set passes again after
+the update (10/10), and the complete Playwright/Axe matrix passes at lower
+runner concurrency (159 passed, 96 intentional project-filtered skips).
+
+ESLint, TypeScript, the complete single-worker Vitest suite (248 tests), the
+focused accessibility suite (13 tests), hosting-header tests (3 tests), M5
+Product Benefits intro coverage (11 passed, 21 intentional skips), M6 Connected
+intro/geometry/restoration coverage (19 passed, 65 intentional skips), and M7-F1
+Connected lifecycle coverage (11 tests) all pass. The production build emits
+the main entry at 283.02 / 84.81 kB raw/gzip, the lazy landing chunk at 182.01 /
+63.18 kB, and CSS at 122.13 / 19.75 kB. No dependency changed and generated
+`dist` output remains untracked. Quiet Coda is feature-frozen; Hero, Product
+Benefits, Connected Workspace, Action Center, Footer, Connected geometry, and
+the established landing motion hierarchy remain unchanged.
+
 ## 2026-09-06 — B8R-F1 native focus preservation
 
 Changed the Product Benefits stream's serialized-navigation state from native

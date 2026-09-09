@@ -254,7 +254,7 @@ test("controls, route remount, and live reduced motion remain independent", asyn
   expect(await page.evaluate(() => (window as typeof window & { m5AnimationStarts?: number }).m5AnimationStarts ?? 0)).toBe(starts);
 
   await scrollInstantly(page, 0);
-  await page.getByRole("button", { name: "Continue Demo" }).click();
+  await page.getByRole("button", { name: "Continue Demo" }).first().click();
   await expect(page.getByRole("heading", { name: "Welcome back", level: 1 })).toBeVisible();
   await page.goBack();
   await expect(region(page)).toBeVisible();

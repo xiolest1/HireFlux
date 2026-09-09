@@ -233,6 +233,8 @@ test("keeps the intro boundary and frozen geometry exact across the mode matrix"
     const legacyStyle = getComputedStyle(legacy);
     return {
       documentHeight: document.documentElement.scrollHeight,
+      quietCodaHeight: document.querySelector<HTMLElement>("[data-quiet-coda]")!
+        .getBoundingClientRect().height,
       sectionTop: sectionRect.top + scrollY,
       sectionHeight: sectionRect.height,
       storyTop: storyRect.top + scrollY,
@@ -251,9 +253,13 @@ test("keeps the intro boundary and frozen geometry exact across the mode matrix"
     };
   });
 
-  for (const key of ["documentHeight", "sectionTop", "sectionHeight", "storyTop", "storyHeight", "stageHeight", "pinSpacerHeight", "introStoryGap"] as const) {
+  for (const key of ["sectionTop", "sectionHeight", "storyTop", "storyHeight", "stageHeight", "pinSpacerHeight", "introStoryGap"] as const) {
     expect(Math.abs(measured[key] - baseline[key]), `${key} changed`).toBeLessThan(0.75);
   }
+  expect(
+    Math.abs(measured.documentHeight - measured.quietCodaHeight - baseline.documentHeight),
+    "only Quiet Coda may extend the frozen landing geometry",
+  ).toBeLessThan(0.75);
   expect(measured.revealLayoutTop).toBeGreaterThan(baseline.sectionTop);
   expect(measured.revealContainsStory).toBe(false);
   expect(measured.revealIsStoryAncestor).toBe(false);
@@ -372,8 +378,12 @@ test("runtime pin spacing cannot strand the intro in full or adapted mode", asyn
     expect(runtime.pinSpacerHeights.length).toBeGreaterThanOrEqual(1);
     expect(runtime.revealRootMargins).toHaveLength(1);
     expect(runtime.revealRootMargins[0]).toContain(`${Math.ceil(runtime.revealObserveHeights[0])}px`);
-    const establishedDocumentHeight = await page.evaluate(() => document.documentElement.scrollHeight);
-    expect(establishedDocumentHeight).toBe(baseline.documentHeight);
+    const { codaHeight, establishedDocumentHeight } = await page.evaluate(() => ({
+      codaHeight: document.querySelector<HTMLElement>("[data-quiet-coda]")!
+        .getBoundingClientRect().height,
+      establishedDocumentHeight: document.documentElement.scrollHeight,
+    }));
+    expect(Math.abs(establishedDocumentHeight - codaHeight - baseline.documentHeight)).toBeLessThan(0.75);
     console.log("M6_PIN_SPACING", {
       delta: establishedDocumentHeight - runtime.revealObserveHeights[0],
       establishedDocumentHeight,
@@ -456,7 +466,7 @@ test("pending intro survives resize boundaries, reduced motion, and route remoun
   await expect(page.locator(".pin-spacer")).toHaveCount(1);
 
   await scrollInstantly(page, 0);
-  await page.getByRole("button", { name: "Continue Demo" }).click();
+  await page.getByRole("button", { name: "Continue Demo" }).first().click();
   await expect(page.getByRole("heading", { name: "Welcome back", level: 1 })).toBeVisible();
   await page.goBack();
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "pending");
@@ -496,16 +506,20 @@ test("restored and throttled entry stays fail-visible while page-level motion re
   const baseline = baselines["full-1280"];
   await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.05);
   await page.waitForTimeout(500);
-  await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.55);
+  // Keep this synthetic native-restoration target reachable before runtime pin
+  // spacing exists. The adapted companion below restores directly into
+  // Preparation, while this throttled branch verifies the stale-sample
+  // handshake within the full-mode pin.
+  await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.3);
   await page.waitForTimeout(600);
-  await expect(story(page)).toHaveAttribute("data-active-chapter", "preparation");
+  await expect(story(page)).toHaveAttribute("data-active-chapter", "interviews");
   const restoredY = await page.evaluate(() => scrollY);
   await queueRestoredScroll(page, restoredY);
   await page.reload();
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(restoredY - 2);
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "revealed");
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-motion", "none");
-  await expect(story(page)).toHaveAttribute("data-active-chapter", "preparation");
+  await expect(story(page)).toHaveAttribute("data-active-chapter", "interviews");
   await expect(page.locator(".pin-spacer")).toHaveCount(1);
   const fullRuntime = await page.evaluate(() => (window as typeof window & {
     m6Runtime?: {
@@ -523,8 +537,15 @@ test("restored and throttled entry stays fail-visible while page-level motion re
   expect(fullRuntime.revealDisconnects).toBe(1);
   expect(fullRuntime.animationStarts).toBe(0);
   // Content-fit eligibility starts from the fail-visible Static DOM before pinning.
-  expect(fullRuntime.revealObserveHeights).toEqual([2460]);
-  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(4395);
+  // Quiet Coda is downstream of Connected Workspace, so remove only its height
+  // before comparing the frozen pre-Coda geometry.
+  const fullCodaHeight = await page.locator("[data-quiet-coda]").evaluate(
+    (element) => element.getBoundingClientRect().height,
+  );
+  expect(fullRuntime.revealObserveHeights.map((height) => height - fullCodaHeight)).toEqual([2460]);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollHeight) - fullCodaHeight,
+  ).toBe(4395);
   await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.9);
   await page.waitForTimeout(500);
   await expect(story(page)).toHaveAttribute("data-active-chapter", "action-center");
@@ -584,8 +605,13 @@ test("adapted runtime spacing reconciles a stale restored-scroll handshake", asy
   expect(runtime.revealCallbackSamples[0]?.currentBottom).toBeLessThanOrEqual(0);
   expect(runtime.revealDisconnects).toBe(1);
   expect(runtime.animationStarts).toBe(0);
-  expect(runtime.revealObserveHeights).toEqual([2875]);
-  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(4106);
+  const adaptedCodaHeight = await page.locator("[data-quiet-coda]").evaluate(
+    (element) => element.getBoundingClientRect().height,
+  );
+  expect(runtime.revealObserveHeights.map((height) => height - adaptedCodaHeight)).toEqual([2875]);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollHeight) - adaptedCodaHeight,
+  ).toBe(4106);
   await scrollInstantly(page, 0);
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "revealed");
   await expectNoHorizontalOverflow(page);

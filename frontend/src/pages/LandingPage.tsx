@@ -1,4 +1,5 @@
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDemoSession } from "../auth/demoSessionContext";
 import { Button } from "../components/ui/Button";
@@ -8,6 +9,7 @@ import { ProductBenefitsSection } from "../features/landing/benefits/ProductBene
 import { HeroApplicationStory, LandingReveal } from "../features/landing/LandingProductStory";
 import { ScrollProductStory } from "../features/landing/ScrollProductStory";
 import { LandingViewportReveal } from "../features/landing/LandingViewportReveal";
+import { QuietCoda } from "../features/landing/QuietCoda";
 import { useHeroMotionSession } from "../features/landing/useHeroMotionSession";
 
 interface LandingLocationState {
@@ -28,13 +30,21 @@ export function LandingPage() {
   const location = useLocation();
   const { status, isCreating, error, start } = useDemoSession();
   const routeState = locationState(location.state);
+  const [actionOrigin, setActionOrigin] = useState<"hero" | "coda" | null>(null);
   const {
     currentReducedMotion,
     heroMotionEligible,
     heroMotionActive,
   } = useHeroMotionSession();
 
-  async function enterDemo() {
+  const actionLabel = isCreating
+    ? "Preparing your workspace…"
+    : status === "active"
+      ? "Continue Demo"
+      : "Explore the Demo";
+
+  async function enterDemo(origin: "hero" | "coda") {
+    setActionOrigin(origin);
     if (status === "active") {
       navigate(routeState.from ?? "/dashboard");
       return;
@@ -77,10 +87,10 @@ export function LandingPage() {
               <p className="hf-hero-enter hf-hero-enter-support mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300" data-hero-entrance="support">HireFlux keeps each opportunity’s context intact and turns its history into a clear next action—without creating an account.</p>
 
               {notice ? <div className="mt-7 max-w-xl rounded-xl border border-line border-l-4 border-l-warning bg-warning-soft px-4 py-3 text-sm font-medium text-warning" role="status">{notice}</div> : null}
-              {error ? <div className="mt-7 max-w-xl"><ErrorPanel compact title="Demo workspace could not be prepared" error={error} /></div> : null}
+              {error && actionOrigin !== "coda" ? <div className="mt-7 max-w-xl"><ErrorPanel compact title="Demo workspace could not be prepared" error={error} /></div> : null}
 
               <div className="hf-hero-enter hf-hero-enter-cta mt-8 flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center" data-hero-entrance="cta">
-                <Button className="group min-w-48 gap-2 shadow-lg shadow-cyan-950/10" disabled={isCreating} onClick={() => void enterDemo()}>{isCreating ? "Preparing your workspace…" : status === "active" ? "Continue Demo" : "Explore the Demo"}<ArrowRight aria-hidden="true" className="size-4 transition-transform group-hover:translate-x-1 group-focus-visible:translate-x-1" /></Button>
+                <Button className="group min-w-48 gap-2 shadow-lg shadow-cyan-950/10" aria-busy={isCreating || undefined} disabled={isCreating} onClick={() => void enterDemo("hero")}>{actionLabel}<ArrowRight aria-hidden="true" className="size-4 transition-transform group-hover:translate-x-1 group-focus-visible:translate-x-1" /></Button>
                 <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">No sign-up · Fictional data · Resets anytime</p>
               </div>
             </div>
@@ -101,6 +111,13 @@ export function LandingPage() {
             <ScrollProductStory />
           </section>
         </LandingReveal>
+
+        <QuietCoda
+          actionLabel={actionLabel}
+          error={actionOrigin === "coda" ? error : null}
+          isCreating={isCreating}
+          onAction={() => void enterDemo("coda")}
+        />
       </main>
 
       <footer className="mx-auto flex max-w-7xl min-w-0 flex-col gap-2 border-t border-line px-4 py-8 text-sm text-ink-muted dark:border-slate-800 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8" data-landing-clip-check><p>HireFlux · Candidate job-search demo</p><p>Temporary workspaces expire automatically after 24 hours.</p></footer>
