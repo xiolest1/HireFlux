@@ -146,7 +146,7 @@ for (const route of routes) {
 
 test("Quiet Coda is a static semantic sibling between Connected Workspace and the footer", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
@@ -179,6 +179,7 @@ test("Quiet Coda is a static semantic sibling between Connected Workspace and th
     const story = document.querySelector("[data-scroll-story]")!;
     const storySection = story.closest("section")!;
     const coda = document.querySelector("[data-quiet-coda]")!;
+    const layout = coda.querySelector("[data-quiet-coda-layout]")!;
     const footer = document.querySelector("footer")!;
     const headline = coda.querySelector("h2")!;
     const support = coda.querySelector('[data-quiet-coda-beat="narrative"] p')!;
@@ -193,6 +194,15 @@ test("Quiet Coda is a static semantic sibling between Connected Workspace and th
       semanticOrder: follows(headline, support) && follows(support, action) && follows(action, reassurance),
       actionHeight: action.getBoundingClientRect().height,
       animations: coda.getAnimations({ subtree: true }).length,
+      codaLeft: coda.getBoundingClientRect().left,
+      codaRight: coda.getBoundingClientRect().right,
+      headingWidth: headline.getBoundingClientRect().width,
+      layoutCenter:
+        (layout.getBoundingClientRect().left + layout.getBoundingClientRect().right) / 2,
+      layoutLeft: layout.getBoundingClientRect().left,
+      layoutRight: layout.getBoundingClientRect().right,
+      textAlign: getComputedStyle(headline).textAlign,
+      viewportWidth: window.innerWidth,
       storyToHeadline:
         headline.getBoundingClientRect().top - story.getBoundingClientRect().bottom,
       sectionToCoda:
@@ -209,11 +219,21 @@ test("Quiet Coda is a static semantic sibling between Connected Workspace and th
   expect(structure.semanticOrder).toBe(true);
   expect(structure.actionHeight).toBeGreaterThanOrEqual(44);
   expect(structure.animations).toBe(0);
+  expect(structure.textAlign).toBe("start");
   expect(Math.abs(structure.sectionToCoda)).toBeLessThanOrEqual(1);
   expect(Math.abs(structure.codaToHeadline)).toBeLessThanOrEqual(1);
   expect(structure.storyToHeadline).toBeGreaterThanOrEqual(63);
-  expect(structure.storyToHeadline).toBeLessThanOrEqual(97);
+  expect(structure.storyToHeadline).toBeLessThanOrEqual(65);
   expect(structure.reassuranceToFooter).toBeGreaterThanOrEqual(79);
+  expect(structure.layoutRight).toBeLessThanOrEqual(structure.codaRight + 1);
+  if (["tablet-768", "desktop-1024", "desktop-1280"].includes(testInfo.project.name)) {
+    expect(structure.layoutLeft).toBeGreaterThan(structure.codaLeft + 40);
+    expect(Math.abs(structure.layoutCenter - structure.viewportWidth / 2)).toBeLessThanOrEqual(16);
+    expect(structure.headingWidth).toBeGreaterThanOrEqual(599);
+  } else {
+    expect(structure.layoutLeft).toBeGreaterThanOrEqual(15);
+    expect(structure.layoutLeft).toBeLessThanOrEqual(17);
+  }
   await expect(main).toContainText("What happened should help you see what matters now.");
   await expect(story).toBeVisible();
   await footer.scrollIntoViewIfNeeded();

@@ -16,15 +16,19 @@ export function QuietCoda({
 }: QuietCodaProps) {
   return (
     <section
-      className="mx-auto max-w-7xl min-w-0 px-4 pb-20 sm:px-6 sm:pb-24 lg:px-8 lg:pb-32"
+      className="mx-auto max-w-[90rem] min-w-0 px-4 pb-20 sm:px-6 sm:pb-24 md:grid md:grid-cols-12 lg:px-8 lg:pb-32"
       aria-labelledby="quiet-coda-title"
       data-quiet-coda
     >
-      <div className="max-w-3xl" data-landing-clip-check>
+      <div
+        className="max-w-3xl md:col-span-10 md:col-start-2 md:max-w-4xl lg:col-span-8 lg:col-start-3"
+        data-landing-clip-check
+        data-quiet-coda-layout
+      >
         <div data-quiet-coda-beat="narrative">
           <h2
             id="quiet-coda-title"
-            className="max-w-2xl text-2xl font-black tracking-tight text-ink sm:text-3xl lg:text-4xl dark:text-white"
+            className="max-w-2xl text-2xl font-black tracking-tight text-ink sm:text-3xl md:max-w-3xl lg:text-4xl dark:text-white"
           >
             What happened should help you see what matters now.
           </h2>

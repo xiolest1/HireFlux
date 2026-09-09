@@ -16,20 +16,20 @@ interface GeometryBaseline {
 }
 
 const baselines: Record<string, GeometryBaseline> = {
-  "full-1440": { documentHeight: 4645, introStoryGap: 48, mode: "full", pinSpacerHeight: 2938, sectionHeight: 3494, sectionTop: 1066.19, stageHeight: 688, storyHeight: 3098, storyTop: 1366.19, travel: 2250 },
-  "full-1280": { documentHeight: 4395, introStoryGap: 48, mode: "full", pinSpacerHeight: 2688, sectionHeight: 3244, sectionTop: 1066.19, stageHeight: 688, storyHeight: 2848, storyTop: 1366.19, travel: 2000 },
-  "full-1024-768": { documentHeight: 4413, introStoryGap: 48, mode: "full", pinSpacerHeight: 2608, sectionHeight: 3164, sectionTop: 1163.98, stageHeight: 688, storyHeight: 2768, storyTop: 1463.98, travel: 1920 },
-  "full-1024-720": { documentHeight: 4293, introStoryGap: 48, mode: "full", pinSpacerHeight: 2488, sectionHeight: 3044, sectionTop: 1163.98, stageHeight: 688, storyHeight: 2648, storyTop: 1463.98, travel: 1800 },
-  "adapted-1023": { documentHeight: 4106, introStoryGap: 56, mode: "adapted", pinSpacerHeight: 2080, sectionHeight: 2612, sectionTop: 1408.53, stageHeight: 640, storyHeight: 2208, storyTop: 1716.53, travel: 1440 },
-  "adapted-900": { documentHeight: 4106, introStoryGap: 56, mode: "adapted", pinSpacerHeight: 2080, sectionHeight: 2612, sectionTop: 1408.53, stageHeight: 640, storyHeight: 2208, storyTop: 1716.53, travel: 1440 },
-  "adapted-1024-719": { documentHeight: 3851, introStoryGap: 48, mode: "adapted", pinSpacerHeight: 2078, sectionHeight: 2602, sectionTop: 1163.98, stageHeight: 640, storyHeight: 2206, storyTop: 1463.98, travel: 1438 },
-  "adapted-1280-700": { documentHeight: 3715, introStoryGap: 48, mode: "adapted", pinSpacerHeight: 2040, sectionHeight: 2564, sectionTop: 1066.19, stageHeight: 640, storyHeight: 2168, storyTop: 1366.19, travel: 1400 },
-  "static-899": { documentHeight: 2875, introStoryGap: 56, mode: "static", pinSpacerHeight: 0, sectionHeight: 1381.28, sectionTop: 1408.53, stageHeight: 0, storyHeight: 977.28, storyTop: 1716.53, travel: 0 },
-  "static-768": { documentHeight: 2891, introStoryGap: 56, mode: "static", pinSpacerHeight: 0, sectionHeight: 1397.28, sectionTop: 1408.53, stageHeight: 0, storyHeight: 993.28, storyTop: 1716.53, travel: 0 },
+  "full-1440": { documentHeight: 4613, introStoryGap: 48, mode: "full", pinSpacerHeight: 2938, sectionHeight: 3462, sectionTop: 1066.19, stageHeight: 688, storyHeight: 3098, storyTop: 1366.19, travel: 2250 },
+  "full-1280": { documentHeight: 4363, introStoryGap: 48, mode: "full", pinSpacerHeight: 2688, sectionHeight: 3212, sectionTop: 1066.19, stageHeight: 688, storyHeight: 2848, storyTop: 1366.19, travel: 2000 },
+  "full-1024-768": { documentHeight: 4381, introStoryGap: 48, mode: "full", pinSpacerHeight: 2608, sectionHeight: 3132, sectionTop: 1163.98, stageHeight: 688, storyHeight: 2768, storyTop: 1463.98, travel: 1920 },
+  "full-1024-720": { documentHeight: 4261, introStoryGap: 48, mode: "full", pinSpacerHeight: 2488, sectionHeight: 3012, sectionTop: 1163.98, stageHeight: 688, storyHeight: 2648, storyTop: 1463.98, travel: 1800 },
+  "adapted-1023": { documentHeight: 4074, introStoryGap: 56, mode: "adapted", pinSpacerHeight: 2080, sectionHeight: 2580, sectionTop: 1408.53, stageHeight: 640, storyHeight: 2208, storyTop: 1716.53, travel: 1440 },
+  "adapted-900": { documentHeight: 4074, introStoryGap: 56, mode: "adapted", pinSpacerHeight: 2080, sectionHeight: 2580, sectionTop: 1408.53, stageHeight: 640, storyHeight: 2208, storyTop: 1716.53, travel: 1440 },
+  "adapted-1024-719": { documentHeight: 3819, introStoryGap: 48, mode: "adapted", pinSpacerHeight: 2078, sectionHeight: 2570, sectionTop: 1163.98, stageHeight: 640, storyHeight: 2206, storyTop: 1463.98, travel: 1438 },
+  "adapted-1280-700": { documentHeight: 3683, introStoryGap: 48, mode: "adapted", pinSpacerHeight: 2040, sectionHeight: 2532, sectionTop: 1066.19, stageHeight: 640, storyHeight: 2168, storyTop: 1366.19, travel: 1400 },
+  "static-899": { documentHeight: 2843, introStoryGap: 56, mode: "static", pinSpacerHeight: 0, sectionHeight: 1349.28, sectionTop: 1408.53, stageHeight: 0, storyHeight: 977.28, storyTop: 1716.53, travel: 0 },
+  "static-768": { documentHeight: 2859, introStoryGap: 56, mode: "static", pinSpacerHeight: 0, sectionHeight: 1365.28, sectionTop: 1408.53, stageHeight: 0, storyHeight: 993.28, storyTop: 1716.53, travel: 0 },
   "static-430": { documentHeight: 3693, introStoryGap: 48, mode: "static", pinSpacerHeight: 0, sectionHeight: 2224.53, sectionTop: 1355.45, stageHeight: 0, storyHeight: 1872.53, storyTop: 1643.45, travel: 0 },
   "static-390": { documentHeight: 3903, introStoryGap: 48, mode: "static", pinSpacerHeight: 0, sectionHeight: 2290.45, sectionTop: 1479.45, stageHeight: 0, storyHeight: 1938.45, storyTop: 1767.45, travel: 0 },
   "static-320": { documentHeight: 4205, introStoryGap: 48, mode: "static", pinSpacerHeight: 0, sectionHeight: 2459.41, sectionTop: 1612.8, stageHeight: 0, storyHeight: 2043.41, storyTop: 1964.8, travel: 0 },
-  "static-1024-639": { documentHeight: 2622, introStoryGap: 48, mode: "static", pinSpacerHeight: 0, sectionHeight: 1373.28, sectionTop: 1163.98, stageHeight: 0, storyHeight: 977.28, storyTop: 1463.98, travel: 0 },
+  "static-1024-639": { documentHeight: 2590, introStoryGap: 48, mode: "static", pinSpacerHeight: 0, sectionHeight: 1341.28, sectionTop: 1163.98, stageHeight: 0, storyHeight: 977.28, storyTop: 1463.98, travel: 0 },
 };
 
 const connectedSection = (page: Page) =>
@@ -650,10 +650,10 @@ test("restored and throttled entry stays fail-visible while page-level motion re
   const fullCodaHeight = await page.locator("[data-quiet-coda]").evaluate(
     (element) => element.getBoundingClientRect().height,
   );
-  expect(fullRuntime.revealObserveHeights.map((height) => height - fullCodaHeight)).toEqual([2460]);
+  expect(fullRuntime.revealObserveHeights.map((height) => height - fullCodaHeight)).toEqual([2428]);
   expect(
     await page.evaluate(() => document.documentElement.scrollHeight) - fullCodaHeight,
-  ).toBe(4395);
+  ).toBe(4363);
   await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.9);
   await expect(story(page)).toHaveAttribute("data-active-chapter", "action-center");
   await scrollInstantly(page, baseline.storyTop + baseline.travel * 0.3);
@@ -684,7 +684,9 @@ test("adapted runtime spacing reconciles a stale restored-scroll handshake", asy
   const adaptedBaseline = baselines["adapted-900"];
   await expect(story(page)).toHaveAttribute("data-scroll-mode", "adapted");
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "pending");
-  await scrollInstantly(page, adaptedBaseline.storyTop + adaptedBaseline.travel * 0.55);
+  // Stay inside Preparation while keeping the pre-pin restoration coordinate
+  // reachable after the intentional 32px post-story composition reduction.
+  await scrollInstantly(page, adaptedBaseline.storyTop + adaptedBaseline.travel * 0.52);
   await expect(story(page)).toHaveAttribute("data-active-chapter", "preparation");
   const restoredY = await page.evaluate(() => scrollY);
   await queueRestoredScroll(page, restoredY);
@@ -728,10 +730,10 @@ test("adapted runtime spacing reconciles a stale restored-scroll handshake", asy
   const adaptedCodaHeight = await page.locator("[data-quiet-coda]").evaluate(
     (element) => element.getBoundingClientRect().height,
   );
-  expect(runtime.revealObserveHeights.map((height) => height - adaptedCodaHeight)).toEqual([2875]);
+  expect(runtime.revealObserveHeights.map((height) => height - adaptedCodaHeight)).toEqual([2843]);
   expect(
     await page.evaluate(() => document.documentElement.scrollHeight) - adaptedCodaHeight,
-  ).toBe(4106);
+  ).toBe(4074);
   await scrollInstantly(page, 0);
   await expect(connectedReveal(page)).toHaveAttribute("data-reveal-state", "revealed");
   await expectNoHorizontalOverflow(page);

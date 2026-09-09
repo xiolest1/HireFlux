@@ -103,6 +103,8 @@ describe("LandingPage motion ownership boundaries", () => {
     );
     expect(reveal.parentElement).toBe(section);
     expect(story.parentElement).toBe(section);
+    expect(section).toHaveClass("sm:pb-16", "sm:pt-24");
+    expect(section).not.toHaveClass("sm:py-24");
     expect(reveal).not.toContainElement(story);
     expect(story.closest("[data-landing-viewport-reveal]")).toBeNull();
     expect(legacyWrapper).toHaveClass("hf-section-reveal", "hf-scroll-story-reveal");

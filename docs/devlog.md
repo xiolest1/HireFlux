@@ -1,5 +1,62 @@
 # HireFlux development log
 
+## 2026-09-09 — V2-2 bridged Quiet Coda composition
+
+Resolved the remaining lower-page composition imbalance without changing the
+Quiet Coda copy, semantic order, shared demo lifecycle, or landing motion. The
+Stage 6-F1 Coda still used the narrow `max-w-7xl` gutter beneath the wider,
+right-weighted Connected Workspace proof, so its 768px content region began at
+approximately x=112px on a 1440px viewport and read as visually undersized after
+Action Center. The secondary issue was the Connected section's 96px desktop
+bottom padding, which left more post-story distance than the now-bridged Coda
+needed.
+
+Three production render treatments were compared outside repository state. A
+narrative-rail continuation remained too far left and too small; a centered
+constraint balanced the canvas but resembled a standalone conversion block;
+the selected bridged, left-aligned treatment connected the narrative rail,
+right-heavy product stage, and Footer while preserving the editorial character
+of the page. No comparison CSS or screenshots were retained in the repository.
+
+`QuietCoda` now owns a local 90rem, 12-column grid. Its one existing content
+node occupies columns 2–11 at `md` and columns 3–10 from `lg`, with a 4xl cap;
+the headline gains a 3xl measure from `md`, while support copy remains 2xl and
+the action/reassurance remain left aligned. Measured/derived content geometry is
+approximately x=261/896px at 1440px, x=235/811px at 1280px, x=192/640px at
+1024px, x=95/710px at 900px, and x=84/600px at 768px. The 430px, 390px, and
+320px layouts keep the existing 16px gutter and full-width composition.
+
+The Connected section retains its existing top padding and all story-owned
+travel/release geometry, but its `sm`-and-up bottom padding is now 64px rather
+than 96px. This reduces stage-to-headline distance at 1440px from roughly 256px
+to 224px and shell-to-headline distance from roughly 344px to 312px. The 160px
+full and 128px adapted release buffers are unchanged, as are the Coda-to-Footer
+gaps of 128px large desktop, 96px intermediate, and 80px mobile. The result uses
+ordinary flow/grid utilities only: no transforms, negative margins, positioned
+alignment, fixed heights, duplicated markup, reveal consumer, observer, GSAP,
+or ScrollTrigger change was introduced.
+
+Focused component coverage now locks the local grid, wider headline measure,
+two-beat source order, one stable native action, and absence of fake positioning
+or motion. Browser assertions cover the 64px post-story boundary, bridged
+desktop/tablet anchor, centered content region with left-aligned text, unchanged
+mobile gutter, 44px action, source/focus order, static presentation, overflow,
+and 200% text reflow. The first M6 run correctly exposed only the intentional
+32px document/section-height delta and one synthetic restored-coordinate clamp;
+its geometry fixtures were updated to the new normal-flow boundary while
+preserving the same Preparation chapter and production lifecycle behavior.
+
+Final validation passed ESLint, TypeScript, all 250 Vitest tests, 13 focused
+accessibility tests, the full M6 matrix (19 passed, 65 mode-skipped), M7-F1
+(11/11), deterministic Coda/landing visual checks (16 passed, 4 mode-skipped),
+and the complete Playwright/Axe matrix (159 passed, 96 mode-skipped). The
+production build passes at 283.02/84.81 kB main, 182.16/63.24 kB lazy landing,
+and 122.57/19.84 kB CSS raw/gzip. Compared with Stage 6-F1, main is unchanged;
+the local grid utilities add 0.15/0.05 kB to the landing chunk and 0.39/0.07 kB
+to CSS. Only the intentional dark desktop 1280, light desktop 1280, and light
+tablet 768 landing baselines changed; 390px and 320px baselines and all frozen
+Hero, Benefits, Connected Workspace, and Action Center behavior remain intact.
+
 ## 2026-09-09 — M6-T1 restored-scroll harness determinism remediation
 
 Retired the remaining synthetic M6 restored-scroll harness timing debt without

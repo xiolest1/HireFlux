@@ -86,7 +86,45 @@ describe("QuietCoda", () => {
     );
     const section = container.querySelector<HTMLElement>("[data-quiet-coda]")!;
 
-    expect(section).toHaveClass("pb-20", "sm:pb-24", "lg:pb-32");
+    expect(section).toHaveClass(
+      "max-w-[90rem]",
+      "pb-20",
+      "sm:pb-24",
+      "md:grid",
+      "md:grid-cols-12",
+      "lg:pb-32",
+    );
     expect(section.className).not.toMatch(/(?:^|\s)(?:p|m)[ty]-/);
+  });
+
+  it("uses one local bridged grid without fake positioning", () => {
+    const { container } = render(
+      <QuietCoda
+        actionLabel="Continue Demo"
+        error={null}
+        isCreating={false}
+        onAction={vi.fn()}
+      />,
+    );
+    const section = container.querySelector<HTMLElement>("[data-quiet-coda]")!;
+    const layout = section.querySelector<HTMLElement>("[data-quiet-coda-layout]")!;
+    const heading = screen.getByRole("heading", {
+      name: "What happened should help you see what matters now.",
+      level: 2,
+    });
+
+    expect(layout).toHaveClass(
+      "md:col-span-10",
+      "md:col-start-2",
+      "md:max-w-4xl",
+      "lg:col-span-8",
+      "lg:col-start-3",
+    );
+    expect(heading).toHaveClass("md:max-w-3xl");
+    expect(section.querySelectorAll("[data-quiet-coda-layout]")).toHaveLength(1);
+    expect(section.querySelectorAll("button")).toHaveLength(1);
+    expect(`${section.className} ${layout.className}`).not.toMatch(
+      /(?:^|\s)(?:absolute|fixed|-m[lrxy]?\b|translate-[xy]-)/,
+    );
   });
 });
