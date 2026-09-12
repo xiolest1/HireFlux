@@ -2,12 +2,10 @@ import { BriefcaseBusiness, CalendarCheck2, Check, ChevronRight, CircleCheckBig,
 import { useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useReducedMotion } from "../../components/ui/motionHooks";
-import { mountConnectedStory, type ConnectedAnimation } from "./connectedStoryLifecycle";
 import { landingScrollChapters, landingStory, landingWorkspace, type LandingScrollChapter, type LandingWorkspaceStage } from "./landingStoryModel";
 import {
   scrollChapterForProgress,
-  scrollStoryModeConfiguration,
+  scrollStoryJ3Configuration,
   scrollStoryTimelineLabels,
 } from "./scrollStoryConfig";
 
@@ -137,7 +135,7 @@ function ActionCenterSurface({ compact = false }: { compact?: boolean }) {
 
 function ConnectedWorkspaceVisual() {
   return <div className="hf-connected-workspace relative h-[32rem] w-full min-w-0 overflow-hidden rounded-[1.6rem] border border-line-strong bg-surface-muted shadow-panel dark:border-slate-700 dark:bg-slate-950/70" data-connected-workspace data-workspace-shell data-landing-clip-check aria-hidden="true">
-    <header className="flex h-12 items-center justify-between border-b border-line bg-surface-raised px-4 dark:bg-slate-900"><div className="flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-lg bg-accent text-[0.55rem] font-black text-white">HF</span><span className="text-xs font-black text-ink dark:text-white">HireFlux</span></div><div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[0.58rem] font-semibold text-ink-muted"><Search className="size-3" />Search your workspace</div></header>
+    <header className="flex h-12 items-center justify-between border-b border-line bg-surface-raised px-4 dark:bg-slate-900"><div className="flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-lg bg-accent text-[0.55rem] font-black text-white dark:text-cyan-950">HF</span><span className="text-xs font-black text-ink dark:text-white">HireFlux</span></div><div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[0.58rem] font-semibold text-ink-muted"><Search className="size-3" />Search your workspace</div></header>
     <div className="grid h-[calc(100%-3rem)] grid-cols-[7.5rem_minmax(0,1fr)]" data-workspace-layout><WorkspaceNavigation /><div className="relative min-w-0 overflow-hidden p-4">
       <div className="absolute inset-x-4 top-3 flex items-end justify-between" data-workspace-heading><div><p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-ink-muted">Your search</p><p className="mt-0.5 text-base font-black text-ink dark:text-white">Connected workspace</p></div><span className="rounded-full border border-line bg-surface-raised px-2.5 py-1 text-[0.56rem] font-bold text-ink-muted">3 active</span></div>
       <section className="absolute inset-x-4 top-[4.1rem] h-[17.5rem] overflow-hidden rounded-2xl border border-line-strong bg-surface-raised px-5 py-4 dark:border-slate-700 dark:bg-slate-900" data-workspace-applications data-workspace-panel><div className="flex items-center justify-between gap-4"><div><p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-accent-strong">Applications workspace</p><p className="mt-1 text-sm font-black text-ink dark:text-white">Three opportunities moving at different speeds</p></div><span className="text-[0.58rem] font-bold text-ink-muted">Updated today</span></div><OpportunityRows /></section>
@@ -152,16 +150,15 @@ function ConnectedWorkspaceVisual() {
   </div>;
 }
 
-function StaticWorkspaceVisual({ stage }: { stage: LandingWorkspaceStage }) {
-  return <div className="hf-static-workspace mt-5 min-w-0 overflow-hidden rounded-2xl border border-line-strong bg-surface-muted p-3 dark:border-slate-700 dark:bg-slate-950/70" data-scroll-static-stage={stage} aria-hidden="true"><div className="flex items-center justify-between border-b border-line pb-2"><span className="text-[0.58rem] font-black text-ink dark:text-white">HireFlux</span><span className="text-[0.52rem] font-bold text-accent-strong">{workspaceNavigation.find((item) => item.stage === stage)?.label}</span></div><div className="mt-2 rounded-xl bg-surface-raised px-3 dark:bg-slate-900">{stage === "applications" ? <OpportunityRows compact /> : null}{stage === "interviews" ? <div className="-mx-1 my-2 rounded-lg border border-violet/20 bg-violet-soft/20 p-2.5" data-workspace-focus-primary="interviews"><InterviewSurface compact /><p className="mt-3 border-t border-violet/15 pt-2 text-[0.58rem] font-semibold text-ink-muted">Application context retained</p></div> : null}{stage === "preparation" ? <div className="-mx-1 my-2 flex items-center gap-3 rounded-lg border border-violet/15 bg-violet-soft/15 p-2.5" data-northstar-identity="preparation" data-workspace-focus-primary="preparation"><NorthstarMark compact /><div className="min-w-0 flex-1"><p className="truncate text-[0.65rem] font-black text-ink dark:text-white">Technical screen · Northstar Labs</p><div className="mt-3 h-1.5 rounded-full bg-line"><div className="h-full w-2/3 rounded-full bg-violet" /></div><p className="mt-2 text-[0.58rem] font-semibold text-ink-muted">Company context and evidence ready · <span className="font-black text-warning">One question remaining</span></p></div></div> : null}{stage === "action-center" ? <ActionCenterSurface compact /> : null}</div></div>;
-}
-
 function ChapterCopy({ chapter, visual = false }: { chapter: LandingScrollChapter; visual?: boolean }) {
   return <div aria-hidden={visual || undefined} data-scroll-copy-content={visual || undefined}><p className="text-xs font-black uppercase tracking-[0.14em] text-accent-strong" data-scroll-copy-label={visual || undefined}><span className="tabular-nums" data-scroll-copy-index={visual || undefined}>{chapter.number}</span><span> · {chapter.label}</span></p><p className="mt-4 text-sm font-bold leading-6 text-ink-muted dark:text-slate-300" data-scroll-copy-question={visual || undefined}>{chapter.question}</p><h3 className="mt-3 text-3xl font-black tracking-tight text-ink dark:text-white" data-scroll-copy-headline={visual || undefined}>{chapter.title}</h3><p className="mt-4 max-w-xl leading-7 text-ink-muted dark:text-slate-300" data-scroll-copy-body={visual || undefined}>{chapter.description}</p></div>;
 }
 
-export function ScrollProductStory() {
-  const reducedMotion = useReducedMotion();
+interface ConnectedStoryJ3Props {
+  onChapterChange?: (chapter: LandingWorkspaceStage) => void;
+}
+
+export function ConnectedStoryJ3({ onChapterChange }: ConnectedStoryJ3Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const activeChapterRef = useRef<LandingWorkspaceStage>("applications");
@@ -171,21 +168,21 @@ export function ScrollProductStory() {
     if (!rootRef.current || !stageRef.current) return;
     const root = rootRef.current;
     const stage = stageRef.current;
-    return mountConnectedStory(root, stage, (mode) => {
-      const media = gsap.matchMedia();
-      let owned: ConnectedAnimation;
-      const context = gsap.context(() => {
-        // Native mode ownership completes capture/revert/remap synchronously.
-        // An all-media GSAP scope retains cleanup without a second media-refresh
-        // owner resetting document scroll after the local transaction finishes.
-        media.add("all", () => {
-        const configuration = scrollStoryModeConfiguration[mode];
-        root.dataset.scrollMode = mode;
-        const selectChapter = (progress: number) => { const next = scrollChapterForProgress(progress); if (activeChapterRef.current !== next) { activeChapterRef.current = next; setActiveChapter(next); } };
+    const configuration = scrollStoryJ3Configuration;
+    let timeline: gsap.core.Timeline | null = null;
+    const context = gsap.context(() => {
+        const envelope = root.querySelector<HTMLElement>("[data-workspace-stage-envelope]")!;
+        const stageBounds = stage.getBoundingClientRect();
+        const envelopeBounds = envelope.getBoundingClientRect();
+        const outerDelta = Math.max(0, stageBounds.bottom - envelopeBounds.bottom);
+        const selectChapter = (progress: number) => { const next = scrollChapterForProgress(progress); root.dataset.connectedProgress = String(progress); if (activeChapterRef.current !== next) { activeChapterRef.current = next; setActiveChapter(next); onChapterChange?.(next); } };
         let refreshing = false;
-        const timeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * configuration.travelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onRefreshInit: () => { refreshing = true; }, onRefresh: (trigger) => { refreshing = false; selectChapter(trigger.progress); } } });
-        timeline.eventCallback("onUpdate", () => { if (!refreshing) selectChapter(timeline.progress()); });
-        timeline
+        const activeTimeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * configuration.travelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onRefreshInit: () => { refreshing = true; }, onRefresh: (trigger) => { refreshing = false; selectChapter(trigger.progress); }, onUpdate: (trigger) => { root.dataset.connectedProgress = String(trigger.progress); } } });
+        timeline = activeTimeline;
+        root.dataset.connectedTimelineActive = "true";
+        root.dataset.connectedTriggerActive = "true";
+        activeTimeline.eventCallback("onUpdate", () => { if (!refreshing) selectChapter(activeTimeline.progress()); });
+        activeTimeline
           .addLabel("applications", scrollStoryTimelineLabels.applications)
           .set('[data-scroll-copy-stage]:not([data-scroll-copy-stage="applications"])', { autoAlpha: 0 }, 0)
           .set("[data-workspace-panel]:not([data-workspace-applications])", { autoAlpha: 0 }, 0)
@@ -237,37 +234,32 @@ export function ScrollProductStory() {
           .set("[data-workspace-actions]", { zIndex: 40, autoAlpha: 1 }, 0.67)
           .fromTo("[data-workspace-history]", { y: 10, scaleX: 0.9, autoAlpha: 0 }, { y: 0, scaleX: 1, autoAlpha: 1, duration: 0.11, ease: "power3.out", transformOrigin: "top center" }, 0.655)
           .fromTo("[data-workspace-actions]", { y: configuration.actionEnterY, scaleX: 0.94, scaleY: 0.78, clipPath: "inset(12% 0% 0% 0% round 1rem)" }, { y: 0, scaleX: 1, scaleY: 1, clipPath: "inset(0% 0% 0% 0% round 1rem)", duration: 0.135, ease: "power3.out", transformOrigin: "top center" }, 0.67)
+          .fromTo("[data-workspace-stage-envelope]", { y: 0 }, { y: outerDelta, duration: 0.135, ease: "power3.out" }, 0.67)
           .fromTo("[data-workspace-action-content]", { y: 6, autoAlpha: 0.45 }, { y: 0, autoAlpha: 1, duration: 0.11, ease: "power3.out" }, 0.68)
           .fromTo("[data-workspace-priority-primary]", { y: 8 }, { y: 0, duration: 0.08 }, 0.7)
           .fromTo("[data-workspace-priority-supporting]", { y: 10 }, { y: 0, duration: 0.09 }, 0.735)
           .to("[data-workspace-actions]", { duration: actionEndpointHoldDuration }, actionEndpointHoldStart)
           .addLabel("settled", scrollStoryTimelineLabels.settled);
-        const timelineDuration = timeline.duration();
+        const timelineDuration = activeTimeline.duration();
         const addNarrativeHandoff = (outgoing: LandingWorkspaceStage, incoming: LandingWorkspaceStage, boundary: number) => {
-          timeline
+          activeTimeline
             .to(`[data-scroll-copy-stage="${outgoing}"]`, { autoAlpha: 0, duration: timelineDuration * narrativeOutgoingProgress, ease: "power1.out" }, timelineDuration * (boundary - narrativeOutgoingLead))
             .to(`[data-scroll-copy-stage="${incoming}"]`, { autoAlpha: 1, duration: timelineDuration * narrativeIncomingProgress, ease: "power2.out" }, timelineDuration * (boundary - narrativeIncomingLead));
         };
         addNarrativeHandoff("applications", "interviews", scrollStoryTimelineLabels.interviews);
         addNarrativeHandoff("interviews", "preparation", scrollStoryTimelineLabels.preparation);
         addNarrativeHandoff("preparation", "action-center", scrollStoryTimelineLabels.actionCenter);
-        owned = {
-          trigger: timeline.scrollTrigger!,
-          settle: (progress) => { timeline.scrollTrigger?.getTween()?.pause(); timeline.progress(progress); },
-          dispose: () => { media.revert(); context.revert(); },
-        };
-        return () => {
-          timeline.scrollTrigger?.kill();
-          timeline.kill();
-        };
-        });
       }, root);
-      return owned!;
-    });
-  }, []);
+    return () => {
+      delete root.dataset.connectedTimelineActive;
+      delete root.dataset.connectedTriggerActive;
+      timeline?.scrollTrigger?.kill();
+      timeline?.kill();
+      context.revert();
+    };
+  }, [onChapterChange]);
 
-  return <div ref={rootRef} className="hf-scroll-story mt-12 sm:mt-14 lg:mt-12" data-scroll-story data-scroll-mode="static" data-active-chapter={activeChapter} data-reduced-motion={reducedMotion}>
-    <span className="pointer-events-none invisible absolute size-[1rem]" data-scroll-fit-probe aria-hidden="true" />
+  return <div ref={rootRef} className="hf-scroll-story" data-connected-j3 data-scroll-story data-active-chapter={activeChapter} data-connected-progress="0">
     <div className="hf-scroll-story-desktop" data-testid="desktop-product-story">
       <div ref={stageRef} className="hf-scroll-story-stage relative grid h-[min(43rem,100vh)] min-h-[40rem] grid-cols-[minmax(0,0.52fr)_minmax(0,1.18fr)] items-center gap-8 xl:grid-cols-[minmax(0,0.48fr)_minmax(0,1.22fr)] xl:gap-6" data-scroll-story-pin>
         <div className="relative min-h-[31rem] min-w-0">
@@ -283,6 +275,5 @@ export function ScrollProductStory() {
       </div>
       <div className="hf-scroll-story-release-buffer" data-scroll-story-release-buffer aria-hidden="true" />
     </div>
-    <ol className="hf-scroll-story-fallback grid gap-8 md:grid-cols-2" data-testid="mobile-product-story">{landingScrollChapters.map((chapter) => <li key={chapter.stage} className="min-w-0"><article className="h-full min-w-0 border-t border-line pt-6" data-scroll-fallback-chapter={chapter.stage} data-landing-clip-check><ChapterCopy chapter={chapter} /><StaticWorkspaceVisual stage={chapter.stage} /></article></li>)}</ol>
   </div>;
 }

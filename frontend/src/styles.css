@@ -762,15 +762,12 @@
 }
 
 .hf-scroll-story-desktop {
-  display: none;
-}
-
-.hf-scroll-story-fallback {
-  display: grid;
+  display: block;
 }
 
 .hf-scroll-story-release-buffer {
-  display: none;
+  display: block;
+  min-height: clamp(10rem, calc(100svh - 48rem), 18rem);
 }
 
 .hf-connected-workspace [data-workspace-recent],
@@ -861,92 +858,6 @@
 
 .dark .hf-scroll-story[data-active-chapter="preparation"] [data-workspace-preparation] {
   box-shadow: 0 18px 38px rgb(0 0 0 / 34%);
-}
-
-/* The Connected-local transaction owns mode visibility, so CSS cannot collapse
-   pin spacing before reading position has been captured. */
-@media all {
-  .hf-scroll-story[data-scroll-mode="adapted"] .hf-scroll-story-desktop {
-    display: block;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] .hf-scroll-story-fallback {
-    display: none;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] .hf-scroll-story-stage {
-    height: min(40rem, 100vh);
-    min-height: 36rem;
-    grid-template-columns: minmax(0, 0.42fr) minmax(0, 1.08fr);
-    gap: 1.25rem;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] [data-workspace-stage-envelope] {
-    height: 34rem;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] [data-workspace-layout] {
-    grid-template-columns: 6.5rem minmax(0, 1fr);
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] [data-workspace-recent] {
-    width: 7.5rem;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] [data-workspace-handoff] {
-    left: 7.75rem;
-    width: 2rem;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] [data-workspace-interviews] {
-    left: 9rem;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] [data-workspace-interview-body] {
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
-    gap: 0.75rem;
-    padding: 1rem;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] [data-workspace-interview-title] {
-    margin-top: 0.375rem;
-    font-size: 1rem;
-    line-height: 1.25rem;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] [data-workspace-interview-description] {
-    margin-top: 0.375rem;
-    line-height: 1.05rem;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] [data-workspace-interview-origin] {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] [data-workspace-interview-next-action] {
-    padding: 0.75rem;
-  }
-
-  .hf-scroll-story[data-scroll-mode="adapted"] .hf-scroll-story-release-buffer {
-    display: block;
-    min-height: max(8rem, calc(100svh - 42rem));
-  }
-}
-
-@media all {
-  .hf-scroll-story[data-scroll-mode="full"] .hf-scroll-story-desktop {
-    display: block;
-  }
-
-  .hf-scroll-story[data-scroll-mode="full"] .hf-scroll-story-fallback {
-    display: none;
-  }
-
-  .hf-scroll-story[data-scroll-mode="full"] .hf-scroll-story-release-buffer {
-    display: block;
-    min-height: max(10rem, calc(100svh - 48rem));
-  }
 }
 
 .hf-route-enter,

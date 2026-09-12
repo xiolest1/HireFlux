@@ -1,5 +1,61 @@
 # HireFlux development log
 
+## 2026-09-12 — LP-J7 J3/C/A production reconciliation
+
+Replaced the retired Full/Adapted/Static Connected Workspace ownership with the
+frozen Policy-B J3/C/A architecture. One canonical journey model now owns
+`pre-story → applications → interviews → preparation → action-center →
+post-story`; one landing-specific controller owns the immutable environment
+revision, family target, active owner, semantic capture, bounded correction,
+history checkpoint, intent veto, and cleanup. The production selector is
+monotonic: A is the terminal-safe native chronology, C is the persistent native
+product frame, and J3 is the frozen animated composition.
+
+J3 eligibility uses the accepted 1180×760 viewport, 1080px container, and
+17.5px root-font seeds plus an inert, zero-footprint live-geometry fit probe.
+C requires 700×700, a 660px container, and a root font no larger than 20px;
+reduced motion resolves directly to the richest safe native family. Typography
+readiness is bounded at 240ms and initial J3 loading at 800ms. A timed-out or
+failed import commits C/A, caches a late module without activating it, and
+permits that cache to initialize only under a later external, still-current J3
+decision. The correction guard remains `max(96px, 20vh)`, with chapter identity
+outranking local progress and zero or one immediate correction per transaction.
+
+The old production host and mode-selection CSS were removed. J3 remains one
+scoped GSAP context, one timeline, and one ScrollTrigger/pin, preserving the
+2.5-viewport travel, authored chapter boundaries, S2 outer-envelope emphasis,
+and R68 release geometry. C and A use shared factual leaves but independent,
+source-ordered native compositions; neither mounts GSAP, ScrollTrigger, a pin,
+or a hidden semantic duplicate. A namespaced version-1
+`history.state.__hirefluxConnectedStory` checkpoint shallow-merges semantic
+position into the current entry without storing business state or raw scroll
+coordinates.
+
+Production browser validation covered initial J3/C/A selection, reduced motion,
+slow/failed/stale J3 imports, C↔A and J3↔C handoffs, semantic continuity,
+trusted-input correction veto, Back/Forward, route unmount/remount, cold/warm
+module behavior, accessibility, overflow, and 200% text. The complete Chromium
+matrix passed 166 tests with 109 intentional project/mode skips after the
+obsolete Full/Adapted/Static block and its 11 snapshots were retired; Firefox also
+preserved J3 → C → J3 ownership with one owner, correct pin counts, and zero
+horizontal overflow. WebKit was unavailable locally, and a real
+`pageshow.persisted` BFCache restore could not be exercised, so those surfaces
+remain explicitly unverified rather than inferred from handler coverage.
+
+Final validation passed ESLint, TypeScript, all 250 Vitest tests, 13 focused
+accessibility tests, three hosting-header tests, the production build, and
+`git diff --check`. Against clean `8be3784`, Vite reports main 283.02/84.82 →
+464.14/138.74 kB and its shared runtime chunk 191.18/58.83 → 9.72/3.85 kB;
+the combined bootstrap pair is effectively flat at 474.20/143.65 →
+473.87/142.59 kB raw/gzip. The former 182.16/63.24 kB landing chunk is split
+into landing 56.24/15.54, shared landing/hero GSAP 73.03/28.85, and J3 plus
+ScrollTrigger 73.15/23.99 kB. CSS decreased from 122.57/19.84 to
+121.91/19.72 kB. The frozen Hero still owns GSAP core in the shared landing
+graph; only the J3/ScrollTrigger family chunk is excluded from C/A requests.
+That pre-existing Hero dependency is documented as the exact qualification to
+the literal J7 “C/A users do not request GSAP” wording; no frozen Hero behavior
+was changed.
+
 ## 2026-09-09 — V2-2 bridged Quiet Coda composition
 
 Resolved the remaining lower-page composition imbalance without changing the

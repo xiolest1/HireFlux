@@ -90,7 +90,7 @@ describe("LandingPage motion ownership boundaries", () => {
     });
     const section = heading.closest<HTMLElement>("section");
     const reveal = heading.closest<HTMLElement>("[data-landing-viewport-reveal]");
-    const story = section?.querySelector<HTMLElement>("[data-scroll-story]");
+    const story = section?.querySelector<HTMLElement>("[data-connected-story]");
     const legacyWrapper = section?.parentElement;
 
     expect(section).not.toBeNull();

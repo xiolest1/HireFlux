@@ -38,6 +38,23 @@ export const landingWorkspaceStageOrder = [
 
 export type LandingWorkspaceStage = (typeof landingWorkspaceStageOrder)[number];
 
+export const landingJourneyOrder = [
+  "pre-story",
+  ...landingWorkspaceStageOrder,
+  "post-story",
+] as const;
+
+export type LandingJourneyStage = (typeof landingJourneyOrder)[number];
+
+export const landingJourneyChapterOrder = landingJourneyOrder.filter(
+  (stage): stage is LandingWorkspaceStage =>
+    stage !== "pre-story" && stage !== "post-story",
+);
+
+export function landingJourneyIndex(stage: LandingJourneyStage) {
+  return landingJourneyOrder.indexOf(stage);
+}
+
 export interface LandingScrollChapter {
   stage: LandingWorkspaceStage;
   number: string;
