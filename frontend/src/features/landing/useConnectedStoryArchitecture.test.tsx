@@ -13,6 +13,10 @@ const FakeJ3: ComponentType = () => (
   <div data-connected-j3 data-connected-progress="0"><div className="pin-spacer"><div data-scroll-story-pin /></div></div>
 );
 
+const UnreadyJ3: ComponentType = () => (
+  <div data-connected-j3 data-connected-progress="0"><div data-scroll-story-pin /></div>
+);
+
 function Harness({ loadJ3 }: { loadJ3: () => Promise<{ ConnectedStoryJ3: ComponentType }> }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const state = useConnectedStoryArchitecture(rootRef, { loadJ3 });
@@ -56,6 +60,7 @@ function installEnvironment(width: number, height: number) {
 beforeEach(() => {
   vi.clearAllMocks();
   resetConnectedStoryModuleForTests();
+  window.history.replaceState({}, "", "/");
   vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
 });
 
@@ -198,5 +203,55 @@ describe("useConnectedStoryArchitecture", () => {
     const { getByTestId } = render(<Harness loadJ3={loadJ3} />);
     await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-family", "c"));
     expect(loadJ3).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["unavailable", () => vi.stubGlobal("ResizeObserver", undefined)],
+    ["construction failure", () => vi.stubGlobal("ResizeObserver", class {
+      constructor() { throw new Error("observer unavailable"); }
+    })],
+    ["observation failure", () => vi.stubGlobal("ResizeObserver", class {
+      observe() { throw new Error("observation unavailable"); }
+      disconnect() { /* fault-path cleanup contract */ }
+    })],
+  ])("degrades deterministically to A when ResizeObserver is %s", async (_, installFault) => {
+    installEnvironment(1280, 900);
+    installFault();
+    const loadJ3 = vi.fn(async () => ({ ConnectedStoryJ3: FakeJ3 }));
+    const { getByTestId } = render(<Harness loadJ3={loadJ3} />);
+    await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-family", "a"));
+    expect(loadJ3).not.toHaveBeenCalled();
+    expect(getByTestId("root").querySelectorAll("[data-connected-j3]")).toHaveLength(0);
+  });
+
+  it("settles a destination-readiness failure and permits a later valid reconciliation", async () => {
+    const { viewport } = installEnvironment(1280, 900);
+    let destinationReady = false;
+    const DeferredReadinessJ3: ComponentType = () => destinationReady ? <FakeJ3 /> : <UnreadyJ3 />;
+    const { getByTestId } = render(
+      <Harness loadJ3={async () => ({ ConnectedStoryJ3: DeferredReadinessJ3 })} />,
+    );
+    await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-family", "j3"));
+    await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-connected-transition", "settled"));
+    expect(window.scrollTo).not.toHaveBeenCalled();
+    expect(getByTestId("root").querySelectorAll(".pin-spacer")).toHaveLength(0);
+
+    viewport.width = 900;
+    act(() => window.dispatchEvent(new Event("resize")));
+    await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-family", "c"));
+    destinationReady = true;
+    viewport.width = 1280;
+    act(() => window.dispatchEvent(new Event("resize")));
+    await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-family", "j3"));
+    expect(getByTestId("root").querySelectorAll(".pin-spacer")).toHaveLength(1);
+  });
+
+  it("returns to the normal J3 path after fault mocks are restored", async () => {
+    installEnvironment(1280, 900);
+    const { getByTestId } = render(
+      <Harness loadJ3={async () => ({ ConnectedStoryJ3: FakeJ3 })} />,
+    );
+    await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-family", "j3"));
+    expect(getByTestId("root").querySelectorAll(".pin-spacer")).toHaveLength(1);
   });
 });

@@ -291,6 +291,125 @@ test("trusted user scrolling vetoes a pending reconciliation correction", async 
   expect(await page.evaluate(() => window.scrollY)).toBe(afterIntent);
 });
 
+test("J3 travel is exactly 2.5 viewport heights", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await openLanding(page);
+  await waitForFamily(page, "j3");
+  const geometry = await page.locator("[data-scroll-story-pin]").evaluate((stage) => {
+    const spacer = stage.parentElement!;
+    return {
+      viewportHeight: window.innerHeight,
+      travel: spacer.getBoundingClientRect().height - stage.getBoundingClientRect().height,
+    };
+  });
+  expect(geometry.travel).toBeCloseTo(geometry.viewportHeight * 2.5, 0);
+});
+
+test("a pending J3 import remains inert after route unmount and warms a later remount", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  let releaseChunk!: () => void;
+  const chunkGate = new Promise<void>((resolve) => { releaseChunk = resolve; });
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.route(/ConnectedStoryJ3-.*\.js$/, async (route) => {
+    await chunkGate;
+    await route.continue();
+  });
+  await openLanding(page);
+  await expect(connectedStory(page)).toHaveAttribute("data-connected-transition", "loading-j3");
+
+  await page.getByRole("button", { name: /Continue Demo|Explore the Demo/ }).first().click();
+  await expect(page).toHaveURL(/dashboard/);
+  await expect(connectedStory(page)).toHaveCount(0);
+  const routeState = await page.evaluate(() => ({ scrollY: window.scrollY, history: JSON.stringify(history.state) }));
+
+  releaseChunk();
+  await page.waitForTimeout(350);
+  await expect(connectedStory(page)).toHaveCount(0);
+  await expect(page.locator(".pin-spacer")).toHaveCount(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(routeState.scrollY);
+  expect(await page.evaluate(() => JSON.stringify(history.state))).toBe(routeState.history);
+  expect(pageErrors).toEqual([]);
+
+  await page.goBack();
+  await expect(page.getByRole("heading", { level: 1, name: "Keep every opportunity connected to what comes next." })).toBeVisible();
+  await waitForFamily(page, "j3");
+  const state = await runtimeState(page);
+  expect(state.owners).toBe(1);
+  expect(state.timelines).toBe(1);
+  expect(state.triggers).toBe(1);
+  expect(state.pinSpacers).toBe(1);
+});
+
+test("trusted keyboard scrolling vetoes correction while editable keys remain local", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await openLanding(page);
+  await waitForFamily(page, "j3");
+  await page.evaluate(() => {
+    document.documentElement.style.scrollBehavior = "auto";
+    (document.activeElement as HTMLElement | null)?.blur();
+    window.scrollTo({ top: 1200, behavior: "instant" });
+  });
+  await page.setViewportSize({ width: 900, height: 720 });
+  await page.keyboard.press("End");
+  await waitForFamily(page, "c");
+  await page.waitForTimeout(500);
+  const endPosition = await page.evaluate(() => ({
+    current: window.scrollY,
+    maximum: document.documentElement.scrollHeight - window.innerHeight,
+  }));
+  expect(endPosition.maximum - endPosition.current).toBeLessThanOrEqual(8);
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await waitForFamily(page, "j3");
+  const pinGeometry = await page.locator("[data-scroll-story-pin]").evaluate((stage) => ({
+    start: stage.parentElement!.getBoundingClientRect().top + window.scrollY,
+    travel: window.innerHeight * 2.5,
+  }));
+  await page.evaluate(({ start, travel }) => {
+    window.scrollTo({ top: start + travel * 0.56, behavior: "instant" });
+    const editor = document.createElement("textarea");
+    editor.dataset.intentEditor = "true";
+    editor.value = "editable control";
+    editor.style.cssText = "position:fixed;left:8px;top:8px;width:120px;height:44px";
+    document.body.append(editor);
+    editor.focus();
+    editor.setSelectionRange(0, 0);
+  }, pinGeometry);
+  await page.setViewportSize({ width: 900, height: 720 });
+  await page.keyboard.press("End");
+  await waitForFamily(page, "c");
+  await expect(page.locator('[data-connected-chapter="preparation"]')).toBeInViewport();
+  await expect(page.locator("[data-intent-editor]")).toBeFocused();
+  expect(await page.locator("[data-intent-editor]").evaluate((editor) => (editor as HTMLTextAreaElement).selectionStart)).toBe(16);
+  await page.locator("[data-intent-editor]").evaluate((editor) => editor.remove());
+});
+
+test("touch intent veto remains unverified without a faithful moving-touch API", async () => {
+  test.skip(
+    true,
+    "Playwright exposes trusted tap only; CDP desktop touch required artificial frame delays and did not reproduce native gesture timing faithfully.",
+  );
+});
+
+test("trusted scrollbar input vetoes correction when a physical gutter is exposed", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await openLanding(page);
+  await waitForFamily(page, "j3");
+  const gutter = await page.evaluate(() => window.innerWidth - document.documentElement.clientWidth);
+  test.skip(gutter < 1, "Headless Chromium exposes overlay scrollbars with no automatable gutter.");
+  await page.evaluate(() => window.scrollTo({ top: 1200, behavior: "instant" }));
+  await page.setViewportSize({ width: 900, height: 720 });
+  const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+  await page.mouse.move(clientWidth + gutter / 2, 360);
+  await page.mouse.down();
+  await page.mouse.up();
+  await waitForFamily(page, "c");
+  const afterIntent = await page.evaluate(() => window.scrollY);
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => window.scrollY)).toBe(afterIntent);
+});
+
 test("cold and warm production J3 loads request the family chunk once per document", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1280");
   const requests: string[] = [];

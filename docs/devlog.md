@@ -1,5 +1,48 @@
 # HireFlux development log
 
+## 2026-09-12 — LP-J7-F1 contract clarification and validation closure
+
+Clarified the Connected Workspace loading contract without reopening the frozen
+Hero: existing landing-page GSAP outside Connected Workspace remains permitted,
+while J3 exclusively owns the Connected Workspace GSAP/ScrollTrigger lifecycle
+and J3-specific chunk. Built-preview network evidence confirms C loads no J3
+chunk and owns zero pins, J3 loads that chunk once and owns one pin, and a warm
+J3 re-entry issues no second request. The earlier global-zero-GSAP gate is
+superseded; Hero's existing GSAP is not a Connected Workspace isolation defect.
+
+Verified that `scrollStoryTravelViewportHeights = 2.5` is multiplied by
+`window.innerHeight` for ScrollTrigger end geometry. At 1280×900, the rendered
+pin-spacer travel is 2250px, so the prior “2.5vh” phrase was report shorthand,
+not literal CSS or an implementation error. No travel, choreography, boundary,
+or release value changed.
+
+Focused fault injection exposed one bounded J7 defect: a throwing or missing
+`ResizeObserver` could escape effect setup. The controller now catches
+construction/observation failure and denies unprovable richer capacity, settling
+deterministically on terminal-safe A. Tests cover unavailable, constructor
+failure, observation failure, cleanup, and a following normal J3 initialization.
+An unready destination test also proves the existing ten-frame J3 readiness
+window settles without correction or duplicate ownership and permits a later
+valid C → J3 reconciliation; no readiness policy changed.
+
+Production Playwright now proves the pending-import route-unmount race, cache-only
+late resolution, coherent cached J3 remount, exact 2.5-viewport travel, and
+trusted keyboard correction veto. The keyboard case also confirms a consumed
+End key remains local to a focused textarea while semantic reconciliation
+continues. Playwright's supported touchscreen surface exposes trusted tap but no
+faithful moving gesture; CDP desktop touch required artificial frame timing and
+was therefore rejected as evidence. Headless Chromium exposes no physical
+scrollbar gutter. Touch and scrollbar veto remain explicitly unverified, as
+allowed by F1; BFCache and WebKit remain unavailable surfaces.
+
+Final validation passed ESLint, TypeScript, 255 Vitest tests, 13 focused
+accessibility tests, a 95-case built-preview F1 matrix (25 passed, 70 intentional
+project/tooling skips), an exhaustive desktop J7/F1 run (13 passed, 4 skips),
+Firefox C/J3 loading and J3 → C → J3 ownership, the production build, and
+`git diff --check`. Final emitted sizes are 464.15/138.74 kB main,
+55.49/15.34 kB landing, 73.03/28.85 kB shared landing/Hero GSAP,
+73.15/23.99 kB J3/ScrollTrigger, and 121.91/19.72 kB CSS raw/gzip.
+
 ## 2026-09-12 — LP-J7 J3/C/A production reconciliation
 
 Replaced the retired Full/Adapted/Static Connected Workspace ownership with the
@@ -52,9 +95,9 @@ into landing 56.24/15.54, shared landing/hero GSAP 73.03/28.85, and J3 plus
 ScrollTrigger 73.15/23.99 kB. CSS decreased from 122.57/19.84 to
 121.91/19.72 kB. The frozen Hero still owns GSAP core in the shared landing
 graph; only the J3/ScrollTrigger family chunk is excluded from C/A requests.
-That pre-existing Hero dependency is documented as the exact qualification to
-the literal J7 “C/A users do not request GSAP” wording; no frozen Hero behavior
-was changed.
+LP-J7-F1 subsequently clarified that this is the intended isolation boundary:
+C/A exclude the J3/ScrollTrigger family chunk and lifecycle, while frozen Hero
+GSAP remains permitted. No frozen Hero behavior was changed.
 
 ## 2026-09-09 — V2-2 bridged Quiet Coda composition
 

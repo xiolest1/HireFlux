@@ -218,6 +218,8 @@ export function useConnectedStoryArchitecture(
     let initialized = false;
     let touchStartY: number | null = null;
     let fontTimer = 0;
+    let observer: ResizeObserver | null = null;
+    let containerObservationAvailable = typeof ResizeObserver === "function";
 
     const capture = () => familyRef.current
       ? captureConnectedStoryPosition(root, familyRef.current)
@@ -241,13 +243,13 @@ export function useConnectedStoryArchitecture(
       const containerWidth = root.clientWidth;
       const rootFontPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
       const base = { width, height, containerWidth, rootFontPx, reducedMotion: reduced.matches };
-      const j3Capacity = isJ3CapacityEligible(base);
+      const j3Capacity = containerObservationAvailable && isJ3CapacityEligible(base);
       return {
         revision,
         ...base,
         fontsReady: fontsReadyRef.current,
         j3Fit: j3Capacity && connectedJ3PreflightFits(root),
-        cCapable: isCCapable(base),
+        cCapable: containerObservationAvailable && isCCapable(base),
       };
     };
 
@@ -352,10 +354,16 @@ export function useConnectedStoryArchitecture(
       pendingRef.current = null;
       requestEvaluation("history-navigation");
     };
-    const observer = typeof ResizeObserver === "function"
-      ? new ResizeObserver(() => requestEvaluation("container-resize"))
-      : null;
-    observer?.observe(root);
+    if (containerObservationAvailable) {
+      try {
+        observer = new ResizeObserver(() => requestEvaluation("container-resize"));
+        observer.observe(root);
+      } catch {
+        observer?.disconnect();
+        observer = null;
+        containerObservationAvailable = false;
+      }
+    }
     window.addEventListener("resize", onResize);
     reduced.addEventListener("change", onReduced);
     window.addEventListener("wheel", onWheel, { passive: true });
