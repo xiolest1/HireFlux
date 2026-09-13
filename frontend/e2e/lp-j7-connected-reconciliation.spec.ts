@@ -22,6 +22,7 @@ async function runtimeState(page: Page) {
       family: root.dataset.connectedFamily,
       semanticOwner: root.dataset.connectedSemanticOwner,
       presentationOwner: root.dataset.connectedPresentationOwner,
+      cPresentation: root.dataset.connectedCPresentation,
       chapter: root.dataset.connectedSemanticChapter,
       transition: root.dataset.connectedTransition,
       owners: root.querySelectorAll("[data-connected-family-owner]").length,
@@ -69,7 +70,7 @@ test("Policy B selects one production owner and one complete story", async ({ pa
   const state = await runtimeState(page);
   expect(state.owners).toBe(1);
   expect(state.semanticOwner).toBe(expected);
-  expect(state.presentationOwner).toBe(expected);
+  expect(state.presentationOwner).toBe(expected === "c" ? state.cPresentation : expected);
   expect(state.fitProbes).toBe(1);
   expect(state.overflow).toBeLessThanOrEqual(1);
   expect(state.pinSpacers).toBe(expected === "j3" ? 1 : 0);

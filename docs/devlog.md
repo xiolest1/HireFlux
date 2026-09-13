@@ -1,5 +1,95 @@
 # HireFlux development log
 
+## 2026-09-13 — Progressive-C release-candidate checkpoint
+
+Progressive-C completed responsive product review and the bounded endpoint-
+handoff correction. Outgoing endpoints now stop painting immediately when
+semantic ownership changes, while the incoming endpoint settles over 180ms
+inside the persistent workspace shell. Forward, reverse, fast-traversal,
+reduced-motion, restoration, fit, accessibility, and production-build checks
+passed without reopening the accepted architecture.
+
+The release-policy decision is to enable Progressive-C with documented
+physical-validation debt. The immutable implementation checkpoint deliberately
+keeps `VITE_CONNECTED_STORY_PROGRESSIVE_C=off`; only an authoritative
+production build/deployment setting may later enable it with exact lowercase
+`on`. No local or example environment value constitutes production enablement.
+
+Physical iOS Safari and Android Chrome validation remains deferred. Typical
+phone geometries do not enter Progressive-C under the current width, height,
+fit, motion, and capability predicates, although physical fallback,
+orientation, touch, browser-chrome, BFCache, lifecycle, tablet, and
+device-specific behavior remain incompletely validated. Unsupported, uncertain,
+or insufficient-fit conditions fail closed to native-C or A.
+
+Rollback preserves the accepted implementation source: set the authoritative
+production build value to `off`, rebuild, redeploy, allow hosting/CDN
+propagation, and verify native-C. The flag is a Vite build-time seam, not a
+runtime kill switch. No production configuration change or deployment is
+recorded by this checkpoint.
+
+## 2026-09-12 — LP-K5 progressive-C production implementation (acceptance pending)
+
+Implemented the frozen Candidate-A progressive-C presentation inside the J7
+selector/reconciliation system. Native C was first extracted without changing
+its markup or presentation, then C gained an atomic `native | progressive`
+presentation identity. The candidate is guarded by the single normalized
+`VITE_CONNECTED_STORY_PROGRESSIVE_C` seam: only exact `on` permits eligibility;
+`off`, missing, and unrecognized values fail closed. The committed example and
+intended deployment default remain `off` because mandatory physical-device
+acceptance is unavailable.
+
+Progressive C renders one source-ordered semantic chapter list beside one
+decorative, inert, sticky HireFlux workspace. Applications, Interviews,
+Preparation, and Action Center stay mounted as stable endpoints, with exactly
+one visual endpoint active. One feature-scoped `IntersectionObserver` resolves a
+narrow center reading band through a deterministic geometry function; chapter
+boundaries update React and history only when ownership changes. It creates no
+GSAP timeline, ScrollTrigger, pin spacer, nested scroller, per-frame React scroll
+state, or additional restoration authority. Configuration and CSS variables
+share one source of truth: 768px minimum width, 720px usable height, 700px
+container width, 20px root-font ceiling, 16px sticky inset, 560px shell,
+2% observer band, 1px tie epsilon, 78/85/90vh chapter travel, 25vh release tail,
+180ms endpoint transition, 1px fit tolerance, 8px entry reserve, and 1px
+retention reserve.
+
+Validation found and corrected three bounded implementation defects. The first
+fit probe measured a 606px workspace because the extracted chrome's `h-full`
+child double-counted the header; a flex-column shell now leaves the content the
+intended 560px frame without weakening fit policy. Observer instrumentation
+initially counted unrelated landing reveal observers; the browser fixture now
+identifies only the progressive center-band observer. Finally, viewport reflow
+could reinterpret an already-settled Preparation checkpoint as Action before a
+progressive/native handoff. Same-family C changes now preserve the last
+controller-owned semantic checkpoint, refresh only owned lifecycle guard
+revisions, and still let a new trusted user intent veto correction. A restored
+Action checkpoint also holds the observer until J7 settlement, eliminating the
+default-Applications bootstrap flash.
+
+Production evidence at 768×1024 covers all four endpoints, forward/reverse and
+fast traversal, Action dwell/release, same-family 768×1024 → 768×700 → 768×1024
+reconciliation, reduced-motion fallback, route restoration, Axe, one-observer
+ownership, no pinning, and zero horizontal overflow. A controlled forward/reverse
+recording and endpoint screenshots were captured under the system temporary
+directory rather than committed. Measured CLS was
+`0.000005378382411436178`; Chromium and Firefox candidate smoke passed. The full
+deployment-off Playwright/Axe matrix passed 169 tests with 166 intentional
+project/feature skips; the candidate matrix passed all 12 applicable tests with
+23 intentional viewport skips. Serialized Vitest passed 269/269, focused
+accessibility passed 13/13, hosting-header tests passed 3/3, and ESLint,
+TypeScript, both production builds, and `git diff --check` passed.
+
+Final rollback and candidate bundles are materially identical because the
+candidate remains inside the lazy landing graph: main 464.15/138.74–138.75 kB,
+landing 67.28/18.10 kB, CSS 123.75/20.10 kB, shared landing/Hero GSAP
+73.03/28.85 kB, and J3/ScrollTrigger 73.15/23.99 kB raw/gzip. Relative to the
+LP-J7-F1 baseline, the main entry is unchanged, while the lazy landing grows
+11.79/2.76 kB and CSS grows 1.84/0.38 kB. Authenticated entry continues to omit
+the lazy landing graph. Physical iOS Safari, Android Chrome, mid-range Android,
+real browser-chrome visual-viewport churn, and physical BFCache/resume remain
+unverified, so the result is verdict B: implementation complete, production
+acceptance incomplete. No architecture contradiction, commit, or push occurred.
+
 ## 2026-09-12 — LP-J7-F1 contract clarification and validation closure
 
 Clarified the Connected Workspace loading contract without reopening the frozen

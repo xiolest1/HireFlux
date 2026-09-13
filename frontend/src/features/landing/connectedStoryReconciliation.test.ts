@@ -10,6 +10,7 @@ import {
   isJ3CapacityEligible,
   j3ProgressForSemanticPosition,
   selectConnectedStoryFamily,
+  selectConnectedStory,
   semanticPositionForJ3Progress,
   validateConnectedStoryCheckpoint,
   type ConnectedStoryEnvironment,
@@ -25,6 +26,8 @@ const environment: ConnectedStoryEnvironment = {
   fontsReady: true,
   j3Fit: true,
   cCapable: true,
+  progressiveCAllowed: false,
+  progressiveCCapability: "ineligible",
 };
 
 describe("connected story reconciliation", () => {
@@ -54,6 +57,16 @@ describe("connected story reconciliation", () => {
     expect(isJ3CapacityEligible(environment)).toBe(true);
     expect(isJ3CapacityEligible({ ...environment, reducedMotion: true })).toBe(false);
     expect(isCCapable(environment)).toBe(true);
+  });
+
+  it("selects the C presentation atomically and never permits progressive under reduced motion", () => {
+    const cEnvironment = { ...environment, j3Fit: false, progressiveCAllowed: true, progressiveCCapability: "eligible" as const };
+    expect(selectConnectedStory(cEnvironment)).toEqual({ family: "c", cPresentation: "progressive" });
+    expect(selectConnectedStory({ ...cEnvironment, progressiveCCapability: "retainable" })).toEqual({ family: "c", cPresentation: "progressive" });
+    expect(selectConnectedStory({ ...cEnvironment, progressiveCCapability: "ineligible" })).toEqual({ family: "c", cPresentation: "native" });
+    expect(selectConnectedStory({ ...cEnvironment, progressiveCAllowed: false })).toEqual({ family: "c", cPresentation: "native" });
+    expect(selectConnectedStory({ ...cEnvironment, reducedMotion: true })).toEqual({ family: "c", cPresentation: "native" });
+    expect(selectConnectedStory({ ...cEnvironment, cCapable: false })).toEqual({ family: "a", cPresentation: null });
   });
 
   it("round-trips authored J3 semantics without raw document offsets", () => {
@@ -91,6 +104,10 @@ describe("connected story reconciliation", () => {
       transitionRevision: 8,
       intentRevision: 2,
       targetFamily: "c" as const,
+      targetPresentation: "native" as const,
+      presentationRevision: 2,
+      fitRevision: 3,
+      observerGeneration: 1,
     };
     expect(correctionIsEligible({ expected: guard, current: guard, semanticDestinationValid: true, alreadyCorrected: false })).toBe(true);
     expect(correctionIsEligible({ expected: guard, current: { ...guard, intentRevision: 3 }, semanticDestinationValid: true, alreadyCorrected: false })).toBe(false);

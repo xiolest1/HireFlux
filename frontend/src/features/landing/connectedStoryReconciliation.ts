@@ -5,8 +5,14 @@ import {
   type LandingWorkspaceStage,
 } from "./landingStoryModel";
 import { scrollStoryTimelineLabels } from "./scrollStoryConfig";
+import type { ConnectedStoryCProgressiveCapability } from "./connectedStoryCConfig";
 
 export type ConnectedStoryFamily = "j3" | "c" | "a";
+export type ConnectedStoryCPresentation = "native" | "progressive";
+export type ConnectedStorySelection =
+  | { family: "j3"; cPresentation: null }
+  | { family: "c"; cPresentation: ConnectedStoryCPresentation }
+  | { family: "a"; cPresentation: null };
 
 export interface ConnectedStoryEnvironment {
   revision: number;
@@ -18,6 +24,8 @@ export interface ConnectedStoryEnvironment {
   fontsReady: boolean;
   j3Fit: boolean;
   cCapable: boolean;
+  progressiveCAllowed: boolean;
+  progressiveCCapability: ConnectedStoryCProgressiveCapability;
 }
 
 export interface ConnectedStoryPosition {
@@ -38,6 +46,10 @@ export interface ReconciliationGuard {
   transitionRevision: number;
   intentRevision: number;
   targetFamily: ConnectedStoryFamily;
+  targetPresentation: ConnectedStoryCPresentation | null;
+  presentationRevision: number;
+  fitRevision: number;
+  observerGeneration: number;
 }
 
 export const connectedStoryCheckpointNamespace = "__hirefluxConnectedStory";
@@ -75,9 +87,22 @@ export function clampUnit(value: number) {
 export function selectConnectedStoryFamily(
   environment: ConnectedStoryEnvironment,
 ): ConnectedStoryFamily {
-  if (!environment.reducedMotion && environment.fontsReady && environment.j3Fit) return "j3";
-  if (environment.cCapable) return "c";
-  return "a";
+  return selectConnectedStory(environment).family;
+}
+
+export function selectConnectedStory(
+  environment: ConnectedStoryEnvironment,
+): ConnectedStorySelection {
+  if (!environment.reducedMotion && environment.fontsReady && environment.j3Fit) {
+    return { family: "j3", cPresentation: null };
+  }
+  if (environment.cCapable) {
+    const progressive = environment.progressiveCAllowed
+      && !environment.reducedMotion
+      && environment.progressiveCCapability !== "ineligible";
+    return { family: "c", cPresentation: progressive ? "progressive" : "native" };
+  }
+  return { family: "a", cPresentation: null };
 }
 
 export function isJ3CapacityEligible(
@@ -164,7 +189,11 @@ export function reconciliationGuardIsCurrent(
   return expected.environmentRevision === current.environmentRevision
     && expected.transitionRevision === current.transitionRevision
     && expected.intentRevision === current.intentRevision
-    && expected.targetFamily === current.targetFamily;
+    && expected.targetFamily === current.targetFamily
+    && expected.targetPresentation === current.targetPresentation
+    && expected.presentationRevision === current.presentationRevision
+    && expected.fitRevision === current.fitRevision
+    && expected.observerGeneration === current.observerGeneration;
 }
 
 export function correctionIsEligible(options: {

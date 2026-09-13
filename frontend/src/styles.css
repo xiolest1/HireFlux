@@ -9,6 +9,75 @@
     format("woff2-variations");
 }
 
+/* Progressive family-C keeps semantic chapters in document flow while one
+   decorative workspace remains the sole visual owner. Values come from the
+   TypeScript configuration through custom properties. */
+.hf-connected-c-progressive {
+  position: relative;
+}
+
+.hf-connected-c-chapter {
+  min-height: var(--hf-connected-c-base-travel);
+}
+
+.hf-connected-c-chapter[data-connected-chapter="preparation"] {
+  min-height: var(--hf-connected-c-preparation-travel);
+}
+
+.hf-connected-c-chapter[data-connected-chapter="action-center"] {
+  min-height: var(--hf-connected-c-action-travel);
+}
+
+.hf-connected-c-sticky-column {
+  align-self: stretch;
+}
+
+.hf-connected-c-workspace {
+  position: sticky;
+  top: max(var(--hf-connected-c-sticky-inset), calc((100vh - var(--hf-connected-c-shell-height)) / 2));
+  height: var(--hf-connected-c-shell-height);
+}
+
+.hf-connected-c-workspace > [data-connected-workspace-frame] {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.hf-connected-c-workspace > [data-connected-workspace-frame] > :last-child {
+  min-height: 0;
+  flex: 1;
+}
+
+.hf-connected-c-endpoint {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px) scale(0.99);
+  transition:
+    opacity var(--hf-connected-c-transition-duration) ease-out,
+    transform var(--hf-connected-c-transition-duration) ease-out;
+}
+
+.hf-connected-c-endpoint[data-active="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  transition-delay: 0s;
+}
+
+[data-connected-c-progress-item][data-active="true"] {
+  color: var(--color-violet);
+}
+
+[data-connected-c-progress-item][data-active="true"] > span {
+  background: var(--color-violet);
+}
+
+.hf-connected-c-release-tail {
+  min-height: var(--hf-connected-c-release-tail);
+}
+
 @font-face {
   font-family: "Space Grotesk Variable";
   font-style: normal;
