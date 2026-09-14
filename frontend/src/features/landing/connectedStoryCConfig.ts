@@ -7,6 +7,7 @@ export const connectedStoryCConfiguration = {
   maxRootFontPx: 20,
   stickyInsetPx: 16,
   shellHeightPx: 560,
+  visualFrameHeightPx: 560,
   observerBandPercent: 2,
   equalityEpsilonPx: 1,
   fitTolerancePx: 1,
@@ -26,6 +27,7 @@ export const connectedStoryCCompactConfiguration = {
   maxRootFontPx: 20,
   stickyInsetPx: 12,
   shellHeightPx: 420,
+  visualFrameHeightPx: 600,
   ownershipLineRatio: 0.12,
   entryReservePx: 8,
   retentionHeightReservePx: 24,
@@ -51,6 +53,7 @@ export function connectedStoryCCssVariables(): React.CSSProperties {
   return {
     "--hf-connected-c-sticky-inset": `${config.stickyInsetPx}px`,
     "--hf-connected-c-shell-height": `${config.shellHeightPx}px`,
+    "--hf-connected-c-visual-frame-height": `${config.visualFrameHeightPx}px`,
     "--hf-connected-c-base-travel": `${config.baseChapterTravelVh}vh`,
     "--hf-connected-c-preparation-travel": `${config.preparationChapterTravelVh}vh`,
     "--hf-connected-c-action-travel": `${config.actionChapterTravelVh}vh`,
@@ -64,6 +67,7 @@ export function connectedStoryCCompactCssVariables(): React.CSSProperties {
   return {
     "--hf-connected-compact-sticky-inset": `${config.stickyInsetPx}px`,
     "--hf-connected-compact-shell-height": `${config.shellHeightPx}px`,
+    "--hf-connected-compact-visual-frame-height": `${config.visualFrameHeightPx}px`,
     "--hf-connected-compact-base-travel": `${config.baseChapterTravelVh}vh`,
     "--hf-connected-compact-preparation-travel": `${config.preparationChapterTravelVh}vh`,
     "--hf-connected-compact-action-travel": `${config.actionChapterTravelVh}vh`,

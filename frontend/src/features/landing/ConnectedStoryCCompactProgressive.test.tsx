@@ -24,18 +24,34 @@ beforeEach(() => {
 });
 
 describe("ConnectedStoryCCompactProgressive", () => {
-  it("keeps one semantic story and one inert persistent visual workspace", () => {
-    const { container } = render(
+  it("keeps one semantic story and one inert synchronized phone scene", () => {
+    const { container, rerender } = render(
       <ConnectedStoryCCompactProgressive activeChapter="applications" onChapterChange={vi.fn()} onCapabilityFailure={vi.fn()} />,
     );
     expect(container.querySelectorAll("[data-connected-c-semantic-chapter]")).toHaveLength(4);
+    expect(container.querySelectorAll("[data-connected-c-semantic-copy].sr-only")).toHaveLength(4);
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(4);
     expect(container.querySelectorAll("[data-connected-c-compact-workspace]")).toHaveLength(1);
+    expect(container.querySelectorAll("[data-connected-c-compact-sticky-owner]")).toHaveLength(1);
+    expect(container.querySelectorAll("[data-connected-c-compact-sticky-scene]")).toHaveLength(1);
+    const owner = container.querySelector("[data-connected-c-compact-sticky-owner]");
+    const workspace = container.querySelector("[data-connected-c-compact-workspace]");
+    expect(owner).toHaveAttribute("aria-hidden", "true");
+    expect(owner).toHaveAttribute("inert");
     expect(container.querySelector("[data-connected-c-compact-workspace]")).toHaveAttribute("aria-hidden", "true");
     expect(container.querySelector("[data-connected-c-compact-workspace]")).toHaveAttribute("inert");
+    expect(container.querySelector("[data-connected-c-visual-narrative]")).toHaveAttribute("data-connected-visual-chapter", "applications");
     expect(container.querySelectorAll('[data-connected-c-compact-endpoint][data-active="true"]')).toHaveLength(1);
     expect(container.querySelector("[aria-live]")).not.toBeInTheDocument();
     expect(container.querySelector(".pin-spacer")).not.toBeInTheDocument();
+
+    rerender(
+      <ConnectedStoryCCompactProgressive activeChapter="action-center" onChapterChange={vi.fn()} onCapabilityFailure={vi.fn()} />,
+    );
+    expect(container.querySelector("[data-connected-c-compact-sticky-owner]")).toBe(owner);
+    expect(container.querySelector("[data-connected-c-compact-workspace]")).toBe(workspace);
+    expect(container.querySelector("[data-connected-c-visual-narrative]")).toHaveAttribute("data-connected-visual-chapter", "action-center");
+    expect(container.querySelector("[data-connected-c-compact-workspace]")).toHaveAttribute("data-connected-visual-chapter", "action-center");
   });
 
   it("creates only one active observer and releases it under Strict Mode cleanup", () => {

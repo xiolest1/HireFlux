@@ -56,23 +56,29 @@ test.beforeEach(({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile-390");
 });
 
-test("compact Progressive-C is one accessible semantic story with one stable phone workspace", async ({ page }) => {
+test("compact Progressive-C is one accessible semantic story with one synchronized phone scene", async ({ page }) => {
   await openCompact(page);
 
   const measured = [];
   for (const chapter of ["applications", "interviews", "preparation", "action-center"]) {
     await placeChapterAtOwnershipLine(page, chapter);
     measured.push(await compact(page).evaluate((root) => {
+      const scene = root.querySelector<HTMLElement>("[data-connected-c-compact-sticky-scene]")!;
       const workspace = root.querySelector<HTMLElement>("[data-connected-c-compact-workspace]")!;
       const endpoint = root.querySelector<HTMLElement>('[data-connected-c-compact-endpoint][data-active="true"]')!;
       const surface = endpoint.querySelector<HTMLElement>("[data-connected-compact-product-surface]")!;
-      const rect = workspace.getBoundingClientRect();
+      const sceneRect = scene.getBoundingClientRect();
+      const workspaceRect = workspace.getBoundingClientRect();
       return {
         active: endpoint.dataset.connectedCCompactEndpoint,
+        activeNarrative: root.querySelector("[data-connected-c-visual-narrative]")?.getAttribute("data-connected-visual-chapter"),
         activeCount: root.querySelectorAll('[data-connected-c-compact-endpoint][data-active="true"]').length,
-        shellHeight: rect.height,
-        shellTop: rect.top,
-        shellBottom: rect.bottom,
+        sceneHeight: sceneRect.height,
+        sceneTop: sceneRect.top,
+        sceneBottom: sceneRect.bottom,
+        scenePosition: getComputedStyle(scene).position,
+        shellHeight: workspaceRect.height,
+        workspacePosition: getComputedStyle(workspace).position,
         surfaceOverflowX: surface.scrollWidth - surface.clientWidth,
         surfaceOverflowY: surface.scrollHeight - surface.clientHeight,
       };
@@ -80,17 +86,30 @@ test("compact Progressive-C is one accessible semantic story with one stable pho
   }
 
   expect(measured.map((state) => state.active)).toEqual(["applications", "interviews", "preparation", "action-center"]);
+  expect(measured.map((state) => state.activeNarrative)).toEqual(["applications", "interviews", "preparation", "action-center"]);
   measured.forEach((state) => {
     expect(state.activeCount).toBe(1);
+    expect(state.sceneHeight).toBeCloseTo(600, 0);
+    expect(state.sceneBottom).toBeLessThanOrEqual(844 - 11);
+    expect(state.scenePosition).toBe("sticky");
     expect(state.shellHeight).toBeCloseTo(420, 0);
-    expect(state.shellBottom).toBeLessThanOrEqual(844 - 11);
+    expect(state.workspacePosition).toBe("static");
     expect(state.surfaceOverflowX).toBeLessThanOrEqual(1);
     expect(state.surfaceOverflowY).toBeLessThanOrEqual(1);
   });
-  expect(Math.max(...measured.map((state) => state.shellTop)) - Math.min(...measured.map((state) => state.shellTop))).toBeLessThanOrEqual(1);
+  expect(Math.max(...measured.map((state) => state.sceneTop)) - Math.min(...measured.map((state) => state.sceneTop))).toBeLessThanOrEqual(1);
 
   await expect(compact(page).locator("[data-connected-c-semantic-track] > li")).toHaveCount(4);
+  await expect(compact(page).locator("[data-connected-c-semantic-copy].sr-only")).toHaveCount(4);
   await expect(compact(page).getByRole("heading", { level: 3 })).toHaveCount(4);
+  await expect(compact(page).locator("[data-connected-c-compact-sticky-owner]")).toHaveCount(1);
+  await expect(compact(page).locator("[data-connected-c-compact-sticky-owner]")).toHaveAttribute("aria-hidden", "true");
+  await expect(compact(page).locator("[data-connected-c-compact-sticky-owner] [data-connected-c-visual-narrative]")).toHaveCount(1);
+  await expect(compact(page).locator("[data-connected-c-compact-sticky-owner] [data-connected-c-compact-workspace]")).toHaveCount(1);
+  expect(await compact(page).locator("[data-connected-c-semantic-copy]").evaluateAll((copies) => copies.filter((copy) => {
+    const rect = copy.getBoundingClientRect();
+    return rect.width > 2 || rect.height > 2;
+  }).length)).toBe(0);
   await expect(compact(page).locator("[data-connected-c-compact-workspace]")).toHaveAttribute("aria-hidden", "true");
   await expect(compact(page).locator("[data-connected-c-compact-workspace]")).toHaveAttribute("inert", "");
   await expect(compact(page).locator("[aria-live]")).toHaveCount(0);

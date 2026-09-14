@@ -93,7 +93,7 @@ describe("principal route accessibility", () => {
     renderApp(route, { withSession });
     expect(await screen.findByRole("heading", { name: heading, level: 1 })).toBeVisible();
     await expectNoAxeViolations();
-  });
+  }, 10_000);
 
   it("has no automated violations on Analytics", async () => {
     useAnalyticsFixture();

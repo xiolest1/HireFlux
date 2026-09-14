@@ -23,6 +23,8 @@ export function ConnectedStoryCProgressive({
   observerEnabled = true,
 }: ConnectedStoryCProgressiveProps) {
   const rootRef = useRef<HTMLElement>(null);
+  const activeNarrative = landingScrollChapters.find((chapter) => chapter.stage === activeChapter)
+    ?? landingScrollChapters[0];
   useConnectedStoryCProgression(rootRef, {
     enabled: observerEnabled,
     activeChapter,
@@ -40,23 +42,39 @@ export function ConnectedStoryCProgressive({
       data-connected-c-presentation="progressive"
       data-active-chapter={activeChapter}
     >
-      <div className="grid min-w-0 grid-cols-[minmax(15rem,0.72fr)_minmax(0,1.28fr)] gap-6">
+      <div className="hf-connected-c-stage min-w-0" data-connected-c-stage>
         <ol className="min-w-0" data-connected-c-semantic-track>
           {landingScrollChapters.map((chapter) => (
             <li
               key={chapter.stage}
-              className="hf-connected-c-chapter flex min-w-0 items-center"
+              className="hf-connected-c-chapter min-w-0"
               data-connected-chapter={chapter.stage}
               data-connected-c-semantic-chapter={chapter.stage}
             >
-              <article className="min-w-0 border-t border-line pt-6" data-landing-clip-check>
+              <article className="sr-only" data-connected-c-semantic-copy>
                 <ConnectedChapterNarrative chapter={chapter} />
               </article>
             </li>
           ))}
         </ol>
-        <div className="hf-connected-c-sticky-column min-w-0" data-connected-c-sticky-column>
-          <ConnectedStoryCWorkspace activeChapter={activeChapter} />
+        <div
+          aria-hidden="true"
+          className="hf-connected-c-sticky-owner min-w-0"
+          data-connected-c-sticky-owner
+          inert
+        >
+          <div className="hf-connected-c-sticky-scene" data-connected-c-sticky-scene>
+            <div
+              key={activeNarrative.stage}
+              className="hf-connected-c-visual-narrative min-w-0"
+              data-landing-clip-check
+              data-connected-c-visual-narrative
+              data-connected-visual-chapter={activeNarrative.stage}
+            >
+              <ConnectedChapterNarrative chapter={activeNarrative} visual />
+            </div>
+            <ConnectedStoryCWorkspace activeChapter={activeChapter} />
+          </div>
         </div>
       </div>
       <div aria-hidden="true" className="hf-connected-c-release-tail" data-connected-c-release-tail />

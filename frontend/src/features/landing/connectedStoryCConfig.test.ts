@@ -25,6 +25,7 @@ describe("progressive-C configuration and geometry", () => {
     expect(connectedStoryCCssVariables()).toMatchObject({
       "--hf-connected-c-sticky-inset": `${connectedStoryCConfiguration.stickyInsetPx}px`,
       "--hf-connected-c-shell-height": `${connectedStoryCConfiguration.shellHeightPx}px`,
+      "--hf-connected-c-visual-frame-height": "560px",
       "--hf-connected-c-preparation-travel": `${connectedStoryCConfiguration.preparationChapterTravelVh}vh`,
       "--hf-connected-c-release-tail": `${connectedStoryCConfiguration.releaseTailVh}vh`,
       "--hf-connected-c-transition-duration": "180ms",
@@ -35,6 +36,7 @@ describe("progressive-C configuration and geometry", () => {
     expect(connectedStoryCCompactConfiguration.ownershipLineRatio).toBe(0.12);
     expect(connectedStoryCCompactCssVariables()).toMatchObject({
       "--hf-connected-compact-shell-height": "420px",
+      "--hf-connected-compact-visual-frame-height": "600px",
       "--hf-connected-compact-base-travel": "74vh",
       "--hf-connected-compact-action-travel": "92vh",
       "--hf-connected-compact-release-tail": "16vh",

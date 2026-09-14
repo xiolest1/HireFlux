@@ -10,10 +10,23 @@
 }
 
 /* Progressive family-C keeps semantic chapters in document flow while one
-   decorative workspace remains the sole visual owner. Values come from the
-   TypeScript configuration through custom properties. */
+   decorative scene owns both the visible narrative and workspace. Values come
+   from the TypeScript configuration through custom properties. */
 .hf-connected-c-progressive {
   position: relative;
+}
+
+.hf-connected-c-stage,
+.hf-connected-c-compact-stage {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hf-connected-c-stage > *,
+.hf-connected-c-compact-stage > * {
+  grid-column: 1;
+  grid-row: 1;
 }
 
 .hf-connected-c-chapter {
@@ -28,13 +41,24 @@
   min-height: var(--hf-connected-c-action-travel);
 }
 
-.hf-connected-c-sticky-column {
+.hf-connected-c-sticky-owner,
+.hf-connected-c-compact-sticky-owner {
   align-self: stretch;
+  pointer-events: none;
+}
+
+.hf-connected-c-sticky-scene {
+  position: sticky;
+  top: max(var(--hf-connected-c-sticky-inset), calc((100vh - var(--hf-connected-c-visual-frame-height)) / 2));
+  display: grid;
+  height: var(--hf-connected-c-visual-frame-height);
+  min-width: 0;
+  grid-template-columns: minmax(15rem, 0.72fr) minmax(0, 1.28fr);
+  align-items: center;
+  gap: 1.5rem;
 }
 
 .hf-connected-c-workspace {
-  position: sticky;
-  top: max(var(--hf-connected-c-sticky-inset), calc((100vh - var(--hf-connected-c-shell-height)) / 2));
   height: var(--hf-connected-c-shell-height);
 }
 
@@ -78,6 +102,26 @@
   min-height: var(--hf-connected-c-release-tail);
 }
 
+@keyframes hf-connected-c-narrative-enter {
+  0%, 24% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hf-connected-c-visual-narrative {
+  animation: hf-connected-c-narrative-enter var(--hf-connected-c-transition-duration) ease-out both;
+}
+
+.hf-connected-c-compact-visual-narrative {
+  animation: hf-connected-c-narrative-enter var(--hf-connected-compact-transition-duration) ease-out both;
+}
+
 /* Compact family-C keeps the same semantic progression model while its
    decorative product shell uses a phone-specific information budget. */
 .hf-connected-c-compact-workspace {
@@ -94,17 +138,6 @@
   position: relative;
 }
 
-.hf-connected-c-compact-stage {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.hf-connected-c-compact-stage > * {
-  grid-column: 1;
-  grid-row: 1;
-}
-
 .hf-connected-c-compact-chapter {
   min-height: var(--hf-connected-compact-base-travel);
 }
@@ -117,22 +150,41 @@
   min-height: var(--hf-connected-compact-action-travel);
 }
 
-.hf-connected-c-compact-chapter > article {
-  max-width: 36rem;
-  padding-bottom: calc(var(--hf-connected-compact-shell-height) + 1.5rem);
-}
-
-.hf-connected-c-compact-sticky-layer {
-  align-self: stretch;
-  pointer-events: none;
-}
-
-.hf-connected-c-compact-sticky-layer .hf-connected-c-compact-workspace {
+.hf-connected-c-compact-sticky-scene {
   position: sticky;
   top: max(
     var(--hf-connected-compact-sticky-inset),
-    calc(100vh - var(--hf-connected-compact-shell-height) - var(--hf-connected-compact-sticky-inset))
+    calc((100vh - var(--hf-connected-compact-visual-frame-height)) / 2)
   );
+  display: grid;
+  height: var(--hf-connected-compact-visual-frame-height);
+  min-width: 0;
+  grid-template-rows: minmax(0, 1fr) var(--hf-connected-compact-shell-height);
+  gap: 1rem;
+}
+
+.hf-connected-c-compact-visual-narrative {
+  align-self: end;
+}
+
+.hf-connected-c-compact-visual-narrative [data-scroll-copy-question] {
+  display: none;
+}
+
+.hf-connected-c-compact-visual-narrative [data-scroll-copy-label] {
+  font-size: 0.7rem;
+}
+
+.hf-connected-c-compact-visual-narrative [data-scroll-copy-headline] {
+  margin-top: 0.45rem;
+  font-size: 1.5rem;
+  line-height: 1.18;
+}
+
+.hf-connected-c-compact-visual-narrative [data-scroll-copy-body] {
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+  line-height: 1.3rem;
 }
 
 .hf-connected-c-compact-release-tail {
@@ -174,6 +226,13 @@
   font-size: 0.65rem;
   font-weight: 700;
   color: var(--color-ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hf-connected-c-visual-narrative,
+  .hf-connected-c-compact-visual-narrative {
+    animation: none;
+  }
 }
 
 @font-face {

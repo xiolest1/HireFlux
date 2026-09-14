@@ -18,17 +18,31 @@ beforeEach(() => {
 });
 
 describe("ConnectedStoryCProgressive", () => {
-  it("keeps one semantic story and four mounted decorative endpoints", () => {
-    const { container } = render(
+  it("keeps one semantic story and one inert visual scene with synchronized narrative and workspace", () => {
+    const { container, rerender } = render(
       <ConnectedStoryCProgressive activeChapter="applications" onChapterChange={vi.fn()} onCapabilityFailure={vi.fn()} />,
     );
     expect(container.querySelectorAll("[data-connected-c-semantic-chapter]")).toHaveLength(4);
+    expect(container.querySelectorAll("[data-connected-c-semantic-copy].sr-only")).toHaveLength(4);
     expect(container.querySelectorAll("[data-connected-c-endpoint]")).toHaveLength(4);
     expect(container.querySelectorAll("[data-connected-c-workspace]")).toHaveLength(1);
+    expect(container.querySelectorAll("[data-connected-c-sticky-owner]")).toHaveLength(1);
+    expect(container.querySelectorAll("[data-connected-c-sticky-scene]")).toHaveLength(1);
+    const owner = container.querySelector("[data-connected-c-sticky-owner]");
+    const workspace = container.querySelector("[data-connected-c-workspace]");
+    expect(owner).toHaveAttribute("aria-hidden", "true");
+    expect(owner).toHaveAttribute("inert");
     expect(container.querySelector("[data-connected-c-workspace]")).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelector("[data-connected-c-visual-narrative]")).toHaveAttribute("data-connected-visual-chapter", "applications");
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(4);
     expect(container.querySelector("[aria-live]")).not.toBeInTheDocument();
     expect(container.querySelector(".pin-spacer")).not.toBeInTheDocument();
+
+    rerender(<ConnectedStoryCProgressive activeChapter="preparation" onChapterChange={vi.fn()} onCapabilityFailure={vi.fn()} />);
+    expect(container.querySelector("[data-connected-c-sticky-owner]")).toBe(owner);
+    expect(container.querySelector("[data-connected-c-workspace]")).toBe(workspace);
+    expect(container.querySelector("[data-connected-c-visual-narrative]")).toHaveAttribute("data-connected-visual-chapter", "preparation");
+    expect(container.querySelector("[data-connected-c-workspace]")).toHaveAttribute("data-connected-visual-chapter", "preparation");
   });
 
   it("creates one observer and releases it under Strict Mode cleanup", () => {

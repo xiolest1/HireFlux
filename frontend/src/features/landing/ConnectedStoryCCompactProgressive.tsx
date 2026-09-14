@@ -23,6 +23,8 @@ export function ConnectedStoryCCompactProgressive({
   observerEnabled = true,
 }: ConnectedStoryCCompactProgressiveProps) {
   const rootRef = useRef<HTMLElement>(null);
+  const activeNarrative = landingScrollChapters.find((chapter) => chapter.stage === activeChapter)
+    ?? landingScrollChapters[0];
   useConnectedStoryCProgression(rootRef, {
     enabled: observerEnabled,
     activeChapter,
@@ -50,14 +52,30 @@ export function ConnectedStoryCCompactProgressive({
               data-connected-chapter={chapter.stage}
               data-connected-c-semantic-chapter={chapter.stage}
             >
-              <article className="min-w-0 border-t border-line pt-5" data-landing-clip-check>
+              <article className="sr-only" data-connected-c-semantic-copy>
                 <ConnectedChapterNarrative chapter={chapter} />
               </article>
             </li>
           ))}
         </ol>
-        <div className="hf-connected-c-compact-sticky-layer min-w-0" data-connected-c-compact-sticky-layer>
-          <ConnectedStoryCCompactWorkspace activeChapter={activeChapter} />
+        <div
+          aria-hidden="true"
+          className="hf-connected-c-compact-sticky-owner min-w-0"
+          data-connected-c-compact-sticky-owner
+          inert
+        >
+          <div className="hf-connected-c-compact-sticky-scene" data-connected-c-compact-sticky-scene>
+            <div
+              key={activeNarrative.stage}
+              className="hf-connected-c-compact-visual-narrative min-w-0"
+              data-landing-clip-check
+              data-connected-c-visual-narrative
+              data-connected-visual-chapter={activeNarrative.stage}
+            >
+              <ConnectedChapterNarrative chapter={activeNarrative} visual />
+            </div>
+            <ConnectedStoryCCompactWorkspace activeChapter={activeChapter} />
+          </div>
         </div>
       </div>
       <div aria-hidden="true" className="hf-connected-c-compact-release-tail" data-connected-c-compact-release-tail />
