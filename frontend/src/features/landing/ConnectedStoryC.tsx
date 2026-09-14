@@ -1,5 +1,6 @@
 import { ConnectedStoryCNative } from "./ConnectedStoryCNative";
 import { ConnectedStoryCProgressive } from "./ConnectedStoryCProgressive";
+import { ConnectedStoryCCompactProgressive } from "./ConnectedStoryCCompactProgressive";
 import type { ConnectedStoryCPresentation } from "./connectedStoryReconciliation";
 import type { LandingWorkspaceStage } from "./landingStoryModel";
 
@@ -20,7 +21,11 @@ export function ConnectedStoryC({
   onPositionChange?: (chapter: LandingWorkspaceStage, localProgress: number) => void;
   observerEnabled?: boolean;
 }) {
-  return presentation === "progressive"
-    ? <ConnectedStoryCProgressive activeChapter={activeChapter} onChapterChange={onChapterChange} onCapabilityFailure={onCapabilityFailure} onObserverGeneration={onObserverGeneration} onPositionChange={onPositionChange} observerEnabled={observerEnabled} />
-    : <ConnectedStoryCNative />;
+  if (presentation === "progressive") {
+    return <ConnectedStoryCProgressive activeChapter={activeChapter} onChapterChange={onChapterChange} onCapabilityFailure={onCapabilityFailure} onObserverGeneration={onObserverGeneration} onPositionChange={onPositionChange} observerEnabled={observerEnabled} />;
+  }
+  if (presentation === "compact-progressive") {
+    return <ConnectedStoryCCompactProgressive activeChapter={activeChapter} onChapterChange={onChapterChange} onCapabilityFailure={onCapabilityFailure} onObserverGeneration={onObserverGeneration} onPositionChange={onPositionChange} observerEnabled={observerEnabled} />;
+  }
+  return <ConnectedStoryCNative />;
 }

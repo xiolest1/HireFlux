@@ -12,6 +12,7 @@ import {
   createConnectedStoryCheckpoint,
   isCCapable,
   isJ3CapacityEligible,
+  isProgressiveCPresentation,
   j3ProgressForSemanticPosition,
   selectConnectedStory,
   semanticPositionForJ3Progress,
@@ -23,8 +24,12 @@ import {
   type ConnectedStorySelection,
   type ReconciliationGuard,
 } from "./connectedStoryReconciliation";
-import { connectedJ3PreflightFits, connectedStoryCProgressivePreflightFits } from "./connectedStoryFit";
-import { progressiveCAllowed } from "./connectedStoryCConfig";
+import {
+  connectedJ3PreflightFits,
+  connectedStoryCCompactPreflightFits,
+  connectedStoryCProgressivePreflightFits,
+} from "./connectedStoryFit";
+import { connectedStoryCCompactConfiguration, progressiveCAllowed } from "./connectedStoryCConfig";
 import type { LandingWorkspaceStage } from "./landingStoryModel";
 import { scrollStoryTravelViewportHeights } from "./scrollStoryConfig";
 
@@ -77,6 +82,9 @@ function absoluteTop(element: Element) {
 }
 
 function readingLine(presentation: ConnectedStoryCPresentation | null = null) {
+  if (presentation === "compact-progressive") {
+    return window.innerHeight * connectedStoryCCompactConfiguration.ownershipLineRatio;
+  }
   return presentation === "progressive" ? window.innerHeight / 2 : window.innerHeight / 3;
 }
 
@@ -105,7 +113,7 @@ export function captureConnectedStoryPosition(
     const progress = Number(root.querySelector<HTMLElement>("[data-connected-j3]")?.dataset.connectedProgress ?? 0);
     return semanticPositionForJ3Progress(progress);
   }
-  const selector = cPresentation === "progressive"
+  const selector = isProgressiveCPresentation(cPresentation)
     ? "[data-connected-c-semantic-chapter]"
     : "[data-connected-chapter]";
   const chapters = Array.from(root.querySelectorAll<HTMLElement>(selector));
@@ -116,7 +124,7 @@ export function captureConnectedStoryPosition(
   });
   const currentTop = chapters[index].getBoundingClientRect().top;
   const nextTop = chapters[index + 1]?.getBoundingClientRect().top
-    ?? (cPresentation === "progressive" ? chapters[index].getBoundingClientRect().bottom : root.getBoundingClientRect().bottom);
+    ?? (isProgressiveCPresentation(cPresentation) ? chapters[index].getBoundingClientRect().bottom : root.getBoundingClientRect().bottom);
   return {
     chapter: (chapters[index].dataset.connectedCSemanticChapter
       ?? chapters[index].dataset.connectedChapter) as LandingWorkspaceStage,
@@ -146,7 +154,7 @@ function destinationForPosition(
     return absoluteTop(spacer)
       + j3ProgressForSemanticPosition(position) * window.innerHeight * scrollStoryTravelViewportHeights;
   }
-  const chapterSelector = cPresentation === "progressive"
+  const chapterSelector = isProgressiveCPresentation(cPresentation)
     ? `[data-connected-c-semantic-chapter="${position.chapter}"]`
     : `[data-connected-chapter="${position.chapter}"]`;
   const chapter = root.querySelector<HTMLElement>(chapterSelector);
@@ -156,7 +164,7 @@ function destinationForPosition(
   const currentTop = absoluteTop(chapter);
   const nextTop = next
     ? absoluteTop(next)
-    : cPresentation === "progressive"
+    : isProgressiveCPresentation(cPresentation)
       ? currentTop + chapter.offsetHeight
       : absoluteTop(root) + root.offsetHeight;
   return currentTop + position.localProgress * Math.max(1, nextTop - currentTop) - line;
@@ -290,7 +298,7 @@ export function useConnectedStoryArchitecture(
       selectionRef.current = nextSelection;
       root.dataset.connectedTransition = "preparing";
       setPresentationSettled(false);
-      if (nextSelection.cPresentation === "progressive" && position
+      if (isProgressiveCPresentation(nextSelection.cPresentation) && position
         && ["applications", "interviews", "preparation", "action-center"].includes(position.chapter)) {
         setActiveChapter(position.chapter as LandingWorkspaceStage);
       }
@@ -317,6 +325,17 @@ export function useConnectedStoryArchitecture(
         stickySupported: CSS.supports?.("position", "sticky") ?? false,
         currentlyProgressive: selectionRef.current?.cPresentation === "progressive",
       });
+      const compactFit = connectedStoryCCompactPreflightFits(root, {
+        width,
+        usableHeight,
+        containerWidth,
+        rootFontPx,
+        progressiveAllowed: (options.progressiveCAllowed ?? progressiveCAllowed) && progressiveRuntimeAvailable,
+        reducedMotion: reduced.matches,
+        intersectionObserverAvailable: typeof IntersectionObserver === "function",
+        stickySupported: CSS.supports?.("position", "sticky") ?? false,
+        currentlyCompact: selectionRef.current?.cPresentation === "compact-progressive",
+      });
       return {
         revision,
         ...base,
@@ -325,6 +344,7 @@ export function useConnectedStoryArchitecture(
         cCapable: containerObservationAvailable && isCCapable(base),
         progressiveCAllowed: (options.progressiveCAllowed ?? progressiveCAllowed) && progressiveRuntimeAvailable,
         progressiveCCapability: progressiveFit.capability,
+        compactCCapability: compactFit.capability,
       };
     };
 
@@ -337,20 +357,20 @@ export function useConnectedStoryArchitecture(
       let winner = selectConnectedStory(environment);
       if (winner.family === "j3" && j3RetryBlockedRef.current) {
         const internallyCaused = ["container-resize", "fonts-ready", "fonts-loadingdone"].includes(reason);
-        if (internallyCaused) winner = environment.cCapable
-          ? { family: "c", cPresentation: environment.progressiveCAllowed && environment.progressiveCCapability !== "ineligible" ? "progressive" : "native" }
-          : { family: "a", cPresentation: null };
+        if (internallyCaused) winner = selectConnectedStory({ ...environment, j3Fit: false });
         else j3RetryBlockedRef.current = false;
       }
       if (
         selectionRef.current?.family === "c"
-        && winner.family === "c"
-        && selectionRef.current.cPresentation !== winner.cPresentation
+        && (
+          winner.family !== "c"
+          || selectionRef.current.cPresentation !== winner.cPresentation
+        )
       ) {
-        // A viewport change has already reflowed the outgoing DOM by the time
+        // A viewport change has already reflowed the outgoing C DOM by the time
         // its resize event runs. Preserve the last controller-owned semantic
-        // checkpoint instead of reinterpreting that transient geometry as a
-        // different chapter.
+        // checkpoint across both C presentation changes and family exits
+        // instead of reinterpreting that transient geometry as another chapter.
         position = readCheckpoint() ?? position;
       }
       targetFamilyRef.current = winner.family;
@@ -367,9 +387,7 @@ export function useConnectedStoryArchitecture(
         return;
       }
       root.dataset.connectedTransition = "loading-j3";
-      const fallback: ConnectedStorySelection = environment.cCapable
-        ? { family: "c", cPresentation: environment.progressiveCAllowed && environment.progressiveCCapability !== "ineligible" ? "progressive" : "native" }
-        : { family: "a", cPresentation: null };
+      const fallback: ConnectedStorySelection = selectConnectedStory({ ...environment, j3Fit: false });
       if (selectionRef.current === null) {
         loadTimerRef.current = window.setTimeout(() => {
           if (!active || environmentRevisionRef.current !== revision || targetFamilyRef.current !== "j3") return;
@@ -614,7 +632,7 @@ export function useConnectedStoryArchitecture(
       }
     },
     reportProgressivePosition: (chapter: LandingWorkspaceStage, localProgress: number) => {
-      if (selectionRef.current?.family !== "c" || selectionRef.current.cPresentation !== "progressive") return;
+      if (selectionRef.current?.family !== "c" || !isProgressiveCPresentation(selectionRef.current.cPresentation)) return;
       setActiveChapter(chapter);
       const root = rootRef.current;
       if (root) root.dataset.connectedSemanticChapter = chapter;

@@ -10,6 +10,7 @@ export interface ConnectedStoryCProgressionOptions {
   onCapabilityFailure: () => void;
   onObserverGeneration?: (generation: number) => void;
   onPositionChange?: (chapter: LandingWorkspaceStage, localProgress: number) => void;
+  ownershipLineRatio?: number;
 }
 
 export function useConnectedStoryCProgression(
@@ -37,7 +38,7 @@ export function useConnectedStoryCProgression(
 
     const resolve = () => {
       if (generationRef.current !== generation) return;
-      const line = window.innerHeight / 2;
+      const line = window.innerHeight * (optionsRef.current.ownershipLineRatio ?? 0.5);
       const geometry = chapters.map((chapter) => {
           const rect = chapter.getBoundingClientRect();
           return {
@@ -63,9 +64,10 @@ export function useConnectedStoryCProgression(
     let observer: IntersectionObserver;
     try {
       const halfBand = connectedStoryCConfiguration.observerBandPercent / 2;
+      const ownershipLinePercent = (optionsRef.current.ownershipLineRatio ?? 0.5) * 100;
       observer = new IntersectionObserver(resolve, {
         root: null,
-        rootMargin: `${-(50 - halfBand)}% 0px ${-(50 - halfBand)}% 0px`,
+        rootMargin: `${-(ownershipLinePercent - halfBand)}% 0px ${-(100 - ownershipLinePercent - halfBand)}% 0px`,
         threshold: 0,
       });
       chapters.forEach((chapter) => observer.observe(chapter));

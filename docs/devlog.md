@@ -1,5 +1,50 @@
 # HireFlux development log
 
+## 2026-09-14 — Progressive-C normal-startup enablement
+
+The full and compact Progressive-C presentations are now the normal eligible
+Connected Workspace experience. A missing deployment value and exact lowercase
+`on` both permit the existing fit, motion-preference, capability, and J3
+selection policy to choose Progressive-C. Exact lowercase `off` remains the
+emergency build-time disable; malformed and case-variant values still fail
+closed. The example environment now reflects the enabled default.
+
+This corrects an integration defect rather than changing the accepted
+renderers. Ordinary local startup previously selected native C at 768×1024 and
+family A at 390×844 because the absent flag was treated as disabled, even though
+both Progressive-C presentations had already passed their eligibility probes.
+No breakpoint, fit threshold, endpoint geometry, chapter ownership,
+reduced-motion fallback, J3 behavior, API, or product copy changed.
+
+Normal-path browser validation confirmed full Progressive-C at 1024×768,
+820×1180, and 768×1024; compact Progressive-C at 430×932, 390×844, 375×812,
+and 360×800; family A at 844×390; and unchanged J3 at 1440×900. Representative
+light-mode results matched dark mode. Reduced motion resolved to native C at
+768×1024 and family A at 390×844. Every measured target had zero horizontal
+overflow and no console errors. Before/after screenshots and short 768×1024 and
+390×844 recordings were retained outside repository state under the local temp
+evidence directory.
+
+Cross-mode validation exposed one bounded reconciliation defect after enabling
+the compact path by default: Preparation remained the written semantic
+checkpoint through J3 → native C → compact C → native C, but the final J3 resize
+could reinterpret already-reflowed native geometry as Action Center. The
+existing controller-owned-checkpoint guard now applies to C family exits as well
+as C presentation changes. The full chain again settles on Preparation without
+changing trusted-input vetoes, scroll geometry, or presentation ownership.
+
+Validation passed ESLint, TypeScript, 284 Vitest tests, the production build,
+three hosting-header tests, and the complete Playwright/Axe suite with 185
+passes and 170 intentional project-specific skips. A separate exact-`off`
+production preview selected native C at 768×1024, family A at 390×844, and J3 at
+1440×900. The normal production bundle emitted 464.15/138.75 kB main JavaScript,
+81.25/19.43 kB lazy landing JavaScript, 73.15/23.99 kB J3 JavaScript, and
+126.75/20.53 kB CSS raw/gzip.
+
+The preceding release-candidate entries record the earlier guarded rollout and
+are retained as historical context; this entry supersedes their off-by-default
+operational policy.
+
 ## 2026-09-13 — Progressive-C release-candidate checkpoint
 
 Progressive-C completed responsive product review and the bounded endpoint-

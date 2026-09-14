@@ -55,7 +55,7 @@ test.beforeEach(async ({ page }) => {
 
 const productionMatrix: Record<string, Family> = {
   "narrow-320": "a",
-  "mobile-390": "a",
+  "mobile-390": "c",
   "tablet-768": "c",
   "desktop-1024": "c",
   "desktop-1280": "j3",
@@ -109,7 +109,7 @@ test("reduced motion selects the richest native family without J3 lifecycle", as
   expect(state.pinSpacers).toBe(0);
 });
 
-test("J3, C, and A hand off atomically while preserving the Preparation chapter", async ({ page }, testInfo) => {
+test("J3, native C, and compact C hand off atomically while preserving the Preparation chapter", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1280");
   await openLanding(page);
   await waitForFamily(page, "j3");
@@ -126,15 +126,21 @@ test("J3, C, and A hand off atomically while preserving the Preparation chapter"
 
   await page.setViewportSize({ width: 900, height: 720 });
   await waitForFamily(page, "c");
+  await expect(connectedStory(page)).toHaveAttribute("data-connected-c-presentation", "native");
+  await expect(connectedStory(page)).toHaveAttribute("data-connected-transition", "settled");
   await expect(page.locator('[data-connected-chapter="preparation"]')).toBeInViewport();
   expect((await runtimeState(page)).pinSpacers).toBe(0);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await waitForFamily(page, "a");
+  await waitForFamily(page, "c");
+  await expect(connectedStory(page)).toHaveAttribute("data-connected-c-presentation", "compact-progressive");
+  await expect(connectedStory(page)).toHaveAttribute("data-connected-transition", "settled");
   await expect(page.locator('[data-connected-chapter="preparation"]')).toBeInViewport();
 
   await page.setViewportSize({ width: 900, height: 720 });
   await waitForFamily(page, "c");
+  await expect(connectedStory(page)).toHaveAttribute("data-connected-c-presentation", "native");
+  await expect(connectedStory(page)).toHaveAttribute("data-connected-transition", "settled");
   await page.setViewportSize({ width: 1280, height: 900 });
   await waitForFamily(page, "j3");
   await expect(page.locator("[data-connected-j3]")).toHaveAttribute("data-active-chapter", "preparation");

@@ -28,6 +28,7 @@ const environment: ConnectedStoryEnvironment = {
   cCapable: true,
   progressiveCAllowed: false,
   progressiveCCapability: "ineligible",
+  compactCCapability: "ineligible",
 };
 
 describe("connected story reconciliation", () => {
@@ -67,6 +68,37 @@ describe("connected story reconciliation", () => {
     expect(selectConnectedStory({ ...cEnvironment, progressiveCAllowed: false })).toEqual({ family: "c", cPresentation: "native" });
     expect(selectConnectedStory({ ...cEnvironment, reducedMotion: true })).toEqual({ family: "c", cPresentation: "native" });
     expect(selectConnectedStory({ ...cEnvironment, cCapable: false })).toEqual({ family: "a", cPresentation: null });
+  });
+
+  it("admits compact-capable narrow viewports only when compact progressive is viable", () => {
+    const phone = {
+      ...environment,
+      width: 390,
+      height: 844,
+      containerWidth: 358,
+      j3Fit: false,
+      cCapable: false,
+      progressiveCAllowed: true,
+      progressiveCCapability: "ineligible" as const,
+      compactCCapability: "eligible" as const,
+    };
+    expect(selectConnectedStory(phone)).toEqual({ family: "c", cPresentation: "compact-progressive" });
+    expect(selectConnectedStory({ ...phone, progressiveCAllowed: false })).toEqual({ family: "a", cPresentation: null });
+    expect(selectConnectedStory({ ...phone, reducedMotion: true })).toEqual({ family: "a", cPresentation: null });
+    expect(selectConnectedStory({ ...phone, compactCCapability: "ineligible" })).toEqual({ family: "a", cPresentation: null });
+  });
+
+  it("prefers full progressive over compact and compact over native when full fit fails", () => {
+    const fullC = {
+      ...environment,
+      j3Fit: false,
+      progressiveCAllowed: true,
+      progressiveCCapability: "eligible" as const,
+      compactCCapability: "eligible" as const,
+    };
+    expect(selectConnectedStory(fullC)).toEqual({ family: "c", cPresentation: "progressive" });
+    expect(selectConnectedStory({ ...fullC, progressiveCCapability: "ineligible" })).toEqual({ family: "c", cPresentation: "compact-progressive" });
+    expect(selectConnectedStory({ ...fullC, progressiveCCapability: "ineligible", compactCCapability: "ineligible" })).toEqual({ family: "c", cPresentation: "native" });
   });
 
   it("round-trips authored J3 semantics without raw document offsets", () => {

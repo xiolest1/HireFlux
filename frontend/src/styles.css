@@ -78,6 +78,104 @@
   min-height: var(--hf-connected-c-release-tail);
 }
 
+/* Compact family-C keeps the same semantic progression model while its
+   decorative product shell uses a phone-specific information budget. */
+.hf-connected-c-compact-workspace {
+  display: flex;
+  height: var(--hf-connected-compact-shell-height);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 1.35rem;
+  background: var(--color-surface-muted);
+}
+
+.hf-connected-c-compact-progressive {
+  position: relative;
+}
+
+.hf-connected-c-compact-stage {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hf-connected-c-compact-stage > * {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.hf-connected-c-compact-chapter {
+  min-height: var(--hf-connected-compact-base-travel);
+}
+
+.hf-connected-c-compact-chapter[data-connected-chapter="preparation"] {
+  min-height: var(--hf-connected-compact-preparation-travel);
+}
+
+.hf-connected-c-compact-chapter[data-connected-chapter="action-center"] {
+  min-height: var(--hf-connected-compact-action-travel);
+}
+
+.hf-connected-c-compact-chapter > article {
+  max-width: 36rem;
+  padding-bottom: calc(var(--hf-connected-compact-shell-height) + 1.5rem);
+}
+
+.hf-connected-c-compact-sticky-layer {
+  align-self: stretch;
+  pointer-events: none;
+}
+
+.hf-connected-c-compact-sticky-layer .hf-connected-c-compact-workspace {
+  position: sticky;
+  top: max(
+    var(--hf-connected-compact-sticky-inset),
+    calc(100vh - var(--hf-connected-compact-shell-height) - var(--hf-connected-compact-sticky-inset))
+  );
+}
+
+.hf-connected-c-compact-release-tail {
+  min-height: var(--hf-connected-compact-release-tail);
+}
+
+.hf-connected-c-compact-endpoint {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition:
+    opacity var(--hf-connected-compact-transition-duration) ease-out,
+    transform var(--hf-connected-compact-transition-duration) ease-out;
+}
+
+.hf-connected-c-compact-endpoint[data-active="true"] {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hf-connected-compact-surface {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 1rem;
+  background: var(--color-surface-raised);
+  padding: 0.75rem;
+}
+
+.hf-connected-compact-provenance {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-left: 2px solid color-mix(in srgb, var(--color-violet) 55%, transparent);
+  background: color-mix(in srgb, var(--color-violet-soft) 35%, transparent);
+  padding: 0.45rem 0.65rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+}
+
 @font-face {
   font-family: "Space Grotesk Variable";
   font-style: normal;

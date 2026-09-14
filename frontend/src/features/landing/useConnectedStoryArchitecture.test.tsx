@@ -2,6 +2,7 @@ import { useRef, type ComponentType } from "react";
 import { act, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConnectedStoryFitProbe } from "./ConnectedStoryFitProbe";
+import { ConnectedStoryCCompactFitProbe } from "./ConnectedStoryCCompactFitProbe";
 import { resetConnectedStoryModuleForTests, useConnectedStoryArchitecture } from "./useConnectedStoryArchitecture";
 
 interface MediaHarness {
@@ -17,12 +18,13 @@ const UnreadyJ3: ComponentType = () => (
   <div data-connected-j3 data-connected-progress="0"><div data-scroll-story-pin /></div>
 );
 
-function Harness({ loadJ3 }: { loadJ3: () => Promise<{ ConnectedStoryJ3: ComponentType }> }) {
+function Harness({ loadJ3, progressiveCAllowed }: { loadJ3: () => Promise<{ ConnectedStoryJ3: ComponentType }>; progressiveCAllowed?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const state = useConnectedStoryArchitecture(rootRef, { loadJ3 });
+  const state = useConnectedStoryArchitecture(rootRef, { loadJ3, progressiveCAllowed });
   return (
-    <div ref={rootRef} data-testid="root" data-family={state.family ?? "unresolved"}>
+    <div ref={rootRef} data-testid="root" data-family={state.family ?? "unresolved"} data-presentation={state.cPresentation ?? "none"}>
       <ConnectedStoryFitProbe />
+      <ConnectedStoryCCompactFitProbe />
       {state.family === "j3" && state.J3 ? <state.J3 /> : null}
       {state.family === "c" || state.family === "a" ? <div data-connected-chapter="applications" /> : null}
     </div>
@@ -37,22 +39,47 @@ function installEnvironment(width: number, height: number) {
     addEventListener: (_: string, listener: () => void) => media.listeners.add(listener),
     removeEventListener: (_: string, listener: () => void) => media.listeners.delete(listener),
   })));
+  vi.stubGlobal("IntersectionObserver", class {
+    observe() { /* capability-only test stub */ }
+    disconnect() { /* capability-only test stub */ }
+  });
   vi.spyOn(window, "innerHeight", "get").mockImplementation(() => viewport.height);
   vi.spyOn(window, "innerWidth", "get").mockImplementation(() => viewport.width);
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
     if (this === document.documentElement) return viewport.width;
-    if (this.hasAttribute("data-testid")) return viewport.width - 120;
+    if (this.hasAttribute("data-testid")) return viewport.width < 700 ? viewport.width - 32 : viewport.width - 120;
+    if (this.hasAttribute("data-connected-c-compact-endpoint-viewport")) return Math.max(0, viewport.width - 34);
+    if (this.hasAttribute("data-connected-c-compact-endpoint")) return Math.max(0, viewport.width - 58);
     return 576;
   });
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (this: HTMLElement) {
+    if (this.hasAttribute("data-connected-c-compact-fit-envelope")) return 420;
+    if (this.hasAttribute("data-connected-c-compact-endpoint-viewport")) return 335;
+    if (this.hasAttribute("data-connected-c-compact-endpoint")) return 311;
     return this === document.documentElement ? viewport.height : 576;
+  });
+  vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+    if (this.hasAttribute("data-connected-c-compact-fit-stage")) return viewport.width < 700 ? viewport.width - 32 : viewport.width - 120;
+    return 576;
   });
   vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
     if (this.hasAttribute("data-connected-j3-fit-stage")) return 688;
     if (this.hasAttribute("data-connected-j3-fit-shell")) return 512;
     return 240;
   });
+  vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(function (this: HTMLElement) {
+    if (this.hasAttribute("data-connected-c-compact-workspace")) return 420;
+    if (this.hasAttribute("data-connected-c-compact-endpoint")) return 311;
+    if (this.hasAttribute("data-connected-compact-product-surface")) return 292;
+    return 240;
+  });
+  vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(function (this: HTMLElement) {
+    if (this.hasAttribute("data-connected-c-compact-endpoint-viewport")) return Math.max(0, viewport.width - 34);
+    if (this.hasAttribute("data-connected-compact-product-surface")) return Math.max(0, viewport.width - 60);
+    return 240;
+  });
   vi.spyOn(window, "getComputedStyle").mockImplementation(() => ({ fontSize: "16px" }) as CSSStyleDeclaration);
+  vi.stubGlobal("CSS", { supports: vi.fn(() => true) });
   Object.defineProperty(document, "fonts", { configurable: true, value: undefined });
   return { media, viewport };
 }
@@ -143,7 +170,7 @@ describe("useConnectedStoryArchitecture", () => {
     expect(getByTestId("root").querySelector("[data-connected-j3]")).not.toBeInTheDocument();
   });
 
-  it("prevents a pending J3 import from claiming ownership after an A-eligible resize", async () => {
+  it("prevents a pending J3 import from claiming ownership after a compact-progressive resize", async () => {
     const { viewport } = installEnvironment(1280, 900);
     let resolveModule: ((module: { ConnectedStoryJ3: ComponentType }) => void) | undefined;
     const loadJ3 = vi.fn(() => new Promise<{ ConnectedStoryJ3: ComponentType }>((resolve) => { resolveModule = resolve; }));
@@ -151,10 +178,28 @@ describe("useConnectedStoryArchitecture", () => {
     await waitFor(() => expect(loadJ3).toHaveBeenCalledOnce());
     viewport.width = 390;
     act(() => window.dispatchEvent(new Event("resize")));
-    await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-family", "a"));
+    await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-family", "c"));
+    expect(getByTestId("root")).toHaveAttribute("data-presentation", "compact-progressive");
     await act(async () => resolveModule?.({ ConnectedStoryJ3: FakeJ3 }));
-    expect(getByTestId("root")).toHaveAttribute("data-family", "a");
+    expect(getByTestId("root")).toHaveAttribute("data-family", "c");
+    expect(getByTestId("root")).toHaveAttribute("data-presentation", "compact-progressive");
     expect(getByTestId("root").querySelector("[data-connected-j3]")).not.toBeInTheDocument();
+  });
+
+  it("admits a qualifying portrait phone only through compact progressive capability", async () => {
+    installEnvironment(390, 844);
+    const loadJ3 = vi.fn(async () => ({ ConnectedStoryJ3: FakeJ3 }));
+    const { getByTestId } = render(<Harness loadJ3={loadJ3} progressiveCAllowed />);
+    await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-family", "c"));
+    expect(getByTestId("root")).toHaveAttribute("data-presentation", "compact-progressive");
+    expect(loadJ3).not.toHaveBeenCalled();
+  });
+
+  it("keeps a qualifying portrait phone on A when progressive deployment is off", async () => {
+    installEnvironment(390, 844);
+    const { getByTestId } = render(<Harness loadJ3={async () => ({ ConnectedStoryJ3: FakeJ3 })} progressiveCAllowed={false} />);
+    await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-family", "a"));
+    expect(getByTestId("root")).toHaveAttribute("data-presentation", "none");
   });
 
   it("does not authorize J3 until fonts are ready, then promotes from the bounded fallback", async () => {
@@ -218,7 +263,7 @@ describe("useConnectedStoryArchitecture", () => {
     installEnvironment(1280, 900);
     installFault();
     const loadJ3 = vi.fn(async () => ({ ConnectedStoryJ3: FakeJ3 }));
-    const { getByTestId } = render(<Harness loadJ3={loadJ3} />);
+    const { getByTestId } = render(<Harness loadJ3={loadJ3} progressiveCAllowed={false} />);
     await waitFor(() => expect(getByTestId("root")).toHaveAttribute("data-family", "a"));
     expect(loadJ3).not.toHaveBeenCalled();
     expect(getByTestId("root").querySelectorAll("[data-connected-j3]")).toHaveLength(0);

@@ -3,6 +3,7 @@ import { ConnectedStoryA } from "./ConnectedStoryA";
 import { ConnectedStoryC } from "./ConnectedStoryC";
 import { ConnectedStoryFitProbe } from "./ConnectedStoryFitProbe";
 import { ConnectedStoryCProgressiveFitProbe } from "./ConnectedStoryCProgressiveFitProbe";
+import { ConnectedStoryCCompactFitProbe } from "./ConnectedStoryCCompactFitProbe";
 import { useConnectedStoryArchitecture } from "./useConnectedStoryArchitecture";
 
 export function ConnectedStory() {
@@ -31,6 +32,7 @@ export function ConnectedStory() {
     >
       <ConnectedStoryFitProbe />
       <ConnectedStoryCProgressiveFitProbe />
+      <ConnectedStoryCCompactFitProbe />
       {family === null ? (
         <div aria-hidden="true" className="min-h-[48rem]" data-connected-unresolved-reservation />
       ) : (

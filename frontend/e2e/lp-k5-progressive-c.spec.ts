@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { installDeterministicApi } from "./fixtures";
 
-const candidateEnabled = process.env.VITE_CONNECTED_STORY_PROGRESSIVE_C === "on";
+const progressiveExplicitlyDisabled = process.env.VITE_CONNECTED_STORY_PROGRESSIVE_C === "off";
 const story = (page: Page) => page.locator("[data-connected-story]");
 const progressive = (page: Page) => page.locator("section[data-connected-c-presentation=progressive]");
 
@@ -33,7 +33,7 @@ async function instrumentProgressiveObserver(page: Page) {
   });
 }
 
-async function openCandidate(page: Page) {
+async function openProgressive(page: Page) {
   await installDeterministicApi(page);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
@@ -44,13 +44,13 @@ async function openCandidate(page: Page) {
 }
 
 test.beforeEach(async ({ page }, testInfo) => {
-  test.skip(!candidateEnabled, "candidate production build is not enabled");
+  test.skip(progressiveExplicitlyDisabled, "Progressive-C was explicitly disabled");
   test.skip(!["tablet-768", "desktop-1024"].includes(testInfo.project.name));
   await instrumentProgressiveObserver(page);
 });
 
 test("progressive-C owns one stable workspace and advances through all four chapters", async ({ page }) => {
-  await openCandidate(page);
+  await openProgressive(page);
   const states = [];
   for (const chapter of ["applications", "interviews", "preparation", "action-center"]) {
     const semantic = progressive(page).locator(`[data-connected-c-semantic-chapter="${chapter}"]`);
@@ -85,7 +85,7 @@ test("progressive-C owns one stable workspace and advances through all four chap
 });
 
 test("reverse traversal is deterministic and Action releases before the Coda takes over", async ({ page }) => {
-  await openCandidate(page);
+  await openProgressive(page);
   for (const chapter of ["action-center", "preparation", "interviews", "applications"]) {
     await progressive(page).locator(`[data-connected-c-semantic-chapter="${chapter}"]`).evaluate((element) => {
       const rect = element.getBoundingClientRect();
@@ -122,7 +122,7 @@ test("reduced motion and capability loss retain a complete native story", async 
 });
 
 test("the progressive story remains one accessible semantic narrative", async ({ page }) => {
-  await openCandidate(page);
+  await openProgressive(page);
   await expect(progressive(page).locator("[data-connected-c-semantic-track] > li")).toHaveCount(4);
   await expect(progressive(page).getByRole("heading", { level: 3 })).toHaveCount(4);
   await expect(progressive(page).locator("[aria-live]")).toHaveCount(0);
@@ -135,7 +135,7 @@ test("the progressive story remains one accessible semantic narrative", async ({
 
 test("same-family capability changes preserve Preparation without stale progressive ownership", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "tablet-768");
-  await openCandidate(page);
+  await openProgressive(page);
   const preparation = progressive(page).locator('[data-connected-c-semantic-chapter="preparation"]');
   await preparation.evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -159,7 +159,7 @@ test("same-family capability changes preserve Preparation without stale progress
 });
 
 test("fast traversal settles directly on the latest valid Action state", async ({ page }) => {
-  await openCandidate(page);
+  await openProgressive(page);
   const target = progressive(page).locator('[data-connected-c-semantic-chapter="action-center"]');
   await progressive(page).locator('[data-connected-c-semantic-chapter="interviews"]').evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -176,7 +176,7 @@ test("fast traversal settles directly on the latest valid Action state", async (
 
 test("forward and reverse endpoint handoffs hide outgoing content before the destination settles", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "tablet-768");
-  await openCandidate(page);
+  await openProgressive(page);
 
   const centerChapter = async (chapter: string) => {
     await progressive(page).locator(`[data-connected-c-semantic-chapter="${chapter}"]`).evaluate((element) => {
@@ -222,7 +222,7 @@ test("forward and reverse endpoint handoffs hide outgoing content before the des
 
 test("a restored Action checkpoint bootstraps without an Applications endpoint flash", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "tablet-768");
-  await openCandidate(page);
+  await openProgressive(page);
   const target = progressive(page).locator('[data-connected-c-semantic-chapter="action-center"]');
   await target.evaluate((element) => {
     const rect = element.getBoundingClientRect();

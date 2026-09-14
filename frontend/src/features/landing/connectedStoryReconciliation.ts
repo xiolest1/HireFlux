@@ -8,7 +8,7 @@ import { scrollStoryTimelineLabels } from "./scrollStoryConfig";
 import type { ConnectedStoryCProgressiveCapability } from "./connectedStoryCConfig";
 
 export type ConnectedStoryFamily = "j3" | "c" | "a";
-export type ConnectedStoryCPresentation = "native" | "progressive";
+export type ConnectedStoryCPresentation = "native" | "progressive" | "compact-progressive";
 export type ConnectedStorySelection =
   | { family: "j3"; cPresentation: null }
   | { family: "c"; cPresentation: ConnectedStoryCPresentation }
@@ -26,6 +26,7 @@ export interface ConnectedStoryEnvironment {
   cCapable: boolean;
   progressiveCAllowed: boolean;
   progressiveCCapability: ConnectedStoryCProgressiveCapability;
+  compactCCapability: ConnectedStoryCProgressiveCapability;
 }
 
 export interface ConnectedStoryPosition {
@@ -97,12 +98,30 @@ export function selectConnectedStory(
     return { family: "j3", cPresentation: null };
   }
   if (environment.cCapable) {
-    const progressive = environment.progressiveCAllowed
-      && !environment.reducedMotion
-      && environment.progressiveCCapability !== "ineligible";
-    return { family: "c", cPresentation: progressive ? "progressive" : "native" };
+    if (environment.progressiveCAllowed && !environment.reducedMotion) {
+      if (environment.progressiveCCapability !== "ineligible") {
+        return { family: "c", cPresentation: "progressive" };
+      }
+      if (environment.compactCCapability !== "ineligible") {
+        return { family: "c", cPresentation: "compact-progressive" };
+      }
+    }
+    return { family: "c", cPresentation: "native" };
+  }
+  if (
+    environment.progressiveCAllowed
+    && !environment.reducedMotion
+    && environment.compactCCapability !== "ineligible"
+  ) {
+    return { family: "c", cPresentation: "compact-progressive" };
   }
   return { family: "a", cPresentation: null };
+}
+
+export function isProgressiveCPresentation(
+  presentation: ConnectedStoryCPresentation | null,
+): presentation is "progressive" | "compact-progressive" {
+  return presentation === "progressive" || presentation === "compact-progressive";
 }
 
 export function isJ3CapacityEligible(
