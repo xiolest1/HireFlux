@@ -312,6 +312,91 @@ test("J3 travel is exactly 2.5 viewport heights", async ({ page }, testInfo) => 
   expect(geometry.travel).toBeCloseTo(geometry.viewportHeight * 2.5, 0);
 });
 
+test("J3 release buffer keeps the Action-to-Coda gap compact without changing pin ownership", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await openLanding(page);
+
+  for (const viewport of [
+    { width: 1440, height: 900, releaseBuffer: 68 },
+    { width: 1280, height: 900, releaseBuffer: 68 },
+    { width: 1280, height: 800, releaseBuffer: 64 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await openLanding(page);
+    await waitForFamily(page, "j3");
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+
+    const beforeRelease = await page.evaluate(() => {
+      const stage = document.querySelector<HTMLElement>("[data-scroll-story-pin]")!;
+      const spacer = stage.parentElement!;
+      const release = document.querySelector<HTMLElement>("[data-scroll-story-release-buffer]")!;
+      return {
+        start: spacer.getBoundingClientRect().top + window.scrollY,
+        travel: window.innerHeight * 2.5,
+        releaseBuffer: Number.parseFloat(getComputedStyle(release).minHeight),
+      };
+    });
+    expect(beforeRelease.releaseBuffer).toBeCloseTo(viewport.releaseBuffer, 0);
+
+    await page.evaluate(({ start, travel }) => {
+      window.scrollTo({ top: start + travel - 2, behavior: "instant" });
+    }, beforeRelease);
+    await expect(page.locator("[data-connected-j3]")).toHaveAttribute(
+      "data-active-chapter",
+      "action-center",
+    );
+    await expect(page.locator("[data-workspace-actions]")).toBeVisible();
+
+    await page.evaluate(({ start, travel }) => {
+      window.scrollTo({ top: start + travel + 2, behavior: "instant" });
+    }, beforeRelease);
+    await page.locator("#quiet-coda-title").scrollIntoViewIfNeeded();
+    const released = await page.evaluate(() => {
+      const stage = document.querySelector<HTMLElement>("[data-scroll-story-pin]")!;
+      const shell = document.querySelector<HTMLElement>("[data-connected-workspace]")!;
+      const heading = document.querySelector<HTMLElement>("#quiet-coda-title")!;
+      const coda = document.querySelector<HTMLElement>("[data-quiet-coda]")!;
+      const footer = document.querySelector<HTMLElement>("footer")!;
+      const stageRect = stage.getBoundingClientRect();
+      const shellRect = shell.getBoundingClientRect();
+      const headingRect = heading.getBoundingClientRect();
+      return {
+        stageDocumentTop: stageRect.top + window.scrollY,
+        shellBottom: shellRect.bottom + window.scrollY,
+        codaHeadingTop: headingRect.top + window.scrollY,
+        codaTop: coda.getBoundingClientRect().top + window.scrollY,
+        footerTop: footer.getBoundingClientRect().top + window.scrollY,
+        pinSpacers: document.querySelectorAll(".pin-spacer").length,
+        owners: document.querySelectorAll("[data-connected-family-owner]").length,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+    expect(released.codaHeadingTop - released.shellBottom).toBeGreaterThan(120);
+    expect(released.codaHeadingTop - released.shellBottom).toBeLessThan(200);
+    expect(released.codaHeadingTop).toBeGreaterThan(released.shellBottom);
+    expect(released.codaTop).toBeGreaterThanOrEqual(released.shellBottom);
+    expect(released.footerTop).toBeGreaterThan(released.codaHeadingTop);
+    expect(released.pinSpacers).toBe(1);
+    expect(released.owners).toBe(1);
+    expect(released.overflow).toBeLessThanOrEqual(1);
+
+    await page.evaluate(() => window.scrollBy({ top: 32, behavior: "instant" }));
+    const afterAdditionalScroll = await page.locator("[data-scroll-story-pin]").evaluate((stage) => {
+      const rect = stage.getBoundingClientRect();
+      return rect.top + window.scrollY;
+    });
+    expect(Math.abs(afterAdditionalScroll - released.stageDocumentTop)).toBeLessThanOrEqual(1);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await waitForFamily(page, "c");
+  expect((await runtimeState(page)).pinSpacers).toBe(0);
+  expect(await page.locator("[data-scroll-story-release-buffer]").count()).toBe(0);
+  expect(pageErrors).toEqual([]);
+});
+
 test("a pending J3 import remains inert after route unmount and warms a later remount", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1280");
   let releaseChunk!: () => void;

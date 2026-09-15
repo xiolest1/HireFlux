@@ -34,6 +34,7 @@ describe("ConnectedStoryCCompactProgressive", () => {
     expect(container.querySelectorAll("[data-connected-c-compact-workspace]")).toHaveLength(1);
     expect(container.querySelectorAll("[data-connected-c-compact-sticky-owner]")).toHaveLength(1);
     expect(container.querySelectorAll("[data-connected-c-compact-sticky-scene]")).toHaveLength(1);
+    expect(container.querySelectorAll("[data-connected-c-compact-release-tail]")).toHaveLength(0);
     const owner = container.querySelector("[data-connected-c-compact-sticky-owner]");
     const workspace = container.querySelector("[data-connected-c-compact-workspace]");
     expect(owner).toHaveAttribute("aria-hidden", "true");

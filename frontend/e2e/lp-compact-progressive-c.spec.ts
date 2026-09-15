@@ -40,13 +40,19 @@ async function openCompact(page: Page) {
 }
 
 async function placeChapterAtOwnershipLine(page: Page, chapter: string) {
-  await compact(page).locator(`[data-connected-c-semantic-chapter="${chapter}"]`).evaluate((element) => {
+  await compact(page).locator(`[data-connected-c-semantic-chapter="${chapter}"]`).evaluate((element, currentChapter) => {
     const rect = element.getBoundingClientRect();
+    const root = element.closest<HTMLElement>('[data-connected-c-presentation="compact-progressive"]')!;
+    const stage = root.querySelector<HTMLElement>(".hf-connected-c-compact-stage")!;
+    const scene = root.querySelector<HTMLElement>("[data-connected-c-compact-sticky-scene]")!;
+    const target = currentChapter === "applications"
+      ? stage.getBoundingClientRect().top + window.scrollY - Number.parseFloat(getComputedStyle(scene).top) + 2
+      : rect.top + window.scrollY - window.innerHeight * 0.12 + 2;
     window.scrollTo({
-      top: rect.top + window.scrollY - window.innerHeight * 0.12 + 2,
+      top: target,
       behavior: "instant",
     });
-  });
+  }, chapter);
   await expect(compact(page)).toHaveAttribute("data-active-chapter", chapter);
 }
 
@@ -98,6 +104,24 @@ test("compact Progressive-C is one accessible semantic story with one synchroniz
     expect(state.surfaceOverflowY).toBeLessThanOrEqual(1);
   });
   expect(Math.max(...measured.map((state) => state.sceneTop)) - Math.min(...measured.map((state) => state.sceneTop))).toBeLessThanOrEqual(1);
+  measured.forEach((state) => expect(state.sceneTop).toBeCloseTo(67.52, 0));
+
+  const geometry = await compact(page).evaluate((root) => {
+    const stage = root.querySelector<HTMLElement>(".hf-connected-c-compact-stage")!;
+    const owner = root.querySelector<HTMLElement>("[data-connected-c-compact-sticky-owner]")!;
+    const track = root.querySelector<HTMLElement>("[data-connected-c-semantic-track]")!;
+    return {
+      chapterHeights: Array.from(root.querySelectorAll<HTMLElement>("[data-connected-c-semantic-chapter]"))
+        .map((chapter) => chapter.getBoundingClientRect().height),
+      actionHold: Number.parseFloat(getComputedStyle(track).paddingBottom),
+      releaseLead: stage.getBoundingClientRect().height - owner.getBoundingClientRect().height,
+      releaseTails: root.querySelectorAll("[data-connected-c-compact-release-tail]").length,
+    };
+  });
+  expect(geometry.chapterHeights).toEqual([438.875, 422, 496, 736]);
+  expect(geometry.actionHold).toBeCloseTo(202.56, 1);
+  expect(geometry.releaseLead).toBeCloseTo(136.48, 0);
+  expect(geometry.releaseTails).toBe(0);
 
   await expect(compact(page).locator("[data-connected-c-semantic-track] > li")).toHaveCount(4);
   await expect(compact(page).locator("[data-connected-c-semantic-copy].sr-only")).toHaveCount(4);
@@ -149,8 +173,56 @@ test("compact progression reverses directly and reconciles with full Progressive
   await expect(story(page).locator("[data-connected-family-owner] > *")).toHaveCount(1);
 });
 
+test("compact Action holds while pinned and reacquires its anchor from the Coda", async ({ page }) => {
+  await openCompact(page);
+  const geometry = await compact(page).evaluate((root) => {
+    const owner = root.querySelector<HTMLElement>("[data-connected-c-compact-sticky-owner]")!;
+    const scene = root.querySelector<HTMLElement>("[data-connected-c-compact-sticky-scene]")!;
+    const action = root.querySelector<HTMLElement>('[data-connected-c-semantic-chapter="action-center"]')!;
+    const coda = document.querySelector<HTMLElement>("[data-quiet-coda]")!;
+    const anchor = Number.parseFloat(getComputedStyle(scene).top);
+    const ownerTop = owner.getBoundingClientRect().top + window.scrollY;
+    const actionTop = action.getBoundingClientRect().top + window.scrollY;
+    const releaseEnd = ownerTop + owner.getBoundingClientRect().height - scene.getBoundingClientRect().height - anchor;
+    const actionStart = actionTop - window.innerHeight * 0.12;
+    return {
+      anchor,
+      releaseEnd,
+      codaEnter: coda.getBoundingClientRect().top + window.scrollY - window.innerHeight,
+      pinnedActionDwell: releaseEnd - actionStart,
+    };
+  });
+  expect(geometry.pinnedActionDwell).toBeGreaterThan(220);
+
+  await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), geometry.releaseEnd - 2);
+  await expect(compact(page)).toHaveAttribute("data-active-chapter", "action-center");
+  await expect.poll(() => compact(page).locator("[data-connected-c-compact-sticky-scene]").evaluate((scene) => scene.getBoundingClientRect().top))
+    .toBeCloseTo(geometry.anchor, 0);
+
+  await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), geometry.codaEnter + 1);
+  await expect(compact(page)).toHaveAttribute("data-active-chapter", "action-center");
+  const releasedTop = await compact(page).locator("[data-connected-c-compact-sticky-scene]").evaluate((scene) => scene.getBoundingClientRect().top);
+  expect(releasedTop).toBeLessThan(geometry.anchor - 20);
+
+  await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), geometry.releaseEnd - 2);
+  await expect(compact(page)).toHaveAttribute("data-active-chapter", "action-center");
+  await expect.poll(() => compact(page).locator("[data-connected-c-compact-sticky-scene]").evaluate((scene) => scene.getBoundingClientRect().top))
+    .toBeCloseTo(geometry.anchor, 0);
+});
+
 test("compact retention tolerates bounded toolbar movement and reduced motion falls back to A", async ({ page }) => {
   await openCompact(page);
+  await placeChapterAtOwnershipLine(page, "preparation");
+  await page.setViewportSize({ width: 390, height: 780 });
+  await expect(story(page)).toHaveAttribute("data-connected-c-presentation", "compact-progressive");
+  await expect(compact(page)).toHaveAttribute("data-active-chapter", "preparation");
+  await expect(compact(page).locator("[data-connected-c-compact-sticky-owner]")).toHaveCount(1);
+  expect(await compact(page).locator("[data-connected-c-compact-sticky-scene]").evaluate((scene) => scene.getBoundingClientRect().top)).toBeCloseTo(62.4, 0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(story(page)).toHaveAttribute("data-connected-c-presentation", "compact-progressive");
+  await expect(compact(page)).toHaveAttribute("data-active-chapter", "preparation");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+
   await page.setViewportSize({ width: 390, height: 736 });
   await expect(story(page)).toHaveAttribute("data-connected-c-presentation", "compact-progressive");
   await page.setViewportSize({ width: 390, height: 735 });

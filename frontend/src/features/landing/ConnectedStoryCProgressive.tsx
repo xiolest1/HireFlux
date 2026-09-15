@@ -77,7 +77,6 @@ export function ConnectedStoryCProgressive({
           </div>
         </div>
       </div>
-      <div aria-hidden="true" className="hf-connected-c-release-tail" data-connected-c-release-tail />
     </section>
   );
 }

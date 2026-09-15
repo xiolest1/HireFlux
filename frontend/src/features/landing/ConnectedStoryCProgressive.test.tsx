@@ -28,6 +28,7 @@ describe("ConnectedStoryCProgressive", () => {
     expect(container.querySelectorAll("[data-connected-c-workspace]")).toHaveLength(1);
     expect(container.querySelectorAll("[data-connected-c-sticky-owner]")).toHaveLength(1);
     expect(container.querySelectorAll("[data-connected-c-sticky-scene]")).toHaveLength(1);
+    expect(container.querySelectorAll("[data-connected-c-release-tail]")).toHaveLength(0);
     const owner = container.querySelector("[data-connected-c-sticky-owner]");
     const workspace = container.querySelector("[data-connected-c-workspace]");
     expect(owner).toHaveAttribute("aria-hidden", "true");

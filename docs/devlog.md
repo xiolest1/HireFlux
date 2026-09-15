@@ -1,5 +1,40 @@
 # HireFlux development log
 
+## 2026-09-14 — Connected Workspace post-story gap reduction
+
+Rendered review of the desktop landing page still showed too much open space
+between the J3 Action Center shell and the Quiet Coda/demo action. Source and
+browser measurements attributed the gap to the J3 release buffer plus the
+existing 64px Connected section bottom padding and the stage-envelope's small
+visual offset; Quiet Coda does not add top padding. At a 900px desktop height,
+the previous release buffer was 160px and the combined shell-to-Coda gap was
+approximately 256px.
+
+The J3-only release rule now uses
+`clamp(4rem, calc(100svh - 52rem), 10rem)`. This yields approximately 68px at
+900px and the 64px floor at 800px and 720px, reducing the expected 900px
+shell-to-Coda gap by roughly 92px while retaining a positive, deliberate
+breathing margin. Connected shell dimensions, Action Center dwell and chapter
+pacing, chapter boundaries, ScrollTrigger ownership/start/end, exact 2.5
+viewport travel, CTA timing, Quiet Coda markup/copy/lifecycle, and mobile,
+tablet, short-viewport, and reduced-motion fallbacks remain unchanged.
+
+Focused J3 geometry coverage passed at 1440×900, 1280×900, and 1280×800,
+including computed release-buffer values, Action visibility before release,
+post-release pin state, one pin spacer/owner, footer ordering, overflow, and
+the unchanged 2.5× travel. Full validation also passed ESLint, TypeScript,
+284 Vitest tests, 13 accessibility tests, hosting-header checks, the production
+build, and the complete Playwright/Axe suite (187 passed, 178 intentional
+skips). Deterministic dark-mode Action/Coda captures for 1280×900 and
+1440×900 were written outside repository state for before/after inspection;
+the supplied screenshots remain the before reference. The production build
+emitted 464.15/138.74 kB main JavaScript, 83.04/19.75 kB lazy landing
+JavaScript, 73.15/23.99 kB J3 JavaScript, and 128.37/20.74 kB CSS raw/gzip.
+No snapshots or generated artifacts were added, and no commit or deployment
+was made. The remaining limitation is that the supplied before evidence and
+automated after captures establish geometry and ordering; subjective gap
+preference still merits a final human visual check in the local browser.
+
 ## 2026-09-14 — Progressive-C normal-startup enablement
 
 The full and compact Progressive-C presentations are now the normal eligible

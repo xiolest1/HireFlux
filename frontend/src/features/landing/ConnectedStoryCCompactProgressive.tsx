@@ -78,7 +78,6 @@ export function ConnectedStoryCCompactProgressive({
           </div>
         </div>
       </div>
-      <div aria-hidden="true" className="hf-connected-c-compact-release-tail" data-connected-c-compact-release-tail />
     </section>
   );
 }

@@ -49,15 +49,21 @@ test.beforeEach(async ({ page }, testInfo) => {
   await instrumentProgressiveObserver(page);
 });
 
-test("progressive-C owns one synchronized sticky scene and advances through all four chapters", async ({ page }) => {
+test("progressive-C owns one synchronized upper-anchored scene and advances through all four chapters", async ({ page }, testInfo) => {
   await openProgressive(page);
   const states = [];
   for (const chapter of ["applications", "interviews", "preparation", "action-center"]) {
     const semantic = progressive(page).locator(`[data-connected-c-semantic-chapter="${chapter}"]`);
-    await semantic.evaluate((element) => {
+    await semantic.evaluate((element, currentChapter) => {
       const rect = element.getBoundingClientRect();
-      window.scrollTo({ top: rect.top + window.scrollY + rect.height / 2 - window.innerHeight / 2, behavior: "instant" });
-    });
+      const root = element.closest<HTMLElement>("[data-connected-c-presentation=progressive]")!;
+      const stage = root.querySelector<HTMLElement>("[data-connected-c-stage]")!;
+      const scene = root.querySelector<HTMLElement>("[data-connected-c-sticky-scene]")!;
+      const target = currentChapter === "applications"
+        ? stage.getBoundingClientRect().top + window.scrollY - Number.parseFloat(getComputedStyle(scene).top) + 2
+        : rect.top + window.scrollY + rect.height / 2 - window.innerHeight / 2;
+      window.scrollTo({ top: target, behavior: "instant" });
+    }, chapter);
     await expect(progressive(page)).toHaveAttribute("data-active-chapter", chapter);
     states.push(await progressive(page).evaluate((root) => {
       const scene = root.querySelector<HTMLElement>("[data-connected-c-sticky-scene]")!;
@@ -85,7 +91,31 @@ test("progressive-C owns one synchronized sticky scene and advances through all 
     expect(state.scenePosition).toBe("sticky");
     expect(state.workspacePosition).toBe("static");
   });
+  const expectedTop = testInfo.project.name === "desktop-1024" ? 76.8 : 102.4;
+  states.forEach((state) => expect(state.sceneTop).toBeCloseTo(expectedTop, 0));
   expect(Math.max(...states.map((state) => state.sceneTop)) - Math.min(...states.map((state) => state.sceneTop))).toBeLessThanOrEqual(1);
+  const geometry = await progressive(page).evaluate((root) => {
+    const stage = root.querySelector<HTMLElement>("[data-connected-c-stage]")!;
+    const owner = root.querySelector<HTMLElement>("[data-connected-c-sticky-owner]")!;
+    const track = root.querySelector<HTMLElement>("[data-connected-c-semantic-track]")!;
+    return {
+      chapterHeights: Array.from(root.querySelectorAll<HTMLElement>("[data-connected-c-semantic-chapter]"))
+        .map((chapter) => chapter.getBoundingClientRect().height),
+      actionHold: Number.parseFloat(getComputedStyle(track).paddingBottom),
+      releaseLead: stage.getBoundingClientRect().height - owner.getBoundingClientRect().height,
+      releaseTails: root.querySelectorAll("[data-connected-c-release-tail]").length,
+    };
+  });
+  if (testInfo.project.name === "desktop-1024") {
+    expect(geometry.chapterHeights).toEqual([416, 384, 448, 512]);
+    expect(geometry.actionHold).toBeCloseTo(122.88, 1);
+    expect(geometry.releaseLead).toBeCloseTo(91.2, 0);
+  } else {
+    expect(geometry.chapterHeights).toEqual([544, 512, 593.90625, 672]);
+    expect(geometry.actionHold).toBeCloseTo(160, 1);
+    expect(geometry.releaseLead).toBeCloseTo(321.6, 0);
+  }
+  expect(geometry.releaseTails).toBe(0);
   await expect(progressive(page).locator("[data-connected-c-sticky-owner]")).toHaveCount(1);
   await expect(progressive(page).locator("[data-connected-c-sticky-owner]")).toHaveAttribute("aria-hidden", "true");
   await expect(progressive(page).locator("[data-connected-c-sticky-owner] [data-connected-c-visual-narrative]")).toHaveCount(1);
@@ -101,7 +131,7 @@ test("progressive-C owns one synchronized sticky scene and advances through all 
   expect(await story(page).locator('[data-connected-timeline-active="true"]')).toHaveCount(0);
 });
 
-test("reverse traversal is deterministic and Action releases before the Coda takes over", async ({ page }) => {
+test("Action holds while pinned and releases bidirectionally before the Coda takes over", async ({ page }) => {
   await openProgressive(page);
   for (const chapter of ["action-center", "preparation", "interviews", "applications"]) {
     await progressive(page).locator(`[data-connected-c-semantic-chapter="${chapter}"]`).evaluate((element) => {
@@ -110,21 +140,49 @@ test("reverse traversal is deterministic and Action releases before the Coda tak
     });
     await expect(progressive(page)).toHaveAttribute("data-active-chapter", chapter);
   }
-  const action = progressive(page).locator('[data-connected-c-semantic-chapter="action-center"]');
-  await action.evaluate((element) => window.scrollTo(0, element.getBoundingClientRect().bottom + window.scrollY - window.innerHeight * 0.75));
+  const releaseGeometry = await progressive(page).evaluate((root) => {
+    const owner = root.querySelector<HTMLElement>("[data-connected-c-sticky-owner]")!;
+    const scene = root.querySelector<HTMLElement>("[data-connected-c-sticky-scene]")!;
+    const action = root.querySelector<HTMLElement>('[data-connected-c-semantic-chapter="action-center"]')!;
+    const coda = document.querySelector<HTMLElement>("[data-quiet-coda]")!;
+    const anchor = Number.parseFloat(getComputedStyle(scene).top);
+    const ownerTop = owner.getBoundingClientRect().top + window.scrollY;
+    const actionTop = action.getBoundingClientRect().top + window.scrollY;
+    const releaseEnd = ownerTop + owner.getBoundingClientRect().height - scene.getBoundingClientRect().height - anchor;
+    const actionStart = actionTop - window.innerHeight / 2;
+    return {
+      anchor,
+      releaseEnd,
+      codaEnter: coda.getBoundingClientRect().top + window.scrollY - window.innerHeight,
+      pinnedActionDwell: releaseEnd - actionStart,
+    };
+  });
+  expect(releaseGeometry.pinnedActionDwell).toBeGreaterThan(280);
+
+  await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), releaseGeometry.releaseEnd - 2);
   await expect(progressive(page)).toHaveAttribute("data-active-chapter", "action-center");
-  const release = await page.evaluate(() => {
+  const beforeRelease = await page.evaluate(() => {
     const scene = document.querySelector<HTMLElement>('section[data-connected-c-presentation="progressive"] [data-connected-c-sticky-scene]')!;
     const coda = document.querySelector<HTMLElement>("[data-quiet-coda]")!;
     const sceneRect = scene.getBoundingClientRect();
     return {
-      scenePosition: getComputedStyle(scene).position,
+      sceneTop: sceneRect.top,
       sceneBottom: sceneRect.bottom,
       codaTop: coda.getBoundingClientRect().top,
     };
   });
-  expect(release.scenePosition).toBe("sticky");
-  expect(release.codaTop).toBeGreaterThan(release.sceneBottom);
+  expect(beforeRelease.sceneTop).toBeCloseTo(releaseGeometry.anchor, 0);
+  expect(beforeRelease.codaTop).toBeGreaterThan(beforeRelease.sceneBottom);
+
+  await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), releaseGeometry.codaEnter + 1);
+  await expect(progressive(page)).toHaveAttribute("data-active-chapter", "action-center");
+  const releasedTop = await progressive(page).locator("[data-connected-c-sticky-scene]").evaluate((scene) => scene.getBoundingClientRect().top);
+  expect(releasedTop).toBeLessThan(releaseGeometry.anchor - 20);
+
+  await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), releaseGeometry.releaseEnd - 2);
+  await expect(progressive(page)).toHaveAttribute("data-active-chapter", "action-center");
+  await expect.poll(() => progressive(page).locator("[data-connected-c-sticky-scene]").evaluate((scene) => scene.getBoundingClientRect().top))
+    .toBeCloseTo(releaseGeometry.anchor, 0);
 });
 
 test("reduced motion and capability loss retain a complete native story", async ({ page }) => {

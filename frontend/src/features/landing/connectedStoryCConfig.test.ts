@@ -23,13 +23,18 @@ describe("progressive-C configuration and geometry", () => {
 
   it("serializes the one TypeScript geometry authority into CSS variables", () => {
     expect(connectedStoryCCssVariables()).toMatchObject({
-      "--hf-connected-c-sticky-inset": `${connectedStoryCConfiguration.stickyInsetPx}px`,
+      "--hf-connected-c-sticky-inset": connectedStoryCConfiguration.stickyInsetCss,
       "--hf-connected-c-shell-height": `${connectedStoryCConfiguration.shellHeightPx}px`,
       "--hf-connected-c-visual-frame-height": "560px",
-      "--hf-connected-c-preparation-travel": `${connectedStoryCConfiguration.preparationChapterTravelVh}vh`,
-      "--hf-connected-c-release-tail": `${connectedStoryCConfiguration.releaseTailVh}vh`,
+      "--hf-connected-c-applications-travel": "clamp(26rem, 54svh, 34rem)",
+      "--hf-connected-c-interviews-travel": "clamp(24rem, 50svh, 32rem)",
+      "--hf-connected-c-preparation-travel": "clamp(28rem, 58svh, 38rem)",
+      "--hf-connected-c-action-travel": "clamp(32rem, 66svh, 42rem)",
+      "--hf-connected-c-action-hold": "clamp(6rem, 16svh, 10rem)",
+      "--hf-connected-c-release-lead": expect.stringContaining("var(--hf-connected-c-sticky-inset)"),
       "--hf-connected-c-transition-duration": "180ms",
     });
+    expect(connectedStoryCConfiguration.externalReleaseTailPx).toBe(0);
   });
 
   it("serializes an independent compact geometry authority", () => {
@@ -37,14 +42,19 @@ describe("progressive-C configuration and geometry", () => {
     expect(connectedStoryCCompactCssVariables()).toMatchObject({
       "--hf-connected-compact-shell-height": "420px",
       "--hf-connected-compact-visual-frame-height": "600px",
-      "--hf-connected-compact-base-travel": "74vh",
-      "--hf-connected-compact-action-travel": "92vh",
-      "--hf-connected-compact-release-tail": "16vh",
+      "--hf-connected-compact-sticky-inset": connectedStoryCCompactConfiguration.stickyInsetCss,
+      "--hf-connected-compact-applications-travel": "clamp(24rem, 52svh, 28rem)",
+      "--hf-connected-compact-interviews-travel": "clamp(23rem, 50svh, 27rem)",
+      "--hf-connected-compact-preparation-travel": "clamp(27rem, 60svh, 31rem)",
+      "--hf-connected-compact-action-travel": "clamp(40rem, 88svh, 46rem)",
+      "--hf-connected-compact-action-hold": "clamp(11rem, 24svh, 13rem)",
+      "--hf-connected-compact-release-lead": expect.stringContaining("var(--hf-connected-compact-sticky-inset)"),
       "--hf-connected-compact-transition-duration": "160ms",
     });
+    expect(connectedStoryCCompactConfiguration.externalReleaseTailPx).toBe(0);
   });
 
-  it("uses viewport-center geometry and lets the later chapter win exact ties", () => {
+  it("uses ownership-line geometry and lets the later chapter win exact ties", () => {
     const geometry = [
       { stage: "applications" as const, top: -100, bottom: 500 },
       { stage: "interviews" as const, top: 500, bottom: 1100 },

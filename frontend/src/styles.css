@@ -29,8 +29,16 @@
   grid-row: 1;
 }
 
-.hf-connected-c-chapter {
-  min-height: var(--hf-connected-c-base-travel);
+.hf-connected-c-stage > [data-connected-c-semantic-track] {
+  padding-bottom: var(--hf-connected-c-action-hold);
+}
+
+.hf-connected-c-chapter[data-connected-chapter="applications"] {
+  min-height: var(--hf-connected-c-applications-travel);
+}
+
+.hf-connected-c-chapter[data-connected-chapter="interviews"] {
+  min-height: var(--hf-connected-c-interviews-travel);
 }
 
 .hf-connected-c-chapter[data-connected-chapter="preparation"] {
@@ -43,13 +51,21 @@
 
 .hf-connected-c-sticky-owner,
 .hf-connected-c-compact-sticky-owner {
-  align-self: stretch;
+  align-self: start;
   pointer-events: none;
+}
+
+.hf-connected-c-sticky-owner {
+  height: max(0px, calc(100% - var(--hf-connected-c-release-lead)));
+}
+
+.hf-connected-c-compact-sticky-owner {
+  height: max(0px, calc(100% - var(--hf-connected-compact-release-lead)));
 }
 
 .hf-connected-c-sticky-scene {
   position: sticky;
-  top: max(var(--hf-connected-c-sticky-inset), calc((100vh - var(--hf-connected-c-visual-frame-height)) / 2));
+  top: var(--hf-connected-c-sticky-inset);
   display: grid;
   height: var(--hf-connected-c-visual-frame-height);
   min-width: 0;
@@ -98,10 +114,6 @@
   background: var(--color-violet);
 }
 
-.hf-connected-c-release-tail {
-  min-height: var(--hf-connected-c-release-tail);
-}
-
 @keyframes hf-connected-c-narrative-enter {
   0%, 24% {
     opacity: 0;
@@ -138,8 +150,16 @@
   position: relative;
 }
 
-.hf-connected-c-compact-chapter {
-  min-height: var(--hf-connected-compact-base-travel);
+.hf-connected-c-compact-stage > [data-connected-c-semantic-track] {
+  padding-bottom: var(--hf-connected-compact-action-hold);
+}
+
+.hf-connected-c-compact-chapter[data-connected-chapter="applications"] {
+  min-height: var(--hf-connected-compact-applications-travel);
+}
+
+.hf-connected-c-compact-chapter[data-connected-chapter="interviews"] {
+  min-height: var(--hf-connected-compact-interviews-travel);
 }
 
 .hf-connected-c-compact-chapter[data-connected-chapter="preparation"] {
@@ -152,10 +172,7 @@
 
 .hf-connected-c-compact-sticky-scene {
   position: sticky;
-  top: max(
-    var(--hf-connected-compact-sticky-inset),
-    calc((100vh - var(--hf-connected-compact-visual-frame-height)) / 2)
-  );
+  top: var(--hf-connected-compact-sticky-inset);
   display: grid;
   height: var(--hf-connected-compact-visual-frame-height);
   min-width: 0;
@@ -185,10 +202,6 @@
   margin-top: 0.55rem;
   font-size: 0.82rem;
   line-height: 1.3rem;
-}
-
-.hf-connected-c-compact-release-tail {
-  min-height: var(--hf-connected-compact-release-tail);
 }
 
 .hf-connected-c-compact-endpoint {
@@ -993,7 +1006,7 @@
 
 .hf-scroll-story-release-buffer {
   display: block;
-  min-height: clamp(10rem, calc(100svh - 48rem), 18rem);
+  min-height: clamp(4rem, calc(100svh - 52rem), 10rem);
 }
 
 .hf-connected-workspace [data-workspace-recent],
