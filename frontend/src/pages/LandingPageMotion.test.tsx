@@ -60,7 +60,7 @@ describe("LandingPage motion ownership boundaries", () => {
     expect(cta).not.toHaveAttribute("aria-hidden");
   });
 
-  it("places the static Quiet Coda after Connected Workspace inside main and before the footer", async () => {
+  it("places Quiet Coda after Connected Workspace inside main and before the footer", async () => {
     const { container } = renderApp("/", { withSession: false });
     const codaHeading = await screen.findByRole("heading", {
       name: "What happened should help you see what matters now.",
@@ -77,7 +77,15 @@ describe("LandingPage motion ownership boundaries", () => {
     expect(connected.compareDocumentPosition(coda)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(coda.compareDocumentPosition(footer)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(coda.closest("[data-scroll-story]")).toBeNull();
-    expect(coda.closest("[data-landing-viewport-reveal]")).toBeNull();
+    const codaReveal = coda.closest<HTMLElement>("[data-landing-viewport-reveal]");
+    expect(codaReveal).not.toBeNull();
+    expect(codaReveal).toHaveClass("hf-post-story-reveal");
+    expect(codaReveal).toHaveAttribute("data-reveal-state", "revealed");
+    expect(codaReveal).toHaveAttribute("data-reveal-motion", "none");
+    expect(coda.querySelectorAll("[data-quiet-coda-word]")).toHaveLength(9);
+    expect(coda.querySelector("[data-quiet-coda-word]")).not.toHaveStyle({
+      animationName: "hf-quiet-coda-word-reveal",
+    });
     expect(coda.closest(".hf-section-reveal")).toBeNull();
     expect(screen.getAllByRole("button", { name: "Explore the Demo" })).toHaveLength(2);
   });

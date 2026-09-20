@@ -1,5 +1,44 @@
 # HireFlux development log
 
+## 2026-09-15 — Connected Workspace → Demo Coda transition polish
+
+The desktop landing boundary still felt abrupt after the first release-buffer
+reduction: the Connected Workspace ended into a quiet structural interval, and
+Quiet Coda was a static sibling with no visual handoff. The rendered source
+measurement identified the release buffer as the dominant controllable gap;
+the existing Connected bottom padding and Coda/Footer spacing were retained so
+the product climax does not collapse into the operational footer.
+
+The J3 release buffer is now `clamp(4rem, calc(100svh - 56rem), 8rem)`, giving a
+64px floor at 900px and 800px desktop heights and a 128px cap on taller
+viewports. Quiet Coda is wrapped at the page boundary with the existing
+fail-visible `LandingViewportReveal`. Normal motion now gives the released
+workspace a restrained opacity/3px Coda handoff using the established 220ms
+reveal behavior; reduced motion, restored scroll, focus capture, missing
+IntersectionObserver support, and already-passed geometry resolve directly to
+the final visible state.
+
+Connected Workspace markup and Action Center choreography, exact 2.5× pin
+travel, single ScrollTrigger ownership, CTA lifecycle, Coda markup/copy, the
+footer, mobile/tablet/short-viewport fallbacks, and reduced-motion Connected
+behavior remain unchanged. No second ScrollTrigger, manual scroll listener,
+custom observer, decorative transition panel, gradient band, or extra CTA was
+added. This keeps Action Center as product climax, Quiet Coda as narrative
+closure, and the footer as operational closure.
+
+Focused component coverage passed 29/29 tests. Focused browser coverage passed
+J3 travel, release geometry, normal-motion reveal-after-release, one-owner/
+one-spacer, Coda structure, and enlarged-text cases. The normal-motion test
+confirms Coda remains pending and visually hidden while the stage is fixed,
+then resolves after release while the stage is relative. Full validation passed
+ESLint, TypeScript, 284 Vitest tests, 13 accessibility tests, hosting-header
+checks, the production build, and the complete Playwright/Axe suite (188
+passed, 182 intentional skips). Deterministic dark-mode before-release and
+Coda-handoff captures for 1280×900 and 1440×900 are stored outside repository
+state; no snapshots or build artifacts are tracked. The remaining limitation
+is subjective visual preference for the final gap, which still benefits from
+human review at the target desktop sizes.
+
 ## 2026-09-14 — Connected Workspace post-story gap reduction
 
 Rendered review of the desktop landing page still showed too much open space

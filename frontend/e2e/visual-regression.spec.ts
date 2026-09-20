@@ -145,7 +145,7 @@ for (const route of routes) {
   });
 }
 
-test("Quiet Coda is a static semantic sibling between Connected Workspace and the footer", async ({
+test("Quiet Coda keeps static semantic content while the page handoff reveals it", async ({
   page,
 }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -155,6 +155,7 @@ test("Quiet Coda is a static semantic sibling between Connected Workspace and th
   const main = page.locator("main");
   const story = page.locator("[data-connected-story]");
   const coda = page.locator("[data-quiet-coda]");
+  const codaReveal = page.locator("[data-landing-viewport-reveal]").filter({ has: coda });
   const footer = page.locator("footer");
   const action = coda.getByRole("button", { name: "Continue Demo" });
 
@@ -170,6 +171,8 @@ test("Quiet Coda is a static semantic sibling between Connected Workspace and th
   )).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue Demo" })).toHaveCount(2);
   await expect(action).toBeVisible();
+  await expect(codaReveal).toHaveAttribute("data-reveal-state", "revealed");
+  await expect(codaReveal).toHaveAttribute("data-reveal-motion", "none");
   await expect(coda.locator("[data-quiet-coda-beat]")).toHaveCount(2);
   await expect(coda.locator(
     "[data-landing-viewport-reveal], .hf-section-reveal, .hf-content-enter, [data-hero-entrance]",
@@ -305,6 +308,24 @@ test("landing story becomes a stable complete state with reduced motion", async 
   await expect(page.locator("[data-connected-story]")).toHaveAttribute("data-connected-family", /^(a|c)$/);
   await expect(page.locator("[data-connected-family-owner]")).toHaveCount(1);
   await expect(page.locator(".pin-spacer")).toHaveCount(0);
+  const codaMotion = await page.locator("[data-quiet-coda]").evaluate((coda) => {
+    const wrapper = coda.closest<HTMLElement>("[data-landing-viewport-reveal]");
+    const word = coda.querySelector<HTMLElement>("[data-quiet-coda-word]");
+    const support = coda.querySelector<HTMLElement>("[data-quiet-coda-support]");
+    const action = coda.querySelector<HTMLElement>("[data-quiet-coda-action-cluster]");
+    return {
+      revealMotion: wrapper?.dataset.revealMotion,
+      wordAnimation: word ? getComputedStyle(word).animationName : "",
+      supportAnimation: support ? getComputedStyle(support).animationName : "",
+      actionAnimation: action ? getComputedStyle(action).animationName : "",
+    };
+  });
+  expect(codaMotion).toEqual({
+    revealMotion: "none",
+    wordAnimation: "none",
+    supportAnimation: "none",
+    actionAnimation: "none",
+  });
   const staticAction = page.locator('[data-connected-chapter="action-center"]');
   await expect(staticAction.locator("[data-workspace-action-decision]")).toContainText("Send a thoughtful follow-up");
   await expect(staticAction.locator("[data-workspace-action-urgency]")).toHaveText("Due today");

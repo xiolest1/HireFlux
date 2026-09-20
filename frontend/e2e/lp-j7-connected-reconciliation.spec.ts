@@ -319,8 +319,8 @@ test("J3 release buffer keeps the Action-to-Coda gap compact without changing pi
   await openLanding(page);
 
   for (const viewport of [
-    { width: 1440, height: 900, releaseBuffer: 68 },
-    { width: 1280, height: 900, releaseBuffer: 68 },
+    { width: 1440, height: 900, releaseBuffer: 64 },
+    { width: 1280, height: 900, releaseBuffer: 64 },
     { width: 1280, height: 800, releaseBuffer: 64 },
   ]) {
     await page.setViewportSize(viewport);
@@ -394,6 +394,70 @@ test("J3 release buffer keeps the Action-to-Coda gap compact without changing pi
   await waitForFamily(page, "c");
   expect((await runtimeState(page)).pinSpacers).toBe(0);
   expect(await page.locator("[data-scroll-story-release-buffer]").count()).toBe(0);
+  expect(pageErrors).toEqual([]);
+});
+
+test("normal motion reveals Quiet Coda after J3 releases without adding a scroll owner", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await openLanding(page, "no-preference");
+  await waitForFamily(page, "j3");
+  await expect(page.locator('[data-connected-timeline-active="true"]')).toHaveCount(1);
+  await expect(page.locator('[data-connected-trigger-active="true"]')).toHaveCount(1);
+
+  const geometry = await page.evaluate(() => {
+    const stage = document.querySelector<HTMLElement>("[data-scroll-story-pin]")!;
+    const spacer = stage.parentElement!;
+    return {
+      start: spacer.getBoundingClientRect().top + window.scrollY,
+      travel: window.innerHeight * 2.5,
+    };
+  });
+
+  await page.evaluate(({ start, travel }) => {
+    // Stay a small distance inside the owned travel range so browser scroll
+    // rounding cannot turn the pre-release probe into an end-boundary sample.
+    window.scrollTo({ top: start + travel - 32, behavior: "instant" });
+  }, geometry);
+  const beforeRelease = await page.evaluate(() => {
+    const stage = document.querySelector<HTMLElement>("[data-scroll-story-pin]")!;
+    const reveal = document.querySelector<HTMLElement>(".hf-post-story-reveal")!;
+    return {
+      stagePosition: getComputedStyle(stage).position,
+      revealState: reveal.dataset.revealState,
+      revealOpacity: getComputedStyle(reveal).opacity,
+    };
+  });
+  expect(beforeRelease.stagePosition).toBe("fixed");
+  expect(beforeRelease.revealState).toBe("pending");
+  expect(beforeRelease.revealOpacity).toBe("0");
+
+  await page.evaluate(({ start, travel }) => {
+    window.scrollTo({ top: start + travel + 100, behavior: "instant" });
+  }, geometry);
+  const reveal = page.locator(".hf-post-story-reveal");
+  await expect(reveal).toHaveAttribute("data-reveal-state", "revealed");
+  await expect(reveal).toHaveAttribute("data-reveal-motion", "entry");
+  const codaMotion = await page.locator("[data-quiet-coda]").evaluate((coda) => {
+    const word = coda.querySelector<HTMLElement>("[data-quiet-coda-word]");
+    const support = coda.querySelector<HTMLElement>("[data-quiet-coda-support]");
+    const action = coda.querySelector<HTMLElement>("[data-quiet-coda-action-cluster]");
+    return {
+      wordAnimation: word ? getComputedStyle(word).animationName : "",
+      supportAnimation: support ? getComputedStyle(support).animationName : "",
+      actionAnimation: action ? getComputedStyle(action).animationName : "",
+    };
+  });
+  expect(codaMotion).toEqual({
+    wordAnimation: "hf-quiet-coda-word-reveal",
+    supportAnimation: "hf-quiet-coda-support-reveal",
+    actionAnimation: "hf-quiet-coda-action-reveal",
+  });
+  await expect(page.locator("[data-quiet-coda] button")).toBeVisible();
+  await expect(page.locator("[data-scroll-story-pin]")).toHaveCSS("position", "relative");
+  expect(await page.locator(".pin-spacer").count()).toBe(1);
+  expect(await page.locator("[data-connected-family-owner]").count()).toBe(1);
   expect(pageErrors).toEqual([]);
 });
 

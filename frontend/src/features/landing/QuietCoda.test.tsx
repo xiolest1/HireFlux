@@ -58,7 +58,7 @@ describe("QuietCoda", () => {
     expect(action).toHaveAttribute("aria-busy", "true");
   });
 
-  it("is static and owns no landing reveal or animation hooks", () => {
+  it("keeps its semantic content free of landing reveal and animation hooks", () => {
     const { container } = render(
       <QuietCoda
         actionLabel="Continue Demo"
@@ -73,6 +73,56 @@ describe("QuietCoda", () => {
     expect(section.querySelector(".hf-section-reveal")).toBeNull();
     expect(section.querySelector(".hf-content-enter")).toBeNull();
     expect(section.querySelector("[data-hero-entrance]")).toBeNull();
+  });
+
+  it("keeps one accessible headline source and one decorative DOM-order word layer", () => {
+    const { container } = render(
+      <QuietCoda
+        actionLabel="Continue Demo"
+        error={null}
+        isCreating={false}
+        onAction={vi.fn()}
+      />,
+    );
+    const section = container.querySelector("[data-quiet-coda]")!;
+    const heading = screen.getByRole("heading", {
+      name: "What happened should help you see what matters now.",
+      level: 2,
+    });
+    const visualHeading = section.querySelector<HTMLElement>(
+      "[data-quiet-coda-visual-heading]",
+    )!;
+
+    expect(section.querySelectorAll("h2")).toHaveLength(1);
+    expect(heading.querySelectorAll("[data-quiet-coda-word]")).toHaveLength(9);
+    expect(visualHeading).toHaveAttribute("aria-hidden", "true");
+    expect(visualHeading.textContent).toBe(
+      "What happened should help you see what matters now.",
+    );
+    expect(heading.querySelector(".sr-only")).toHaveTextContent(
+      "What happened should help you see what matters now.",
+    );
+  });
+
+  it("keeps the supporting copy and action cluster ready for entry-scoped motion", () => {
+    const { container } = render(
+      <QuietCoda
+        actionLabel="Continue Demo"
+        error={null}
+        isCreating={false}
+        onAction={vi.fn()}
+      />,
+    );
+    const section = container.querySelector("[data-quiet-coda]")!;
+
+    expect(section.querySelector("[data-quiet-coda-support]")).toBeTruthy();
+    expect(section.querySelector("[data-quiet-coda-action-cluster]")).toBeTruthy();
+    expect(section.querySelector("[data-quiet-coda-support]")).not.toHaveAttribute(
+      "aria-hidden",
+    );
+    expect(section.querySelector("[data-quiet-coda-action-cluster]")).not.toHaveAttribute(
+      "aria-hidden",
+    );
   });
 
   it("owns the post-story handoff without duplicating top spacing", () => {

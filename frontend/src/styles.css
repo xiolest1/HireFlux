@@ -721,6 +721,42 @@
   }
 }
 
+@keyframes hf-quiet-coda-word-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hf-quiet-coda-support-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 5px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hf-quiet-coda-action-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 @keyframes hf-fade-in {
   from { opacity: 0; transform: translateY(0.25rem); }
   to { opacity: 1; transform: translateY(0); }
@@ -898,6 +934,32 @@
   animation: hf-landing-viewport-reveal 220ms var(--ease-enter);
 }
 
+.hf-post-story-reveal[data-reveal-state="revealed"][data-reveal-motion="entry"]
+  [data-quiet-coda-word] {
+  display: inline-block;
+  animation: hf-quiet-coda-word-reveal 260ms var(--ease-enter) both;
+  animation-delay: calc(var(--quiet-coda-word-index) * 32ms);
+}
+
+.hf-post-story-reveal[data-reveal-state="revealed"][data-reveal-motion="entry"]
+  [data-quiet-coda-support] {
+  animation: hf-quiet-coda-support-reveal 260ms var(--ease-enter) both;
+  animation-delay: 210ms;
+}
+
+.hf-post-story-reveal[data-reveal-state="revealed"][data-reveal-motion="entry"]
+  [data-quiet-coda-action-cluster] {
+  animation: hf-quiet-coda-action-reveal 240ms var(--ease-enter) both;
+  animation-delay: 390ms;
+}
+
+.hf-post-story-reveal[data-reveal-state="revealed"][data-reveal-motion="entry"]
+  [data-quiet-coda-action-cluster]:focus-within {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
 .hf-benefits-viewport {
   scrollbar-color: var(--hf-line-strong) transparent;
   scrollbar-width: thin;
@@ -1006,7 +1068,7 @@
 
 .hf-scroll-story-release-buffer {
   display: block;
-  min-height: clamp(4rem, calc(100svh - 52rem), 10rem);
+  min-height: clamp(4rem, calc(100svh - 56rem), 8rem);
 }
 
 .hf-connected-workspace [data-workspace-recent],

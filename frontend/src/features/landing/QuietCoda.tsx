@@ -1,5 +1,9 @@
+import { Fragment, type CSSProperties } from "react";
 import { Button } from "../../components/ui/Button";
 import { ErrorPanel } from "../../components/ui/Feedback";
+
+const quietCodaHeadline = "What happened should help you see what matters now.";
+const quietCodaHeadlineWords = quietCodaHeadline.split(" ");
 
 export interface QuietCodaProps {
   actionLabel: string;
@@ -30,9 +34,29 @@ export function QuietCoda({
             id="quiet-coda-title"
             className="max-w-2xl text-2xl font-black tracking-tight text-ink sm:text-3xl md:max-w-3xl lg:text-4xl dark:text-white"
           >
-            What happened should help you see what matters now.
+            <span className="sr-only">{quietCodaHeadline}</span>
+            <span aria-hidden="true" data-quiet-coda-visual-heading>
+              {quietCodaHeadlineWords.map((word, index) => (
+                <Fragment key={`${word}-${index}`}>
+                  <span
+                    data-quiet-coda-word
+                    style={
+                      {
+                        "--quiet-coda-word-index": index,
+                      } as CSSProperties
+                    }
+                  >
+                    {word}
+                  </span>
+                  {index < quietCodaHeadlineWords.length - 1 ? " " : null}
+                </Fragment>
+              ))}
+            </span>
           </h2>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-ink-muted dark:text-slate-300">
+          <p
+            className="mt-5 max-w-2xl text-base leading-7 text-ink-muted dark:text-slate-300"
+            data-quiet-coda-support
+          >
             When each opportunity keeps its context, you can return without
             rebuilding the story—and recognize whether the next move is yours.
           </p>
@@ -41,6 +65,7 @@ export function QuietCoda({
         <div
           className="mt-8 flex flex-col items-start gap-3"
           data-quiet-coda-beat="action"
+          data-quiet-coda-action-cluster
         >
           <Button
             variant="secondary"

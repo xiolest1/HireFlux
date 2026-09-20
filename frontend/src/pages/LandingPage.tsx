@@ -112,12 +112,14 @@ export function LandingPage() {
           </section>
         </LandingReveal>
 
-        <QuietCoda
-          actionLabel={actionLabel}
-          error={actionOrigin === "coda" ? error : null}
-          isCreating={isCreating}
-          onAction={() => void enterDemo("coda")}
-        />
+        <LandingViewportReveal className="hf-post-story-reveal">
+          <QuietCoda
+            actionLabel={actionLabel}
+            error={actionOrigin === "coda" ? error : null}
+            isCreating={isCreating}
+            onAction={() => void enterDemo("coda")}
+          />
+        </LandingViewportReveal>
       </main>
 
       <footer className="mx-auto flex max-w-7xl min-w-0 flex-col gap-2 border-t border-line px-4 py-8 text-sm text-ink-muted dark:border-slate-800 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8" data-landing-clip-check><p>HireFlux · Candidate job-search demo</p><p>Temporary workspaces expire automatically after 24 hours.</p></footer>
