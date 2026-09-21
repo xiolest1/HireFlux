@@ -9,6 +9,7 @@ export const scrollStoryJ3Configuration = {
   interviewEnterX: 48,
   preparationEnterY: 30,
   actionEnterY: 12,
+  stageEnvelopeReleaseClearancePx: 12,
 } as const;
 
 export const scrollStoryTimelineLabels = {

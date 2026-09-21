@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConnectedStoryJ3 } from "./ConnectedStoryJ3";
-import { scrollStoryTimelineLabels, scrollStoryTravelViewportHeights } from "./scrollStoryConfig";
+import { scrollStoryJ3Configuration, scrollStoryTimelineLabels, scrollStoryTravelViewportHeights } from "./scrollStoryConfig";
 
 const mocks = vi.hoisted(() => {
   let activeContexts = 0;
@@ -55,7 +55,12 @@ describe("ConnectedStoryJ3", () => {
     expect(mocks.timeline.addLabel).toHaveBeenCalledWith("preparation", scrollStoryTimelineLabels.preparation);
     expect(mocks.timeline.addLabel).toHaveBeenCalledWith("action-center", scrollStoryTimelineLabels.actionCenter);
     expect(mocks.timeline.addLabel).toHaveBeenCalledWith("settled", scrollStoryTimelineLabels.settled);
-    expect(mocks.timeline.fromTo).toHaveBeenCalledWith("[data-workspace-stage-envelope]", { y: 0 }, expect.objectContaining({ duration: 0.135 }), 0.67);
+    expect(mocks.timeline.fromTo).toHaveBeenCalledWith(
+      "[data-workspace-stage-envelope]",
+      { y: 0 },
+      expect.objectContaining({ duration: 0.135, y: scrollStoryJ3Configuration.stageEnvelopeReleaseClearancePx }),
+      0.67,
+    );
     expect(container.querySelector("[data-scroll-story-release-buffer]")).toBeInTheDocument();
     expect(container.querySelector("[data-connected-j3]")).toHaveAttribute("data-connected-timeline-active", "true");
     expect(container.querySelectorAll("[data-scroll-story-pin]")).toHaveLength(1);

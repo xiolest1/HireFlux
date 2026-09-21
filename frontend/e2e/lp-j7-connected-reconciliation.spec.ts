@@ -319,9 +319,9 @@ test("J3 release buffer keeps the Action-to-Coda gap compact without changing pi
   await openLanding(page);
 
   for (const viewport of [
-    { width: 1440, height: 900, releaseBuffer: 64 },
-    { width: 1280, height: 900, releaseBuffer: 64 },
-    { width: 1280, height: 800, releaseBuffer: 64 },
+    { width: 1440, height: 900, releaseBuffer: 16 },
+    { width: 1280, height: 900, releaseBuffer: 16 },
+    { width: 1280, height: 800, releaseBuffer: 16 },
   ]) {
     await page.setViewportSize(viewport);
     await openLanding(page);
@@ -339,6 +339,43 @@ test("J3 release buffer keeps the Action-to-Coda gap compact without changing pi
       };
     });
     expect(beforeRelease.releaseBuffer).toBeCloseTo(viewport.releaseBuffer, 0);
+
+    await page.evaluate(({ start, travel }) => {
+      window.scrollTo({ top: start + travel * 0.98, behavior: "instant" });
+    }, beforeRelease);
+    await page.waitForTimeout(120);
+    const forwardNearRelease = await page.evaluate(() => {
+      const stage = document.querySelector<HTMLElement>("[data-scroll-story-pin]")!;
+      const shell = document.querySelector<HTMLElement>("[data-connected-workspace]")!;
+      const heading = document.querySelector<HTMLElement>("#quiet-coda-title")!;
+      return {
+        stagePosition: getComputedStyle(stage).position,
+        gap: heading.getBoundingClientRect().top - shell.getBoundingClientRect().bottom,
+        revealState: document.querySelector<HTMLElement>(".hf-post-story-reveal")?.dataset.revealState,
+      };
+    });
+    expect(forwardNearRelease.stagePosition).toBe("fixed");
+    expect(forwardNearRelease.gap).toBeLessThanOrEqual(150);
+    expect(forwardNearRelease.revealState).toBe("pending");
+
+    await page.evaluate(({ start, travel }) => {
+      window.scrollTo({ top: start + travel * 1.02, behavior: "instant" });
+    }, beforeRelease);
+    await page.evaluate(({ start, travel }) => {
+      window.scrollTo({ top: start + travel * 0.98, behavior: "instant" });
+    }, beforeRelease);
+    await page.waitForTimeout(120);
+    const reverseNearRelease = await page.evaluate(() => {
+      const stage = document.querySelector<HTMLElement>("[data-scroll-story-pin]")!;
+      const shell = document.querySelector<HTMLElement>("[data-connected-workspace]")!;
+      const heading = document.querySelector<HTMLElement>("#quiet-coda-title")!;
+      return {
+        stagePosition: getComputedStyle(stage).position,
+        gap: heading.getBoundingClientRect().top - shell.getBoundingClientRect().bottom,
+      };
+    });
+    expect(reverseNearRelease.stagePosition).toBe("fixed");
+    expect(reverseNearRelease.gap).toBeLessThanOrEqual(150);
 
     await page.evaluate(({ start, travel }) => {
       window.scrollTo({ top: start + travel - 2, behavior: "instant" });
@@ -373,8 +410,8 @@ test("J3 release buffer keeps the Action-to-Coda gap compact without changing pi
         overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       };
     });
-    expect(released.codaHeadingTop - released.shellBottom).toBeGreaterThan(120);
-    expect(released.codaHeadingTop - released.shellBottom).toBeLessThan(200);
+    expect(released.codaHeadingTop - released.shellBottom).toBeGreaterThanOrEqual(96);
+    expect(released.codaHeadingTop - released.shellBottom).toBeLessThanOrEqual(104);
     expect(released.codaHeadingTop).toBeGreaterThan(released.shellBottom);
     expect(released.codaTop).toBeGreaterThanOrEqual(released.shellBottom);
     expect(released.footerTop).toBeGreaterThan(released.codaHeadingTop);

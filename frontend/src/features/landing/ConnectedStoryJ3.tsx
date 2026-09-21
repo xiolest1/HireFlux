@@ -174,7 +174,7 @@ export function ConnectedStoryJ3({ onChapterChange }: ConnectedStoryJ3Props) {
         const envelope = root.querySelector<HTMLElement>("[data-workspace-stage-envelope]")!;
         const stageBounds = stage.getBoundingClientRect();
         const envelopeBounds = envelope.getBoundingClientRect();
-        const outerDelta = Math.max(0, stageBounds.bottom - envelopeBounds.bottom);
+        const outerDelta = Math.max(0, stageBounds.bottom - envelopeBounds.bottom) + configuration.stageEnvelopeReleaseClearancePx;
         const selectChapter = (progress: number) => { const next = scrollChapterForProgress(progress); root.dataset.connectedProgress = String(progress); if (activeChapterRef.current !== next) { activeChapterRef.current = next; setActiveChapter(next); onChapterChange?.(next); } };
         let refreshing = false;
         const activeTimeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * configuration.travelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onRefreshInit: () => { refreshing = true; }, onRefresh: (trigger) => { refreshing = false; selectChapter(trigger.progress); }, onUpdate: (trigger) => { root.dataset.connectedProgress = String(trigger.progress); } } });

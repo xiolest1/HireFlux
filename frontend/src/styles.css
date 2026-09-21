@@ -1068,7 +1068,7 @@
 
 .hf-scroll-story-release-buffer {
   display: block;
-  min-height: clamp(4rem, calc(100svh - 56rem), 8rem);
+  min-height: clamp(1rem, calc(100svh - 56rem), 1.5rem);
 }
 
 .hf-connected-workspace [data-workspace-recent],
