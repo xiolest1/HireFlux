@@ -1,5 +1,205 @@
 # HireFlux development log
 
+## 2026-09-26 — Restore the original animated Connected Workspace
+
+The natural-flow implementation below was rejected after rendered product
+review. Its new exit-budget eligibility rule deliberately selected C-native on
+tall desktop windows, exposing all chapters at once instead of the animated
+Connected Workspace the candidate-facing page was intended to preserve. The
+geometry tests passed that newly authored fallback contract; that did not
+establish preservation of the desired desktop experience. The change was too
+broad for the original handoff complaint and is not the accepted production
+direction.
+
+Restored the exact pre-change versions from `b91bddd` (`Light mode improvement`)
+of all eleven tracked production/test files touched by that implementation.
+This restores the existing J3 GSAP pin, exact 2.5-viewport travel, original
+chapter timing, Action entrance/dwell, renderer-selection rules and checkpoint
+mapping. Removed the new sticky track, exit-budget dependency, tall-screen
+native-selection rule, added tail observations and story/Coda readiness gate.
+The earlier Coda word reveal, accessible heading, shared demo lifecycle,
+spacing, mobile/tablet and reduced-motion presentations are unchanged.
+
+Removed only the three agent-created rejected implementation files:
+`connectedStoryJ3Geometry.ts`, `connectedStoryJ3Geometry.test.ts` and
+`j3-natural-flow-exit.spec.ts`. An external recoverable copy of these and the
+eleven rejected file versions is retained at
+`C:/Users/xiole/AppData/Local/Temp/hireflux-rejected-natural-flow-backup/`.
+No reset, checkout, commit, staging, deployment or dependency change was used.
+The entry worktree contained only the preceding agent-owned changes; no
+unrelated user changes were reverted. The production/test tree now matches
+the pre-change commit, and only this dated devlog correction remains modified.
+Accepted design documents, Home/light-theme work, backend and product data
+remain untouched.
+
+Validation passed lint, TypeScript, all 310 unit/integration tests in 44 files
+with two workers, 13 dedicated accessibility tests, production build and three
+hosting-header tests. Live Chromium review verified J3, one owner, one timeline,
+one ScrollTrigger and one original pin spacer at 1280 × 900, 1440 × 900,
+1818 × 1080, 2182 × 1651 and the submitted screenshot's 2157 × 1797 dimensions
+in dark and light themes. Every size traversed Applications → Interviews →
+Preparation → Action and reversed back through that order; the native
+all-chapters presentation no longer replaces J3 at those tall sizes. Forty
+chapter captures and a tall-desktop forward/reverse recording were captured;
+representative chapter frames were inspected, alongside deterministic rendered
+chapter/owner checks. There were no browser console/page errors or
+ordinary-width overflow. The unchanged 1280 × 720 native C, 1024 × 768 and
+768 × 1024 full Progressive-C,
+430 × 932 and 390 × 844 compact C, 320 × 720 A, and reduced-motion native C
+selections were rechecked. Coda focus recovery remains visible and usable.
+The complete two-worker production-preview Playwright/Axe run passed 240 tests
+with 270 intentional viewport/capability skips in 5.0 minutes, including the
+restored pin-distance, Action dwell/release, Coda reveal, checkpoint, route
+cleanup, keyboard and shared CTA contracts. No visual baselines were changed.
+`git diff --check` passes; the frontend production and test tree has no diff.
+Evidence stays outside the repository at
+`C:/Users/xiole/AppData/Local/Temp/hireflux-restored-workspace-20260926/`.
+
+This is a recovery, not a new exit correction. The original reverse-scroll
+spacing behavior and tall-screen endpoint reachability limitation return
+with the original architecture. Maximum scroll reaches approximately 0.905
+timeline progress at 2182 × 1651 and 0.880 at 2157 × 1797, while ordinary tested
+desktops reach 1.00. Animated Action is present, but the extreme-tall endpoint
+is not represented as fully released. These limitations must not be concealed
+by changing renderer eligibility or replacing the animated presentation.
+Any further gap work requires a separate bounded pass that preserves this
+workspace experience.
+
+## 2026-09-26 — Natural-flow J3 Action ending and geometry-based fallback (superseded)
+
+Historical rejected implementation record: the code and its new test contracts
+described in this entry have been rolled back by the recovery entry above.
+
+Implemented the approved exit-contract change, not another spacing reduction.
+The previous GSAP pin kept the workspace stationary while the normal-flow Coda
+remained downstream of its reservation. Reverse scrolling therefore increased
+their visible separation even though the settled gap was already about 100px.
+Tall viewports could also put the configured trigger endpoint beyond the page's
+maximum scroll position. Earlier planning captures are retained outside the
+repository; they are before evidence, not new production results.
+
+J3 now has a local native sticky track ending at authored time 0.67. Its one
+existing GSAP timeline and one ScrollTrigger complete the Action entrance during
+ordinary document movement. The stationary 0.825–0.88 hold and GSAP pin spacer
+are removed. The former exact 2.5-viewport reservation is intentionally replaced
+by a bounded sticky/natural-flow clock; 2.5 viewports remains the reference rate
+for earlier choreography. Chapter content, stage/shell dimensions and screen
+position, earlier tween timing, typography, product data, the existing envelope
+release movement, and all section/release-buffer spacing remain unchanged.
+Envelope clearance uses untransformed stage/envelope heights so refresh cannot
+accumulate a previous translation.
+
+The tested internal geometry helper calculates reference rate 2.5H / 0.88,
+sticky travel 0.67 × rate, desired Action travel 0.155 × rate, and available
+Action travel stage height + measured post-story flow through Footer − H.
+Actual Action travel is the smaller of desired and available. Eligibility
+requires at least 0.135 × rate; missing/invalid measurements fail safe. Tail
+measurement uses offset geometry, actual release height and Connected bottom
+padding, excluding reveal transforms and any story reservation. Existing resize,
+font-readiness and refresh mechanisms recompute the budget; the existing resize
+observer additionally watches Coda and Footer. No new observer, listener,
+timer, timeline, trigger, dependency or document-end runway was introduced.
+
+For the current desktop copy and 16px root text, measured stage height is 688px
+and tail flow is 561px. At 1280/1440 × 900, reference rate is 2556.818px per
+authored unit, sticky travel 1713.068px, desired Action travel 396.307px and
+available/effective Action travel 349px: total trigger travel 2062.068px.
+At 1280 × 800, sticky travel is 1522.727px and effective Action travel
+352.273px: total 1875px, with 449px available. Both endpoints are reachable.
+The current measured eligibility boundary is approximately 903px high at the
+tested desktop width; 900px retains J3 and 906px deliberately selects C-native.
+1818 × 1080 and 2182 × 1651 also select C-native, not another sticky mode.
+This boundary is content/font/geometry-dependent, not a new hardcoded breakpoint.
+Existing tablet/full Progressive-C, phone/compact Progressive-C, short-viewport,
+A and reduced-motion rules remain intact.
+
+Version-1 chapter/local-progress checkpoints are retained. J3 restoration now
+maps semantic progress into the actual sticky and natural-flow ranges instead
+of assuming spacer top + 2.5H. Coda's existing reveal receives only boundary
+readiness from the story owner: normal first entry waits for Action settlement;
+restored post-story checkpoints, focus, reduced motion, unsupported observers
+and existing fail-visible paths resolve immediately without delayed children.
+A reload edge found in recording review was corrected: an existing post-story
+checkpoint now explicitly resolves wrapper and children with motion="none".
+The optional reveal gate defaults to previous behavior for all other consumers;
+it reuses the existing observer and never re-hides or replays a revealed Coda.
+Word choreography, accessible heading and the shared native demo action are
+unchanged.
+
+Controlled Chromium forward/reverse frames cover normalized actual travel
+0.76, 0.82, 0.86, 0.90, 0.94, 0.96, 0.98, 1.00 and 1.02 at 1440 × 900,
+1280 × 900 and 1280 × 800 in both themes. These fractions describe the new
+actual travel, not the former 2.5H reservation. Settled shell-to-heading spacing
+is 100px. Late reverse Action measurements are approximately 100–106px; first
+entry's pending wrapper adds its existing 3px settle. At 900px height, reverse
+0.90/0.94/0.98 gaps are approximately 105.35/100.31/100px. Reverse into
+Preparation returns the earlier authored scene rather than leaving completed
+Action stationary above an expanding void. Small movements around the sticky
+join (+8/+2/0/−2/−8px) produce stage tops −7.75/−1.75/0/0/0px in both themes,
+with no release jump. Tests check one owner, timeline and trigger, no pin spacer,
+endpoint reachability, Coda eligibility/one-shot restoration, Footer ordering
+and zero ordinary-width overflow. Height-only resizing returns from native
+fallback to J3 without reload. Existing route/Back/Forward/keyboard-intent,
+CTA lifecycle and cleanup coverage remains active.
+
+Rendered light-mode rechecks cover 1280 × 720 native C, 1024 × 768 and
+768 × 1024 full Progressive-C, 430 × 932 and 390 × 844 compact Progressive-C,
+320 × 720 A, reduced-motion 1280 × 900 native C, and both tall native fallbacks.
+Focus recovery settles pending Coda immediately. At 320 × 568 with doubled
+root text, Coda itself is contained and its native action wraps and remains
+usable, but unchanged surrounding landing regions produce 67px whole-page
+horizontal overflow. This was not concealed or fixed through unrelated Hero,
+Header or Benefits changes. Cold fragment navigation to #quiet-coda-title did
+not automatically scroll the lazy SPA page in the manual probe; restored
+checkpoint visibility and focus were verified separately. No new route/hash
+behavior was introduced.
+
+Evidence is external at
+`C:/Users/xiole/AppData/Local/Temp/hireflux-natural-flow-20260926/gallery.html`.
+The directory contains deterministic desktop frames, responsive/fallback and
+large-text captures, plus final dark/light forward/reverse recordings and reload
+captures. Final recordings are named `dark-forward-reverse-final.webm` and
+`light-forward-reverse-final.webm`; older unqualified recordings predate the
+restoration correction. Before production captures are in
+`C:/Users/xiole/AppData/Local/Temp/hireflux-gap-planning-20260926/current-*.png`;
+prototype trial images there are not represented as production evidence.
+Visual baselines have not been regenerated: existing references pass without
+updates. Screenshot similarity alone is not the geometry acceptance criterion.
+
+Validation passed ESLint, TypeScript, 322 Vitest tests in 45 files with
+`--maxWorkers=2`, a final 51-test focused geometry/lifecycle rerun, 13 dedicated
+accessibility tests, production build, three hosting-header tests, and
+`git diff --check` including this documentation addition. Initial unrestricted
+Vitest concurrency produced timeouts in unrelated route tests; bounded full
+reruns passed without weakened expectations. An earlier complete browser run
+passed 246 tests with 294 intentional skips. The expanded final run passed all
+new geometry/restoration tests but encountered `ERR_NO_BUFFER_SPACE` while
+navigating an unchanged Home light-theme fixture (246 passed, 298 skipped,
+one infrastructure failure). That fixture passed unchanged in isolation; the
+complete final two-worker Playwright/Axe rerun passed 247 tests with 298
+intentional viewport/capability skips in 4.9 minutes. No expectations or
+production behavior were changed to accommodate the infrastructure failure.
+
+Remaining limits: a deliberate first-entry readiness gate keeps Coda pending if
+the visitor pauses before Action finishes; it is not an additional layout
+reservation. Earlier-chapter reverse traversal necessarily returns earlier
+scenes, not a permanently adjacent CTA. Physical-device Safari and human comfort
+were not tested. The enlarged-text overflow and cold-fragment behavior above
+remain outside this bounded exit correction; no fully clean whole-page 200%
+text claim is made.
+
+Production scope is `ConnectedStory.tsx`, `ConnectedStoryFitProbe.tsx`,
+`ConnectedStoryJ3.tsx`, `connectedStoryReconciliation.ts`,
+`useConnectedStoryArchitecture.ts`, `LandingViewportReveal.tsx`,
+`LandingPage.tsx` and new `connectedStoryJ3Geometry.ts`. Test scope is the
+existing J3, architecture and viewport-reveal unit files, new geometry unit
+coverage, existing `lp-j7-connected-reconciliation.spec.ts` and new
+`j3-natural-flow-exit.spec.ts`. `docs/devlog.md` is the only documentation change.
+The worktree was clean at entry; no unrelated changes were reverted. Styles,
+Coda, C renderers, Hero, Benefits, Footer, accepted design documents, backend,
+API/routes, product data, dependencies and snapshots are untouched. No files
+were staged/committed/deployed, and no generated evidence was added to Git.
+
 ## 2026-09-26 — Authenticated workspace light-mode refinement
 
 Implemented the approved presentation-only light theme. The starting worktree
