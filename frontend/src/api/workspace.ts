@@ -19,6 +19,7 @@ import {
 
 const timestampSchema = z.string().datetime({ offset: true });
 const dateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const actionResponsibilitySchema = z.enum(["CANDIDATE", "EMPLOYER", "NONE"]).nullable().optional();
 
 const summarySchema = z.object({
   total_tracked: z.number().int().nonnegative(),
@@ -67,15 +68,26 @@ export const dashboardSchema = z.object({
         due_date: dateOnlySchema,
         priority: z.enum(["HIGH", "MEDIUM", "LOW"]),
         label: z.string().min(1),
+        responsibility: actionResponsibilitySchema,
       }),
       z.object({
-        kind: z.enum(["STALE_APPLICATION", "INTERVIEW_SOON"]),
+        kind: z.enum(["INTERVIEW_SOON", "INTERVIEW_UPCOMING"]),
         application_id: z.string().uuid(),
         company_name: z.string().min(1),
         job_title: z.string().min(1),
         due_at: timestampSchema,
         priority: z.enum(["HIGH", "MEDIUM", "LOW"]),
         label: z.string().min(1),
+        responsibility: actionResponsibilitySchema,
+      }),
+      z.object({
+        kind: z.enum(["CANDIDATE_ACTION_UNDATED", "STALE_APPLICATION"]),
+        application_id: z.string().uuid(),
+        company_name: z.string().min(1),
+        job_title: z.string().min(1),
+        priority: z.enum(["HIGH", "MEDIUM", "LOW"]),
+        label: z.string().min(1),
+        responsibility: actionResponsibilitySchema,
       }),
     ]),
   ),

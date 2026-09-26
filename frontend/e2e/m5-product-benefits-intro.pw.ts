@@ -255,7 +255,7 @@ test("controls, route remount, and live reduced motion remain independent", asyn
 
   await scrollInstantly(page, 0);
   await page.getByRole("button", { name: "Continue Demo" }).first().click();
-  await expect(page.getByRole("heading", { name: "Welcome back", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home", level: 1 })).toBeVisible();
   await page.goBack();
   await expect(region(page)).toBeVisible();
   await expect(reveal(page)).toHaveAttribute("data-reveal-state", "pending");

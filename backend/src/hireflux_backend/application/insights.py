@@ -86,19 +86,25 @@ class InsightsService:
         )
         actions = _actions(applications, due_follow_ups, now, local_today)
         for interview in upcoming:
-            if interview.scheduled_at <= now + timedelta(hours=24):
-                actions.append(
-                    {
-                        "kind": "INTERVIEW_SOON",
-                        "application_id": interview.application_id,
-                        "company_name": interview.company_name,
-                        "job_title": interview.job_title,
-                        "due_date": None,
-                        "due_at": interview.scheduled_at,
-                        "priority": "HIGH",
-                        "label": "Prepare for upcoming interview",
-                    }
-                )
+            actions.append(
+                {
+                    "kind": "INTERVIEW_SOON"
+                    if interview.scheduled_at <= now + timedelta(hours=24)
+                    else "INTERVIEW_UPCOMING",
+                    "application_id": interview.application_id,
+                    "company_name": interview.company_name,
+                    "job_title": interview.job_title,
+                    "due_date": None,
+                    "due_at": interview.scheduled_at,
+                    "priority": "HIGH"
+                    if interview.scheduled_at <= now + timedelta(hours=24)
+                    else "LOW",
+                    "label": "Prepare for upcoming interview"
+                    if interview.scheduled_at <= now + timedelta(hours=24)
+                    else "Review scheduled interview",
+                    "responsibility": None,
+                }
+            )
         actions.sort(key=_action_sort_key)
         return {
             "range": reporting_range,
@@ -574,6 +580,7 @@ def _actions(
                     "due_at": None,
                     "priority": "HIGH" if overdue else "MEDIUM",
                     "label": _follow_up_action_label(application, overdue=overdue),
+                    "responsibility": application.next_step_responsibility,
                 }
             )
     for application in applications:
@@ -586,16 +593,19 @@ def _actions(
         ):
             actions.append(
                 {
-                    "kind": "FOLLOW_UP_TODAY",
+                    "kind": "CANDIDATE_ACTION_UNDATED",
                     "application_id": application.application_id,
                     "company_name": application.company_name,
                     "job_title": application.job_title,
-                    "due_date": local_today,
+                    "due_date": None,
                     "due_at": None,
                     "priority": "MEDIUM",
                     "label": application.next_step_note or "Complete candidate next step",
+                    "responsibility": application.next_step_responsibility,
                 }
             )
+        # Home's 14-day APPLIED/SCREENING review cue is distinct from Search
+        # Health's stage-specific strategic pattern (21/14/9 days).
         if (
             application.status in {ApplicationStatus.APPLIED, ApplicationStatus.SCREENING}
             and application.stage_entered_at is not None
@@ -608,9 +618,10 @@ def _actions(
                     "company_name": application.company_name,
                     "job_title": application.job_title,
                     "due_date": None,
-                    "due_at": application.stage_entered_at + timedelta(days=14),
+                    "due_at": None,
                     "priority": "LOW",
-                    "label": "Review application with no recent progress",
+                    "label": "Review application after at least 14 days in this stage",
+                    "responsibility": None,
                 }
             )
     return sorted(actions, key=_action_sort_key)

@@ -76,7 +76,7 @@ const routes = [
     path: "/",
     heading: "Keep every opportunity connected to what comes next.",
   },
-  { name: "dashboard", path: "/dashboard", heading: "Welcome back" },
+  { name: "dashboard", path: "/dashboard", heading: "Home" },
   { name: "applications", path: "/applications", heading: "Applications" },
   {
     name: "application-create",
@@ -988,7 +988,7 @@ test("connected hero resolves one opportunity into one useful action", async ({
   await expect(story.locator("[data-flux-next-action]")).toBeVisible();
 
   await page.goto("/dashboard");
-  await expect(page.getByRole("heading", { name: "Welcome back", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home", level: 1 })).toBeVisible();
   await expect(page.locator("[data-flux-story]")).toHaveCount(0);
 
   await page.goto("/");
@@ -1241,7 +1241,7 @@ test("authenticated entry does not download the lazy landing route", async ({
   });
 
   await page.goto("/dashboard");
-  await expect(page.getByRole("heading", { name: "Welcome back", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home", level: 1 })).toBeVisible();
   expect(landingChunkRequests).toEqual([]);
 
   await page.goto("/");
@@ -1251,49 +1251,24 @@ test("authenticated entry does not download the lazy landing route", async ({
   expect(landingChunkRequests.length).toBeGreaterThanOrEqual(1);
 });
 
-test("Home progress story stays coherent, keyboard-operable, and accessible", async ({
+test("Home decision context and subordinate Analytics stay accessible", async ({
   page,
 }) => {
   await page.goto("/dashboard");
-  const story = page.getByRole("region", {
-    name: "How is my search progressing?",
-  });
-  await expect(story).toBeVisible();
-  await expect(
-    story.getByRole("link", { name: "View full Analytics" }),
-  ).toHaveCount(1);
-  await expect(story.getByText("Submission activity")).toHaveCount(0);
-  await expect(story.getByText("Progress brief")).toHaveCount(0);
-
-  const disclosure = story.getByRole("button", {
-    name: "See what changed and why",
-  });
-  await expect(disclosure).toHaveAttribute("aria-expanded", "false");
-  await disclosure.focus();
-  await page.keyboard.press("Enter");
-  await expect(disclosure).toHaveAttribute("aria-expanded", "true");
-  await expect(story.getByText("Compared with what", { exact: true })).toBeVisible();
-  await expect(
-    story.getByRole("heading", {
-      name: "Two equal-length periods in your selected range",
-    }),
-  ).toBeVisible();
-  await expect(story.getByText(/is compared with/)).toBeVisible();
-  await expect(
-    story.getByRole("progressbar", {
-      name: "Active opportunities with a scheduled next step",
-    }),
-  ).toBeVisible();
+  const decision = page.getByRole("region", { name: "What can I work on now?" });
+  await expect(decision).toBeVisible();
+  await expect(decision.getByRole("heading", { name: "Recorded overdue follow-ups" })).toBeVisible();
+  await decision.getByRole("button", { name: "View recorded overdue follow-ups details and options" }).click();
+  await expect(decision.getByText(/Why this is here: Check back with the employer/)).toBeVisible();
+  await expect(decision.getByRole("button", { name: "Complete follow-up" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Search patterns" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Explore Analytics" })).toHaveCount(1);
   await expectNoHorizontalPageOverflow(page);
-
   const accessibility = await new AxeBuilder({ page })
-    .include('section[aria-labelledby="progress-story-title"]')
+    .include('section[aria-labelledby="home-decision-title"]')
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
   expect(accessibility.violations).toEqual([]);
-
-  await page.keyboard.press("Space");
-  await expect(disclosure).toHaveAttribute("aria-expanded", "false");
 });
 
 test("interview journey selection, preparation, and deep-link refresh stay connected", async ({
@@ -1511,7 +1486,7 @@ test("keeps navigation present and consistent at breakpoint edges", async ({
     await page.setViewportSize(viewport);
     await page.goto("/dashboard");
     await expect(
-      page.getByRole("heading", { name: "Welcome back", level: 1 }),
+      page.getByRole("heading", { name: "Home", level: 1 }),
     ).toBeVisible();
     await expectNoHorizontalPageOverflow(page);
 
@@ -1994,6 +1969,6 @@ test("the desktop layout remains usable at a 200 percent zoom equivalent", async
     dimensions.clientWidth + 1,
   );
   await expect(
-    page.getByRole("heading", { name: "Welcome back", level: 1 }),
+    page.getByRole("heading", { name: "Home", level: 1 }),
   ).toBeVisible();
 });

@@ -109,7 +109,7 @@ function sidebarNavClassName(
 }
 
 function mobileNavClassName({ isActive }: { isActive: boolean }): string {
-  return `flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.68rem] font-semibold transition-colors ${
+  return `flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.68rem] font-semibold transition-colors ${
     isActive ? "text-accent" : "text-ink-muted hover:text-ink"
   }`;
 }
@@ -519,34 +519,34 @@ export function AppLayout() {
         </div>
 
         <nav
-          className="hf-glass fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line-subtle px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
+          className="hf-glass fixed inset-x-0 bottom-0 z-40 grid grid-cols-[1fr_1fr_1fr_1.3fr_1fr] border-t border-line-subtle px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
           aria-label="Mobile navigation"
         >
           {primaryNavigation.slice(0, 2).map(({ to, label, shortLabel, icon: Icon }) => (
             <NavLink key={to} to={to} className={mobileNavClassName}>
               <Icon aria-hidden="true" className="size-5" strokeWidth={2} />
-              <span>{shortLabel ?? label}</span>
+              <span className="max-w-full text-center [overflow-wrap:anywhere]">{shortLabel ?? label}</span>
             </NavLink>
           ))}
           <NavLink
             to="/applications/new"
             state={addApplicationState}
             aria-label="Add application"
-            className="relative flex min-h-14 flex-col items-center justify-end gap-1 pb-1 text-[0.68rem] font-bold text-accent"
+            className="relative flex min-h-14 min-w-0 flex-col items-center justify-end gap-1 pb-1 text-[0.68rem] font-bold text-accent"
           >
             <span className="absolute -top-5 flex size-12 items-center justify-center rounded-2xl border-4 border-canvas bg-accent text-accent-contrast shadow-lg shadow-cyan-950/20">
               <Plus aria-hidden="true" className="size-6" />
             </span>
-            <span>Add</span>
+            <span className="max-w-full text-center [overflow-wrap:anywhere]">Add</span>
           </NavLink>
           <NavLink to="/interviews" className={mobileNavClassName}>
             <CalendarDays aria-hidden="true" className="size-5" strokeWidth={2} />
-            <span>Interviews</span>
+            <span className="max-w-full text-center [overflow-wrap:anywhere]">Interviews</span>
           </NavLink>
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.68rem] font-semibold transition-colors ${
+            className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.68rem] font-semibold transition-colors ${
               location.pathname === "/analytics" || location.pathname === "/settings"
                 ? "text-accent"
                 : "text-ink-muted hover:text-ink"
@@ -554,7 +554,7 @@ export function AppLayout() {
             aria-label="More navigation"
           >
             <MenuIcon aria-hidden="true" className="size-5" strokeWidth={2} />
-            <span>More</span>
+            <span className="max-w-full text-center [overflow-wrap:anywhere]">More</span>
           </button>
         </nav>
 

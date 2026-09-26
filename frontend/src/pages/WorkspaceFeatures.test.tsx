@@ -104,589 +104,153 @@ function interviewContextHandlers(interviews = [makeInterview()]) {
 }
 
 describe("workspace milestone features", () => {
-  it("answers the core dashboard questions and completes a due follow-up", async () => {
-    const application = makeApplication({
-      version: 3,
-      follow_up_date: "2026-08-11",
-    });
-    let body: Record<string, unknown> | null = null;
+  it("keeps recorded commitments and their reasons in one decision context", async () => {
+    const application = makeApplication({ version: 3, follow_up_date: "2026-08-11" });
+    let completionBody: Record<string, unknown> | null = null;
     server.use(
-      http.get(`${API_ORIGIN}/api/v1/dashboard`, () =>
-        HttpResponse.json({
-          ...testDashboard,
-          actions: [
-            {
-              kind: "FOLLOW_UP_OVERDUE",
-              application_id: application.application_id,
-              company_name: application.company_name,
-              job_title: application.job_title,
-              due_date: "2026-08-11",
-              priority: "HIGH",
-              label: "Complete overdue follow-up",
-            },
-            {
-              kind: "INTERVIEW_SOON",
-              application_id: application.application_id,
-              company_name: application.company_name,
-              job_title: application.job_title,
-              due_at: "2026-08-14T01:00:00Z",
-              priority: "HIGH",
-              label: "Prepare for upcoming interview",
-            },
-          ],
-          recent_applications: [application],
-        }),
-      ),
-      http.get(`${API_ORIGIN}/api/v1/settings`, () =>
-        HttpResponse.json({
-          ...testSettings,
-          time_zone: "America/Los_Angeles",
-        }),
-      ),
-      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () =>
-        HttpResponse.json(application),
-      ),
-      http.post(
-        `${API_ORIGIN}/api/v1/applications/:applicationId/follow-up/complete`,
-        async ({ request }) => {
-          body = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({
-            ...application,
-            follow_up_date: null,
-            version: 4,
-          });
-        },
-      ),
-    );
-
-    const { user, queryClient } = renderApp("/dashboard");
-    const analyticsKey = ["analytics", { range: "30d" }] as const;
-    queryClient.setQueryData(analyticsKey, makeProgressAnalytics());
-    expect(
-      await screen.findByRole("heading", {
-        name: "How many jobs am I pursuing?",
-      }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("heading", { name: "What needs my attention today?" }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("heading", {
-        name: "How is my search progressing?",
-      }),
-    ).toBeVisible();
-    expect(screen.getByText("62% of submissions")).toBeVisible();
-    expect(
-      screen.getByText(/Complete overdue follow-up.*Aug 11, 2026/),
-    ).toBeVisible();
-    expect(
-      screen.queryByRole("button", { name: /more overdue/ }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/Prepare for upcoming interview.*Aug 13, 2026, 6:00 PM/),
-    ).toBeVisible();
-
-    const collapseActionCenter = screen.getByRole("button", {
-      name: "Collapse action center",
-    });
-    expect(collapseActionCenter).toHaveAttribute("aria-expanded", "true");
-    expect(collapseActionCenter).toHaveAttribute(
-      "aria-controls",
-      "action-center-content",
-    );
-    await user.click(collapseActionCenter);
-    expect(
-      screen.getByRole("button", { name: "Expand action center" }),
-    ).toHaveAttribute("aria-expanded", "false");
-    expect(
-      screen.getByText("2 actions · 1 overdue · 0 today · 1 upcoming"),
-    ).toBeVisible();
-    expect(document.getElementById("action-center-content")).toHaveAttribute("aria-hidden", "true");
-    expect(document.getElementById("action-center-content")).toHaveAttribute("inert");
-    expect(
-      screen.queryByRole("button", { name: "Complete" }),
-    ).not.toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: "Expand action center" }),
-    );
-    expect(screen.getByRole("button", { name: "Complete" })).toBeVisible();
-
-    const analyticsUpdatedAt = queryClient.getQueryState(analyticsKey)?.dataUpdatedAt ?? 0;
-    await user.click(screen.getByRole("button", { name: "Complete" }));
-    expect(await screen.findByText("Follow-up completed.")).toBeVisible();
-    expect(body).toEqual({ expected_version: 3 });
-    await waitFor(() =>
-      expect(queryClient.getQueryState(analyticsKey)?.dataUpdatedAt).toBeGreaterThan(
-        analyticsUpdatedAt,
-      ),
-    );
-  });
-
-  it("adapts Home for an early, calm search without inventing urgency", async () => {
-    server.use(
-      http.get(`${API_ORIGIN}/api/v1/dashboard`, () =>
-        HttpResponse.json({
-          ...testDashboard,
-          summary: {
-            ...testDashboard.summary,
-            total_tracked: 2,
-            active_pursuits: 2,
-          },
-          rates: { ...testDashboard.rates, submitted_count: 2 },
-          actions: [],
-          upcoming_interviews: [],
-          recent_applications: [],
-          submission_trend: testDashboard.submission_trend.map((point) => ({
-            ...point,
-            count: 0,
-          })),
-        }),
-      ),
-    );
-
-    renderApp("/dashboard");
-    expect(await screen.findByText("Building your foundation")).toBeVisible();
-    expect(
-      screen.getByText(
-        "Nothing needs immediate attention. You can continue without creating urgency.",
-      ),
-    ).toBeVisible();
-    expect(
-      screen.getAllByRole("link", { name: "Add an application" })[0],
-    ).toHaveAttribute("href", "/applications/new");
-    expect(
-      screen.getByText(
-        "There is no recent application activity to catch up on yet.",
-      ),
-    ).toBeVisible();
-  });
-
-  it("loads one progress narrative eagerly and reveals its reasoning on demand", async () => {
-    let analyticsRequests = 0;
-    server.use(
-      http.get(`${API_ORIGIN}/api/v1/analytics`, () => {
-        analyticsRequests += 1;
-        return HttpResponse.json(makeProgressAnalytics());
-      }),
-    );
-
-    const { user } = renderApp("/dashboard");
-    expect(await screen.findByText("Recent applications are converting more effectively")).toBeVisible();
-    expect(analyticsRequests).toBe(1);
-    expect(
-      screen.queryByRole("heading", { name: "50% response · 25% interview" }),
-    ).not.toBeInTheDocument();
-
-    const progressDisclosure = screen.getByRole("button", {
-      name: "See what changed and why",
-    });
-    expect(progressDisclosure).toHaveAttribute("aria-expanded", "false");
-    expect(progressDisclosure).toHaveAttribute("aria-controls", "progress-story-details");
-    await user.click(progressDisclosure);
-
-    expect(
-      await screen.findByRole("heading", { name: "50% response · 25% interview" }),
-    ).toBeVisible();
-    expect(analyticsRequests).toBe(1);
-    expect(screen.queryByText("3 applications higher than the previous period")).not.toBeInTheDocument();
-    expect(screen.getByText("20 percentage points higher than the previous period")).toBeVisible();
-    expect(screen.getByText("5 percentage points higher than the previous period")).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Two equal-length periods in your selected range" })).toBeVisible();
-    expect(
-      screen.getByText((_, element) =>
-        element?.tagName === "P"
-        && element.textContent === "Jul 13, 2026–Aug 12, 2026 is compared with Jun 12, 2026–Jul 12, 2026.",
-      ),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("heading", { name: "1 follow-up is overdue" }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "Review follow-ups" }),
-    ).toHaveAttribute(
-      "href",
-      "/applications?view=ACTIVE&follow_up=NEEDS_ATTENTION",
-    );
-    expect(
-      screen.getByText("1 overdue follow-ups · 1 due today · 1 without a next step"),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "View full Analytics" }),
-    ).toHaveAttribute("href", "/analytics?range=30d");
-
-    await user.click(progressDisclosure);
-    expect(
-      screen.queryByRole("heading", { name: "50% response · 25% interview" }),
-    ).not.toBeInTheDocument();
-    progressDisclosure.focus();
-    await user.keyboard("{Enter}");
-    expect(
-      await screen.findByRole("heading", { name: "50% response · 25% interview" }),
-    ).toBeVisible();
-    await user.keyboard(" ");
-    expect(
-      screen.queryByRole("heading", { name: "50% response · 25% interview" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("explains all-time progress and allows an analytics retry", async () => {
-    let allTimeAttempts = 0;
-    server.use(
-      http.get(`${API_ORIGIN}/api/v1/analytics`, ({ request }) => {
-        const range = new URL(request.url).searchParams.get("range");
-        if (range === "all") allTimeAttempts += 1;
-        if (range === "all" && allTimeAttempts === 1) {
-          return HttpResponse.json(
-            {
-              error: {
-                code: "UNEXPECTED",
-                message: "Analytics is temporarily unavailable.",
-                request_id: "request-123",
-              },
-            },
-            { status: 503 },
-          );
-        }
-        return HttpResponse.json(
-          makeProgressAnalytics(range === "all" ? "all" : "30d"),
-        );
-      }),
-    );
-
-    const { user } = renderApp("/dashboard");
-    await screen.findByRole("heading", {
-      name: "How is my search progressing?",
-    });
-    await user.selectOptions(screen.getByLabelText("Summary range"), "all");
-
-    expect(
-      await screen.findByText("Progress interpretation is temporarily unavailable."),
-    ).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Try again" }));
-
-    expect(await screen.findByText("Your complete tracked search history")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "See what changed and why" }));
-    expect(
-      await screen.findByRole("heading", { name: "Complete tracked history" }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("heading", { name: "History is context, not a trend" }),
-    ).toBeVisible();
-    expect(allTimeAttempts).toBe(2);
-    expect(
-      screen.getByRole("link", { name: "View full Analytics" }),
-    ).toHaveAttribute("href", "/analytics?range=all");
-  });
-
-  it("does not display a previous-range narrative while the selected range loads", async () => {
-    let releaseNinetyDayResponse: (() => void) | undefined;
-    const ninetyDayGate = new Promise<void>((resolve) => {
-      releaseNinetyDayResponse = resolve;
-    });
-    server.use(
-      http.get(`${API_ORIGIN}/api/v1/analytics`, async ({ request }) => {
-        const selectedRange = new URL(request.url).searchParams.get("range");
-        if (selectedRange === "90d") await ninetyDayGate;
-        const response = makeProgressAnalytics(selectedRange === "90d" ? "90d" : "30d");
-        if (selectedRange === "90d") {
-          response.progress_narrative.headline = "Ninety-day progress is ready";
-        }
-        return HttpResponse.json(response);
-      }),
-    );
-
-    const { user } = renderApp("/dashboard");
-    expect(await screen.findByText("Recent applications are converting more effectively")).toBeVisible();
-    await user.selectOptions(screen.getByLabelText("Summary range"), "90d");
-
-    expect(screen.queryByText("Recent applications are converting more effectively")).not.toBeInTheDocument();
-    expect(screen.getByRole("status", { name: "Interpreting your recent progress" })).toBeVisible();
-
-    releaseNinetyDayResponse?.();
-    expect(await screen.findByText("Ninety-day progress is ready")).toBeVisible();
-  });
-
-  it("renders an empty calm workspace without inventing a warning or action", async () => {
-    const emptyAnalytics = makeProgressAnalytics();
-    emptyAnalytics.rates = {
-      submitted_count: 0,
-      response_count: 0,
-      response_rate: 0,
-      interview_count: 0,
-      interview_rate: 0,
-      offer_count: 0,
-      offer_rate: 0,
-      acceptance_count: 0,
-      acceptance_rate: 0,
-    };
-    emptyAnalytics.progress_narrative = {
-      ...emptyAnalytics.progress_narrative,
-      state: "EMPTY",
-      tone: "NEUTRAL",
-      headline: "Your recent progress picture is waiting for activity",
-      explanation: "Submit and track applications to start seeing meaningful changes over time.",
-      primary_signal: null,
-      supporting_signals: emptyAnalytics.progress_narrative.supporting_signals.map((signal) => ({
-        ...signal,
-        direction: "NOT_AVAILABLE" as const,
-        emphasis: "CONTEXT" as const,
+      http.get(`${API_ORIGIN}/api/v1/dashboard`, () => HttpResponse.json({
+        ...testDashboard,
+        actions: [
+          { kind: "FOLLOW_UP_OVERDUE", application_id: application.application_id, company_name: application.company_name, job_title: application.job_title, due_date: "2026-08-11", priority: "HIGH", label: "Complete overdue follow-up" },
+          { kind: "INTERVIEW_SOON", application_id: "22222222-2222-4222-8222-222222222222", company_name: "Interview company", job_title: "Interview role", due_at: "2026-08-14T01:00:00Z", priority: "HIGH", label: "Prepare for upcoming interview" },
+        ],
+        recent_applications: [application],
       })),
-      process_health: {
-        tone: "NEUTRAL",
-        summary: "There are no active opportunities to schedule yet.",
-        active_count: 0,
-        scheduled_count: 0,
-        coverage_rate: 0,
-        overdue_count: 0,
-        due_today_count: 0,
-        missing_count: 0,
-      },
-      recommended_focus: null,
-    };
-    server.use(
-      http.get(`${API_ORIGIN}/api/v1/analytics`, () => HttpResponse.json(emptyAnalytics)),
+      http.get(`${API_ORIGIN}/api/v1/settings`, () => HttpResponse.json({ ...testSettings, time_zone: "America/Los_Angeles" })),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () => HttpResponse.json(application)),
+      http.post(`${API_ORIGIN}/api/v1/applications/:applicationId/follow-up/complete`, async ({ request }) => {
+        completionBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ ...application, follow_up_date: null, version: 4 });
+      }),
     );
-
     const { user } = renderApp("/dashboard");
-    expect(await screen.findByText("Your recent progress picture is waiting for activity")).toBeVisible();
-    expect(screen.getByText("There are no active opportunities to schedule yet.")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "See what changed and why" }));
-    expect(screen.getByRole("heading", { name: "No submitted activity in this range" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Tracking creates the comparison" })).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Review follow-ups" })).not.toBeInTheDocument();
+    await screen.findByText("Several recorded commitments");
+    const band = screen.getByRole("region", { name: "What can I work on now?" });
+    expect(within(band).getByText("Several recorded commitments")).toBeVisible();
+    expect(within(band).getByRole("heading", { name: "Recorded overdue follow-ups" })).toBeVisible();
+    expect(within(band).getByRole("heading", { name: "Scheduled interviews" })).toBeVisible();
+    expect(within(band).getByText(/Dates show recorded timing, not personal importance/)).toBeVisible();
+    expect(within(band).getAllByText(/Aug 13, 2026, 6:00 PM/)[0]).toBeVisible();
+    expect(within(band).getByRole("link", { name: "Interviews for Interview role · Interview company" })).toHaveAttribute("href", "/applications/22222222-2222-4222-8222-222222222222?section=interviews");
+    expect(screen.queryByText("What should I do next?")).not.toBeInTheDocument();
+    await user.click(within(band).getByRole("button", { name: "View recorded overdue follow-ups details and options" }));
+    expect(within(band).getByText("Why this is here: Complete overdue follow-up")).toBeVisible();
+    expect(within(band).getByText(/A recorded date signals timing/)).toBeVisible();
+    await user.click(within(band).getByRole("button", { name: "Complete follow-up" }));
+    expect(await screen.findByText("Follow-up completed.")).toBeVisible();
+    expect(completionBody).toEqual({ expected_version: 3 });
   });
 
-  it("keeps large action groups compact while revealing every action on demand", async () => {
-    const action = (
-      index: number,
-      kind: "FOLLOW_UP_OVERDUE" | "FOLLOW_UP_TODAY" | "INTERVIEW_SOON",
-    ) => ({
-      kind,
+  it("keeps a recorded follow-up discoverable while its date is rescheduled", async () => {
+    const application = makeApplication({ version: 3, follow_up_date: "2026-08-11" });
+    let rescheduleBody: Record<string, unknown> | null = null;
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/dashboard`, () => HttpResponse.json({
+        ...testDashboard,
+        actions: [{ kind: "FOLLOW_UP_OVERDUE", application_id: application.application_id, company_name: application.company_name, job_title: application.job_title, due_date: "2026-08-11", priority: "HIGH", label: "Complete overdue follow-up" }],
+      })),
+      http.get(`${API_ORIGIN}/api/v1/applications/:applicationId`, () => HttpResponse.json(application)),
+      http.post(`${API_ORIGIN}/api/v1/applications/:applicationId/follow-up/reschedule`, async ({ request }) => {
+        rescheduleBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ ...application, follow_up_date: "2026-08-20", version: 4 });
+      }),
+    );
+    const { user } = renderApp("/dashboard");
+    const band = await screen.findByRole("region", { name: "What can I work on now?" });
+    await user.click(await within(band).findByRole("button", { name: "View details and options" }));
+    await user.click(await within(band).findByRole("button", { name: "Reschedule" }));
+    expect(within(band).getByRole("heading", { name: "Recorded overdue follow-ups" })).toBeVisible();
+    fireEvent.change(within(band).getByLabelText("New follow-up date"), { target: { value: "2026-08-20" } });
+    await user.click(within(band).getByRole("button", { name: "Save date" }));
+    expect(await screen.findByText("Follow-up rescheduled.")).toBeVisible();
+    expect(rescheduleBody).toEqual({ expected_version: 3, follow_up_date: "2026-08-20" });
+    expect(within(band).queryByLabelText("New follow-up date")).not.toBeInTheDocument();
+  });
+
+  it("distinguishes waiting from an unavailable ownership check", async () => {
+    server.use(
+      http.get(`${API_ORIGIN}/api/v1/applications/workspace`, () => HttpResponse.json({
+        generated_at: "2026-08-12T13:00:00Z",
+        groups: {
+          needs_action: { total_count: 0, items: [], next_cursor: null },
+          moving_forward: { total_count: 0, items: [], next_cursor: null },
+          waiting: { total_count: 2, items: [], next_cursor: null },
+        },
+      })),
+    );
+    renderApp("/dashboard");
+    expect(await screen.findByText("Some opportunities are in a waiting state")).toBeVisible();
+    expect(screen.queryByText("You are caught up.")).not.toBeInTheDocument();
+  });
+
+  it("treats failed operational evidence as partial, not a clean slate", async () => {
+    server.use(http.get(`${API_ORIGIN}/api/v1/applications/workspace`, () => HttpResponse.json({ error: { code: "UNEXPECTED", message: "Unavailable", request_id: "test" } }, { status: 503 })));
+    renderApp("/dashboard");
+    expect(await screen.findByText("The full decision context is not available")).toBeVisible();
+    expect(screen.getByText(/Evidence is incomplete; this is not an all-clear/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Retry missing information" })).toBeVisible();
+  });
+
+  it("keeps strategic reporting below the decision and honors its selected range", async () => {
+    server.use(http.get(`${API_ORIGIN}/api/v1/analytics`, ({ request }) => {
+      const selected = new URL(request.url).searchParams.get("range");
+      return HttpResponse.json(makeProgressAnalytics(selected === "90d" ? "90d" : selected === "all" ? "all" : "30d"));
+    }));
+    const { user } = renderApp("/dashboard");
+    expect(await screen.findByText("Recent applications are converting more effectively")).toBeVisible();
+    await user.selectOptions(screen.getByLabelText("Reporting range"), "all");
+    expect(await screen.findByText("Your complete tracked search history")).toBeVisible();
+    expect(screen.getByRole("link", { name: /Explore Analytics/ })).toHaveAttribute("href", "/analytics?range=all");
+    expect(screen.queryByText("What deserves attention")).not.toBeInTheDocument();
+  });
+
+  it("reveals extra recorded rows without hiding the first commitments", async () => {
+    const actions = Array.from({ length: 8 }, (_, index) => ({
+      kind: "FOLLOW_UP_OVERDUE",
       application_id: `11111111-1111-4111-8111-${String(index + 1).padStart(12, "0")}`,
       company_name: `Company ${index + 1}`,
-      job_title: `${kind} role ${index + 1}`,
-      due_date: kind === "INTERVIEW_SOON" ? null : "2026-08-11",
-      due_at: kind === "INTERVIEW_SOON" ? "2026-08-14T15:00:00Z" : null,
-      priority: kind === "FOLLOW_UP_OVERDUE" ? "HIGH" : "MEDIUM",
-      label:
-        kind === "FOLLOW_UP_OVERDUE"
-          ? "Complete overdue follow-up"
-          : kind === "FOLLOW_UP_TODAY"
-            ? "Follow up today"
-            : "Prepare for upcoming interview",
-    });
-    const actions = [
-      ...Array.from({ length: 9 }, (_, index) =>
-        action(index, "FOLLOW_UP_OVERDUE"),
-      ),
-      ...Array.from({ length: 4 }, (_, index) =>
-        action(index + 9, "FOLLOW_UP_TODAY"),
-      ),
-      ...Array.from({ length: 5 }, (_, index) =>
-        action(index + 13, "INTERVIEW_SOON"),
-      ),
-    ];
-    server.use(
-      http.get(`${API_ORIGIN}/api/v1/dashboard`, () =>
-        HttpResponse.json({ ...testDashboard, actions }),
-      ),
-      http.get(`${API_ORIGIN}/api/v1/settings`, () =>
-        HttpResponse.json(testSettings),
-      ),
-    );
-
+      job_title: `Role ${index + 1}`,
+      due_date: "2026-08-11",
+      priority: "HIGH",
+      label: "Complete overdue follow-up",
+    }));
+    server.use(http.get(`${API_ORIGIN}/api/v1/dashboard`, () => HttpResponse.json({ ...testDashboard, actions })));
     const { user } = renderApp("/dashboard");
-    expect(
-      await screen.findByRole("heading", {
-        name: "What needs my attention today?",
-      }),
-    ).toBeVisible();
-    await user.click(
-      screen.getByRole("button", { name: "Expand action center" }),
-    );
-    expect(
-      screen.getByRole("heading", { name: /Overdue \(9\)/ }),
-    ).toBeVisible();
-    expect(screen.getByText("Showing 3 of 9")).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "FOLLOW_UP_OVERDUE role 1" }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "FOLLOW_UP_OVERDUE role 3" }),
-    ).toBeVisible();
-    expect(
-      screen.queryByRole("link", { name: "FOLLOW_UP_OVERDUE role 4" }),
-    ).not.toBeInTheDocument();
-
-    const showMoreOverdue = screen.getByRole("button", {
-      name: "Show 6 more overdue actions",
-    });
-    expect(showMoreOverdue).toHaveAttribute("aria-expanded", "false");
-    expect(showMoreOverdue).toHaveAttribute(
-      "aria-controls",
-      "attention-overdue-items",
-    );
-    showMoreOverdue.focus();
-    await user.keyboard("{Enter}");
-    expect(
-      screen.getByRole("button", { name: "Show fewer overdue actions" }),
-    ).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("Showing 9 of 9")).toBeVisible();
-    const ninthLink = screen.getByRole("link", {
-      name: "FOLLOW_UP_OVERDUE role 9",
-    });
-    expect(ninthLink).toBeVisible();
-
-    const ninthCard = ninthLink.closest("li");
-    expect(ninthCard).not.toBeNull();
-    await user.click(
-      within(ninthCard as HTMLElement).getByRole("button", {
-        name: "Reschedule",
-      }),
-    );
-    await user.type(screen.getByLabelText("New follow-up date"), "2026-08-20");
-    await user.click(
-      screen.getByRole("button", { name: "Show fewer overdue actions" }),
-    );
-    expect(
-      screen.queryByLabelText("New follow-up date"),
-    ).not.toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: "Show 6 more overdue actions" }),
-    );
-    expect(screen.getByLabelText("New follow-up date")).toHaveValue(
-      "2026-08-20",
-    );
-
-    expect(screen.getByText("Showing 3 of 4")).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Show 1 more today action" }),
-    ).toBeVisible();
-    expect(screen.getByText("Showing 3 of 5")).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Show 2 more upcoming actions" }),
-    ).toBeVisible();
-
-    await user.click(
-      screen.getByRole("button", { name: "Collapse action center" }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Expand action center" }),
-    );
-    expect(
-      screen.getByRole("link", { name: "FOLLOW_UP_OVERDUE role 9" }),
-    ).toBeVisible();
-    await user.click(
-      screen.getByRole("button", { name: "Show fewer overdue actions" }),
-    );
-    expect(
-      screen.queryByRole("link", { name: "FOLLOW_UP_OVERDUE role 9" }),
-    ).not.toBeInTheDocument();
+    await screen.findByText("Several recorded commitments");
+    const band = screen.getByRole("region", { name: "What can I work on now?" });
+    expect(within(band).getByRole("link", { name: "Role 1 · Company 1" })).toBeVisible();
+    expect(within(band).getByText("8 overdue")).toBeVisible();
+    expect(within(band).queryByRole("link", { name: "Role 8 · Company 8" })).not.toBeInTheDocument();
+    const more = within(band).getByRole("button", { name: /See all 8 returned items/ });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    await user.click(more);
+    expect(within(band).getByRole("link", { name: "Role 8 · Company 8" })).toBeVisible();
   });
 
-  it("remembers the Action Center per workspace and preserves a reschedule draft", async () => {
-    const application = makeApplication({ follow_up_date: "2026-08-11" });
-    server.use(
-      http.get(`${API_ORIGIN}/api/v1/dashboard`, () =>
-        HttpResponse.json({
-          ...testDashboard,
-          actions: [
-            {
-              kind: "FOLLOW_UP_OVERDUE",
-              application_id: application.application_id,
-              company_name: application.company_name,
-              job_title: application.job_title,
-              due_date: "2026-08-11",
-              priority: "HIGH",
-              label: "Complete overdue follow-up",
-            },
-          ],
-        }),
-      ),
-      http.get(`${API_ORIGIN}/api/v1/settings`, () =>
-        HttpResponse.json(testSettings),
-      ),
-    );
-
-    const firstRender = renderApp("/dashboard");
-    const reschedule = await screen.findByRole("button", {
-      name: "Reschedule",
-    });
-    await firstRender.user.click(reschedule);
-    const date = screen.getByLabelText("New follow-up date");
-    await firstRender.user.type(date, "2026-08-20");
-    await firstRender.user.click(
-      screen.getByRole("button", { name: "Collapse action center" }),
-    );
-    expect(document.getElementById("action-center-content")).toHaveAttribute("aria-hidden", "true");
-    expect(document.getElementById("action-center-content")).toHaveAttribute("inert");
-    expect(screen.getByLabelText("New follow-up date")).toHaveValue(
-      "2026-08-20",
-    );
-    expect(
-      window.sessionStorage.getItem("hireflux-action-center.v1"),
-    ).toContain('"collapsed":true');
-    await firstRender.user.click(
-      screen.getByRole("button", { name: "Expand action center" }),
-    );
-    expect(screen.getByLabelText("New follow-up date")).toHaveValue(
-      "2026-08-20",
-    );
-    await firstRender.user.click(
-      screen.getByRole("button", { name: "Collapse action center" }),
-    );
-
-    firstRender.unmount();
-    const sameWorkspace = renderApp("/dashboard");
-    expect(
-      await screen.findByRole("button", { name: "Expand action center" }),
-    ).toBeVisible();
-    sameWorkspace.unmount();
-
-    renderApp("/dashboard", {
-      session: {
-        access_token: "different.demo.session.token.value.123456789",
-        token_type: "Bearer",
-        expires_at: "2099-08-11T12:00:00Z",
-      },
-    });
-    expect(
-      await screen.findByRole("button", { name: "Collapse action center" }),
-    ).toBeVisible();
+  it("keeps no-records distinct from a quiet recorded search", async () => {
+    server.use(http.get(`${API_ORIGIN}/api/v1/dashboard`, () => HttpResponse.json({
+      ...testDashboard,
+      summary: { total_tracked: 0, active_pursuits: 0, drafts: 0, accepted: 0, rejected: 0, withdrawn: 0, archived: 0 },
+      actions: [], recent_applications: [],
+    })));
+    renderApp("/dashboard");
+    expect(await screen.findByText("Start with a recorded opportunity")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Record an application" })).toHaveAttribute("href", "/applications/new");
+    expect(screen.queryByRole("heading", { name: "Search patterns" })).not.toBeInTheDocument();
   });
 
-  it("migrates, persists, and dismisses the candidate search tour", async () => {
-    window.sessionStorage.setItem(
-      "hireflux-recruiter-guide",
-      JSON.stringify({
-        status: true,
-        engagement: false,
-        analytics: false,
-        dismissed: false,
-      }),
-    );
+  it("retains optional tour dismissal without making it operational work", async () => {
+    window.sessionStorage.setItem("hireflux-recruiter-guide", JSON.stringify({ status: true, engagement: false, analytics: false, dismissed: false }));
     const { user } = renderApp("/dashboard");
-    expect(
-      await screen.findByRole("heading", {
-        name: "Three ways to explore HireFlux",
-      }),
-    ).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Explore the demo workspace" })).toBeVisible();
     expect(screen.getByText("Search tour · 1/3")).toBeVisible();
-    await user.click(
-      screen.getByRole("button", { name: "Dismiss search tour" }),
-    );
-    expect(
-      screen.queryByRole("heading", { name: "Three ways to explore HireFlux" }),
-    ).not.toBeInTheDocument();
-    expect(window.sessionStorage.getItem("hireflux-search-tour")).toContain(
-      '"dismissed":true',
-    );
-    expect(window.sessionStorage.getItem("hireflux-search-tour")).toContain(
-      '"status":true',
-    );
-    expect(
-      window.sessionStorage.getItem("hireflux-recruiter-guide"),
-    ).toBeNull();
+    expect(screen.getByText("Optional ways to learn; not a recorded task.")).toBeVisible();
+    await user.click(screen.getByText("View tour details"));
+    expect(screen.getByText("Move an application forward")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Dismiss search tour" }));
+    expect(screen.queryByRole("heading", { name: "Explore the demo workspace" })).not.toBeInTheDocument();
+    expect(window.sessionStorage.getItem("hireflux-search-tour")).toContain('"dismissed":true');
+    expect(window.sessionStorage.getItem("hireflux-recruiter-guide")).toBeNull();
   });
 
   it("binds analytics filters to the API and labels small samples", async () => {

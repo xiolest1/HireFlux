@@ -8,6 +8,7 @@ from hireflux_backend.api.schemas import ApplicationResponse
 from hireflux_backend.domain.enums import (
     ApplicationSource,
     ApplicationStatus,
+    NextStepResponsibility,
     StageAgeBucket,
     WorkMode,
 )
@@ -38,7 +39,14 @@ class InsightRatesResponse(BaseModel):
 
 
 class ActionResponse(BaseModel):
-    kind: Literal["FOLLOW_UP_OVERDUE", "FOLLOW_UP_TODAY", "STALE_APPLICATION", "INTERVIEW_SOON"]
+    kind: Literal[
+        "FOLLOW_UP_OVERDUE",
+        "FOLLOW_UP_TODAY",
+        "CANDIDATE_ACTION_UNDATED",
+        "STALE_APPLICATION",
+        "INTERVIEW_SOON",
+        "INTERVIEW_UPCOMING",
+    ]
     application_id: str
     company_name: str
     job_title: str
@@ -46,14 +54,18 @@ class ActionResponse(BaseModel):
     due_at: datetime | None = None
     priority: Literal["HIGH", "MEDIUM", "LOW"]
     label: str
+    responsibility: NextStepResponsibility | None = None
 
     @model_validator(mode="after")
-    def require_exactly_one_due_value(self) -> "ActionResponse":
-        if (self.due_date is None) == (self.due_at is None):
-            raise ValueError("Actions require exactly one of due_date or due_at.")
-        follow_up = self.kind in {"FOLLOW_UP_OVERDUE", "FOLLOW_UP_TODAY"}
-        if follow_up != (self.due_date is not None):
-            raise ValueError("Follow-ups require due_date; timed actions require due_at.")
+    def require_kind_appropriate_time(self) -> "ActionResponse":
+        if self.kind in {"FOLLOW_UP_OVERDUE", "FOLLOW_UP_TODAY"}:
+            if self.due_date is None or self.due_at is not None:
+                raise ValueError("Dated follow-ups require only due_date.")
+        elif self.kind in {"INTERVIEW_SOON", "INTERVIEW_UPCOMING"}:
+            if self.due_at is None or self.due_date is not None:
+                raise ValueError("Scheduled interviews require only due_at.")
+        elif self.due_date is not None or self.due_at is not None:
+            raise ValueError("Undated actions and stage-age cues must not imply a due time.")
         return self
 
 

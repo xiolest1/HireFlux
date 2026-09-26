@@ -53,7 +53,7 @@ describe("demo workspace flow", () => {
     const { user } = renderApp("/", { withSession: false });
     await user.click(screen.getAllByRole("button", { name: "Explore the Demo" })[0]);
 
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
     expect(authorization).toBe(`Bearer ${issuedSession.access_token}`);
     expect(idempotencyKey).toMatch(/^[0-9a-f-]{36}$/i);
     expect(getDemoSession()?.access_token).toBe(issuedSession.access_token);
@@ -98,7 +98,7 @@ describe("demo workspace flow", () => {
 
     releaseRequest?.();
     await activation;
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
     expect(requestCount).toBe(1);
   });
 
@@ -154,7 +154,7 @@ describe("demo workspace flow", () => {
     expect(document.documentElement).not.toHaveClass("dark");
 
     await user.click(screen.getAllByRole("button", { name: "Explore the Demo" })[0]);
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
     await waitFor(() => expect(document.documentElement).not.toHaveClass("dark"));
   });
 
@@ -167,7 +167,7 @@ describe("demo workspace flow", () => {
       }),
     );
     const { user } = renderApp("/dashboard");
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
     window.sessionStorage.setItem("hireflux-search-tour", '{"dismissed":true}');
     window.sessionStorage.setItem("hireflux-recruiter-guide", '{"dismissed":true}');
 
@@ -211,7 +211,7 @@ describe("demo workspace flow", () => {
       }),
     );
     const { user } = renderApp("/dashboard");
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Reset demo" }));
     await user.click(screen.getByRole("button", { name: "Reset workspace" }));
@@ -222,7 +222,7 @@ describe("demo workspace flow", () => {
     );
     expect(error).toHaveFocus();
     expect(screen.getByRole("alertdialog", { name: "Reset this demo?" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Home" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
     expect(hasManualTimeZonePreference()).toBe(true);
 
@@ -254,7 +254,7 @@ describe("demo workspace flow", () => {
       } as Intl.ResolvedDateTimeFormatOptions);
 
     const { user } = renderApp("/dashboard");
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
     expect(timeZoneUpdate).toBeNull();
     await user.click(screen.getByRole("button", { name: "Reset demo" }));
     await user.click(screen.getByRole("button", { name: "Reset workspace" }));
@@ -285,7 +285,7 @@ describe("demo workspace flow", () => {
     expect(await screen.findByText(/HireFlux could not reach the API/)).toBeVisible();
 
     await user.click(screen.getAllByRole("button", { name: "Explore the Demo" })[0]);
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
     expect(idempotencyKeys).toHaveLength(2);
     expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
   });
@@ -316,7 +316,7 @@ describe("demo workspace flow", () => {
     expect(await screen.findByText(/still in progress/)).toBeVisible();
 
     await user.click(screen.getAllByRole("button", { name: "Explore the Demo" })[0]);
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
     expect(idempotencyKeys).toHaveLength(2);
     expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
   });
@@ -340,7 +340,7 @@ describe("demo workspace flow", () => {
     );
 
     const { user } = renderApp("/dashboard");
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Reset demo" }));
     await user.click(screen.getByRole("button", { name: "Reset workspace" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Unable to reset demo");
@@ -379,12 +379,11 @@ describe("demo workspace flow", () => {
 
     const { user, queryClient } = renderApp("/dashboard");
     const dashboardKey = ["dashboard", "30d"] as const;
-    const initialTotal = await screen.findByText("Total tracked");
-    expect(within(initialTotal.parentElement!).getByText("16")).toBeVisible();
+    expect(await screen.findByText(/16 tracked/)).toBeVisible();
     queryClient.setQueryData(dashboardKey, oldDashboard);
     await waitFor(() =>
       expect(
-        within(screen.getByText("Total tracked").parentElement!).getByText("17"),
+        screen.getByText(/17 tracked/),
       ).toBeVisible(),
     );
 
@@ -393,27 +392,24 @@ describe("demo workspace flow", () => {
 
     expect(screen.getByRole("alertdialog", { name: "Reset this demo?" })).toBeVisible();
     expect(screen.getByText("Preparing a fresh demo workspace...")).toBeVisible();
-    expect(screen.queryByText("17")).not.toBeInTheDocument();
+    expect(screen.queryByText(/17 tracked/)).not.toBeInTheDocument();
     expect(queryClient.getQueryData(dashboardKey)).toBeUndefined();
 
     await waitFor(() => expect(releaseReset.current).toEqual(expect.any(Function)));
     releaseReset.current?.();
     await screen.findByText("Demo workspace reset.");
-    const totalTracked = (await screen.findByText("Total tracked")).parentElement!;
-    await waitFor(() =>
-      expect(within(totalTracked).getByText("16")).toBeVisible(),
-    );
+    expect(await screen.findByText(/16 tracked/)).toBeVisible();
     await waitFor(() => {
       expect(queryClient.getQueryData(dashboardKey)).toEqual(newDashboard);
-      expect(screen.queryByText("17")).not.toBeInTheDocument();
+      expect(screen.queryByText(/17 tracked/)).not.toBeInTheDocument();
     });
-    expect(screen.queryByText("17")).not.toBeInTheDocument();
+    expect(screen.queryByText(/17 tracked/)).not.toBeInTheDocument();
     expect(dashboardAuthorization).toBe(`Bearer ${issuedSession.access_token}`);
   });
 
   it("contains focus in the reset dialog and restores it when closed", async () => {
     const { user } = renderApp("/dashboard");
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
 
     const resetTrigger = screen.getByRole("button", { name: "Reset demo" });
     await user.click(resetTrigger);

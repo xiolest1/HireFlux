@@ -85,7 +85,7 @@ function useAnalyticsFixture() {
 describe("principal route accessibility", () => {
   it.each([
     ["landing", "/", false, "Keep every opportunity connected to what comes next."],
-    ["dashboard", "/dashboard", true, "Welcome back"],
+    ["dashboard", "/dashboard", true, "Home"],
     ["applications", "/applications", true, "Applications"],
     ["interviews", "/interviews", true, "Interviews"],
     ["settings", "/settings", true, "Settings & profile"],
@@ -102,11 +102,10 @@ describe("principal route accessibility", () => {
     await expectNoAxeViolations();
   });
 
-  it("has no automated violations in the expanded Home progress story", async () => {
-    const { user } = renderApp("/dashboard");
+  it("has no automated violations in the Home decision and strategic context", async () => {
+    renderApp("/dashboard");
     expect(await screen.findByText("Recent applications are converting more effectively")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "See what changed and why" }));
-    expect(await screen.findByRole("heading", { name: "50% response · 25% interview" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "What can I work on now?" })).toBeVisible();
     await expectNoAxeViolations();
   });
 
@@ -136,7 +135,7 @@ describe("overlay accessibility", () => {
 
   it("keeps the workspace More sheet free of automated violations", async () => {
     const { user } = renderApp("/dashboard");
-    await screen.findByRole("heading", { name: "Welcome back", level: 1 });
+    await screen.findByRole("heading", { name: "Home", level: 1 });
     await user.click(screen.getByRole("button", { name: "More navigation" }));
     expect(await screen.findByRole("dialog", { name: "Workspace" })).toBeVisible();
     await expectNoAxeViolations();
@@ -144,7 +143,7 @@ describe("overlay accessibility", () => {
 
   it("keeps the reset confirmation free of automated violations", async () => {
     const { user } = renderApp("/dashboard");
-    await screen.findByRole("heading", { name: "Welcome back", level: 1 });
+    await screen.findByRole("heading", { name: "Home", level: 1 });
     await user.click(screen.getByRole("button", { name: "Reset demo" }));
     expect(await screen.findByRole("alertdialog", { name: "Reset this demo?" })).toBeVisible();
     await expectNoAxeViolations();

@@ -24,6 +24,14 @@ export const server = setupServer(
   http.get(`${API_ORIGIN}/api/v1/applications`, () =>
     HttpResponse.json({ items: [], next_cursor: null }),
   ),
+  http.get(`${API_ORIGIN}/api/v1/applications/workspace`, () =>
+    HttpResponse.json({
+      generated_at: "2026-08-12T13:00:00Z",
+      groups: Object.fromEntries(
+        ["needs_action", "moving_forward", "waiting"].map((group) => [group, { total_count: 0, items: [], next_cursor: null }]),
+      ),
+    }),
+  ),
   http.post(`${API_ORIGIN}/api/v1/applications/duplicate-candidates`, () =>
     HttpResponse.json({ candidates: [] }),
   ),

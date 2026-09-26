@@ -1,8 +1,10 @@
+from dataclasses import replace
 from datetime import UTC, date, datetime
+from types import SimpleNamespace
 from typing import cast
 
 from hireflux_backend.application.insights import InsightFilters, InsightsService
-from hireflux_backend.domain.enums import ApplicationStatus, UserRole
+from hireflux_backend.domain.enums import ApplicationStatus, NextStepResponsibility, UserRole
 from hireflux_backend.domain.models import Application, CurrentIdentity
 from hireflux_backend.domain.resources import (
     DashboardRange,
@@ -114,9 +116,52 @@ def test_dashboard_uses_saved_zone_and_schedule_query_for_follow_up_dates() -> N
             "due_at": None,
             "priority": "MEDIUM",
             "label": "Review check-back today",
+            "responsibility": None,
         }
     ]
     assert all(action["application_id"] != "future" for action in follow_ups)
+
+
+def test_dashboard_keeps_scheduled_interviews_visible_beyond_the_next_24_hours() -> None:
+    class InterviewsStub(ResourceServiceStub):
+        def list_owner_interviews(
+            self, identity: CurrentIdentity, *, limit: int
+        ) -> tuple[object, ...]:
+            return (
+                SimpleNamespace(
+                    interview=SimpleNamespace(
+                        application_id="soon",
+                        company_name="Today Co",
+                        job_title="Engineer",
+                        scheduled_at=datetime(2026, 8, 12, 15, tzinfo=UTC),
+                    )
+                ),
+                SimpleNamespace(
+                    interview=SimpleNamespace(
+                        application_id="tomorrow",
+                        company_name="Tomorrow Co",
+                        job_title="Designer",
+                        scheduled_at=datetime(2026, 8, 13, 15, tzinfo=UTC),
+                    )
+                ),
+            )
+
+    repository = RepositorySpy()
+    repository.all_applications = ()
+    repository.due_applications = ()
+    identity = CurrentIdentity(
+        user_id="owner", name="User", email="user@example.com", role=UserRole.STANDARD_USER
+    )
+    payload = InsightsService(
+        repository,
+        resource_service=InterviewsStub(),  # type: ignore[arg-type]
+        clock=lambda: datetime(2026, 8, 12, 2, 30, tzinfo=UTC),
+    ).dashboard(identity, reporting_range="all")
+    actions = cast(list[dict[str, object]], payload["actions"])
+    assert {action["kind"] for action in actions} == {"INTERVIEW_SOON", "INTERVIEW_UPCOMING"}
+    assert next(action for action in actions if action["kind"] == "INTERVIEW_UPCOMING")[
+        "due_at"
+    ] == datetime(2026, 8, 13, 15, tzinfo=UTC)
 
 
 def test_analytics_stage_aging_uses_saved_workspace_zone() -> None:
@@ -148,3 +193,41 @@ def test_analytics_stage_aging_uses_saved_workspace_zone() -> None:
         {"bucket": "15-30", "count": 0},
         {"bucket": "31+", "count": 0},
     ]
+
+
+def test_dashboard_keeps_undated_action_and_stage_age_out_of_due_states() -> None:
+    repository = RepositorySpy()
+    repository.due_applications = ()
+    repository.all_applications = (
+        replace(
+            _application("undated", None, stage_entered_at=datetime(2026, 8, 10, tzinfo=UTC)),
+            next_step_responsibility=NextStepResponsibility.CANDIDATE,
+            next_step_note="Send portfolio",
+        ),
+        _application("aged", None, stage_entered_at=datetime(2026, 7, 20, tzinfo=UTC)),
+    )
+    identity = CurrentIdentity(
+        user_id="owner", name="User", email="user@example.com", role=UserRole.STANDARD_USER
+    )
+    payload = InsightsService(
+        repository,
+        resource_service=ResourceServiceStub(),  # type: ignore[arg-type]
+        clock=lambda: datetime(2026, 8, 12, 2, 30, tzinfo=UTC),
+    ).dashboard(identity, reporting_range="all")
+    actions = cast(list[dict[str, object]], payload["actions"])
+
+    assert {item["kind"] for item in actions} == {
+        "CANDIDATE_ACTION_UNDATED",
+        "STALE_APPLICATION",
+    }
+    assert all(item["due_date"] is None and item["due_at"] is None for item in actions)
+    assert (
+        next(item for item in actions if item["kind"] == "CANDIDATE_ACTION_UNDATED")[
+            "responsibility"
+        ]
+        is NextStepResponsibility.CANDIDATE
+    )
+    assert (
+        next(item for item in actions if item["kind"] == "CANDIDATE_ACTION_UNDATED")["label"]
+        == "Send portfolio"
+    )

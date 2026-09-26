@@ -5,7 +5,7 @@ import { renderApp } from "../test/renderApp";
 describe("AppLayout", () => {
   it("persists the desktop sidebar choice and announces the active route", async () => {
     const { user } = renderApp("/dashboard");
-    const routeHeading = await screen.findByRole("heading", { name: "Welcome back" });
+    const routeHeading = await screen.findByRole("heading", { name: "Home" });
     expect(routeHeading).toBeVisible();
     expect(routeHeading).toHaveFocus();
     expect(routeHeading).toHaveAttribute("tabindex", "-1");
@@ -20,7 +20,7 @@ describe("AppLayout", () => {
 
   it("exposes secondary destinations in the mobile More sheet", async () => {
     const { user } = renderApp("/dashboard");
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
 
     const trigger = screen.getByRole("button", { name: "More navigation" });
     await user.click(trigger);
@@ -41,7 +41,7 @@ describe("AppLayout", () => {
 
   it("opens the labeled tablet navigation drawer and restores focus", async () => {
     const { user } = renderApp("/dashboard");
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
 
     const trigger = screen.getByRole("button", { name: "Open navigation" });
     expect(trigger).toHaveAttribute("aria-expanded", "false");
