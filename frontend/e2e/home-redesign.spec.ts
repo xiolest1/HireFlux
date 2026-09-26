@@ -1,7 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { testDashboard } from "../src/test/fixtures";
 import { installDeterministicApi } from "./fixtures";
+import { homeFixtureActions, installHomeFixture, type HomeFixtureName } from "./homeFixtures";
 
 test.beforeEach(async ({ page }) => {
   await installDeterministicApi(page);
@@ -46,7 +49,7 @@ test("an empty recorded search cannot inherit a conflicting Analytics story", as
   const band = page.getByRole("region", { name: "What can I work on now?" });
   await expect(band.getByText("Start with a recorded opportunity")).toBeVisible();
   await expect(band.getByRole("link", { name: "Record an application" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Search patterns" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Search activity" })).toHaveCount(0);
 });
 
 test("Home keeps long peer commitments and their reasons visible without horizontal overflow", async ({ page }) => {
@@ -66,10 +69,10 @@ test("Home keeps long peer commitments and their reasons visible without horizon
   await expect(band.getByText("8 overdue")).toBeVisible();
   await expect(band.getByRole("link", { name: /Senior Infrastructure Reliability Engineer.*Partnership 1/ })).toBeVisible();
   await expect(band.getByText(/Check back about the recorded next step/).first()).toBeVisible();
-  await expect(band.getByRole("button", { name: "See all 8 returned items" })).toBeVisible();
+  await expect(band.getByRole("button", { name: /See all 8 returned items/ })).toBeVisible();
   const width = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(width.scroll).toBeLessThanOrEqual(width.client + 1);
-  await band.getByRole("button", { name: "See all 8 returned items" }).click();
+  await band.getByRole("button", { name: /See all 8 returned items/ }).click();
   await expect(band.getByRole("link", { name: /Senior Infrastructure Reliability Engineer.*Partnership 8/ })).toBeVisible();
 });
 
@@ -84,11 +87,11 @@ test("a single recorded commitment leads without promoting review suggestions", 
   await page.goto("/dashboard");
   const decision = page.getByRole("region", { name: "What can I work on now?" });
   await expect(decision.getByText("1 due today")).toBeVisible();
-  await expect(decision.getByRole("heading", { name: "Follow-ups due today" })).toBeVisible();
-  await expect(decision.getByRole("heading", { name: "Stage-age review suggestions" })).toBeVisible();
-  await expect(decision.getByText(/not a missed deadline/).first()).toBeVisible();
-  await expect(decision.locator('[aria-labelledby="home-group-today"]')).toHaveClass(/border-accent/);
-  await expect(decision.locator('[aria-labelledby="home-group-review"]')).not.toHaveClass(/border-accent/);
+  await expect(decision.getByRole("heading", { name: "Due today" })).toBeVisible();
+  await expect(decision.getByRole("heading", { name: "Suggested review · Time in stage" })).toBeVisible();
+  await expect(decision.getByText(/No recorded deadline/).first()).toBeVisible();
+  await expect(decision.locator('[aria-labelledby="home-group-today"]')).toHaveAttribute("data-focal", "true");
+  await expect(decision.locator('[aria-labelledby="home-group-review"]')).not.toHaveAttribute("data-focal", "true");
 });
 
 test("competing commitments remain peers and interviews open the correct opportunity section", async ({ page }, testInfo) => {
@@ -103,8 +106,8 @@ test("competing commitments remain peers and interviews open the correct opportu
   const decision = page.getByRole("region", { name: "What can I work on now?" });
   await expect(decision.getByText("1 overdue")).toBeVisible();
   await expect(decision.getByText("1 interview")).toBeVisible();
-  await expect(decision.locator('[aria-labelledby="home-group-overdue"]')).not.toHaveClass(/border-accent/);
-  await expect(decision.locator('[aria-labelledby="home-group-interviews"]')).not.toHaveClass(/border-accent/);
+  await expect(decision.locator('[aria-labelledby="home-group-overdue"]')).not.toHaveAttribute("data-focal", "true");
+  await expect(decision.locator('[aria-labelledby="home-group-interviews"]')).not.toHaveAttribute("data-focal", "true");
   await expect(decision.getByRole("link", { name: "Interviews for Engineer · Cedar" })).toHaveAttribute("href", "/applications/22222222-2222-4222-8222-222222222222?section=interviews");
   const width = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(width.scroll).toBeLessThanOrEqual(width.client + 1);
@@ -154,7 +157,12 @@ test("peer commitments remain readable and keyboard-operable at enlarged phone t
   await details.focus();
   await page.keyboard.press("Enter");
   await expect(details).toHaveAttribute("aria-expanded", "true");
-  await expect(decision.getByRole("button", { name: "Complete follow-up" })).toBeVisible();
+  const complete = decision.getByRole("button", { name: "Complete follow-up" });
+  await expect(complete).toBeVisible();
+  await complete.focus();
+  await expect(complete).toBeFocused();
+  expect(await complete.evaluate((element) => element.getBoundingClientRect().right <= element.closest("article")!.getBoundingClientRect().right)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
   await page.screenshot({ path: testInfo.outputPath("home-320-200-percent.png"), fullPage: true });
 });
 
@@ -169,8 +177,8 @@ test("peer decision hierarchy remains distinct in phone light mode", async ({ pa
   const decision = page.getByRole("region", { name: "What can I work on now?" });
   await expect(decision.getByText("1 overdue")).toBeVisible();
   await expect(decision.getByText("1 interview")).toBeVisible();
-  await expect(decision.locator('[aria-labelledby="home-group-overdue"]')).not.toHaveClass(/border-accent/);
-  await expect(decision.locator('[aria-labelledby="home-group-interviews"]')).not.toHaveClass(/border-accent/);
+  await expect(decision.locator('[aria-labelledby="home-group-overdue"]')).not.toHaveAttribute("data-focal", "true");
+  await expect(decision.locator('[aria-labelledby="home-group-interviews"]')).not.toHaveAttribute("data-focal", "true");
   const width = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(width.scroll).toBeLessThanOrEqual(width.client + 1);
   const axe = await new AxeBuilder({ page }).include('section[aria-labelledby="home-decision-title"]').withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
@@ -202,3 +210,58 @@ test("Home composition remains coherent at wide desktop and 430px in both themes
     }
   }
 });
+
+for (const name of Object.keys(homeFixtureActions) as HomeFixtureName[]) {
+  test(`open-canvas rendered fixture: ${name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-1280");
+    test.setTimeout(90_000);
+    const consoleErrors: string[] = [];
+    page.on("pageerror", (error) => consoleErrors.push(error.message));
+    page.on("console", (message) => { if (message.type() === "error" && !message.text().includes("503")) consoleErrors.push(message.text()); });
+    await installHomeFixture(page, name);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    for (const width of [1440, 1280, 768, 430, 390, 320]) {
+      await page.setViewportSize({ width, height: width === 768 ? 1024 : width <= 430 ? 844 : 900 });
+      await page.goto("/dashboard");
+      const decision = page.getByRole("region", { name: "What can I work on now?" });
+      await expect(page.getByText("16 tracked", { exact: false })).toBeVisible();
+      await expect(decision.getByText("Limited Home result")).toBeVisible();
+      if (name === "partial") await expect(decision.getByText("Evidence is incomplete; this is not an all-clear.")).toBeVisible();
+      if (name === "waiting") await expect(decision.getByText("3 recorded opportunities are waiting")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Recently updated" })).toBeVisible();
+      await expect(page.getByRole("figure", { name: "Weekly submitted applications" })).toBeVisible();
+      const commitmentCount = name === "peers" || name === "volume" ? 3 : name === "focal" ? 1 : 0;
+      await expect(decision.locator("[data-home-commitment]")).toHaveCount(commitmentCount);
+      await expect(decision.locator('[data-focal="true"]')).toHaveCount(name === "focal" ? 1 : 0);
+      for (const theme of ["dark", "light"] as const) {
+        await page.evaluate((nextTheme) => {
+          localStorage.setItem("hireflux-color-theme", nextTheme);
+          document.documentElement.classList.toggle("dark", nextTheme === "dark");
+          window.dispatchEvent(new Event("hireflux-theme-change"));
+        }, theme);
+        await page.evaluate(() => document.fonts.ready);
+        const geometry = await decision.evaluate((element) => ({ height: element.getBoundingClientRect().height, width: document.documentElement.scrollWidth, viewport: window.innerWidth }));
+        expect(geometry.width).toBeLessThanOrEqual(geometry.viewport + 1);
+        if (name === "peers") {
+          // Comparative exposure, not a production height limit: all copy still wraps naturally.
+          expect(geometry.height).toBeLessThan(width >= 1280 ? 700 : width === 390 ? 950 : 1600);
+        }
+        await page.mouse.move(0, 0);
+        const path = join(tmpdir(), `hireflux-open-home-after-${name}-${width}-${theme}.png`);
+        await page.screenshot({ path, fullPage: true });
+        if (width === 1280 || width === 390) await testInfo.attach(`${name}-${width}-${theme}`, { path, contentType: "image/png" });
+        if (width === 1280 || width === 390) console.log(`Home geometry ${name} ${width} ${theme}: ${geometry.height}px`);
+      }
+    }
+    // Every returned item remains reachable inline; these are not equivalent to an exhaustive search.
+    if (name === "volume") {
+      await page.getByRole("button", { name: /See all 8 returned items/ }).click();
+      await expect(page.getByRole("link", { name: /Research Partnership 8/ })).toBeVisible();
+    }
+    if (name === "peers" || name === "focal" || name === "undated") {
+      const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+      expect(axe.violations).toEqual([]);
+    }
+    expect(consoleErrors).toEqual([]);
+  });
+}

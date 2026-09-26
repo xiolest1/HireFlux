@@ -124,16 +124,18 @@ describe("workspace milestone features", () => {
       }),
     );
     const { user } = renderApp("/dashboard");
-    await screen.findByText("Several recorded commitments");
+    await screen.findByText("1 overdue");
     const band = screen.getByRole("region", { name: "What can I work on now?" });
-    expect(within(band).getByText("Several recorded commitments")).toBeVisible();
-    expect(within(band).getByRole("heading", { name: "Recorded overdue follow-ups" })).toBeVisible();
-    expect(within(band).getByRole("heading", { name: "Scheduled interviews" })).toBeVisible();
+    expect(within(band).getByText("Limited Home result")).toBeVisible();
+    expect(within(band).getByRole("heading", { name: "Overdue follow-up" })).toBeVisible();
+    expect(within(band).getByRole("heading", { name: "Scheduled interview" })).toBeVisible();
+    expect(within(band).getByText(/Dates show recorded timing, not personal importance/)).not.toBeVisible();
+    await user.click(within(band).getByText("About these results"));
     expect(within(band).getByText(/Dates show recorded timing, not personal importance/)).toBeVisible();
     expect(within(band).getAllByText(/Aug 13, 2026, 6:00 PM/)[0]).toBeVisible();
     expect(within(band).getByRole("link", { name: "Interviews for Interview role · Interview company" })).toHaveAttribute("href", "/applications/22222222-2222-4222-8222-222222222222?section=interviews");
     expect(screen.queryByText("What should I do next?")).not.toBeInTheDocument();
-    await user.click(within(band).getByRole("button", { name: "View recorded overdue follow-ups details and options" }));
+    await user.click(within(band).getByRole("button", { name: /Details.*Recorded overdue follow-ups/ }));
     expect(within(band).getByText("Why this is here: Complete overdue follow-up")).toBeVisible();
     expect(within(band).getByText(/A recorded date signals timing/)).toBeVisible();
     await user.click(within(band).getByRole("button", { name: "Complete follow-up" }));
@@ -157,9 +159,9 @@ describe("workspace milestone features", () => {
     );
     const { user } = renderApp("/dashboard");
     const band = await screen.findByRole("region", { name: "What can I work on now?" });
-    await user.click(await within(band).findByRole("button", { name: "View details and options" }));
+    await user.click(await within(band).findByRole("button", { name: /Details.*Recorded overdue follow-ups/ }));
     await user.click(await within(band).findByRole("button", { name: "Reschedule" }));
-    expect(within(band).getByRole("heading", { name: "Recorded overdue follow-ups" })).toBeVisible();
+    expect(within(band).getByRole("heading", { name: "Overdue follow-up" })).toBeVisible();
     fireEvent.change(within(band).getByLabelText("New follow-up date"), { target: { value: "2026-08-20" } });
     await user.click(within(band).getByRole("button", { name: "Save date" }));
     expect(await screen.findByText("Follow-up rescheduled.")).toBeVisible();
@@ -197,6 +199,7 @@ describe("workspace milestone features", () => {
       return HttpResponse.json(makeProgressAnalytics(selected === "90d" ? "90d" : selected === "all" ? "all" : "30d"));
     }));
     const { user } = renderApp("/dashboard");
+    await user.click(await screen.findByRole("button", { name: "Interpretation" }));
     expect(await screen.findByText("Recent applications are converting more effectively")).toBeVisible();
     await user.selectOptions(screen.getByLabelText("Reporting range"), "all");
     expect(await screen.findByText("Your complete tracked search history")).toBeVisible();
@@ -216,7 +219,7 @@ describe("workspace milestone features", () => {
     }));
     server.use(http.get(`${API_ORIGIN}/api/v1/dashboard`, () => HttpResponse.json({ ...testDashboard, actions })));
     const { user } = renderApp("/dashboard");
-    await screen.findByText("Several recorded commitments");
+    await screen.findByText("8 overdue");
     const band = screen.getByRole("region", { name: "What can I work on now?" });
     expect(within(band).getByRole("link", { name: "Role 1 · Company 1" })).toBeVisible();
     expect(within(band).getByText("8 overdue")).toBeVisible();
@@ -236,7 +239,7 @@ describe("workspace milestone features", () => {
     renderApp("/dashboard");
     expect(await screen.findByText("Start with a recorded opportunity")).toBeVisible();
     expect(screen.getByRole("link", { name: "Record an application" })).toHaveAttribute("href", "/applications/new");
-    expect(screen.queryByRole("heading", { name: "Search patterns" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Search activity" })).not.toBeInTheDocument();
   });
 
   it("retains optional tour dismissal without making it operational work", async () => {

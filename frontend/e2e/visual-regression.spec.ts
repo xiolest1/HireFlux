@@ -1257,11 +1257,11 @@ test("Home decision context and subordinate Analytics stay accessible", async ({
   await page.goto("/dashboard");
   const decision = page.getByRole("region", { name: "What can I work on now?" });
   await expect(decision).toBeVisible();
-  await expect(decision.getByRole("heading", { name: "Recorded overdue follow-ups" })).toBeVisible();
-  await decision.getByRole("button", { name: "View recorded overdue follow-ups details and options" }).click();
+  await expect(decision.getByRole("heading", { name: "Overdue follow-up" })).toBeVisible();
+  await decision.getByRole("button", { name: /Details.*Recorded overdue follow-ups/ }).click();
   await expect(decision.getByText(/Why this is here: Check back with the employer/)).toBeVisible();
   await expect(decision.getByRole("button", { name: "Complete follow-up" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Search patterns" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Search activity" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Explore Analytics" })).toHaveCount(1);
   await expectNoHorizontalPageOverflow(page);
   const accessibility = await new AxeBuilder({ page })
@@ -1768,7 +1768,7 @@ test("principal workspace routes retain their layout in light mode", async ({
   );
 
   for (const route of routes.filter(
-    ({ name }) => name !== "landing" && name !== "application-create",
+    ({ name }) => name !== "landing" && name !== "application-create" && name !== "dashboard",
   )) {
     await page.goto(route.path);
     await expect(
@@ -1789,6 +1789,19 @@ test("principal workspace routes retain their layout in light mode", async ({
       fullPage: true,
     });
   }
+});
+
+test("Home open canvas retains its light-mode visual baseline", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1280");
+  await page.addInitScript(() => localStorage.setItem("hireflux-color-theme", "light"));
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "Home", level: 1 })).toBeVisible();
+  await expect(page.getByRole("figure", { name: "Weekly submitted applications" })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await expectNoHorizontalPageOverflow(page);
+  const accessibility = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+  expect(accessibility.violations).toEqual([]);
+  await expect(page).toHaveScreenshot("light-dashboard.png", { fullPage: true });
 });
 
 test("application opportunity workspace has a stable visual baseline", async ({

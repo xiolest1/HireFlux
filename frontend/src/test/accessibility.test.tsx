@@ -104,7 +104,7 @@ describe("principal route accessibility", () => {
 
   it("has no automated violations in the Home decision and strategic context", async () => {
     renderApp("/dashboard");
-    expect(await screen.findByText("Recent applications are converting more effectively")).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Interpretation" })).toBeVisible();
     expect(screen.getByRole("region", { name: "What can I work on now?" })).toBeVisible();
     await expectNoAxeViolations();
   });
