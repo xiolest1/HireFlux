@@ -12,6 +12,7 @@ describe("AppLayout", () => {
     expect(routeHeading).toHaveAttribute("data-route-focus", "true");
     expect(document.title).toBe("Home · HireFlux");
     expect(screen.getByText("Home page loaded")).toBeInTheDocument();
+    expect(routeHeading.closest("[data-workspace-shell]")).not.toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
     expect(window.localStorage.getItem("hireflux-sidebar-collapsed")).toBe("true");
@@ -59,5 +60,11 @@ describe("AppLayout", () => {
     await waitFor(() => expect(drawer).not.toBeInTheDocument());
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(trigger).toHaveFocus();
+  });
+
+  it("does not expose the workspace theme scope on the landing page", async () => {
+    renderApp("/", { withSession: false });
+    expect(await screen.findByRole("heading", { level: 1 })).toBeVisible();
+    expect(document.querySelector("[data-workspace-shell]")).toBeNull();
   });
 });

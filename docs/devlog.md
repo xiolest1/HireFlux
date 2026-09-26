@@ -1,5 +1,118 @@
 # HireFlux development log
 
+## 2026-09-26 — Authenticated workspace light-mode refinement
+
+Implemented the approved presentation-only light theme. The starting worktree
+was clean at `1ad1ccc` (`Homepage improvement`); no pre-existing work was reverted,
+staged, committed, or removed. Home's open-canvas anatomy, copy, date-led
+commitments, focal eligibility, peer equality, action/reason/uncertainty,
+disclosures, destinations, mutation behavior, and distinct quiet/loading/failure
+states remain unchanged.
+
+`AppLayout` now exposes `data-workspace-shell`. Workspace light overrides are
+root-scoped through `:root:not(.dark):has([data-workspace-shell])`, so body-mounted
+dialogs, drawers and focused workspaces inherit the same variables. Global light
+defaults outside the shell and every dark definition remain intact. There is no
+new theme listener, polyfill, dependency, observer, or motion. Browsers without
+`:has()` retain the previous readable palette; that legacy-browser fallback was
+checked structurally, not exercised in a separate unsupported browser.
+
+The surface ladder is canvas `#eef0f1`, shell/ordinary surface `#f8f9fa`, raised
+`#ffffff`, inset `#e7ebed`, hover `#e5e9ec`, pressed `#dbe1e5`, and selected
+`#e2eef0`. Primary/secondary/tertiary ink is `#20262f` / `#485460` / `#586471`;
+disabled ink stays unchanged. Subtle/default/control boundaries are `#dde2e5` /
+`#d2d8dc` / `#727e89`. Teal accent/strong/soft is `#126579` / `#0b5164` /
+`#e2f0f2`. Danger, warning, information, violet and success use the approved
+foreground/soft-background pairs without changing status mappings. Light shell
+surfaces are opaque; sticky behavior, navigation geometry, fonts and logo remain.
+
+Commitments alone receive the specified low-amplitude two-layer shadow and a
+subtle outline. Undated work and suggestions remain unraised. Home disclosures
+and secondary destinations use neutral supporting ink, retaining hover feedback,
+arrows, chevrons and focus outlines. Active navigation gains a light-only inset
+indicator without changing its dimensions. Home's nonzero weekly bars use opaque
+`#417e8d`; values, dimensions and the accessible weekly list remain intact. No
+unrelated chart has a dedicated fill override. Existing selects use the strong
+control boundary in light workspace scope.
+
+Rendered evidence uses the production preview and deterministic fictional API
+fixtures, with both the initial preference and saved settings explicitly LIGHT.
+Six identical before/after Home fixtures (peers, focal, high volume, undated,
+waiting, partial failure) were captured at 1440, 1280, 1024, 768, 430, 390 and
+320px: 42 before and 42 after images outside repository state. The decision
+heights remain unchanged (for example, peers: 547px at 1280 and 902px at 390;
+focal: 340px and 528.5px respectively). Rendered comparison shows stronger
+white commitment separation and quieter supporting context, not a layout
+compression. Recognition speed and extended-use comfort were not user-tested.
+
+Additional captures cover healthy Applications, detail/create/edit, Interviews,
+Analytics, Settings, a menu, editing drawers, focused interview preparation,
+reset confirmation, loading, no records, pending/success/failed mutation
+feedback, and long content at 320px with doubled root text size. The route audit
+uses a locally scoped, typed healthy OpportunityWorkspace mock: the legacy shared
+mock embeds a full interview instead of the compact response's required
+`preparation_essentials_complete` flag and otherwise exercises the response-error
+state. Production response validation and unrelated baseline mocks were not
+changed to accommodate that fixture defect.
+
+Browser tests verify light → dark → light, saved-theme reload, direct workspace
+entry, exit to original landing light tokens, portal inheritance, returned-item
+expansion, keyboard disclosure/focus, native pending disablement, mutation recovery,
+and no horizontal overflow. Axe passes for tested Home states, routes, editing
+drawers, focused workspaces and enlarged content. An additional held pending
+mutation Axe probe reported no violations. Effective-color checks account for
+alpha composition and ancestor backgrounds: Home chart 4.00:1, range-control
+boundary 3.63:1, tested focus outline 5.53:1. Expanded peer-state text passes
+size-appropriate 4.5:1/3:1 thresholds; tertiary text and control tokens also pass
+across raised, canvas, inset, hover and pressed backgrounds. Decorative card
+outlines and genuinely disabled controls are not treated as required control
+boundaries or active text.
+
+Only `light-dashboard-desktop-1280-win32.png` was updated after inspection. Its
+previous "light" capture was actually dark because the saved-settings fixture
+overrode the initial local preference. The new helper and explicit light
+assertion correct that mismatch. Other inspected light references passed their
+existing pixel tolerance; all dark and landing reference files remain unchanged.
+
+Validation passed ESLint, TypeScript, 310 Vitest tests across 44 files (bounded
+`--maxWorkers=2`), 13 dedicated accessibility tests, production build, three
+hosting-header tests, and `git diff --check`. The complete Playwright/Axe run
+passed 240 tests with 270 intentional viewport/capability skips using two workers;
+the final focused light-theme suite passed 12/12. Initial high-concurrency unit
+failures resolved in isolated/bounded reruns after correcting the new landing
+test's session setup. The first full browser run had one unchanged landing
+keyboard-reconciliation failure; that test passed two repeated reruns and the
+complete bounded rerun. No production workaround or weakened expectation was
+added for it. Backend checks were not run because backend/domain/API code is
+untouched.
+
+Known unrelated P2 accessibility defect: application detail → More opportunity
+actions → Manage next step → Escape returns focus to BODY after cleanup instead
+of the More opener. This reproduces in both light and dark mode; the menu item
+that opened the drawer is removed, and the unchanged focus helper only restores
+connected nodes. It was not repaired in this no-interaction-change theme pass.
+Direct-trigger drawer closure, menu Escape and focused-workspace entry/closure
+were tested separately. No new P1/P2/P3 theme/layout defect was found. Physical
+devices, screen-reader narration, legacy `:has()`-unsupported rendering and
+extended-use comfort remain unverified, not claimed as passes.
+
+External gallery:
+`C:/Users/xiole/AppData/Local/Temp/hireflux-workspace-light-gallery-2026-09-26.html`.
+It links the original PNGs and was rendered to verify the comparison loads. These
+temporary artifacts may be removed by OS cleanup and are not Git changes.
+
+Production files changed: `frontend/src/styles.css`,
+`frontend/src/components/AppLayout.tsx`,
+`frontend/src/features/workspace/HomeDecisionSection.tsx`,
+`frontend/src/pages/DashboardPage.tsx`. Tests/fixtures changed:
+`frontend/e2e/fixtures.ts`, `frontend/e2e/visual-regression.spec.ts`,
+`frontend/src/components/AppLayout.test.tsx`,
+`frontend/src/features/workspace/HomeDecisionSection.test.tsx`; new test:
+`frontend/e2e/workspace-light-theme.spec.ts`. Supporting changes are this entry
+and the single intentional Home light snapshot. Stage 1/2/3 documents, backend,
+API contracts, dependencies, routes, models and landing production files are
+unchanged. No generated evidence or build output was added to Git state.
+
 ## 2026-09-15 — Connected Workspace → Demo Coda transition polish
 
 The desktop landing boundary still felt abrupt after the first release-buffer

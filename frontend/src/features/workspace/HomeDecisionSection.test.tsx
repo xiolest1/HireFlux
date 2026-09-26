@@ -22,6 +22,7 @@ describe("open Home decision composition", () => {
     const { section } = renderDecision([followUp, interview, review]);
     expect(section).not.toHaveClass("bg-surface-raised");
     expect(section.querySelectorAll('[data-home-commitment]')).toHaveLength(2);
+    expect(within(section).getAllByRole("button", { name: /Details/ })[0]).toHaveClass("hf-home-quiet-link");
     expect(section.querySelector('[data-focal="true"]')).toBeNull();
     expect(within(section).getByText("Limited Home result")).toBeVisible();
     const suggestion = within(section).getByRole("heading", { name: "Suggested review · Time in stage" }).closest("div")!;

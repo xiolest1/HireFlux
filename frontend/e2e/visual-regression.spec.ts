@@ -5,6 +5,7 @@ import {
   application,
   applicationId,
   installDeterministicApi,
+  installWorkspaceTheme,
 } from "./fixtures";
 
 async function fulfillJson(route: Route, body: unknown, status = 200) {
@@ -1766,6 +1767,7 @@ test("principal workspace routes retain their layout in light mode", async ({
     testInfo.project.name !== "desktop-1280",
     "Desktop light-mode baselines only.",
   );
+  await installWorkspaceTheme(page);
 
   for (const route of routes.filter(
     ({ name }) => name !== "landing" && name !== "application-create" && name !== "dashboard",
@@ -1793,10 +1795,11 @@ test("principal workspace routes retain their layout in light mode", async ({
 
 test("Home open canvas retains its light-mode visual baseline", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1280");
-  await page.addInitScript(() => localStorage.setItem("hireflux-color-theme", "light"));
+  await installWorkspaceTheme(page);
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "Home", level: 1 })).toBeVisible();
   await expect(page.getByRole("figure", { name: "Weekly submitted applications" })).toBeVisible();
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
   await page.evaluate(() => document.fonts.ready);
   await expectNoHorizontalPageOverflow(page);
   const accessibility = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();

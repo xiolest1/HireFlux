@@ -775,3 +775,32 @@ export async function installDeterministicApi(page: Page) {
     });
   });
 }
+
+/** Keep saved settings and the initial preference aligned for real theme captures. */
+export async function installWorkspaceTheme(page: Page, theme: "LIGHT" | "DARK" = "LIGHT") {
+  await page.addInitScript((initialTheme) => {
+    localStorage.setItem("hireflux-color-theme", initialTheme.toLowerCase());
+  }, theme);
+  const settings = {
+    time_zone: "UTC",
+    default_follow_up_days: 7,
+    default_application_view: "ACTIVE",
+    default_dashboard_range: "30d",
+    theme,
+    created_at: "2026-08-10T13:00:00Z",
+    updated_at: "2026-08-10T13:00:00Z",
+    version: 1,
+  };
+  await page.route("**/api/v1/settings", async (route) => {
+    if (route.request().method() === "OPTIONS") {
+      await route.fallback();
+      return;
+    }
+    if (route.request().method() === "PATCH") {
+      const patch = route.request().postDataJSON() as { theme?: "LIGHT" | "DARK" };
+      settings.theme = patch.theme ?? settings.theme;
+      settings.version += 1;
+    }
+    await json(route, settings);
+  });
+}

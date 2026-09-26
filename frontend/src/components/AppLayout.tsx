@@ -90,7 +90,7 @@ function readSidebarPreference(): boolean {
 function navClassName(
   { isActive }: { isActive: boolean },
 ): string {
-  return `group flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-[color,background-color,box-shadow] duration-200 ${
+  return `hf-workspace-nav group flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-[color,background-color,box-shadow] duration-200 ${
     isActive
       ? "bg-surface-selected text-accent-strong"
       : "text-ink-muted hover:bg-surface-hover hover:text-ink active:bg-surface-pressed"
@@ -109,7 +109,7 @@ function sidebarNavClassName(
 }
 
 function mobileNavClassName({ isActive }: { isActive: boolean }): string {
-  return `flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.68rem] font-semibold transition-colors ${
+  return `hf-workspace-nav flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.68rem] font-semibold transition-colors ${
     isActive ? "text-accent" : "text-ink-muted hover:text-ink"
   }`;
 }
@@ -269,7 +269,7 @@ export function AppLayout() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-canvas text-ink md:flex">
+      <div data-workspace-shell className="min-h-screen bg-canvas text-ink md:flex">
         <a
           href="#main-content"
           className="fixed left-4 top-4 z-[70] -translate-y-24 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-accent-contrast shadow-float focus:translate-y-0"
@@ -546,7 +546,8 @@ export function AppLayout() {
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.68rem] font-semibold transition-colors ${
+            data-workspace-selected={location.pathname === "/analytics" || location.pathname === "/settings"}
+            className={`hf-workspace-nav flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.68rem] font-semibold transition-colors ${
               location.pathname === "/analytics" || location.pathname === "/settings"
                 ? "text-accent"
                 : "text-ink-muted hover:text-ink"

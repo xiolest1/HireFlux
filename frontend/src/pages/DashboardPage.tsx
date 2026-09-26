@@ -25,7 +25,7 @@ import {
   type SearchTourState,
 } from "../features/workspace/queries";
 
-const textLink = "inline-flex min-h-11 items-center text-sm font-semibold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+const textLink = "hf-home-quiet-link inline-flex min-h-11 items-center text-sm font-semibold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
 export function DashboardPage() {
   const location = useLocation();
@@ -114,7 +114,7 @@ export function DashboardPage() {
 
   return (
     <WorkspaceFrame width="wide" className="space-y-6 pb-12 sm:space-y-8">
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-line pb-3 sm:pb-4">
+      <header className="hf-home-divider flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-line pb-3 sm:pb-4">
         <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted">Recorded demo search</p><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">Home</h1></div>
         <p className="w-full text-sm leading-6 text-ink-muted sm:w-auto">{dashboard ? `${dashboard.summary.active_pursuits} active · ${dashboard.summary.total_tracked} tracked` : "Your recorded workspace"}</p>
       </header>
@@ -140,7 +140,7 @@ export function DashboardPage() {
       />
 
       {dashboard && dashboard.summary.total_tracked > 0 ? (
-        <div className="grid gap-7 border-t border-line pt-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-10">
+        <div className="hf-home-divider grid gap-7 border-t border-line pt-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-10">
           <section aria-labelledby="home-records-title" className="min-w-0">
             <h2 id="home-records-title" className="font-display text-lg font-semibold text-ink">Recently updated</h2>
             {dashboard.recent_applications.length ? <ul className="mt-3 divide-y divide-line-subtle">{dashboard.recent_applications.slice(0, 2).map((item) => <li key={item.application_id} className="min-w-0 py-3 first:pt-0">
@@ -175,12 +175,12 @@ function SearchTour({ tour, onDismiss }: { tour: SearchTourState; onDismiss: () 
   ] as const;
   const completed = steps.filter(({ key }) => tour[key]).length;
   return (
-    <section className="border-t border-line pt-6" aria-labelledby="home-tour-title">
+    <section className="hf-home-divider border-t border-line pt-6" aria-labelledby="home-tour-title">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 break-words"><p className="text-sm font-medium text-ink-muted">Search tour · {completed}/3</p><h2 id="home-tour-title" className="mt-1 text-lg font-semibold text-ink">Explore the demo workspace</h2><p className="mt-1 text-sm text-ink-muted">Optional ways to learn; not a recorded task.</p></div>
         <button type="button" aria-label="Dismiss search tour" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus" onClick={onDismiss}><X aria-hidden="true" className="size-4" /></button>
       </div>
-      <details className="mt-3"><summary className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">View tour details <ChevronDown aria-hidden="true" className="size-4" /></summary><ol className="mt-3 grid gap-3 sm:grid-cols-3">{steps.map(({ key, title, description, href }) => <li key={key} className="rounded-xl border border-line-subtle p-3"><p className="font-semibold text-ink">{title}</p><p className="mt-1 text-sm leading-5 text-ink-muted">{description}</p>{tour[key] ? <p className="mt-2 text-sm font-medium text-ink-muted">Completed</p> : <Link to={href} className={textLink}>Try it <ArrowRight aria-hidden="true" className="ml-1 size-4" /></Link>}</li>)}</ol></details>
+      <details className="mt-3"><summary className="hf-home-quiet-link inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">View tour details <ChevronDown aria-hidden="true" className="size-4" /></summary><ol className="mt-3 grid gap-3 sm:grid-cols-3">{steps.map(({ key, title, description, href }) => <li key={key} className="rounded-xl border border-line-subtle p-3"><p className="font-semibold text-ink">{title}</p><p className="mt-1 text-sm leading-5 text-ink-muted">{description}</p>{tour[key] ? <p className="mt-2 text-sm font-medium text-ink-muted">Completed</p> : <Link to={href} className={textLink}>Try it <ArrowRight aria-hidden="true" className="ml-1 size-4" /></Link>}</li>)}</ol></details>
     </section>
   );
 }
@@ -193,7 +193,7 @@ function SearchActivity({ analytics }: { analytics: Analytics }) {
     <p className="flex flex-wrap items-baseline gap-x-2"><span className="font-display text-3xl font-semibold text-ink">{analytics.rates.submitted_count}</span><span className="text-sm text-ink-muted">submitted {analytics.range === "all" ? "all time" : "in this period"}</span></p>
     {analytics.range !== "all" ? <>
       {analytics.submission_trend.length && analytics.rates.submitted_count > 0 ? <figure aria-label="Weekly submitted applications" className="mt-3">
-        <div aria-hidden="true" className="flex h-14 items-end gap-1 border-b border-line-subtle">{analytics.submission_trend.map((week) => <span key={week.week_start} className="flex min-w-0 flex-1 items-end"><span className={`block w-full rounded-t-sm ${week.count ? "bg-accent/50" : "bg-line"}`} style={{ height: week.count ? `${(week.count / maxCount) * 48}px` : "1px" }} /></span>)}</div>
+        <div aria-hidden="true" className="flex h-14 items-end gap-1 border-b border-line-subtle">{analytics.submission_trend.map((week) => <span key={week.week_start} className="flex min-w-0 flex-1 items-end"><span className={`block w-full rounded-t-sm ${week.count ? "hf-home-chart-bar bg-accent/50" : "bg-line"}`} style={{ height: week.count ? `${(week.count / maxCount) * 48}px` : "1px" }} /></span>)}</div>
         <figcaption className="mt-1 flex justify-between gap-2 text-xs leading-5 text-ink-muted"><span>Weekly submissions</span><span>{analytics.submission_trend.length} weeks</span></figcaption>
         <ul className="sr-only">{analytics.submission_trend.map((week) => <li key={week.week_start}>Week starting {week.week_start}: {week.count} submitted applications</li>)}</ul>
       </figure> : <p className="mt-2 text-sm text-ink-muted">{analytics.rates.submitted_count === 0 ? "No submissions recorded in this period." : "Weekly history is unavailable in this result."}</p>}

@@ -384,6 +384,82 @@
   --hf-danger-soft: #471b29;
 }
 
+/* Root scope also reaches body-mounted portals. Outside the authenticated shell,
+   and in browsers without :has(), the original light palette remains intact. */
+:root:not(.dark):has([data-workspace-shell]) {
+  --hf-canvas: #eef0f1;
+  --hf-surface: #f8f9fa;
+  --hf-surface-raised: #ffffff;
+  --hf-surface-muted: #e7ebed;
+  --hf-surface-hover: #e5e9ec;
+  --hf-surface-pressed: #dbe1e5;
+  --hf-surface-selected: #e2eef0;
+  --hf-line-subtle: #dde2e5;
+  --hf-line: #d2d8dc;
+  --hf-line-strong: #727e89;
+  --hf-ink: #20262f;
+  --hf-ink-muted: #485460;
+  --hf-ink-tertiary: #586471;
+  --hf-accent: #126579;
+  --hf-accent-strong: #0b5164;
+  --hf-accent-soft: #e2f0f2;
+  --hf-info: #315f88;
+  --hf-info-soft: #ebf1f7;
+  --hf-violet: #6650a4;
+  --hf-violet-soft: #f1edf8;
+  --hf-success: #216d50;
+  --hf-success-soft: #e9f4ee;
+  --hf-warning: #8f4a14;
+  --hf-warning-soft: #faf1e4;
+  --hf-danger: #b42347;
+  --hf-danger-soft: #fbecef;
+  --hf-commitment-shadow: 0 1px 2px rgb(20 30 40 / 0.055),
+    0 4px 12px rgb(20 30 40 / 0.025);
+  --hf-quiet-link: var(--hf-ink-muted);
+  --hf-home-chart: #417e8d;
+}
+
+:root:not(.dark):has([data-workspace-shell]) [data-workspace-shell] .hf-glass,
+:root:not(.dark):has([data-workspace-shell]) [data-workspace-shell] > aside {
+  background: var(--hf-surface);
+  backdrop-filter: none;
+}
+
+:root:not(.dark):has([data-workspace-shell]) [data-home-commitment] {
+  border-color: var(--hf-line-subtle);
+  box-shadow: var(--hf-commitment-shadow);
+}
+
+:root:not(.dark):has([data-workspace-shell]) .hf-home-divider {
+  border-color: var(--hf-line-subtle);
+}
+
+:root:not(.dark):has([data-workspace-shell]) .hf-home-quiet-link {
+  color: var(--hf-quiet-link);
+}
+
+:root:not(.dark):has([data-workspace-shell]) .hf-home-quiet-link:hover,
+:root:not(.dark):has([data-workspace-shell]) .hf-home-quiet-link:focus-visible {
+  color: var(--hf-accent-strong);
+}
+
+:root:not(.dark):has([data-workspace-shell]) .hf-home-chart-bar {
+  background: var(--hf-home-chart);
+}
+
+:root:not(.dark):has([data-workspace-shell]) select:not(:disabled) {
+  border-color: var(--hf-line-strong);
+}
+
+:root:not(.dark):has([data-workspace-shell]) .hf-workspace-nav[aria-current="page"] {
+  box-shadow: inset 2px 0 0 var(--hf-accent);
+}
+
+:root:not(.dark):has([data-workspace-shell]) nav[aria-label="Mobile navigation"] .hf-workspace-nav[aria-current="page"],
+:root:not(.dark):has([data-workspace-shell]) .hf-workspace-nav[data-workspace-selected="true"] {
+  box-shadow: inset 0 -2px 0 var(--hf-accent);
+}
+
 @layer base {
   * {
     box-sizing: border-box;

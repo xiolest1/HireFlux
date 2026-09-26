@@ -9,7 +9,7 @@ import { applicationCreateRouteState } from "../applications/createNavigation";
 import { formatDateOnly, formatTimestamp } from "../applications/format";
 import { homeActionMeaning, homeActionPreviewReason, type HomeAction, type HomeActionGroup, type HomeDecisionModel } from "./homeDecisionModel";
 
-const textLink = "inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+const textLink = "hf-home-quiet-link inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 const labels = { overdue: "Overdue follow-up", today: "Due today", interviews: "Scheduled interview", undated: "No saved date", review: "Suggested review · Time in stage" };
 
 interface ActionControls {
