@@ -32,8 +32,9 @@ import {
 import { connectedStoryCCompactConfiguration, progressiveCAllowed } from "./connectedStoryCConfig";
 import type { LandingWorkspaceStage } from "./landingStoryModel";
 import { scrollStoryTravelViewportHeights } from "./scrollStoryConfig";
+import { readConnectedJ3ScrollRange, untransformedLayoutTop, type ConnectedClosingCallbacks, type ConnectedClosingOwner } from "./connectedClosingGeometry";
 
-type J3Component = ComponentType<{
+type J3Component = ComponentType<ConnectedClosingCallbacks & {
   onChapterChange?: (chapter: LandingWorkspaceStage) => void;
 }>;
 
@@ -50,6 +51,7 @@ interface PendingReconciliation {
 }
 
 interface RuntimeOptions {
+  closingOwnerRef?: RefObject<ConnectedClosingOwner | null>;
   loadJ3?: () => Promise<J3Module>;
   fontReadinessBoundMs?: number;
   j3LoadBoundMs?: number;
@@ -103,6 +105,14 @@ export function captureConnectedStoryPosition(
   family: ConnectedStoryFamily,
   cPresentation: ConnectedStoryCPresentation | null = null,
 ): ConnectedStoryPosition {
+  const range = family === "j3" ? readConnectedJ3ScrollRange(root) : null;
+  // A tall-screen pin anchor can sit below the reading line. Its owner, not
+  // the fixed root's viewport top, determines whether the story has begun.
+  if (range && window.scrollY <= range.end) {
+    if (window.scrollY < range.start) return { chapter: "pre-story", localProgress: 0, codaProgress: 0 };
+    const progress = Number(root.querySelector<HTMLElement>("[data-connected-j3]")?.dataset.connectedProgress ?? 0);
+    return semanticPositionForJ3Progress(progress);
+  }
   const coda = currentCodaPosition(cPresentation);
   if (coda) return coda;
   const line = readingLine(cPresentation);
@@ -143,11 +153,20 @@ function destinationForPosition(
   if (position.chapter === "pre-story") return null;
   if (position.chapter === "post-story") {
     const coda = document.querySelector<HTMLElement>("[data-quiet-coda]");
+    const range = family === "j3" ? readConnectedJ3ScrollRange(root) : null;
+    const stage = root.querySelector<HTMLElement>("[data-scroll-story-pin]");
+    if (coda && range && stage) {
+      const pinTop = Number(root.querySelector<HTMLElement>("[data-connected-j3]")?.dataset.connectedPinTop ?? 0);
+      return range.end + pinTop + untransformedLayoutTop(coda) - untransformedLayoutTop(stage)
+        + position.codaProgress * coda.offsetHeight - line;
+    }
     return coda
       ? absoluteTop(coda) + position.codaProgress * coda.offsetHeight - line
       : null;
   }
   if (family === "j3") {
+    const range = readConnectedJ3ScrollRange(root);
+    if (range) return range.start + j3ProgressForSemanticPosition(position) * (range.end - range.start);
     const pin = root.querySelector<HTMLElement>("[data-scroll-story-pin]");
     const spacer = pin?.parentElement?.classList.contains("pin-spacer") ? pin.parentElement : null;
     if (!spacer) return null;
@@ -350,9 +369,10 @@ export function useConnectedStoryArchitecture(
 
     const evaluate = (reason: string) => {
       if (!active) return;
+      let position = capture();
+      options.closingOwnerRef?.current?.refreshGeometry();
       environmentRevisionRef.current += 1;
       const revision = environmentRevisionRef.current;
-      let position = capture();
       const environment = readEnvironment(revision);
       let winner = selectConnectedStory(environment);
       if (winner.family === "j3" && j3RetryBlockedRef.current) {
@@ -473,6 +493,14 @@ export function useConnectedStoryArchitecture(
       try {
         observer = new ResizeObserver(() => requestEvaluation("container-resize"));
         observer.observe(root);
+        const closingTrack = root.closest<HTMLElement>("[data-connected-closing-track]");
+        if (closingTrack) {
+          observer.observe(closingTrack);
+          const codaFlow = closingTrack.querySelector<HTMLElement>("[data-connected-coda-flow]");
+          if (codaFlow) observer.observe(codaFlow);
+          const footer = document.querySelector<HTMLElement>("#landing-main + footer");
+          if (footer) observer.observe(footer);
+        }
       } catch {
         observer?.disconnect();
         observer = null;
@@ -536,7 +564,7 @@ export function useConnectedStoryArchitecture(
       window.removeEventListener("popstate", onPopState);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [options.fontReadinessBoundMs, options.j3LoadBoundMs, options.loadJ3, options.progressiveCAllowed, progressiveRuntimeAvailable, rootRef]);
+  }, [options.closingOwnerRef, options.fontReadinessBoundMs, options.j3LoadBoundMs, options.loadJ3, options.progressiveCAllowed, progressiveRuntimeAvailable, rootRef]);
 
   useLayoutEffect(() => {
     const root = rootRef.current;

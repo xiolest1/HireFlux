@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => {
   const trigger = { kill: vi.fn(), progress: 0, getTween: vi.fn() };
   const timeline = {
     addLabel: vi.fn(), set: vi.fn(), fromTo: vi.fn(), to: vi.fn(),
-    eventCallback: vi.fn(), progress: vi.fn(() => 0), duration: vi.fn(() => 0.88),
+    eventCallback: vi.fn(), progress: vi.fn(() => 0), time: vi.fn(() => 0), duration: vi.fn(() => 0.88),
     kill: vi.fn(), scrollTrigger: trigger,
   };
   for (const method of [timeline.addLabel, timeline.set, timeline.fromTo, timeline.to, timeline.eventCallback]) method.mockReturnValue(timeline);
@@ -40,6 +40,7 @@ beforeEach(() => {
   mocks.reset();
   for (const method of [mocks.timeline.addLabel, mocks.timeline.set, mocks.timeline.fromTo, mocks.timeline.to, mocks.timeline.eventCallback]) method.mockReturnValue(mocks.timeline);
   mocks.timeline.progress.mockReturnValue(0);
+  mocks.timeline.time.mockReturnValue(0);
 });
 
 afterEach(() => vi.restoreAllMocks());
@@ -58,9 +59,11 @@ describe("ConnectedStoryJ3", () => {
     expect(mocks.timeline.fromTo).toHaveBeenCalledWith(
       "[data-workspace-stage-envelope]",
       { y: 0 },
-      expect.objectContaining({ duration: 0.135, y: scrollStoryJ3Configuration.stageEnvelopeReleaseClearancePx }),
+      expect.objectContaining({ duration: 0.135, y: expect.any(Function) }),
       0.67,
     );
+    const settlement = mocks.timeline.fromTo.mock.calls.find(([target]) => target === "[data-workspace-stage-envelope]")!;
+    expect((settlement[2].y as () => number)()).toBe(scrollStoryJ3Configuration.stageEnvelopeReleaseClearancePx);
     expect(container.querySelector("[data-scroll-story-release-buffer]")).toBeInTheDocument();
     expect(container.querySelector("[data-connected-j3]")).toHaveAttribute("data-connected-timeline-active", "true");
     expect(container.querySelectorAll("[data-scroll-story-pin]")).toHaveLength(1);
@@ -88,5 +91,31 @@ describe("ConnectedStoryJ3", () => {
     expect(mocks.counts().activeContexts).toBe(0);
     expect(mocks.trigger.kill).toHaveBeenCalled();
     expect(mocks.timeline.kill).toHaveBeenCalled();
+  });
+
+  it("pins the shared track and gates Coda only until actual Action settlement", () => {
+    const onCodaEntryReadyChange = vi.fn();
+    const onClosingOwnerChange = vi.fn();
+    const { container, unmount } = render(<div data-connected-closing-track>
+      <ConnectedStoryJ3 onCodaEntryReadyChange={onCodaEntryReadyChange} onClosingOwnerChange={onClosingOwnerChange} />
+      <div data-connected-coda-flow><button>Demo</button></div>
+    </div>);
+    expect(mocks.configuration().scrollTrigger).toMatchObject({ pin: container.firstElementChild, start: expect.any(Function) });
+    const flow = container.querySelector("[data-connected-coda-flow]");
+    expect(mocks.timeline.fromTo).toHaveBeenCalledWith(flow, { y: expect.any(Function) }, { y: 0, duration: 0.135, ease: "power3.out" }, 0.67);
+    expect(onCodaEntryReadyChange).toHaveBeenLastCalledWith(false);
+    const update = mocks.timeline.eventCallback.mock.calls.find(([event]) => event === "onUpdate")?.[1] as () => void;
+    mocks.timeline.time.mockReturnValue(0.824);
+    act(() => update());
+    expect(onCodaEntryReadyChange).toHaveBeenCalledTimes(1);
+    mocks.timeline.time.mockReturnValue(0.825);
+    act(() => update());
+    expect(onCodaEntryReadyChange).toHaveBeenLastCalledWith(true);
+    mocks.timeline.time.mockReturnValue(0.5);
+    act(() => update());
+    expect(onCodaEntryReadyChange).toHaveBeenLastCalledWith(false);
+    expect(onClosingOwnerChange).toHaveBeenCalledWith(expect.objectContaining({ refreshGeometry: expect.any(Function), finishForCodaFocus: expect.any(Function) }));
+    unmount();
+    expect(onClosingOwnerChange).toHaveBeenLastCalledWith(null);
   });
 });

@@ -1138,6 +1138,15 @@
   animation: none;
 }
 
+[data-connected-coda-flow][data-connected-focus-recovery="true"] .hf-post-story-reveal,
+[data-connected-coda-flow][data-connected-focus-recovery="true"] .hf-post-story-reveal [data-quiet-coda-word],
+[data-connected-coda-flow][data-connected-focus-recovery="true"] .hf-post-story-reveal [data-quiet-coda-support],
+[data-connected-coda-flow][data-connected-focus-recovery="true"] .hf-post-story-reveal [data-quiet-coda-action-cluster] {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
 .hf-scroll-story-desktop {
   display: block;
 }

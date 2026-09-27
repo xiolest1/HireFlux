@@ -74,7 +74,12 @@ describe("LandingPage motion ownership boundaries", () => {
     const footer = container.querySelector("footer")!;
 
     expect(main).toContainElement(coda);
-    expect(connected.compareDocumentPosition(coda)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(connected).toContainElement(coda);
+    const track = coda.closest("[data-connected-closing-track]")!;
+    expect(track).toContainElement(container.querySelector("[data-connected-story]"));
+    expect(track).not.toContainElement(container.querySelector("#proof-title"));
+    expect(track).not.toContainElement(footer);
+    expect(container.querySelectorAll("[data-quiet-coda]")).toHaveLength(1);
     expect(coda.compareDocumentPosition(footer)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(coda.closest("[data-scroll-story]")).toBeNull();
     const codaReveal = coda.closest<HTMLElement>("[data-landing-viewport-reveal]");
@@ -86,7 +91,7 @@ describe("LandingPage motion ownership boundaries", () => {
     expect(coda.querySelector("[data-quiet-coda-word]")).not.toHaveStyle({
       animationName: "hf-quiet-coda-word-reveal",
     });
-    expect(coda.closest(".hf-section-reveal")).toBeNull();
+    expect(coda.closest(".hf-section-reveal")).toHaveClass("hf-scroll-story-reveal");
     expect(screen.getAllByRole("button", { name: "Explore the Demo" })).toHaveLength(2);
   });
 
@@ -109,10 +114,9 @@ describe("LandingPage motion ownership boundaries", () => {
     expect(reveal).toHaveTextContent(
       "Follow one opportunity through the search while the bigger picture stays connected.",
     );
-    expect(reveal.parentElement).toBe(section);
-    expect(story.parentElement).toBe(section);
-    expect(section).toHaveClass("sm:pb-16", "sm:pt-24");
-    expect(section).not.toHaveClass("sm:py-24");
+    expect(reveal.parentElement).toHaveClass("sm:pt-24");
+    expect(story.parentElement).toHaveClass("pb-16", "flow-root");
+    expect(story.closest("[data-connected-closing-track]")).not.toContainElement(reveal);
     expect(reveal).not.toContainElement(story);
     expect(story.closest("[data-landing-viewport-reveal]")).toBeNull();
     expect(legacyWrapper).toHaveClass("hf-section-reveal", "hf-scroll-story-reveal");

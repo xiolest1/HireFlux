@@ -3,7 +3,7 @@ import { act, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConnectedStoryFitProbe } from "./ConnectedStoryFitProbe";
 import { ConnectedStoryCCompactFitProbe } from "./ConnectedStoryCCompactFitProbe";
-import { resetConnectedStoryModuleForTests, useConnectedStoryArchitecture } from "./useConnectedStoryArchitecture";
+import { captureConnectedStoryPosition, resetConnectedStoryModuleForTests, useConnectedStoryArchitecture } from "./useConnectedStoryArchitecture";
 
 interface MediaHarness {
   reduced: boolean;
@@ -98,6 +98,19 @@ afterEach(() => {
 });
 
 describe("useConnectedStoryArchitecture", () => {
+  it("captures tall-screen pinned chapters from the actual owner range, not the reading line", () => {
+    installEnvironment(2215, 1687);
+    const root = document.createElement("div");
+    const j3 = document.createElement("div");
+    j3.dataset.connectedJ3 = "";
+    j3.dataset.connectedProgress = "0.55";
+    j3.dataset.connectedScrollStart = "904";
+    j3.dataset.connectedScrollEnd = "5122";
+    root.append(j3);
+    vi.spyOn(root, "getBoundingClientRect").mockReturnValue({ top: 462 } as DOMRect);
+    vi.spyOn(window, "scrollY", "get").mockReturnValue(3224);
+    expect(captureConnectedStoryPosition(root, "j3").chapter).toBe("preparation");
+  });
   it("loads and commits J3 only after capacity and inert fit succeed", async () => {
     installEnvironment(1280, 900);
     const loadJ3 = vi.fn(async () => ({ ConnectedStoryJ3: FakeJ3 }));

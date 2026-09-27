@@ -8,6 +8,7 @@ import {
   scrollStoryJ3Configuration,
   scrollStoryTimelineLabels,
 } from "./scrollStoryConfig";
+import { measureConnectedClosingGeometry, untransformedLayoutTop, type ConnectedClosingCallbacks, type ConnectedClosingOwner } from "./connectedClosingGeometry";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -154,11 +155,11 @@ function ChapterCopy({ chapter, visual = false }: { chapter: LandingScrollChapte
   return <div aria-hidden={visual || undefined} data-scroll-copy-content={visual || undefined}><p className="text-xs font-black uppercase tracking-[0.14em] text-accent-strong" data-scroll-copy-label={visual || undefined}><span className="tabular-nums" data-scroll-copy-index={visual || undefined}>{chapter.number}</span><span> · {chapter.label}</span></p><p className="mt-4 text-sm font-bold leading-6 text-ink-muted dark:text-slate-300" data-scroll-copy-question={visual || undefined}>{chapter.question}</p><h3 className="mt-3 text-3xl font-black tracking-tight text-ink dark:text-white" data-scroll-copy-headline={visual || undefined}>{chapter.title}</h3><p className="mt-4 max-w-xl leading-7 text-ink-muted dark:text-slate-300" data-scroll-copy-body={visual || undefined}>{chapter.description}</p></div>;
 }
 
-interface ConnectedStoryJ3Props {
+interface ConnectedStoryJ3Props extends ConnectedClosingCallbacks {
   onChapterChange?: (chapter: LandingWorkspaceStage) => void;
 }
 
-export function ConnectedStoryJ3({ onChapterChange }: ConnectedStoryJ3Props) {
+export function ConnectedStoryJ3({ onChapterChange, onClosingOwnerChange, onCodaEntryReadyChange }: ConnectedStoryJ3Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const activeChapterRef = useRef<LandingWorkspaceStage>("applications");
@@ -170,18 +171,43 @@ export function ConnectedStoryJ3({ onChapterChange }: ConnectedStoryJ3Props) {
     const stage = stageRef.current;
     const configuration = scrollStoryJ3Configuration;
     let timeline: gsap.core.Timeline | null = null;
+    const closingTrack = root.closest<HTMLElement>("[data-connected-closing-track]");
+    const codaFlow = closingTrack?.querySelector<HTMLElement>("[data-connected-coda-flow]") ?? null;
+    const footer = document.querySelector<HTMLElement>("#landing-main + footer");
+    let entryReady: boolean | null = null;
+    const reportEntryReady = () => {
+      const ready = (timeline?.time() ?? 0) >= actionEndpointHoldStart - 0.000001;
+      if (entryReady !== ready) { entryReady = ready; onCodaEntryReadyChange?.(ready); }
+    };
     const context = gsap.context(() => {
         const envelope = root.querySelector<HTMLElement>("[data-workspace-stage-envelope]")!;
-        const stageBounds = stage.getBoundingClientRect();
-        const envelopeBounds = envelope.getBoundingClientRect();
-        const outerDelta = Math.max(0, stageBounds.bottom - envelopeBounds.bottom) + configuration.stageEnvelopeReleaseClearancePx;
+        let geometry = measureConnectedClosingGeometry(stage, envelope, codaFlow, footer, configuration.stageEnvelopeReleaseClearancePx);
+        const outerDelta = () => geometry.envelopeDelta;
         const selectChapter = (progress: number) => { const next = scrollChapterForProgress(progress); root.dataset.connectedProgress = String(progress); if (activeChapterRef.current !== next) { activeChapterRef.current = next; setActiveChapter(next); onChapterChange?.(next); } };
         let refreshing = false;
-        const activeTimeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { trigger: stage, pin: stage, pinSpacing: true, start: "top top", end: () => `+=${Math.round(window.innerHeight * configuration.travelViewportHeights)}`, scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true, onRefreshInit: () => { refreshing = true; }, onRefresh: (trigger) => { refreshing = false; selectChapter(trigger.progress); }, onUpdate: (trigger) => { root.dataset.connectedProgress = String(trigger.progress); } } });
+        const activeTimeline = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: {
+          trigger: stage, pin: closingTrack ?? stage, pinSpacing: true,
+          start: closingTrack ? () => `top ${geometry.pinTop}px` : "top top",
+          end: () => `+=${Math.round(window.innerHeight * configuration.travelViewportHeights)}`,
+          scrub: 0.35, anticipatePin: 1, invalidateOnRefresh: true,
+          onRefreshInit: () => {
+            refreshing = true;
+            geometry = measureConnectedClosingGeometry(stage, envelope, codaFlow, footer, configuration.stageEnvelopeReleaseClearancePx);
+          },
+          onRefresh: (trigger) => {
+            refreshing = false;
+            root.dataset.connectedScrollStart = String(trigger.start);
+            root.dataset.connectedScrollEnd = String(trigger.end);
+            root.dataset.connectedPinTop = String(geometry.pinTop);
+            selectChapter(trigger.progress);
+            reportEntryReady();
+          },
+          onUpdate: (trigger) => { root.dataset.connectedProgress = String(trigger.progress); },
+        } });
         timeline = activeTimeline;
         root.dataset.connectedTimelineActive = "true";
         root.dataset.connectedTriggerActive = "true";
-        activeTimeline.eventCallback("onUpdate", () => { if (!refreshing) selectChapter(activeTimeline.progress()); });
+        activeTimeline.eventCallback("onUpdate", () => { if (!refreshing) { selectChapter(activeTimeline.progress()); reportEntryReady(); } });
         activeTimeline
           .addLabel("applications", scrollStoryTimelineLabels.applications)
           .set('[data-scroll-copy-stage]:not([data-scroll-copy-stage="applications"])', { autoAlpha: 0 }, 0)
@@ -249,15 +275,50 @@ export function ConnectedStoryJ3({ onChapterChange }: ConnectedStoryJ3Props) {
         addNarrativeHandoff("applications", "interviews", scrollStoryTimelineLabels.interviews);
         addNarrativeHandoff("interviews", "preparation", scrollStoryTimelineLabels.preparation);
         addNarrativeHandoff("preparation", "action-center", scrollStoryTimelineLabels.actionCenter);
+        if (codaFlow) {
+          // The Coda shares the envelope's displacement, not a second scroll clock.
+          activeTimeline.set(codaFlow, { y: () => -outerDelta() }, 0)
+            .fromTo(codaFlow, { y: () => -outerDelta() }, { y: 0, duration: 0.135, ease: "power3.out" }, 0.67);
+        }
+        reportEntryReady();
+        const owner: ConnectedClosingOwner = {
+          refreshGeometry: () => {
+            const next = measureConnectedClosingGeometry(stage, envelope, codaFlow, footer, configuration.stageEnvelopeReleaseClearancePx);
+            if (next.signature !== geometry.signature) activeTimeline.scrollTrigger?.refresh();
+          },
+          finishForCodaFocus: (target) => {
+            if (codaFlow) codaFlow.dataset.connectedFocusRecovery = "true";
+            const trigger = activeTimeline.scrollTrigger;
+            if (!trigger || window.scrollY > trigger.end) return;
+            const targetBounds = target.getBoundingClientRect();
+            if (targetBounds.top >= 0 && targetBounds.bottom <= window.innerHeight) return;
+            trigger.getTween()?.progress(1);
+            activeTimeline.progress(1);
+            const relativeTargetTop = untransformedLayoutTop(target) - untransformedLayoutTop(stage);
+            const desired = Math.max(trigger.end + 1, trigger.end + geometry.pinTop + relativeTargetTop - window.innerHeight / 2);
+            const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+            window.scrollTo({ top: Math.min(maxScroll, desired), left: window.scrollX, behavior: "instant" });
+            trigger.update();
+            trigger.getTween()?.progress(1);
+            activeTimeline.progress(1);
+          },
+        };
+        onClosingOwnerChange?.(owner);
       }, root);
     return () => {
+      onClosingOwnerChange?.(null);
       delete root.dataset.connectedTimelineActive;
       delete root.dataset.connectedTriggerActive;
+      delete root.dataset.connectedScrollStart;
+      delete root.dataset.connectedScrollEnd;
+      delete root.dataset.connectedPinTop;
+      // Recovery belongs to this Coda DOM lifetime. Removing it on a family
+      // handoff would restart completed child keyframes when entry CSS returns.
       timeline?.scrollTrigger?.kill();
       timeline?.kill();
       context.revert();
     };
-  }, [onChapterChange]);
+  }, [onChapterChange, onClosingOwnerChange, onCodaEntryReadyChange]);
 
   return <div ref={rootRef} className="hf-scroll-story" data-connected-j3 data-scroll-story data-active-chapter={activeChapter} data-connected-progress="0">
     <div className="hf-scroll-story-desktop" data-testid="desktop-product-story">

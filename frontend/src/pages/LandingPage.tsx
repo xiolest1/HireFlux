@@ -1,5 +1,5 @@
 import { ArrowRight, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDemoSession } from "../auth/demoSessionContext";
 import { Button } from "../components/ui/Button";
@@ -11,6 +11,7 @@ import { HeroApplicationStory, LandingReveal } from "../features/landing/Landing
 import { LandingViewportReveal } from "../features/landing/LandingViewportReveal";
 import { QuietCoda } from "../features/landing/QuietCoda";
 import { useHeroMotionSession } from "../features/landing/useHeroMotionSession";
+import type { ConnectedClosingOwner } from "../features/landing/connectedClosingGeometry";
 
 interface LandingLocationState {
   from?: string;
@@ -31,6 +32,11 @@ export function LandingPage() {
   const { status, isCreating, error, start } = useDemoSession();
   const routeState = locationState(location.state);
   const [actionOrigin, setActionOrigin] = useState<"hero" | "coda" | null>(null);
+  const closingOwnerRef = useRef<ConnectedClosingOwner | null>(null);
+  const [codaEntryReady, setCodaEntryReady] = useState(false);
+  const registerClosingOwner = useCallback((owner: ConnectedClosingOwner | null) => {
+    closingOwnerRef.current = owner;
+  }, []);
   const {
     currentReducedMotion,
     heroMotionEligible,
@@ -106,20 +112,31 @@ export function LandingPage() {
         <ProductBenefitsSection />
 
         <LandingReveal className="hf-scroll-story-reveal">
-          <section className="mx-auto max-w-[90rem] min-w-0 px-4 py-16 sm:px-6 sm:pb-16 sm:pt-24 lg:px-8" aria-labelledby="proof-title">
-            <LandingViewportReveal className="max-w-2xl"><div data-landing-clip-check><p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">Connected workspace</p><h2 id="proof-title" className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">The workspace adapts around your search.</h2><p className="mt-4 leading-7 text-slate-600 dark:text-slate-300">Follow one opportunity through the search while the bigger picture stays connected.</p></div></LandingViewportReveal>
-            <ConnectedStory />
+          <section aria-labelledby="proof-title">
+            <div className="mx-auto max-w-[90rem] min-w-0 px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
+              <LandingViewportReveal className="max-w-2xl"><div data-landing-clip-check><p className="text-sm font-bold uppercase tracking-[0.16em] text-brand-700">Connected workspace</p><h2 id="proof-title" className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">The workspace adapts around your search.</h2><p className="mt-4 leading-7 text-slate-600 dark:text-slate-300">Follow one opportunity through the search while the bigger picture stays connected.</p></div></LandingViewportReveal>
+            </div>
+            <div data-connected-closing-track onFocusCapture={(event) => {
+              if (event.target instanceof HTMLElement && event.target.closest("[data-quiet-coda]")) {
+                closingOwnerRef.current?.finishForCodaFocus(event.target);
+              }
+            }}>
+              <div className="mx-auto flow-root max-w-[90rem] min-w-0 px-4 pb-16 sm:px-6 lg:px-8" data-connected-body>
+                <ConnectedStory onClosingOwnerChange={registerClosingOwner} onCodaEntryReadyChange={setCodaEntryReady} />
+              </div>
+              <div data-connected-coda-flow>
+                <LandingViewportReveal className="hf-post-story-reveal" normalEntryReady={codaEntryReady}>
+                  <QuietCoda
+                    actionLabel={actionLabel}
+                    error={actionOrigin === "coda" ? error : null}
+                    isCreating={isCreating}
+                    onAction={() => void enterDemo("coda")}
+                  />
+                </LandingViewportReveal>
+              </div>
+            </div>
           </section>
         </LandingReveal>
-
-        <LandingViewportReveal className="hf-post-story-reveal">
-          <QuietCoda
-            actionLabel={actionLabel}
-            error={actionOrigin === "coda" ? error : null}
-            isCreating={isCreating}
-            onAction={() => void enterDemo("coda")}
-          />
-        </LandingViewportReveal>
       </main>
 
       <footer className="mx-auto flex max-w-7xl min-w-0 flex-col gap-2 border-t border-line px-4 py-8 text-sm text-ink-muted dark:border-slate-800 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8" data-landing-clip-check><p>HireFlux · Candidate job-search demo</p><p>Temporary workspaces expire automatically after 24 hours.</p></footer>

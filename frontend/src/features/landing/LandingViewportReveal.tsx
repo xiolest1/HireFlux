@@ -20,11 +20,13 @@ function classifyRevealGeometry(bounds: DOMRect, viewportHeight: number): Reveal
 interface LandingViewportRevealProps {
   children: ReactNode;
   className?: string;
+  normalEntryReady?: boolean;
 }
 
 export function LandingViewportReveal({
   children,
   className = "",
+  normalEntryReady = true,
 }: LandingViewportRevealProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const lifecycleRef = useRef<RevealLifecycle>("uninitialized");
@@ -33,6 +35,8 @@ export function LandingViewportReveal({
   const [lifecycle, setLifecycle] = useState<RevealLifecycle>("revealed");
   const [motion, setMotion] = useState<RevealMotion>("none");
   const reducedMotion = useReducedMotion();
+  const entryReadyRef = useRef(normalEntryReady);
+  const entryObservedRef = useRef(false);
 
   const clearWatchdog = useCallback(() => {
     if (watchdogRef.current === null) return;
@@ -53,6 +57,16 @@ export function LandingViewportReveal({
     setMotion(nextMotion);
     setLifecycle("revealed");
   }, [clearWatchdog, disconnectObserver]);
+
+  useLayoutEffect(() => {
+    entryReadyRef.current = normalEntryReady;
+    if (!normalEntryReady || lifecycleRef.current !== "pending" || !entryObservedRef.current) return;
+    const root = rootRef.current;
+    if (!root) { reveal(); return; }
+    const geometry = classifyRevealGeometry(root.getBoundingClientRect(), window.innerHeight);
+    if (geometry === "passed") reveal();
+    else if (geometry === "reached") reveal("entry");
+  }, [normalEntryReady, reveal]);
 
   useLayoutEffect(() => {
     if (lifecycleRef.current === "revealed") return;
@@ -118,14 +132,18 @@ export function LandingViewportReveal({
             return;
           }
 
-          reveal("entry");
+          entryObservedRef.current = true;
+          if (entryReadyRef.current) reveal("entry");
           return;
         }
 
         if (entry.boundingClientRect.bottom <= 0) {
           reveal();
         } else if (entry.isIntersecting) {
-          reveal("entry");
+          entryObservedRef.current = true;
+          if (entryReadyRef.current) reveal("entry");
+        } else {
+          entryObservedRef.current = false;
         }
       }, createLandingRevealObserverOptions(passedSectionSafetyMargin));
       observerRef.current = observer;

@@ -1,13 +1,19 @@
-import { useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { ConnectedStoryA } from "./ConnectedStoryA";
 import { ConnectedStoryC } from "./ConnectedStoryC";
 import { ConnectedStoryFitProbe } from "./ConnectedStoryFitProbe";
 import { ConnectedStoryCProgressiveFitProbe } from "./ConnectedStoryCProgressiveFitProbe";
 import { ConnectedStoryCCompactFitProbe } from "./ConnectedStoryCCompactFitProbe";
 import { useConnectedStoryArchitecture } from "./useConnectedStoryArchitecture";
+import type { ConnectedClosingCallbacks, ConnectedClosingOwner } from "./connectedClosingGeometry";
 
-export function ConnectedStory() {
+export function ConnectedStory({ onClosingOwnerChange, onCodaEntryReadyChange }: ConnectedClosingCallbacks = {}) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const closingOwnerRef = useRef<ConnectedClosingOwner | null>(null);
+  const registerClosingOwner = useCallback((owner: ConnectedClosingOwner | null) => {
+    closingOwnerRef.current = owner;
+    onClosingOwnerChange?.(owner);
+  }, [onClosingOwnerChange]);
   const {
     family,
     cPresentation,
@@ -18,7 +24,11 @@ export function ConnectedStory() {
     reportProgressiveObserverGeneration,
     reportProgressivePosition,
     presentationSettled,
-  } = useConnectedStoryArchitecture(rootRef);
+  } = useConnectedStoryArchitecture(rootRef, { closingOwnerRef });
+
+  useLayoutEffect(() => {
+    if (family && family !== "j3") onCodaEntryReadyChange?.(true);
+  }, [family, onCodaEntryReadyChange]);
 
   return (
     <div
@@ -37,7 +47,7 @@ export function ConnectedStory() {
         <div aria-hidden="true" className="min-h-[48rem]" data-connected-unresolved-reservation />
       ) : (
         <div data-connected-family-owner={family}>
-          {family === "j3" && J3 ? <J3 onChapterChange={setActiveChapter} /> : null}
+          {family === "j3" && J3 ? <J3 onChapterChange={setActiveChapter} onClosingOwnerChange={registerClosingOwner} onCodaEntryReadyChange={onCodaEntryReadyChange} /> : null}
           {family === "c" && cPresentation ? (
             <ConnectedStoryC
               presentation={cPresentation}

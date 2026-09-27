@@ -182,7 +182,7 @@ test("Quiet Coda keeps static semantic content while the page handoff reveals it
   const structure = await page.evaluate(() => {
     const main = document.querySelector("main")!;
     const story = document.querySelector("[data-connected-story]")!;
-    const storySection = story.closest("section")!;
+    const storySection = story.closest("[data-connected-body]")!;
     const coda = document.querySelector("[data-quiet-coda]")!;
     const layout = coda.querySelector("[data-quiet-coda-layout]")!;
     const footer = document.querySelector("footer")!;

@@ -1,5 +1,125 @@
 # HireFlux development log
 
+## 2026-09-26 — Shared animated workspace / Quiet Coda closing boundary
+
+Implemented the approved shared-boundary correction, not another margin shave
+and not the rejected natural-flow/static-desktop substitution. The entry tree
+was clean at `fb629df` (`Landing page`). The previous restoration record below
+remains intact.
+
+The defect was independent scroll ownership: the workspace stayed pinned while
+Coda moved in ordinary flow after its spacer. Remaining pin travel therefore
+reappeared as empty space on reverse scrolling. A second defect made the old
+endpoint unreachable on very tall windows. The settled separation was already
+appropriate; no section padding, release-buffer size or Coda/Footer spacing
+was reduced in this pass.
+
+Matched baseline measurements confirm 325px at 0.90 reverse progress on
+1280 × 900, versus 100px after the correction. The old 2215 × 1687 page clamps
+at about 0.898 progress with a 538px gap; the implemented page reaches release
+and holds 108px. The 2157 × 1797 baseline gap is about 648px, versus 108px.
+
+`LandingPage` now places the existing story body and single Coda in a neutral
+closing track. The introduction stays outside that track; Footer stays outside
+`main`. J3 retains the stage trigger but pins the shared track. Existing scene
+tweens, shell dimensions, chapter boundaries, Action entrance/dwell, 0.35 scrub
+and original 2.5-viewport clock (including its existing pixel rounding) remain.
+The same timeline offsets Coda by negative `outerDelta` and resolves it to zero
+at authored 0.67 using the envelope's existing 0.135 duration/easing. This
+matches their displacement throughout forward and reverse traversal; it does
+not add another workspace movement or scroll owner.
+
+The tested internal geometry helper reads untransformed offsets/heights and
+excludes reveal transforms and pin reservation. The existing resize observer
+also observes the closing track, Coda flow and Footer. Refresh recomputes the
+envelope delta and the stable pin anchor:
+`max(0, viewportHeight - stageHeight - postStoryFlowHeight + 32px)`.
+Ordinary tested desktops keep anchor zero. At 2215 × 1687, anchor is about
+462px, actual trigger range 904–5122, and maximum scroll 5154: release is now
+reachable with 32px remaining. At 2182 × 1651 and 2157 × 1797, anchors are
+426px and 572px respectively. These tall-screen anchors apply throughout the
+chapters; they are not an animated downward chase or a new fallback rule.
+
+Normal Coda entry is gated until actual timeline time 0.825, then still requires
+the existing viewport observer's entry. It can appear during final dwell, as
+explicitly approved. Shorter desktops may enter after release. The optional
+gate defaults to the previous reveal behavior everywhere else. Restored,
+already-reached/passed, focus, reduced-motion, unsupported-observer and existing
+fail-visible paths bypass choreography. Revealed content is never re-hidden
+or replayed on reverse traversal. Offscreen Coda focus settles the same owner
+and scrolls into reachable post-pin flow; already-visible controls do not cause
+an unnecessary exit. Coda-local recovery CSS persists for that Coda DOM lifetime
+so family changes cannot restart child keyframes. The original nine-word reveal,
+one accessible heading, native CTA, and shared Explore / Preparing / Continue
+session behavior remain unchanged.
+
+Checkpoint capture/restoration now uses the owner's actual start/end and the
+shared pin's untransformed post-story position. A lower tall-screen anchor is
+not mistaken for pre-story merely because the root sits below the reading line.
+The checkpoint format, chapter mapping, trusted-intent guard and bounded
+correction policy remain unchanged. Height-resize coverage waits for existing
+owner reconciliation and ScrollTrigger's delayed refresh before synthetic
+checkpoint jumps; these tests add no production timer or refresh system.
+
+Rendered evidence uses the read-only committed HEAD implementation on a
+separate local Vite port and the implemented page at matching widths/themes/
+checkpoints. The baseline server explicitly includes its removed Tailwind
+utility candidates so its original 64px bottom padding is actually compiled;
+it does not modify repository source. Evidence is external at
+`C:/Users/xiole/AppData/Local/Temp/hireflux-shared-closing-20260926/`:
+`index.html`, `geometry.json`, 560 matched checkpoint images across seven
+desktop sizes/two themes, ordinary/tall traversal recordings, and responsive
+focus captures. Forward/reverse samples include 0.12, 0.32, 0.55, 0.76, 0.90,
+0.94, 0.96, 0.98, 1.00 and 1.02. Unreachable baseline samples record actual
+clamped progress rather than claiming endpoint completion. Representative
+ordinary/tall, earlier-chapter, Action and light/dark frames were visually
+inspected; after-reveal gaps are 100px ordinarily and 108px on taller screens,
+with only the existing 3px pending-reveal offset before entry.
+Additional real wheel-input recordings in both themes verify stable 100px/
+108px separation through release and reverse re-entry; numerical samples are
+in `wheel-qa.json`. All 26 ordinary desktop/fallback console checks have zero
+errors, warnings or horizontal overflow (`console-qa.json`). The wheel records
+include all four chapters at ordinary desktop size and reverse into Interviews
+on the tall screen; the full checkpoint gallery covers all four at both sizes.
+
+Unchanged selection was rechecked at 1280 × 720 (native C), 1024 × 768 and
+768 × 1024 (full Progressive-C), 430 × 932 and 390 × 844 (compact C),
+320 × 720 (A), and desktop reduced motion (native C), in both themes.
+Ordinary widths have no horizontal overflow or console/page errors. Coda
+retains natural wrapping and usable focus at 320px/200% root text. That extreme
+whole-page test exposes a pre-existing 67px overflow from the frozen Hero
+CTA/visual, reproduced identically in HEAD; Coda itself remains contained.
+This is an explicit out-of-scope limitation, not a claim of global enlarged-text
+perfection. Physical-device Safari/Firefox acceptance was not performed.
+
+Validation: lint, TypeScript, all 322 unit/integration tests in 45 files with
+two workers, 13 dedicated accessibility tests, production build and three
+hosting-header tests pass. An initial unconstrained unit run overlapped browser
+work and timed out in unrelated lazy-route tests; the bounded complete rerun
+passes without changing their expectations. An initial full browser run exposed
+a synthetic resize/restoration test that jumped before the existing delayed
+refresh settled; synchronizing the fixture preserved its geometry/chapter
+assertions and its isolated rerun passed. A subsequent cold full run had one
+unrelated first-page failure: the trace records HTTP 404 for `/` before React
+mounted. Three isolated 320px landing reruns passed unchanged. The final full
+run uses an explicitly verified HTTP-200 built preview without an overlapping
+build: all 257 applicable Playwright/Axe tests pass, with 338
+project/capability-gated cases skipped, in 6.8 minutes. `git diff --check` also
+passes. No visual reference images have been updated; frozen landing/workspace
+references remain intact.
+
+Production scope: `LandingPage.tsx`, `ConnectedStory.tsx`,
+`ConnectedStoryJ3.tsx`, `useConnectedStoryArchitecture.ts`,
+`LandingViewportReveal.tsx`, `styles.css`, and new
+`connectedClosingGeometry.ts`. Tests: the existing J3, reveal, architecture and
+landing-page motion unit tests; new `connectedClosingGeometry.test.ts`; existing
+reconciliation and visual-regression browser assertions; new
+`connected-closing-track.spec.ts`. Only this devlog is changed in documentation.
+No backend, route, API, product-data, dependency, accepted design-document,
+Home/theme, renderer-selection or shared demo-provisioning changes; no new
+observer constructor, scroll listener, timeline, trigger, negative margin,
+runway, decorative panel, commit or deployment.
+
 ## 2026-09-26 — Restore the original animated Connected Workspace
 
 The natural-flow implementation below was rejected after rendered product

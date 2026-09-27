@@ -126,6 +126,53 @@ afterEach(() => {
 });
 
 describe("LandingViewportReveal", () => {
+  it("gates normal entry with the existing observer and never re-hides a revealed instance", () => {
+    const content = <button data-testid="content">Demo</button>;
+    const view = render(<LandingViewportReveal normalEntryReady={false}>{content}</LandingViewportReveal>);
+    const observer = ObserverStub.instances[0]!;
+    act(() => observer.emit(reveal(), { top: 900, bottom: 1000 }));
+    setCurrentBounds(700, 800);
+    act(() => observer.emit(reveal(), { intersecting: true, top: 700, bottom: 800 }));
+    expect(reveal()).toHaveAttribute("data-reveal-state", "pending");
+    view.rerender(<LandingViewportReveal normalEntryReady>{content}</LandingViewportReveal>);
+    expect(reveal()).toHaveAttribute("data-reveal-motion", "entry");
+    expect(observer.disconnect).toHaveBeenCalledOnce();
+    view.rerender(<LandingViewportReveal normalEntryReady={false}>{content}</LandingViewportReveal>);
+    expect(reveal()).toHaveAttribute("data-reveal-state", "revealed");
+    expect(ObserverStub.instances).toHaveLength(1);
+  });
+
+  it.each(["focus", "passed", "reduced", "unsupported", "restored"])("bypasses the normal-entry gate for %s recovery", (path) => {
+    if (path === "reduced") motionPreference(true);
+    if (path === "unsupported") vi.stubGlobal("IntersectionObserver", undefined);
+    if (path === "restored") setCurrentBounds(700, 800);
+    render(<LandingViewportReveal normalEntryReady={false}><button data-testid="content">Demo</button></LandingViewportReveal>);
+    if (path === "focus") act(() => screen.getByRole("button").focus());
+    if (path === "passed") {
+      setCurrentBounds(-200, -1);
+      act(() => ObserverStub.instances[0]!.emit(reveal(), { top: -200, bottom: -1 }));
+    }
+    expect(reveal()).toHaveAttribute("data-reveal-state", "revealed");
+    expect(reveal()).toHaveAttribute("data-reveal-motion", "none");
+  });
+
+  it("opening readiness does not reveal a target that has left the entry area", () => {
+    const content = <button data-testid="content">Demo</button>;
+    const view = render(<LandingViewportReveal normalEntryReady={false}>{content}</LandingViewportReveal>);
+    const observer = ObserverStub.instances[0]!;
+    act(() => observer.emit(reveal(), { top: 900, bottom: 1000 }));
+    setCurrentBounds(700, 800);
+    act(() => observer.emit(reveal(), { intersecting: true, top: 700, bottom: 800 }));
+    setCurrentBounds(900, 1000);
+    act(() => observer.emit(reveal(), { intersecting: false, top: 900, bottom: 1000 }));
+    view.rerender(<LandingViewportReveal normalEntryReady>{content}</LandingViewportReveal>);
+    expect(reveal()).toHaveAttribute("data-reveal-state", "pending");
+    setCurrentBounds(700, 800);
+    act(() => observer.emit(reveal(), { intersecting: true, top: 700, bottom: 800 }));
+    expect(reveal()).toHaveAttribute("data-reveal-motion", "entry");
+    expect(ObserverStub.instances).toHaveLength(1);
+  });
+
   it("keeps final-visible presentation as the semantic base state", () => {
     vi.stubGlobal("IntersectionObserver", undefined);
     renderReveal();
