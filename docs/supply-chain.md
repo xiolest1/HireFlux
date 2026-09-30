@@ -49,6 +49,13 @@ the source revision.
 The backend CI job also generates `artifacts/hireflux-openapi.json` from the
 FastAPI application contract. This preserves an inspectable API specification
 without requiring public staging or production documentation routes.
+The generator imports the side-effect-free `hireflux_backend.app_factory` and
+supplies its own explicit test settings and inert database client. It does not
+require `.env`, deployment signing keys, AWS credentials, or a running database.
+The runtime entry point remains `hireflux_backend.main:app` and still validates
+all required environment configuration on startup. Subprocess regression tests
+exercise generation from a directory without `.env`, outside pytest's configured
+process environment.
 
 ## Release checks
 

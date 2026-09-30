@@ -1,5 +1,49 @@
 # HireFlux development log
 
+## 2026-09-29 — Repair post-push CI artifact generation and dependency auditing
+
+Investigated the reported commit/push failure against the live GitHub refs and
+Actions run `36285527115`. Local `main`, its `origin/main` tracking ref, and
+GitHub `main` all pointed to `18a1760`; the worktree was clean and push dry-run
+succeeded. Git metadata, active hooks, lock files, index conflicts, and object
+integrity showed no blocking problem. The failure occurred after the successful
+push in GitHub Actions, not during add, commit, authentication, or ref updates.
+
+Reproduced the OpenAPI command's exact three missing-settings errors from a
+temporary directory without `.env`. Importing `main.create_app` initialized
+`main.app` before the generator could supply its explicit test settings.
+Pytest's configured environment and the local `.env` had hidden this import
+side effect. Moved the unchanged application construction code into
+`hireflux_backend.app_factory` and made the generator import that module.
+`hireflux_backend.main:app` remains the runtime entry point and still rejects
+missing configuration. Added subprocess tests for clean-environment contract
+generation, side-effect-free factory imports, and required runtime settings.
+No deployment secrets, relaxed validation, or database startup writes were added.
+Separated the SBOM and OpenAPI commands into individually named workflow steps.
+
+The same run also failed the frontend audit gate. Updated Vitest to 4.1.11 and
+compatible transitive versions of brace-expansion, js-yaml, and undici, while
+removing unused lock entries including vulnerable fast-uri. The regenerated
+lockfile passes npm audit with zero reported vulnerabilities. Audit thresholds
+and security checks remain intact.
+
+The existing local backend virtual environment used Python 3.12, outside the
+declared support range. Verification used separate ignored temporary locked
+Python 3.13 and 3.14 environments, preserving the existing one. A running
+HireFlux Vite process held a native CSS module open during npm ci; it was stopped
+specifically for dependency installation, without touching the unrelated
+portfolio dev server. No branches, worktrees, stashes, or historical objects
+were reset, removed, or rewritten.
+
+Validation passed Ruff lint/format and strict Mypy (59 source files), all 267
+backend tests on both Python 3.13 and 3.14, all 322 frontend tests (45 files,
+one worker on Windows), frontend lint/typecheck, three hosting-header tests,
+and the production build. The locked Python runtime audit found no known
+vulnerabilities and npm audit reported zero vulnerabilities. Both generated
+artifacts succeeded without runtime configuration on Python 3.13. The existing
+Starlette/httpx test-client deprecation warning remains non-failing and unrelated
+to the CI artifact failure.
+
 ## 2026-09-26 — Shared animated workspace / Quiet Coda closing boundary
 
 Implemented the approved shared-boundary correction, not another margin shave

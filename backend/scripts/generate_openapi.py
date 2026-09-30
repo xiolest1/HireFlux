@@ -6,8 +6,8 @@ import argparse
 import json
 from pathlib import Path
 
+from hireflux_backend.app_factory import create_app
 from hireflux_backend.config import Settings
-from hireflux_backend.main import create_app
 
 
 def main() -> None:
