@@ -16,8 +16,6 @@ NOW = datetime(2026, 8, 24, 15, tzinfo=UTC)
 def identity() -> CurrentIdentity:
     return CurrentIdentity(
         user_id="owner",
-        name="Candidate",
-        email="candidate@example.test",
         role=UserRole.STANDARD_USER,
     )
 

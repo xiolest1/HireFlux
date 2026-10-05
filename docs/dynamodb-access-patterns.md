@@ -19,6 +19,7 @@ Adding or changing an index is an explicit schema migration decision, not an app
 | Entity | Primary key | Sort key | Relevant index keys |
 | --- | --- | --- | --- |
 | User profile | `USER#<user_id>` | `PROFILE` | none |
+| Durable workspace readiness | `USER#<owner_user_id>` | `WORKSPACE` | none; `DURABLE_WORKSPACE`, identity kind, bootstrap version 1, `PROVISIONING`/`ACTIVE`, UTC timestamps; no TTL |
 | Demo workspace lifecycle | `USER#<workspace_id>` | `WORKSPACE` | none; `state` is `PROVISIONING`, `READY`, or `FAILED` |
 | Demo idempotency record | `DEMO_IDEMPOTENCY#<sha256(idempotency-key)>` | `SESSION` | none; stores only the workspace reference, state, timestamps, and TTL |
 | Workspace quota | `USER#<user_id>` | `WORKSPACE_QUOTA` | none |
@@ -67,6 +68,26 @@ Every temporary demo item, including settings, notes, counters, and interviews, 
 | 20 | Later admin reporting | role-gated query on a sparse admin index keyed by entity/date | admin GSI, later | signed cursor | separate admin service requires `ADMIN`; ordinary methods never use this index |
 | 21 | Reserve or replay demo provisioning | conditional `PutItem` without a key, or two-item `TransactWriteItems` for lifecycle plus idempotency record | table | none | public route has no owner input; generated workspace ID and hashed key are server-owned |
 | 22 | Clean up failed demo provisioning | owner-partition `Query`, status-partition `Query` on GSI2, application-partition `Query`, then bounded `BatchWriteItem` deletes | table + GSI2 | internal bounded pagination | only invoked for the just-reserved generated workspace; lifecycle and failure marker remain until TTL |
+| 23 | Bootstrap or adopt durable workspace | strongly consistent owner-partition `Query`; conditional three-item transaction creates only missing profile/settings and finalizes readiness; existing records use `ConditionCheck` | table | paginated owner query; bounded conflict retries | verified non-demo identity; same WORKSPACE slot as demo detects unsafe collisions; no TTL conversion or seed |
+| 24 | Gate ordinary durable workspace routes | strongly consistent owner-partition `Query` validates complete ACTIVE readiness, schema, provenance, profile/settings and absence of owner-item TTL | table | paginated owner query | central dependency runs before service side effects; verified demos bypass this query |
+| 25 | Check legacy data lifetime during adoption | query all owner/status partitions, including ARCHIVED, then strongly query each discovered application partition | existing GSI2 + table | paginated queries; existing workspace quotas bound legitimate data | owner-qualified keys only; rejects temporary canonical and helper records without rewriting them |
+
+Durable bootstrap adds no table or index and requires no reset/migration. The
+workspace record deliberately shares the demo lifecycle slot but has a distinct
+entity type. Its transaction either commits readiness/profile/settings together
+or leaves the previous state intact. Replays of a complete ACTIVE workspace do
+not write, bump versions, or reset preferences. Compatible incomplete records
+recover only missing components; previously ACTIVE settings loss fails explicitly.
+Existing legacy profile attributes and creation-only `last_login_at` storage are
+preserved. Read APIs present the deprecated login field as null.
+
+GSI2 discovery during legacy adoption is eventually consistent and cannot prove
+absence of unindexed/orphan application partitions. It is a compatibility path
+for existing local data, not an account-deletion inventory. A strongly consistent
+application manifest, deletion lifecycle, and transaction write guards remain
+Phase 2C. No `Scan` is introduced on request paths. Durable canonical items and
+lazy quotas/counters/context omit `expires_at`; demos retain the signed workspace
+expiry on every temporary item. Credential expiration cannot supply durable TTL.
 
 ## Cursor contract
 

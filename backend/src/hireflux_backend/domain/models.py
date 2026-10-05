@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from enum import StrEnum
 
 from hireflux_backend.domain.enums import (
     ActivityType,
@@ -13,14 +14,41 @@ from hireflux_backend.domain.enums import (
 )
 
 
+class IdentityKind(StrEnum):
+    LOCAL = "LOCAL"
+    PERSISTENT = "PERSISTENT"
+    DEMO = "DEMO"
+
+
 @dataclass(frozen=True, slots=True)
 class CurrentIdentity:
+    """Verified principal. Credential expiry is deliberately not a data lifetime."""
+
     user_id: str
+    role: UserRole
+    kind: IdentityKind = IdentityKind.LOCAL
+    data_expires_at: int | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.kind, IdentityKind) or not isinstance(self.role, UserRole):
+            raise ValueError("Identity kind and role must be validated.")
+        if self.kind is IdentityKind.DEMO:
+            if type(self.data_expires_at) is not int or self.data_expires_at <= 0:
+                raise ValueError("Demo identities require a data expiry.")
+        elif self.data_expires_at is not None:
+            raise ValueError("Durable identities cannot expire workspace data.")
+
+    @property
+    def is_demo(self) -> bool:
+        return self.kind is IdentityKind.DEMO
+
+
+@dataclass(frozen=True, slots=True)
+class TrustedProfileAttributes:
+    """Server configuration or verified profile source, separate from access claims."""
+
     name: str
     email: str
-    role: UserRole
-    expires_at: int | None = None
-    is_demo: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,7 +58,7 @@ class UserProfile:
     email: str
     role: UserRole
     created_at: datetime
-    last_login_at: datetime
+    last_login_at: datetime | None
     expires_at: int | None = None
 
 

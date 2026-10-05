@@ -50,8 +50,6 @@ class ApplicationRepositoryStub:
 def identity() -> CurrentIdentity:
     return CurrentIdentity(
         user_id="owner",
-        name="Recruiter",
-        email="recruiter@example.com",
         role=UserRole.STANDARD_USER,
     )
 

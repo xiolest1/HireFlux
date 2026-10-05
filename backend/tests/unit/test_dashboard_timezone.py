@@ -90,8 +90,6 @@ def test_dashboard_uses_saved_zone_and_schedule_query_for_follow_up_dates() -> N
     repository = RepositorySpy()
     identity = CurrentIdentity(
         user_id="owner",
-        name="User",
-        email="user@example.com",
         role=UserRole.STANDARD_USER,
     )
     service = InsightsService(  # type: ignore[arg-type]
@@ -149,9 +147,7 @@ def test_dashboard_keeps_scheduled_interviews_visible_beyond_the_next_24_hours()
     repository = RepositorySpy()
     repository.all_applications = ()
     repository.due_applications = ()
-    identity = CurrentIdentity(
-        user_id="owner", name="User", email="user@example.com", role=UserRole.STANDARD_USER
-    )
+    identity = CurrentIdentity(user_id="owner", role=UserRole.STANDARD_USER)
     payload = InsightsService(
         repository,
         resource_service=InterviewsStub(),  # type: ignore[arg-type]
@@ -176,8 +172,6 @@ def test_analytics_stage_aging_uses_saved_workspace_zone() -> None:
     )
     identity = CurrentIdentity(
         user_id="owner",
-        name="User",
-        email="user@example.com",
         role=UserRole.STANDARD_USER,
     )
 
@@ -206,9 +200,7 @@ def test_dashboard_keeps_undated_action_and_stage_age_out_of_due_states() -> Non
         ),
         _application("aged", None, stage_entered_at=datetime(2026, 7, 20, tzinfo=UTC)),
     )
-    identity = CurrentIdentity(
-        user_id="owner", name="User", email="user@example.com", role=UserRole.STANDARD_USER
-    )
+    identity = CurrentIdentity(user_id="owner", role=UserRole.STANDARD_USER)
     payload = InsightsService(
         repository,
         resource_service=ResourceServiceStub(),  # type: ignore[arg-type]

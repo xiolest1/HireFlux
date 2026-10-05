@@ -10,6 +10,7 @@ from hireflux_backend.application.errors import (
 from hireflux_backend.application.opportunity_workspace import OpportunityWorkspaceService
 from hireflux_backend.application.resource_services import WorkspaceResourceService
 from hireflux_backend.application.services import ApplicationService, UserService
+from hireflux_backend.application.workspace_bootstrap import WorkspaceBootstrapService
 from hireflux_backend.application.workspace_export import WorkspaceExportService
 from hireflux_backend.auth.demo import identity_from_claims
 from hireflux_backend.auth.local import identity_from_settings
@@ -63,7 +64,23 @@ def get_workspace_export_service(request: Request) -> WorkspaceExportService:
     return request.app.state.workspace_export_service
 
 
-IdentityDependency = Annotated[CurrentIdentity, Depends(get_current_identity)]
+def get_workspace_bootstrap_service(request: Request) -> WorkspaceBootstrapService:
+    return request.app.state.workspace_bootstrap_service
+
+
+def get_workspace_identity(
+    identity: Annotated[CurrentIdentity, Depends(get_current_identity)],
+    service: Annotated[WorkspaceBootstrapService, Depends(get_workspace_bootstrap_service)],
+) -> CurrentIdentity:
+    service.require_ready(identity)
+    return identity
+
+
+AuthenticatedIdentityDependency = Annotated[CurrentIdentity, Depends(get_current_identity)]
+IdentityDependency = Annotated[CurrentIdentity, Depends(get_workspace_identity)]
+WorkspaceBootstrapServiceDependency = Annotated[
+    WorkspaceBootstrapService, Depends(get_workspace_bootstrap_service)
+]
 UserServiceDependency = Annotated[UserService, Depends(get_user_service)]
 ApplicationServiceDependency = Annotated[ApplicationService, Depends(get_application_service)]
 OpportunityWorkspaceServiceDependency = Annotated[

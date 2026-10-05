@@ -27,7 +27,13 @@ from hireflux_backend.domain.enums import (
     UserRole,
     WorkMode,
 )
-from hireflux_backend.domain.models import Application, CurrentIdentity, DemoWorkspace
+from hireflux_backend.domain.models import (
+    Application,
+    CurrentIdentity,
+    DemoWorkspace,
+    IdentityKind,
+    TrustedProfileAttributes,
+)
 from hireflux_backend.domain.resources import InterviewStatus, InterviewType
 
 
@@ -360,15 +366,18 @@ class DemoSessionService:
 
         identity = CurrentIdentity(
             user_id=workspace_id,
-            name="Demo Workspace",
-            email=f"demo-{workspace_id.split('-')[0]}@example.invalid",
             role=UserRole.STANDARD_USER,
-            expires_at=int(expires_at.timestamp()),
-            is_demo=True,
+            data_expires_at=int(expires_at.timestamp()),
+            kind=IdentityKind.DEMO,
         )
         created: list[Application] = []
         try:
-            self._user_service.get_or_create_profile(identity)
+            self._user_service.ensure_demo_profile(
+                identity,
+                TrustedProfileAttributes(
+                    "Demo Workspace", f"demo-{workspace_id.split('-')[0]}@example.invalid"
+                ),
+            )
             self._seed_workspace(identity, issued_at, created)
             self._workspace_repository.mark_ready(reservation.workspace)
         except Exception as error:

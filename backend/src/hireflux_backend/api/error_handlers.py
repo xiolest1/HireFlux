@@ -17,6 +17,8 @@ from hireflux_backend.application.errors import (
     NotFoundError,
     PersistenceError,
     ValidationError,
+    WorkspaceBootstrapConflictError,
+    WorkspaceBootstrapRequiredError,
     WorkspaceExportTooLargeError,
 )
 
@@ -30,6 +32,8 @@ def register_exception_handlers(app: FastAPI) -> None:
         DemoProvisioningInProgressError, demo_provisioning_in_progress_handler
     )
     app.add_exception_handler(ConflictError, conflict_handler)
+    app.add_exception_handler(WorkspaceBootstrapRequiredError, bootstrap_required_handler)
+    app.add_exception_handler(WorkspaceBootstrapConflictError, bootstrap_conflict_handler)
     app.add_exception_handler(ValidationError, domain_validation_handler)
     app.add_exception_handler(InvalidCursorError, invalid_cursor_handler)
     app.add_exception_handler(PersistenceError, persistence_handler)
@@ -69,6 +73,14 @@ async def not_found_handler(request: Request, error: Exception) -> JSONResponse:
 async def conflict_handler(request: Request, error: Exception) -> JSONResponse:
     assert isinstance(error, ConflictError)
     return _response(request, 409, "CONFLICT", str(error))
+
+
+async def bootstrap_required_handler(request: Request, error: Exception) -> JSONResponse:
+    return _response(request, 409, "WORKSPACE_BOOTSTRAP_REQUIRED", str(error))
+
+
+async def bootstrap_conflict_handler(request: Request, error: Exception) -> JSONResponse:
+    return _response(request, 409, "WORKSPACE_BOOTSTRAP_CONFLICT", str(error))
 
 
 async def demo_provisioning_in_progress_handler(request: Request, error: Exception) -> JSONResponse:

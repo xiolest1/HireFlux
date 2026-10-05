@@ -1,4 +1,3 @@
-from dataclasses import replace
 from datetime import date
 from typing import Any
 
@@ -18,7 +17,13 @@ from hireflux_backend.domain.enums import (
     NextStepResponsibility,
     WorkMode,
 )
-from hireflux_backend.domain.models import Activity, Application, CurrentIdentity, UserProfile
+from hireflux_backend.domain.models import (
+    Activity,
+    Application,
+    CurrentIdentity,
+    TrustedProfileAttributes,
+    UserProfile,
+)
 from hireflux_backend.domain.resources import (
     ACTIVE_APPLICATION_STATUSES,
     DefaultApplicationView,
@@ -53,16 +58,31 @@ class DynamoUserRepository:
         self._client = client
         self._table_name = table_name
 
-    def get_or_create(self, identity: CurrentIdentity, *, now_iso: str) -> UserProfile:
-        now = parse_timestamp(now_iso)
+    def get(self, owner_user_id: str) -> UserProfile | None:
+        try:
+            response = self._client.get_item(
+                TableName=self._table_name,
+                Key=serialize_item({"PK": user_partition(owner_user_id), "SK": "PROFILE"}),
+                ConsistentRead=True,
+            )
+        except ClientError as error:
+            raise PersistenceError("Unable to read the user profile.") from error
+        item = response.get("Item")
+        return profile_from_item(deserialize_item(item)) if item else None
+
+    def ensure_demo_profile(
+        self, identity: CurrentIdentity, attributes: TrustedProfileAttributes, *, now_iso: str
+    ) -> UserProfile:
+        if not identity.is_demo:
+            raise ValueError("Demo provisioning requires a demo identity.")
         proposed = UserProfile(
             user_id=identity.user_id,
-            name=identity.name,
-            email=identity.email,
+            name=attributes.name,
+            email=attributes.email,
             role=identity.role,
-            created_at=now,
-            last_login_at=now,
-            expires_at=identity.expires_at,
+            created_at=parse_timestamp(now_iso),
+            last_login_at=None,
+            expires_at=identity.data_expires_at,
         )
         try:
             self._client.put_item(
@@ -73,32 +93,10 @@ class DynamoUserRepository:
             return proposed
         except ClientError as error:
             if _error_code(error) != "ConditionalCheckFailedException":
-                raise PersistenceError("Unable to initialize the user profile.") from error
-
-        try:
-            response = self._client.get_item(
-                TableName=self._table_name,
-                Key=serialize_item({"PK": user_partition(identity.user_id), "SK": "PROFILE"}),
-                ConsistentRead=True,
-            )
-        except ClientError as error:
-            raise PersistenceError("Unable to read the user profile.") from error
-        item = response.get("Item")
-        if item is None:
-            raise PersistenceError("The user profile could not be initialized.")
-        profile = profile_from_item(deserialize_item(item))
-        if identity.name == "Demo Workspace" and profile.name == "Demo Recruiter":
-            try:
-                self._client.update_item(
-                    TableName=self._table_name,
-                    Key=serialize_item({"PK": user_partition(identity.user_id), "SK": "PROFILE"}),
-                    UpdateExpression="SET #name = :name",
-                    ExpressionAttributeNames={"#name": "name"},
-                    ExpressionAttributeValues=serialize_item({":name": identity.name}),
-                )
-            except ClientError as error:
-                raise PersistenceError("Unable to migrate the demo workspace profile.") from error
-            return replace(profile, name=identity.name)
+                raise PersistenceError("Unable to initialize the demo profile.") from error
+        profile = self.get(identity.user_id)
+        if profile is None or profile.expires_at != identity.data_expires_at:
+            raise PersistenceError("The demo profile could not be initialized.")
         return profile
 
 

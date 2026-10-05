@@ -26,6 +26,7 @@ from hireflux_backend.application.opportunity_workspace import OpportunityWorksp
 from hireflux_backend.application.pipeline import PipelineService
 from hireflux_backend.application.resource_services import WorkspaceResourceService
 from hireflux_backend.application.services import ApplicationService, UserService
+from hireflux_backend.application.workspace_bootstrap import WorkspaceBootstrapService
 from hireflux_backend.application.workspace_export import WorkspaceExportService
 from hireflux_backend.auth.demo import DemoSessionCodec
 from hireflux_backend.config import Settings, get_settings
@@ -40,6 +41,9 @@ from hireflux_backend.infrastructure.dynamodb.repositories import (
 )
 from hireflux_backend.infrastructure.dynamodb.resource_repositories import (
     DynamoWorkspaceResourceRepository,
+)
+from hireflux_backend.infrastructure.dynamodb.workspace_bootstrap_repository import (
+    DynamoWorkspaceBootstrapRepository,
 )
 
 _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
@@ -63,6 +67,9 @@ def create_app(
         openapi_url="/openapi.json" if configured.expose_api_docs else None,
     )
     app.state.settings = configured
+    app.state.workspace_bootstrap_service = WorkspaceBootstrapService(
+        DynamoWorkspaceBootstrapRepository(client, configured.dynamodb_table_name)
+    )
     user_service = UserService(DynamoUserRepository(client, configured.dynamodb_table_name))
     application_repository = DynamoApplicationRepository(
         client,

@@ -254,8 +254,6 @@ def test_workspace_preview_has_exact_counts_without_read_path_n_plus_one() -> No
     )
     identity = CurrentIdentity(
         user_id="owner",
-        name="Owner",
-        email="owner@example.test",
         role=UserRole.STANDARD_USER,
     )
 
@@ -281,8 +279,6 @@ def test_workspace_cursor_is_isolated_by_group_and_owner() -> None:
     )
     identity = CurrentIdentity(
         user_id="owner",
-        name="Owner",
-        email="owner@example.test",
         role=UserRole.STANDARD_USER,
     )
     first_page = service.get_group(identity, OpportunityGroup.WAITING, limit=1, cursor=None)

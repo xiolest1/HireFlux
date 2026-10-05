@@ -32,6 +32,7 @@ from hireflux_backend.domain.resources import (
     ThemePreference,
     WorkspaceSettings,
 )
+from hireflux_backend.domain.workspace import default_workspace_settings
 
 
 def utc_now() -> datetime:
@@ -185,17 +186,8 @@ class WorkspaceResourceService:
         if current is not None:
             return current
         now = self._aware_utc_now()
-        proposed = WorkspaceSettings(
-            owner_user_id=identity.user_id,
-            time_zone="UTC",
-            default_follow_up_days=7,
-            default_application_view=DefaultApplicationView.ACTIVE,
-            default_dashboard_range=DashboardRange.THIRTY_DAYS,
-            theme=ThemePreference.SYSTEM,
-            created_at=now,
-            updated_at=now,
-            version=1,
-            expires_at=identity.expires_at,
+        proposed = default_workspace_settings(
+            identity.user_id, now, data_expires_at=identity.data_expires_at
         )
         return self._resources.create_settings(proposed)
 
@@ -265,7 +257,7 @@ class WorkspaceResourceService:
             created_at=now,
             updated_at=now,
             version=1,
-            expires_at=identity.expires_at,
+            expires_at=identity.data_expires_at,
         )
         activity = self._activity(
             identity,
@@ -399,7 +391,7 @@ class WorkspaceResourceService:
             created_at=now,
             updated_at=now,
             version=1,
-            expires_at=identity.expires_at,
+            expires_at=identity.data_expires_at,
         )
         _validate_duration(interview.duration_minutes)
         activity = self._activity(
@@ -841,7 +833,7 @@ class WorkspaceResourceService:
             summary=summary,
             created_at=self._aware_utc_now(),
             metadata=metadata,
-            expires_at=identity.expires_at,
+            expires_at=identity.data_expires_at,
         )
 
     def _aware_utc_now(self) -> datetime:

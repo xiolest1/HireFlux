@@ -146,7 +146,11 @@ class UserResponse(BaseModel):
     email: str
     role: UserRole
     created_at: datetime
-    last_login_at: datetime | None
+    last_login_at: datetime | None = Field(
+        default=None,
+        deprecated=True,
+        description="Legacy compatibility field; HireFlux does not record login events.",
+    )
 
     @classmethod
     def from_domain(cls, profile: UserProfile) -> "UserResponse":
@@ -156,7 +160,7 @@ class UserResponse(BaseModel):
             email=profile.email,
             role=profile.role,
             created_at=profile.created_at,
-            last_login_at=profile.last_login_at,
+            last_login_at=None,
         )
 
 

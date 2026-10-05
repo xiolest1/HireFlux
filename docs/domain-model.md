@@ -12,11 +12,43 @@ The local demo bounds resource growth per application: 100 notes, 25 interviews,
 
 ## User
 
-- `user_id`: Cognito `sub` in AWS; fixed UUID in local mode.
+- `user_id`: generated UUID for demos; fixed configured UUID for local durable workspaces.
+  Direct verified Cognito `sub` is the approved future ownership direction, not implemented authentication.
 - `name`, `email`, `role`.
-- `created_at`, `last_login_at`.
+- `created_at`: profile initialization instant. The deprecated nullable API field
+  `last_login_at` is always null; HireFlux does not observe actual login events.
+  Existing creation-only stored values remain untouched on adoption.
 
-Cognito owns passwords, verification, resets, MFA options, sessions, and tokens. HireFlux never stores passwords or password hashes.
+Future Cognito owns passwords, verification, resets, MFA options, sessions, and tokens. HireFlux never stores passwords or password hashes.
+
+The verified principal (`CurrentIdentity`) has `user_id`, `role`, `kind`, and
+`data_expires_at`; it does not require name/email or contain token expiry.
+`DEMO` requires a positive data expiry. `LOCAL` and future `PERSISTENT` prohibit
+workspace expiry. `is_demo` is derived from kind, so contradictory flags cannot
+be constructed. `TrustedProfileAttributes` supplies name/email independently
+from server configuration or a future trusted profile source.
+
+## Durable workspace readiness
+
+`DurableWorkspace` contains `owner_user_id`, `identity_kind`, `bootstrap_version`
+(currently 1), `state` (`PROVISIONING` or `ACTIVE`), `created_at`, and `updated_at`.
+It has no TTL field. Normal bootstrap atomically creates `ACTIVE` metadata plus
+profile and default settings; `PROVISIONING` supports safe incomplete-record
+recovery. Existing records are preserved with conditional checks. Counters remain
+lazy and an absent counter represents zero. This lifecycle does not implement
+account deletion states, manifests, write guards, or erasure.
+
+`POST /api/v1/me/bootstrap` accepts no authoritative client fields and always
+initializes the authenticated durable owner. It returns readiness/version,
+profile, and settings with HTTP 200 for both initialization and replay. Demo
+identities receive 403. Ordinary durable operations require complete readiness;
+`GET /me` cannot initialize a workspace. Compatible legacy local records are
+adopted without seed/reset. TTL/type/owner conflicts are never repaired by stripping
+expiry. Lost responses and concurrent attempts converge through atomic conditional
+writes. Missing settings in an already active workspace return a conflict because
+preferences cannot safely be reconstructed; missing profiles can be recovered
+from the trusted source. Defaults are UTC, 7 follow-up days, ACTIVE application
+view, 30d dashboard range, SYSTEM theme, and settings version 1.
 
 ## Application
 

@@ -13,7 +13,7 @@ from hireflux_backend.application.errors import (
     DemoSessionRequiredError,
 )
 from hireflux_backend.domain.enums import UserRole
-from hireflux_backend.domain.models import CurrentIdentity
+from hireflux_backend.domain.models import CurrentIdentity, IdentityKind
 
 
 def utc_now() -> datetime:
@@ -102,14 +102,11 @@ class DemoSessionCodec:
 
 
 def identity_from_claims(claims: DemoSessionClaims) -> CurrentIdentity:
-    short_id = claims.workspace_id.split("-")[0]
     return CurrentIdentity(
         user_id=claims.workspace_id,
-        name="Demo Workspace",
-        email=f"demo-{short_id}@example.invalid",
         role=UserRole.STANDARD_USER,
-        expires_at=int(claims.expires_at.timestamp()),
-        is_demo=True,
+        data_expires_at=int(claims.expires_at.timestamp()),
+        kind=IdentityKind.DEMO,
     )
 
 

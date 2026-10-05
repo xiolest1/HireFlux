@@ -36,8 +36,6 @@ def draft_payload(company: str = "Acme") -> dict[str, Any]:
 def _identity(user_id: str, name: str) -> CurrentIdentity:
     return CurrentIdentity(
         user_id=user_id,
-        name=name,
-        email=f"{user_id}@example.invalid",
         role=UserRole.STANDARD_USER,
     )
 
@@ -195,7 +193,9 @@ def test_workspace_export_aggregates_only_the_authenticated_workspace(
     identity_b = _identity("00000000-0000-4000-8000-0000000000bb", "Owner B")
 
     with TestClient(app) as client:
+        assert client.post("/api/v1/me/bootstrap").status_code == 200
         _use_identity(app, identity_a)
+        assert client.post("/api/v1/me/bootstrap").status_code == 200
         application_a = client.post(
             "/api/v1/applications", json=draft_payload("Export Owner A")
         ).json()
@@ -220,6 +220,7 @@ def test_workspace_export_aggregates_only_the_authenticated_workspace(
         ).json()
 
         _use_identity(app, identity_b)
+        assert client.post("/api/v1/me/bootstrap").status_code == 200
         application_b = client.post(
             "/api/v1/applications", json=draft_payload("Export Owner B")
         ).json()
@@ -244,6 +245,7 @@ def test_workspace_export_aggregates_only_the_authenticated_workspace(
         ).json()
 
         _use_identity(app, identity_a)
+        assert client.post("/api/v1/me/bootstrap").status_code == 200
         response = client.get("/api/v1/me/export")
         csv_response = client.get("/api/v1/me/applications/export")
 
@@ -278,6 +280,7 @@ def test_workspace_export_rejects_workspaces_above_the_sync_record_limit(
         dynamodb_client=dynamodb_client,
     )
     with TestClient(app) as client:
+        assert client.post("/api/v1/me/bootstrap").status_code == 200
         response = client.post("/api/v1/applications", json=draft_payload("Too Large"))
         assert response.status_code == 201
 
@@ -424,7 +427,9 @@ def test_duplicate_candidates_are_owner_scoped(dynamodb_client: Any) -> None:
     owner_b = _identity("00000000-0000-4000-8000-0000000000b2", "Owner B")
 
     with TestClient(app) as client:
+        assert client.post("/api/v1/me/bootstrap").status_code == 200
         _use_identity(app, owner_a)
+        assert client.post("/api/v1/me/bootstrap").status_code == 200
         created = client.post(
             "/api/v1/applications",
             json=draft_payload("Private Opportunity"),
@@ -432,6 +437,7 @@ def test_duplicate_candidates_are_owner_scoped(dynamodb_client: Any) -> None:
         assert created.status_code == 201
 
         _use_identity(app, owner_b)
+        assert client.post("/api/v1/me/bootstrap").status_code == 200
         response = client.post(
             "/api/v1/applications/duplicate-candidates",
             json={

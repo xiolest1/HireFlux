@@ -26,8 +26,8 @@ def test_demo_session_round_trip_builds_temporary_identity() -> None:
 
     assert claims.workspace_id == WORKSPACE_ID
     assert identity.user_id == WORKSPACE_ID
-    assert identity.name == "Demo Workspace"
-    assert identity.expires_at == int((NOW + timedelta(hours=24)).timestamp())
+    assert identity.is_demo
+    assert identity.data_expires_at == int((NOW + timedelta(hours=24)).timestamp())
 
 
 def test_demo_session_rejects_tampering_and_malformed_values() -> None:

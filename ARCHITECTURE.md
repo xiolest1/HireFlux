@@ -118,9 +118,34 @@ request verifies the signature and expiration before deriving `owner_user_id`.
 The client never supplies authoritative ownership.
 
 `AUTH_MODE=local` is a deterministic developer convenience and is rejected
-outside local/test environments. A future Cognito adapter can replace token
+outside local/test environments and when deployment runtime markers are present.
+It now owns durable data and requires explicit `POST /api/v1/me/bootstrap` before
+ordinary workspace operations. The body is absent or `{}`; ownership, profile
+attributes, roles, and lifetime come from the server. Bootstrap creates an empty
+workspace, profile, and UTC settings atomically, with no seed data or eager counters.
+A future Cognito adapter can replace token
 verification for persistent accounts without changing service or repository
 ownership contracts.
+
+`CurrentIdentity` contains only the verified owner, role, identity kind, and
+`data_expires_at`. Demo identities require a data expiry; `LOCAL` and the
+provider-neutral future `PERSISTENT` kind prohibit it. Credential expiration
+remains outside that data-lifetime contract. Trusted display name and email are
+separate bootstrap attributes. No Cognito verifier or persistent browser session
+is implemented. Auth modes remain exclusive; the current SPA still runs demos.
+
+Durable readiness is centrally checked before all ordinary owner routes, including
+`GET /me`, settings, insights, pipeline, resource writes, and exports. Missing or
+incomplete initialization returns `409 WORKSPACE_BOOTSTRAP_REQUIRED`; incompatible
+ownership/type/lifetime returns `409 WORKSPACE_BOOTSTRAP_CONFLICT`. Verified demo
+identities bypass this durable check because their tokens are issued only after
+demo provisioning. Health, demo creation, and authenticated bootstrap are exempt.
+
+`GET /me` only reads an established profile. The legacy demo display name is
+normalized only for a demo identity without writing on reads. The nullable,
+deprecated `last_login_at` response field is always null: profile creation and
+ordinary requests are not observed login events. Legacy stored timestamps are
+preserved during adoption but are not treated as login evidence.
 
 Demo authorization ends at token expiry. Every temporary DynamoDB item also has
 an `expires_at` TTL value, but TTL cleanup is asynchronous and is not used as an
@@ -147,7 +172,7 @@ PK = USER#<owner_id>#APPLICATION#<application_id>
 ```
 
 Application metadata, append-only activity, notes, and interviews share that
-partition. Profile, settings, quota, and aggregate counters live in the owner
+partition. Profile, settings, durable readiness metadata, quota, and aggregate counters live in the owner
 partition. This model makes the main authorization boundary part of the key
 used to address the data.
 
@@ -164,6 +189,21 @@ Normal request paths use `GetItem`, `Query`, conditional writes, and
 script may scan the explicitly confirmed local table to rebuild projections and
 counters. Index reads are eventually consistent, while canonical item reads and
 conditional writes protect correctness.
+
+Durable metadata uses the existing owner `WORKSPACE` slot with a distinct
+`DURABLE_WORKSPACE` entity type, identity kind, bootstrap version, `ACTIVE` state,
+and creation/update timestamps, without TTL. Sharing the slot with demo lifecycle
+metadata prevents an in-place type conversion. Bootstrap strongly reads the owner
+partition and conditionally transacts all three required records. Concurrent
+requests reread on conditional conflicts; existing preferences and timestamps are
+never replaced. Compatible local legacy records and incomplete `PROVISIONING`
+markers can be adopted/repaired. An active workspace missing settings requires
+operator recovery rather than recreating possibly customized preferences.
+Legacy adoption discovers applications through every existing GSI2 status
+partition and strongly checks their child partitions for TTL conflicts. This is
+eventually consistent discovery, not a strong application manifest or an erasure
+guarantee. Phase 2C owns that stronger safety foundation. No table/index migration
+or reset is required by Phase 2A; schema operations remain explicit commands.
 
 Full key shapes and query contracts are documented in
 [docs/dynamodb-access-patterns.md](docs/dynamodb-access-patterns.md).

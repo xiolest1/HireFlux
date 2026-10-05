@@ -56,6 +56,7 @@ def dynamodb_client() -> Iterator[Any]:
 def client(dynamodb_client: Any) -> Iterator[TestClient]:
     app = create_app(test_settings(), dynamodb_client=dynamodb_client)
     with TestClient(app) as test_client:
+        assert test_client.post("/api/v1/me/bootstrap").status_code == 200
         yield test_client
 
 
@@ -70,4 +71,5 @@ def limited_client(dynamodb_client: Any) -> Iterator[TestClient]:
         dynamodb_client=dynamodb_client,
     )
     with TestClient(app) as test_client:
+        assert test_client.post("/api/v1/me/bootstrap").status_code == 200
         yield test_client

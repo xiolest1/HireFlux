@@ -14,6 +14,7 @@ from hireflux_backend.domain.models import (
     Application,
     CurrentIdentity,
     DemoWorkspace,
+    TrustedProfileAttributes,
     UserProfile,
 )
 from hireflux_backend.domain.resources import DefaultApplicationView
@@ -47,7 +48,11 @@ class ActivityPage:
 
 
 class UserRepository(Protocol):
-    def get_or_create(self, identity: CurrentIdentity, *, now_iso: str) -> UserProfile: ...
+    def get(self, owner_user_id: str) -> UserProfile | None: ...
+
+    def ensure_demo_profile(
+        self, identity: CurrentIdentity, attributes: TrustedProfileAttributes, *, now_iso: str
+    ) -> UserProfile: ...
 
 
 class ApplicationRepository(Protocol):

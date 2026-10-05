@@ -28,7 +28,13 @@ from hireflux_backend.domain.enums import (
     StageAgeBucket,
     WorkMode,
 )
-from hireflux_backend.domain.models import Activity, Application, CurrentIdentity, UserProfile
+from hireflux_backend.domain.models import (
+    Activity,
+    Application,
+    CurrentIdentity,
+    TrustedProfileAttributes,
+    UserProfile,
+)
 from hireflux_backend.domain.resources import ACTIVE_APPLICATION_STATUSES, DefaultApplicationView
 from hireflux_backend.domain.status_policy import (
     ACTIVE_STATUSES_REQUIRING_APPLIED_DATE,
@@ -105,9 +111,23 @@ class UserService:
         self._repository = repository
         self._clock = clock
 
-    def get_or_create_profile(self, identity: CurrentIdentity) -> UserProfile:
+    def get_profile(self, identity: CurrentIdentity) -> UserProfile:
+        profile = self._repository.get(identity.user_id)
+        if profile is None:
+            raise NotFoundError("User profile not found.")
+        if identity.is_demo and profile.name == "Demo Recruiter":
+            return replace(profile, name="Demo Workspace")
+        return profile
+
+    def ensure_demo_profile(
+        self, identity: CurrentIdentity, attributes: TrustedProfileAttributes
+    ) -> UserProfile:
+        if not identity.is_demo:
+            raise ValueError("Only demo provisioning can initialize a demo profile.")
         now = self._clock()
-        return self._repository.get_or_create(identity, now_iso=_format_timestamp(now))
+        return self._repository.ensure_demo_profile(
+            identity, attributes, now_iso=_format_timestamp(now)
+        )
 
 
 class ApplicationService:
@@ -181,7 +201,7 @@ class ApplicationService:
             stage_entered_at=now,
             first_response_at=(now if command.status is ApplicationStatus.INTERVIEW else None),
             first_interview_at=(now if command.status is ApplicationStatus.INTERVIEW else None),
-            expires_at=identity.expires_at,
+            expires_at=identity.data_expires_at,
         )
         activity = Activity(
             activity_id=self._id_factory(),
@@ -202,7 +222,7 @@ class ApplicationService:
                     else {}
                 ),
             },
-            expires_at=identity.expires_at,
+            expires_at=identity.data_expires_at,
         )
         self._repository.create(application, activity)
         return application
@@ -456,7 +476,7 @@ class ApplicationService:
                 "to_status": updated.status.value,
                 **({"correction": "APPLIED_TO_DRAFT"} if is_correction else {}),
             },
-            expires_at=identity.expires_at,
+            expires_at=identity.data_expires_at,
         )
         self._repository.replace_with_activity(
             updated,
@@ -557,7 +577,7 @@ class ApplicationService:
                 "from_date": current.follow_up_date.isoformat() if current.follow_up_date else "",
                 "to_date": updated.follow_up_date.isoformat() if updated.follow_up_date else "",
             },
-            expires_at=identity.expires_at,
+            expires_at=identity.data_expires_at,
         )
         self._repository.replace_details_with_activity(
             updated,
@@ -634,7 +654,7 @@ class ApplicationService:
                 "from_date": before.follow_up_date.isoformat() if before.follow_up_date else "",
                 "to_date": after.follow_up_date.isoformat() if after.follow_up_date else "",
             },
-            expires_at=identity.expires_at,
+            expires_at=identity.data_expires_at,
         )
 
     @staticmethod

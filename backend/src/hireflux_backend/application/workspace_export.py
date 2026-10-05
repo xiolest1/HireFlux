@@ -75,7 +75,7 @@ class WorkspaceExportService:
 
         return WorkspaceExport(
             exported_at=datetime.now(UTC),
-            profile=self._users.get_or_create_profile(identity),
+            profile=self._users.get_profile(identity),
             settings=self._resources.get_settings(identity),
             applications=applications,
             activities=tuple(activities),

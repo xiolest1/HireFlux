@@ -44,3 +44,11 @@ class DemoSessionExpiredError(HireFluxError):
 
 class WorkspaceExportTooLargeError(HireFluxError):
     pass
+
+
+class WorkspaceBootstrapRequiredError(HireFluxError):
+    pass
+
+
+class WorkspaceBootstrapConflictError(ConflictError):
+    pass

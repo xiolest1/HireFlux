@@ -262,7 +262,7 @@ def profile_to_item(profile: UserProfile) -> dict[str, Any]:
         "email": profile.email,
         "role": profile.role.value,
         "created_at": format_timestamp(profile.created_at),
-        "last_login_at": format_timestamp(profile.last_login_at),
+        "last_login_at": None,
         "expires_at": profile.expires_at,
     }
 
@@ -274,7 +274,7 @@ def profile_from_item(item: dict[str, Any]) -> UserProfile:
         email=str(item["email"]),
         role=UserRole(str(item["role"])),
         created_at=parse_timestamp(str(item["created_at"])),
-        last_login_at=parse_timestamp(str(item["last_login_at"])),
+        last_login_at=None,
         expires_at=int(item["expires_at"]) if item.get("expires_at") is not None else None,
     )
 
