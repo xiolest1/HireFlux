@@ -15,11 +15,9 @@ export function loadDemoSession(): LoadedDemoSession {
   if (typeof window === "undefined") {
     return { session: null, expired: false };
   }
-  const stored = window.sessionStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    return { session: null, expired: false };
-  }
   try {
+    const stored = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!stored) return { session: null, expired: false };
     const parsed = demoSessionSchema.safeParse(JSON.parse(stored));
     if (!parsed.success) {
       window.sessionStorage.removeItem(STORAGE_KEY);
@@ -31,7 +29,7 @@ export function loadDemoSession(): LoadedDemoSession {
     }
     return { session: parsed.data, expired: false };
   } catch {
-    window.sessionStorage.removeItem(STORAGE_KEY);
+    removeStoredDemoSession();
     return { session: null, expired: false };
   }
 }
@@ -41,12 +39,12 @@ export function getDemoSession(): DemoSession | null {
 }
 
 export function saveDemoSession(session: DemoSession): void {
-  window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  try { window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session)); } catch { /* Current in-memory session still works. */ }
 }
 
 export function removeStoredDemoSession(): void {
   if (typeof window === "undefined") return;
-  window.sessionStorage.removeItem(STORAGE_KEY);
+  try { window.sessionStorage.removeItem(STORAGE_KEY); } catch { /* Storage can be unavailable. */ }
 }
 
 export function clearDemoSession(reason: DemoSessionEventReason = "cleared"): void {

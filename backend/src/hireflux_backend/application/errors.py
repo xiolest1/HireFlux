@@ -52,3 +52,15 @@ class WorkspaceBootstrapRequiredError(HireFluxError):
 
 class WorkspaceBootstrapConflictError(ConflictError):
     pass
+
+
+class WorkspaceDeletingError(ConflictError):
+    pass
+
+
+class WorkspaceDeletedError(ConflictError):
+    pass
+
+
+class WorkspaceManifestIncompleteError(ConflictError):
+    pass

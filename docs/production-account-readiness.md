@@ -1,15 +1,31 @@
 # Production account readiness — Phase 1
 
 Date: 2026-10-05. Status: architecture proposal for review, not an accepted implementation ADR.
+
+**Phase 2C implementation update (2026-10-05):** the durable safety foundation is
+implemented and validated. Strong application references, verified local backfill,
+atomic ACTIVE write guards, DELETING/DELETED lifecycle, bounded resumable erasure,
+and record/public-byte/work-limited strong JSON export are current local behavior.
+See [ADR 0007](adr/0007-durable-workspace-manifest-and-erasure.md) and section 39.
+The historical audit below remains historical. Phase 3 CDK definitions/synth is
+next and not started; public authentication/deletion UX, provider finalization,
+backup/privacy guarantees, and AWS deployment are still later work.
 Repository baseline: `533cee182dc1a20ef7edb45db5d2c0ee21635dfd`.
 
 **Phase 2A implementation update (2026-10-05):** the historical findings and
 proposals below describe the Phase 1 baseline. Durable local principal/data-lifetime
 separation, empty atomic bootstrap, and central durable readiness are now implemented;
 see [ADR 0005](adr/0005-durable-local-workspace-bootstrap.md) and section 37.
-No Cognito, persistent frontend session, or AWS deployment is implemented.
+No Cognito or AWS deployment is implemented.
+
+**Phase 2B implementation update (2026-10-05):** general frontend workspace
+sessions, the preserved demo adapter, and a development-only durable local
+adapter are now implemented. Bootstrap precedes protected rendering; generation
+fences, fresh caches, durable preference handling, and truthful lifetime UI are
+validated. See [ADR 0006](adr/0006-frontend-workspace-session-boundary.md) and
+section 38. This is not production authentication or personal-account readiness.
 The accepted follow-on scope/order supersedes the earlier grouped Phase 2 proposal:
-Phase 2B frontend sessions; Phase 2C account deletion state, strong application
+Phase 2B frontend sessions (completed); Phase 2C account deletion state, strong application
 manifest, write guards, and expanded export safety; Phase 3 CDK synth only;
 Phase 4 AWS staging demo; Phase 5 Cognito accounts in staging; Phase 6 hardening;
 Phase 7 production deployment. Direct verified Cognito sub ownership remains
@@ -1694,3 +1710,473 @@ still needs the strong application manifest, persistent-account deletion lifecyc
 write guards, and expanded export safety. Cognito verification/profile sourcing
 is Phase 5, after CDK synth and the existing demo in AWS staging. Persistent
 personal-data production readiness is not claimed by this local implementation.
+
+## 38. Phase 2B implementation and handoff
+
+Date: 2026-10-05. Phase 2B supports temporary and durable workspace semantics
+through one frontend boundary. Phase 2C is the next milestone; no work from it
+or subsequent phases is implemented here. The six documentation files already
+dirty when this task began were preserved and updated in place.
+
+1. **Enabled:** the existing fictional demo and the empty, development-only
+   durable local workspace share the candidate workflow.
+2. **State model:** discriminated initializing, anonymous, activating,
+   bootstrapping, ready, reset switching, expired/invalidation, and stable error.
+3. **Demo adapter:** tab restore, 24-hour signed expiry, synchronized launch,
+   idempotency keys, reset, valid previous-workspace recovery, and exit remain.
+   Already-expired issued tokens cannot become ready.
+4. **Local adapter:** fixed backend identity, no browser credential or owner
+   selection; refresh replays bootstrap. Leaving stores only a tab-local boolean
+   and preserves server data. Configured local development ignores demo storage.
+5. **Bootstrap:** validates ACTIVE state, LOCAL identity kind, version 1,
+   timestamp formats/order, UUID profile ID, profile/settings, and IANA zone.
+   Only the current generation seeds profile/settings and exposes protected pages.
+   Failures remain stable until explicit retry; no fallback or repair is invented.
+6. **Credentials:** JSON and downloads use the same immutable request scope.
+   The API client no longer imports demo storage; local requests have no bearer.
+7. **Fencing:** every transition advances a unique generation before cancellation
+   or cleanup. Headers/body reads and all relevant async continuations retain
+   origin scope. Adapter invalidation callbacks carry no profile/data/credential.
+8. **Caches:** old queries and mutation caches are cancelled/cleared; ready
+   generations receive fresh QueryClients. The shared workspace query subtree
+   remounts because TanStack observers retain their original client. Reset dialog
+   intent survives the loading boundary. No identity cache is persisted.
+9. **Mutations:** scoped variables preserve origin even if observer options
+   change. Shared hooks guard mutation functions, observer/per-call callbacks,
+   errors, settlement, and mutateAsync. Compound calls and page continuations
+   check scope; navigation/toasts are scoped. No generic write replay is added.
+10. **401s:** current authenticated failures invalidate their scope; late errors
+    from old JSON/download requests cannot terminate a replacement identity.
+11. **Exports:** stale bodies/files are discarded before browser exposure;
+    object URLs are revoked, including failure during URL exposure.
+12. **Routing:** authoritative initialization/bootstrap block protected consumers.
+    Landing stays public. Only validated local workspace return paths are used;
+    external, protocol-relative, callback, control-character, and encoded paths
+    used to escape scope are rejected. Existing not-found handling remains.
+13. **Intentional/forced transitions:** leave checks registered unsaved forms and
+    asks before discarding. Reset explicitly confirms discard. Forced expiry or
+    invalidation fences/clears first, unmounts protected content, and bypasses
+    the application form's stale navigation blocker. No draft autosave crosses
+    identity boundaries.
+14. **Preferences:** durable saved zones, including UTC/defaults, never trigger
+    browser auto-detection. Current server settings control durable appearance;
+    stale theme rollback cannot overwrite a newer generation. Demo manual-zone,
+    tour, and optional account-preview state are cleaned on identity changes;
+    same-demo tab restoration preserves optional simulations. Device sidebar/
+    appearance preferences remain harmless device state.
+15. **Capabilities:** temporary lifetime, expiry/reset, full JSON export, optional
+    simulations, account management, and real sign-out are centralized. These
+    are presentation capabilities; backend authorization remains authoritative.
+    Account management and real sign-out remain unavailable.
+16. **UI:** shared layout has truthful local development/durable labels and no
+    local demo countdown/reset. Settings offers real saved preferences and JSON
+    export while hiding account simulations for durable local workspaces. Landing
+    offers the dev-only reopen action; configuration failure disables activation.
+17. **Production:** the normal production demo builds. A deliberately local-mode
+    production build was exercised in Chromium: public landing works, activation
+    is disabled, protected content is rejected, and zero API requests occur.
+    Bundle inspection found no local owner ID, debug owner header, local credential,
+    or secret marker. CSP and dependency manifests are unchanged.
+18. **Exact changed files:** listed below. This includes preserved documentation
+    edits from the preceding task; no backend source, dependency, diagram, normal
+    table, or secret/environment file was changed.
+19. **Tests:** 42 deterministic session tests added, plus the real durable browser
+    smoke/config. Existing API tests now establish their credential source via the
+    adapter/controller; the existing reset cache assertion proves fresh-client
+    replacement. The ordinary app test helper uses injected adapters/controllers.
+20. **Validation:** frontend lint/typecheck/build passed; 46 Vitest files and 364
+    tests passed; hosting-header tests 3/3; existing production-demo Playwright
+    workspace/theme suite 12/12; real durable browser smoke 1/1; Python 3.14.7
+    backend Ruff, formatting (93 files), mypy (63 source files), and all 312 tests
+    passed. The existing Starlette/httpx deprecation warning remains. OpenAPI
+    generation was unnecessary because no backend contract changed. Diff whitespace
+    validation passed. Direct Node entry points were used for package-script
+    equivalents on this Windows path containing an ampersand.
+21. **Full-stack smoke:** real React development build → FastAPI AUTH_MODE=local
+    on port 8012 → DynamoDB Local on 8001, using disposable table
+    `HireFluxPhase2B-20261005-8e426f70`. Verified empty bootstrap, application,
+    note, scheduled interview, custom Asia/Tokyo/LIGHT preferences, browser
+    refresh, intentional leave with protected content gone, leave retained on
+    refresh, and reactivation with the same saved data. Settings passed 1280,
+    768, 390, and 320px overflow checks and an axe accessibility check. One
+    bootstrap occurred on initial hydration; profile/settings came from it.
+    Earlier smoke-selector failures were corrected without changing product
+    behavior; a concurrent browser run hit transient ERR_NO_BUFFER_SPACE, then
+    the sequential rerun passed. Temporary processes/table were removed after QA.
+22. **Demo regression:** existing launch/restore/expiry/reset/failure recovery,
+    application/notes/interview/analytics/settings/export flows pass. The 12-test
+    browser suite also checks themes, responsive routes, feedback, and accessibility.
+23. **Backend changes:** none. The Phase 2A contract was sufficient; ownership,
+    policy, TTL, transaction, key/index, and error contracts remain unchanged.
+24. **DEFERRED TO 2C:** persistent deletion lifecycle, strong application manifest,
+    deletion/write guards, and expanded export safety.
+25. **DEFERRED TO PHASE 3:** TypeScript CDK definitions and synth only. AWS staging
+    is Phase 4, not deployed by this work.
+26. **DEFERRED TO PHASE 5+:** Cognito/JWT/JWKS, managed login/OAuth/PKCE, token
+    refresh/revocation, real account controls, production cross-tab logout,
+    attachments/reminders/email, and production hardening/deployment gates.
+27. **Phase 2C blockers:** none identified within the Phase 2B exit gate. Local
+    durable access is not approval for production personal accounts. Stop here.
+
+### Changed-file inventory
+
+```text
+.env.example
+ARCHITECTURE.md
+README.md
+docs/adr/0006-frontend-workspace-session-boundary.md
+docs/architecture.md
+docs/data-export.md
+docs/deployment-environments.md
+docs/devlog.md
+docs/production-account-readiness.md
+docs/roadmap.md
+frontend/e2e/local-durable-smoke.pw.ts
+frontend/playwright.phase2b.config.ts
+frontend/src/api/client.test.ts
+frontend/src/api/client.ts
+frontend/src/api/demoSessions.ts
+frontend/src/api/workspaceBootstrap.ts
+frontend/src/app/queryClient.ts
+frontend/src/app/router.tsx
+frontend/src/auth/DemoSessionGuard.tsx
+frontend/src/auth/DemoSessionProvider.tsx
+frontend/src/auth/WorkspaceSession.test.tsx
+frontend/src/auth/WorkspaceSessionGuard.tsx
+frontend/src/auth/WorkspaceSessionProvider.tsx
+frontend/src/auth/demoSessionContext.ts
+frontend/src/auth/identityCleanup.ts
+frontend/src/auth/sessionAdapters.ts
+frontend/src/auth/sessionGeneration.ts
+frontend/src/auth/sessionStore.ts
+frontend/src/auth/workspaceCapabilities.ts
+frontend/src/auth/workspaceQueries.ts
+frontend/src/auth/workspaceReturnPath.ts
+frontend/src/auth/workspaceSessionContext.ts
+frontend/src/auth/workspaceSessionController.ts
+frontend/src/components/AppLayout.tsx
+frontend/src/components/ui/ThemeToggle.tsx
+frontend/src/components/ui/Toast.tsx
+frontend/src/features/applications/ApplicationCreateForm.tsx
+frontend/src/features/applications/ApplicationForm.tsx
+frontend/src/features/applications/NextStepPlanner.tsx
+frontend/src/features/applications/StatusTransitionForm.tsx
+frontend/src/features/applications/queries.ts
+frontend/src/features/landing/QuietCoda.tsx
+frontend/src/features/pipeline/queries.ts
+frontend/src/features/resources/ApplicationNotesSection.tsx
+frontend/src/features/resources/InterviewScheduleWorkspace.tsx
+frontend/src/features/resources/InterviewWorkspaceDrawer.tsx
+frontend/src/features/resources/InterviewsPanel.tsx
+frontend/src/features/resources/NotesPanel.tsx
+frontend/src/features/resources/queries.ts
+frontend/src/features/workspace/queries.ts
+frontend/src/main.tsx
+frontend/src/pages/ApplicationCreatePage.tsx
+frontend/src/pages/ApplicationDetailPage.tsx
+frontend/src/pages/ApplicationEditPage.tsx
+frontend/src/pages/ApplicationListPage.tsx
+frontend/src/pages/DashboardPage.tsx
+frontend/src/pages/DemoSessionFlow.test.tsx
+frontend/src/pages/InterviewsPage.tsx
+frontend/src/pages/LandingPage.tsx
+frontend/src/pages/SettingsPage.tsx
+frontend/src/test/renderApp.tsx
+frontend/src/test/setup.ts
+```
+
+### Repeating the isolated durable browser smoke
+
+Choose a new disposable local table; this test requires an empty workspace.
+Do not use the normal development table or a deployed endpoint. With the usual
+fake local credentials and Docker DynamoDB Local available, use a separate
+backend Command Prompt:
+
+```bat
+set AUTH_MODE=local
+set DYNAMODB_TABLE_NAME=HireFluxPhase2BSmoke
+set DYNAMODB_ENDPOINT_URL=http://127.0.0.1:8001
+set CORS_ALLOWED_ORIGINS=http://127.0.0.1:5175
+backend\.venv\Scripts\python.exe backend\scripts\init_local_table.py
+backend\.venv\Scripts\python.exe -m uvicorn hireflux_backend.main:app --app-dir backend\src --host 127.0.0.1 --port 8012
+```
+
+In another Command Prompt from the repository root:
+
+```bat
+set HIREFLUX_LOCAL_SMOKE=1
+cd frontend
+node node_modules\@playwright\test\cli.js test --config playwright.phase2b.config.ts
+```
+
+The config starts its own development Vite on 5175 and requires explicit test
+opt-in; the backend/table remain explicit operator resources. Use the supported
+Python 3.13/3.14 environment, stop the temporary processes, and remove only the
+new disposable table when finished. No schema reset is required for Phase 2B.
+
+## 39. Phase 2C implementation and handoff
+
+Date: 2026-10-05. Phase 2C is complete; Phase 3 is next and has not started.
+The accepted uncommitted Phase 2A/2B baseline was preserved. No commit, push,
+AWS resource, Cognito implementation, new index, or production deletion UI was added.
+
+1. **Enabled:** a strong durable owner/application inventory, commit-time freeze
+   exclusion, non-reactivating lifecycle, bounded resumable live-table erasure,
+   and trustworthy bounded synchronous full JSON export.
+
+2. **Lifecycle:** PROVISIONING remains initialization/recovery; ACTIVE allows
+   ordinary access; DELETING freezes ordinary access and permits only lifecycle
+   status/retry; DELETED is terminal HireFlux workspace erasure, not provider deletion.
+
+3. **Workspace/tombstone:** owner WORKSPACE stores DURABLE_WORKSPACE, owner
+   provenance, identity kind, bootstrap version 1, state, created_at/updated_at,
+   optional manifest version, deletion_started_at, and deletion_completed_at.
+   Final DELETED omits manifest version and contains no product/profile/preferences,
+   email/name, application IDs, counters, or TTL. Its provisional non-expiring
+   retention prevents stale-subject resurrection; production privacy/backup/token
+   policy remains unsettled and explicitly deferred.
+
+4. **Manifest:** PK USER#owner / SK APPLICATION_REF#application_id. Other fields
+   are only entity_type=APPLICATION_REF, owner_user_id, application_id. No index,
+   labels/status/content, duplicated projection, or TTL. Demos do not create refs.
+
+5. **Atomic creation:** the reference Put is in the same DynamoDB transaction as
+   application metadata, initial activity, workspace quota, resource quota,
+   status/funnel counters, and the durable ACTIVE ConditionCheck. Failed creation
+   changes none of these. Archive, restore, transitions, and children retain refs.
+
+6. **Completeness:** application_manifest_version=1 is independent of unchanged
+   bootstrap_version=1. Fresh empty durable bootstrap sets it with an absent-quota
+   condition; old/adopted records remain incomplete until explicit verified backfill.
+   Full JSON export and deletion refuse unsupported/missing manifest evidence.
+
+7. **Legacy LOCAL adoption:** backend/scripts/backfill_local_manifest.py requires
+   explicit owner and exact table confirmation plus existing local endpoint/fake
+   credential/environment guards. Paginated status indexes supply candidates;
+   strong canonical partition and owner/ref checks verify provenance, TTL, quota
+   bounds, and archived records. Missing refs are conditionally transacted. Final
+   ref/canonical equality must match lifetime application_count. Existing records,
+   settings, timestamps, and TTL are not rewritten. Safe to rerun; no table reset.
+
+8. **Failed completeness proof:** count mismatch, GSI lag, orphan/wrong-owner refs,
+   missing/malformed canonical records, TTL, demo collisions, incompatible state,
+   and concurrent application creation fail closed. Final marker transaction
+   conditions on unchanged authoritative quota and compatible ACTIVE workspace.
+   A failed attempt may leave valid unversioned refs but never a false marker.
+
+9. **Write guard:** workspace_guard.active_condition supplies one ConditionCheck
+   for state ACTIVE, DURABLE_WORKSPACE entity type, owner provenance, LOCAL or
+   PERSISTENT identity kind, bootstrap version 1, and absence of expires_at.
+   guarded_transact adds it to each durable mutation; guarded_put converts
+   formerly single-item durable writes. Optimistic/version conditions remain.
+   Temporary writes keep the old path. Cancellation rereads state only for safe
+   classification, never as the correctness mechanism.
+
+10. **Mutation inventory:** application create; details edit; details plus activity;
+    details plus synchronized interview labels (with/without activity); status,
+    archive/restore; follow-up/next-step changes; settings create fallback/edit;
+    note create/edit/delete; interview create/edit/status/preparation/debrief and
+    custom preparation items. Required activity/quota/counter/opportunity writes
+    share their parent guard transaction. Bootstrap has its own conditional
+    lifecycle transaction; profile creation is demo-only. Confirmed local
+    projection repair also excludes frozen owners, with a separate explicit
+    pre-bootstrap legacy operator condition. No ordinary admin bypass was added.
+
+11. **Race property:** write-first commits data and reference before freeze,
+    so strong erasure finds it. Freeze-first makes the write transaction fail
+    atomically: no canonical/activity/ref/counter/quota/projection changes. Moto
+    deterministic commit interception and real DynamoDB Local paused requests
+    prove application creation and settings exclusion after HTTP/read preflight.
+
+12. **API:** authenticated durable DELETE /api/v1/me initiates/advances erasure;
+    GET /api/v1/me/deletion reads status; POST /api/v1/me/deletion/retry continues.
+    Write bodies are absent or {}; client owner/inventory/version fields are
+    rejected. Responses contain state, nullable deletion timestamps, and
+    retryable_failure. They have Cache-Control: no-store. In progress returns
+    202; completed returns 200. Ownership comes only from verified identity.
+    Demos receive 403; uninitialized subjects receive bootstrap-required errors.
+
+13. **Status/retry:** duplicate initiation, response loss, process restart, and
+    partial erasure safely reuse remaining server refs/keys. DELETED calls return
+    the stable result without restarting. Transient failure after freeze retains
+    DELETING and reports retryable_failure when status can be read; unavailable
+    status storage uses the existing safe 503 envelope. No rollback to ACTIVE.
+
+14. **Erasure algorithm:** strong query one remaining reference; strong query a
+    bounded application partition page; delete whole partition contents; strong
+    query again until empty; only then remove reference. Repeat within item/time/
+    operation budgets. Once refs are gone, strongly query and erase all owner
+    items except WORKSPACE, including unknown types. Strong empty-owner-content
+    verification precedes conditional DELETING-to-DELETED finalization. No Scan,
+    GSI discovery authority, TTL reliance, client cursor, or background worker.
+
+15. **Batch retries:** at most 25 DeleteRequest keys per batch, four attempts for
+    UnprocessedItems, exponential 25/50/100ms backoff only within remaining work
+    time. Retry attempts consume item/operation budget. Exhaustion retains
+    DELETING; still-unprocessed/transient failures can be retried. Budgets check
+    between SDK operations rather than interrupting an already-running call.
+
+16. **Erasure result:** only the minimal WORKSPACE tombstone remains in the live
+    owner partition. All inventoried application partitions, unknown owned child
+    and owner records, profile, preferences, quotas, counters, and refs are gone.
+    Foreign owner data remains. Eventual GSI cleanup is not authorization or the
+    completion criterion. No claim about historical backup erasure is made.
+
+17. **Bootstrap/read errors:** WORKSPACE_DELETING and WORKSPACE_DELETED (409)
+    deny bootstrap and ordinary reads/writes/exports. Missing foundation remains
+    WORKSPACE_BOOTSTRAP_REQUIRED; incompatible foundation remains
+    WORKSPACE_BOOTSTRAP_CONFLICT. Missing manifest uses
+    WORKSPACE_MANIFEST_INCOMPLETE. Frozen/deleted workspaces cannot recreate
+    profile/settings. Previously started reads can still finish; no instantaneous
+    cancellation claim is made.
+
+18. **Strong JSON discovery:** complete owner manifest queries and canonical
+    application/child pages use ConsistentRead=True, including archived records.
+    Record collection does not fully load child collections before checking the
+    cumulative budget. ACTIVE is rechecked after traversal. It is a current
+    best-effort copy, not a database-wide transactional snapshot. CSV keeps its
+    existing owner/status-index discovery for a convenient application list.
+
+19. **Limits:** MAX_SYNC_EXPORT_RECORDS defaults to 5000 and preserves the
+    existing application/activity/note/interview counting model. Fixed profile/
+    settings are included in bytes. MAX_SYNC_EXPORT_BYTES defaults to 4000000
+    (1024..10000000); MAX_SYNC_EXPORT_WORK_SECONDS defaults to 5 (0.1..20).
+    ACCOUNT_ERASURE_MAX_ITEMS_PER_REQUEST defaults to 250 (1..1000);
+    ACCOUNT_ERASURE_MAX_SECONDS_PER_REQUEST defaults to 2 (0.1..10).
+    Public-record byte measurement includes derived interview guidance and framing;
+    the exact final JSON bytes/time are checked before return. CSV also enforces
+    bounded record/UTF-8 bytes/work during row writing and final serialization.
+    These are backend settings, not VITE values or deployed AWS gateway claims.
+    The maximum interview setting is now 96, default 25, reserving four items
+    for the worst-case 100-item atomic label-sync transaction.
+
+20. **Oversized exports:** 413 WORKSPACE_EXPORT_TOO_LARGE retains the safe error
+    envelope/request ID and returns no partial success or private content.
+    Async artifacts are deferred. CSV formula neutralization and no-store remain.
+
+21. **Demo regression:** launch/seed/token/TTL, restore/expiry/reset and recovery,
+    shared product behavior/ownership, CSV and JSON rejection remain. Demos get
+    no durable manifest overhead/guard query and never enter durable erasure.
+    Backend full regression and the unchanged 12-test production browser suite pass.
+
+22. **Frontend changes:** none in Phase 2C. All existing Phase 2B generation,
+    cache, mutation, download, route, and durable-local behavior is preserved.
+    The generic safe error envelope handles the new codes; no deletion button,
+    simulated recent login, Cognito, or session rewrite was introduced.
+
+23. **Exact Phase 2C file inventory:** 33 files, listed below. Existing Phase 2A/2B
+    changes remain in the wider working tree and are not Phase 2C changes.
+
+24. **Tests:** 46 new cases: 37 lifecycle/manifest/race/backfill/export cases and
+    nine configuration-bound cases. Distinct ordinary transaction implementations
+    are exercised, plus operator write denial, GSI lag/concurrent quota proof,
+    unknown/foreign cleanup, retries/UnprocessedItems, malformed provenance,
+    time/byte/record limits, deletion read denial, and tombstone non-reactivation.
+    Added opt-in real local smoke script; unchanged frontend/browser tests reused.
+
+25. **Backend validation:** supported Python 3.14.7 isolated environment, pinned
+    dependencies plus backend/uv.lock constraints. Ruff passed; format check 101
+    files passed; mypy 68 source files passed; full pytest 358 passed (final 76.04s).
+    Existing Starlette/httpx TestClient deprecation warning remains. OpenAPI
+    generation passed and includes the new lifecycle response/routes; output is
+    ignored. Existing Python 3.12 environment was not changed.
+
+26. **Frontend validation:** ESLint with zero warnings, tsc -b, production Vite
+    build passed. Vitest 46 files/364 tests passed with two workers (78.94s),
+    including all Phase 2B session tests. Hosting headers 3/3 passed. Production
+    demo Playwright desktop-1280, one worker: 12/12 passed (54.5s). Real durable
+    local browser smoke: 1/1 passed (18.8s), refresh/leave/reactivation and saved
+    application/note/interview/preferences; responsive widths and axe passed.
+
+27. **Real datastore evidence:** Docker DynamoDB Local loopback 8001, new
+    HireFluxPhase2C-7a284d96285e only. Real paused application/settings transactions
+    released after freeze returned WORKSPACE_DELETING with exact unchanged table
+    assertions. Pre-freeze committed refs/data were erased. Mixed active/archived
+    resources and synthetic unknown owned entities converged in ten bounded calls
+    to only the minimal tombstone. Repeated delete and denied bootstrap passed.
+    Scan was used only for isolated assertion snapshots, never runtime discovery.
+
+28. **Migration smoke:** the same disposable real table emulated pre-2C missing
+    refs/version. Backfill passed twice without changing saved preferences or
+    application/child content; strong JSON exported both applications, two notes,
+    and two interviews. No normal local table reset/backfill/erasure was performed.
+
+29. **Environment issues:** no required check remains blocked. Sandbox Windows
+    asyncio socket setup and Vitest cache rename restrictions required host runs.
+    High-concurrency frontend loading timeouts and an initial loaded browser wait
+    passed on lower-concurrency/sequential reruns without assertion changes.
+    Temporary test Python, preview/backend processes, and the disposable table
+    were removed; normal local data/Docker and user development services remain.
+
+30. **Deferred Phase 3:** TypeScript CDK definitions, synth, and infrastructure
+    tests only. Not started. Actual staging deployment is Phase 4.
+
+31. **Deferred Phase 5:** Cognito access verification/login/PKCE, provider deletion
+    and revocation, real sign-out, account controls, and meaningful recent auth
+    before destructive public UX. Future sequence: recent provider auth, HireFlux
+    freeze/erasure/DELETED, then provider finalization.
+
+32. **Deferred Phase 6:** production privacy/tombstone retention, deletion-aware
+    backup/restore guarantees, release hardening and operational qualification.
+    Async export/background erasure infrastructure and optional attachments/email
+    remain later scoped work; no provider/backup deletion claims apply today.
+
+33. **Remaining gate:** no unresolved Phase 2C blocker to starting Phase 3 was
+    identified. Phase 2 is over. Stop here; no CDK/AWS/Cognito work was started.
+
+### Exact Phase 2C files
+
+Paths are repository-relative. All earlier frontend changes/untracked deliverables
+remain the accepted Phase 2B baseline. New files are identified explicitly.
+
+```text
+.env.example
+ARCHITECTURE.md
+README.md
+docs/architecture.md
+docs/data-export.md
+docs/devlog.md
+docs/dynamodb-access-patterns.md
+docs/production-account-readiness.md
+docs/roadmap.md
+docs/adr/0007-durable-workspace-manifest-and-erasure.md [new]
+backend/scripts/backfill_local_manifest.py [new]
+backend/scripts/smoke_workspace_safety_local.py [new]
+backend/src/hireflux_backend/api/deletion_schemas.py [new]
+backend/src/hireflux_backend/api/dependencies.py
+backend/src/hireflux_backend/api/error_handlers.py
+backend/src/hireflux_backend/api/export_schemas.py
+backend/src/hireflux_backend/api/routes/me.py
+backend/src/hireflux_backend/app_factory.py
+backend/src/hireflux_backend/application/errors.py
+backend/src/hireflux_backend/application/workspace_bootstrap.py
+backend/src/hireflux_backend/application/workspace_export.py
+backend/src/hireflux_backend/application/workspace_safety.py [new]
+backend/src/hireflux_backend/config.py
+backend/src/hireflux_backend/domain/workspace.py
+backend/src/hireflux_backend/infrastructure/dynamodb/manifest_backfill.py [new]
+backend/src/hireflux_backend/infrastructure/dynamodb/reconciliation.py
+backend/src/hireflux_backend/infrastructure/dynamodb/repositories.py
+backend/src/hireflux_backend/infrastructure/dynamodb/resource_repositories.py
+backend/src/hireflux_backend/infrastructure/dynamodb/workspace_bootstrap_repository.py
+backend/src/hireflux_backend/infrastructure/dynamodb/workspace_guard.py [new]
+backend/src/hireflux_backend/infrastructure/dynamodb/workspace_safety_repository.py [new]
+backend/tests/integration/test_workspace_safety.py [new]
+backend/tests/unit/test_config.py
+```
+
+### Local operator commands
+
+Use a supported Python 3.13/3.14 backend environment. From the repository root,
+confirmed loopback `.env` and the actual configured local owner/table:
+
+```bat
+backend\.venv\Scripts\python.exe backend\scripts\backfill_local_manifest.py --confirm-table HireFluxLocal --owner 00000000-0000-4000-8000-000000000001
+backend\.venv\Scripts\python.exe backend\scripts\smoke_workspace_safety_local.py --confirm-local-smoke
+```
+
+Backfill preserves existing data. The smoke creates and deletes only its own
+unique disposable table. Never use ordinary local data for destructive erasure
+validation. The optional smoke keep-table flag exists only to prepare a fresh
+browser owner for isolated QA; an operator must then stop the isolated backend
+and explicitly remove that exact disposable loopback table.

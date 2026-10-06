@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, configure } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll } from "vitest";
 import { server } from "./server";
+import { newSessionScope } from "../auth/sessionGeneration";
 
 class ResizeObserverStub {
   observe() {}
@@ -36,6 +37,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 beforeAll(() => document.documentElement.setAttribute("lang", "en"));
 afterEach(() => {
   cleanup();
+  newSessionScope();
   server.resetHandlers();
   window.sessionStorage.clear();
   window.localStorage.clear();

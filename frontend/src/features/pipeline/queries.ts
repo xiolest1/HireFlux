@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useWorkspaceQuery } from "../../auth/workspaceQueries";
 import { getPipeline } from "../../api/pipeline";
 
 export const pipelineKeys = {
@@ -7,7 +7,7 @@ export const pipelineKeys = {
 };
 
 export function usePipeline({ enabled = true }: { enabled?: boolean } = {}) {
-  return useQuery({
+  return useWorkspaceQuery({
     queryKey: pipelineKeys.board(),
     queryFn: ({ signal }) => getPipeline(signal),
     enabled,

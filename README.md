@@ -96,6 +96,13 @@ React + TypeScript + Vite -> FastAPI -> DynamoDB Local
 - **Security model:** signed temporary demo identities, server-owned authorization and metrics, explicit CORS, optimistic concurrency, and no stored passwords.
 - **Current runtime:** local development with DynamoDB Local. Planned AWS staging is documented separately and is not provisioned by this repository.
 
+Phase 2A also provides a durable local backend workspace: a server-configured
+non-demo identity explicitly bootstraps an empty workspace whose records omit
+demo TTL. Phase 2B adds a shared browser session boundary and a development-only
+durable local adapter. Phase 2C adds strong inventory, atomic deletion/write
+guards, resumable live-workspace erasure, and bounded export. Cognito and AWS
+deployment remain later phases. See the [current roadmap](docs/roadmap.md#current-execution-order).
+
 The canonical architecture and current-versus-target boundary are documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Run the local demo
@@ -136,6 +143,66 @@ Then open [http://localhost:5173](http://localhost:5173). The local API health c
 
 For table reset/reconciliation, environment configuration, and the complete validation workflow, see [AGENTS.md](AGENTS.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
 
+### Optional durable local development workspace
+
+For backend development, start the API in a separate local configuration with
+`AUTH_MODE=local`. In its Command Prompt window, set the mode before starting:
+
+```bat
+set AUTH_MODE=local
+backend\.venv\Scripts\python.exe -m uvicorn hireflux_backend.main:app --app-dir backend\src --reload --port 8000
+```
+
+For the durable browser flow, start Vite with the matching mode in its window:
+
+```bat
+set VITE_WORKSPACE_MODE=local
+npm --prefix frontend run dev
+```
+
+Open a protected route such as `/applications`. The browser initializes the
+configured fixed backend owner automatically before showing workspace content.
+The workspace begins empty and saved applications/preferences survive refresh,
+leaving, and reopening. This is development access, with no real login, logout,
+passwords, or browser owner selector. A tab remembers intentional leave until
+you choose **Open local durable workspace**. The public landing stays accessible.
+
+API-only development can still initialize explicitly from another window:
+
+```bat
+curl.exe -X POST http://localhost:8000/api/v1/me/bootstrap
+curl.exe http://localhost:8000/api/v1/me
+```
+
+Bootstrap is idempotent, accepts no authoritative client fields, and creates no
+fictional applications. Ordinary durable endpoints return
+`WORKSPACE_BOOTSTRAP_REQUIRED` until initialization completes. Compatible legacy
+local data is preserved without a table reset. Demo identities cannot use this
+endpoint to convert their workspace. Restart both processes after changing
+modes. Return to `AUTH_MODE=demo` and `VITE_WORKSPACE_MODE=demo` for the ordinary
+fictional demo. Local browser mode is unavailable in production builds. No table
+reset or migration is required for Phase 2B.
+
+Phase 2C requires a verified application manifest for full JSON export and
+workspace erasure. Existing durable LOCAL data is preserved; run the explicit
+backfill against the confirmed loopback table and configured local owner:
+
+```bat
+backend\.venv\Scripts\python.exe backend\scripts\backfill_local_manifest.py --confirm-table HireFluxLocal --owner 00000000-0000-4000-8000-000000000001
+```
+
+Use the actual configured owner/table if changed. The command is non-destructive,
+idempotent, quota-verified, and refuses incomplete/temporary/incompatible evidence.
+No table reset is needed. Erasure has no product button or recent-auth simulation;
+validate it only on disposable data with the opt-in local smoke:
+
+```bat
+backend\.venv\Scripts\python.exe backend\scripts\smoke_workspace_safety_local.py --confirm-local-smoke
+```
+
+That script creates and deletes its own uniquely named local table, never the normal
+table. See [ADR 0007](docs/adr/0007-durable-workspace-manifest-and-erasure.md).
+
 </details>
 
 ## Documentation
@@ -147,8 +214,16 @@ For table reset/reconciliation, environment configuration, and the complete vali
 - [Data export](docs/data-export.md) — current CSV export and future portability boundaries.
 - [Roadmap](docs/roadmap.md) — planned product and infrastructure work.
 - [Development log](docs/devlog.md) — implementation history, decisions, and validation notes.
+- [Production account readiness](docs/production-account-readiness.md) — Phase 1 audit and Phase 2A/2B/2C implementation handoffs.
+- [Durable bootstrap decision](docs/adr/0005-durable-local-workspace-bootstrap.md) — accepted identity, readiness, recovery, and deferred safety boundaries.
+- [Frontend workspace session decision](docs/adr/0006-frontend-workspace-session-boundary.md) — adapters, bootstrap, generations, isolation, and local-mode limits.
+- [Durable workspace safety decision](docs/adr/0007-durable-workspace-manifest-and-erasure.md) — strong manifests, atomic freeze/write exclusion, erasure, and export limits.
 - [Supply-chain guide](docs/supply-chain.md) — lockfiles, SBOMs, and dependency review.
 
 ## Current status
 
-The local candidate demo is the active product slice. AWS staging, persistent accounts, external identity, private attachments, reminders, email delivery, and large asynchronous exports remain future milestones rather than hidden dependencies of the current app.
+The local candidate demo is the active browser experience. The durable local
+backend identity/bootstrap foundation and general frontend session boundary are
+complete, including the Phase 2C local data-safety foundation. AWS staging, real Cognito accounts, private attachments,
+reminders, email delivery, and large asynchronous exports remain future phases
+rather than hidden dependencies of the current app.

@@ -1,3 +1,4 @@
+import { useWorkspaceScope, useWorkspaceUnsavedChanges } from "../../auth/workspaceSessionContext";
 import { FileText, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "../../components/ui/Button";
@@ -22,6 +23,7 @@ export function NotesPanel({
   applicationId: string;
   timeZone: string;
 }) {
+  const sessionScope = useWorkspaceScope();
   const notesQuery = useNotes(applicationId);
   const notes = notesQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const createMutation = useCreateNote(applicationId);
@@ -35,6 +37,8 @@ export function NotesPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  useWorkspaceUnsavedChanges((composerOpen && Boolean(content.trim()) && !createMutation.isPending) || (editingId !== null && editContent !== notes.find((note) => note.note_id === editingId)?.content && !updateMutation.isPending));
 
   useEffect(() => {
     if (!composerOpen) return;
@@ -67,6 +71,7 @@ export function NotesPanel({
     if (!content.trim()) return;
     try {
       await createMutation.mutateAsync(content.trim());
+      sessionScope.assertCurrent();
       showToast("Note added.", { title: "Notes updated", tone: "success" });
       updateSearchTour("engagement");
       closeComposer();
@@ -197,6 +202,7 @@ export function NotesPanel({
                         version: note.version,
                         content: editContent.trim(),
                       });
+                      sessionScope.assertCurrent();
                       setEditingId(null);
                       showToast("Note updated.", {
                         title: "Notes updated",
@@ -272,6 +278,7 @@ export function NotesPanel({
                                   noteId: note.note_id,
                                   version: note.version,
                                 });
+                                sessionScope.assertCurrent();
                                 setConfirmDeleteId(null);
                                 showToast("Note deleted.", {
                                   title: "Notes updated",

@@ -49,15 +49,23 @@ def reconcile_local_projections(
     interviews_by_application: defaultdict[tuple[str, str], list[Interview]] = defaultdict(list)
     try:
         for application in applications:
-            dynamodb.put_item(
-                TableName=settings.dynamodb_table_name,
+            _reconcile_write(
+                dynamodb,
+                settings.dynamodb_table_name,
+                application.owner_user_id,
+                application.expires_at,
+                "Put",
                 Item=serialize_item(application_to_item(application)),
                 ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
             )
             grouped[application.owner_user_id].append(application)
         for interview in interviews:
-            dynamodb.put_item(
-                TableName=settings.dynamodb_table_name,
+            _reconcile_write(
+                dynamodb,
+                settings.dynamodb_table_name,
+                interview.owner_user_id,
+                interview.expires_at,
+                "Put",
                 Item=serialize_item(interview_to_item(interview)),
                 ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
             )
@@ -95,7 +103,14 @@ def _write_opportunity_context(
     )
     key = opportunity_context_key(application.owner_user_id, application.application_id)
     if not scheduled:
-        client.delete_item(TableName=table_name, Key=serialize_item(key))
+        _reconcile_write(
+            client,
+            table_name,
+            application.owner_user_id,
+            application.expires_at,
+            "Delete",
+            Key=serialize_item(key),
+        )
         return
     interview = scheduled[0]
     context = OpportunityContext(
@@ -107,8 +122,12 @@ def _write_opportunity_context(
         version=1,
         expires_at=application.expires_at,
     )
-    client.put_item(
-        TableName=table_name,
+    _reconcile_write(
+        client,
+        table_name,
+        application.owner_user_id,
+        application.expires_at,
+        "Put",
         Item=serialize_item(opportunity_context_to_item(context)),
     )
 
@@ -168,8 +187,12 @@ def _write_counters(
         (application.expires_at for application in applications if application.expires_at), None
     )
     for status in ApplicationStatus:
-        client.put_item(
-            TableName=table_name,
+        _reconcile_write(
+            client,
+            table_name,
+            owner_user_id,
+            expires_at,
+            "Put",
             Item=serialize_item(
                 {
                     "PK": user_partition(owner_user_id),
@@ -180,8 +203,12 @@ def _write_counters(
                 }
             ),
         )
-    client.put_item(
-        TableName=table_name,
+    _reconcile_write(
+        client,
+        table_name,
+        owner_user_id,
+        expires_at,
+        "Put",
         Item=serialize_item(
             {
                 "PK": user_partition(owner_user_id),
@@ -203,4 +230,27 @@ def _write_counters(
                 "expires_at": expires_at,
             }
         ),
+    )
+
+
+def _reconcile_write(
+    client: Any, table: str, owner: str, expires_at: int | None, operation: str, **arguments: Any
+) -> None:
+    if expires_at is not None:
+        if operation == "Put":
+            client.put_item(TableName=table, **arguments)
+        else:
+            client.delete_item(TableName=table, **arguments)
+        return
+    # Explicit local tooling also handles pre-bootstrap legacy records, but cannot
+    # write after a lifecycle freeze. Ordinary repository guards require ACTIVE.
+    from hireflux_backend.infrastructure.dynamodb.workspace_guard import active_condition
+
+    guard = active_condition(table, owner)
+    check = guard["ConditionCheck"]
+    check["ConditionExpression"] = (
+        "attribute_not_exists(PK) OR (" + check["ConditionExpression"] + ")"
+    )
+    client.transact_write_items(
+        TransactItems=[guard, {operation: {"TableName": table, **arguments}}]
     )

@@ -377,7 +377,7 @@ describe("demo workspace flow", () => {
       }),
     );
 
-    const { user, queryClient } = renderApp("/dashboard");
+    const { user, queryClient, controller } = renderApp("/dashboard");
     const dashboardKey = ["dashboard", "30d"] as const;
     expect(await screen.findByText(/16 tracked/)).toBeVisible();
     queryClient.setQueryData(dashboardKey, oldDashboard);
@@ -400,7 +400,9 @@ describe("demo workspace flow", () => {
     await screen.findByText("Demo workspace reset.");
     expect(await screen.findByText(/16 tracked/)).toBeVisible();
     await waitFor(() => {
-      expect(queryClient.getQueryData(dashboardKey)).toEqual(newDashboard);
+      expect(queryClient.getQueryData(dashboardKey)).toBeUndefined();
+      expect(controller.getSnapshot().queryClient).not.toBe(queryClient);
+      expect(controller.getSnapshot().queryClient.getQueryData(dashboardKey)).toEqual(newDashboard);
       expect(screen.queryByText(/17 tracked/)).not.toBeInTheDocument();
     });
     expect(screen.queryByText(/17 tracked/)).not.toBeInTheDocument();

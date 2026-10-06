@@ -1,7 +1,8 @@
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useDemoSession } from "../auth/demoSessionContext";
+import { useWorkspaceSession } from "../auth/workspaceSessionContext";
+import { safeWorkspaceReturnPath } from "../auth/workspaceReturnPath";
 import { Button } from "../components/ui/Button";
 import { ErrorPanel } from "../components/ui/Feedback";
 import { ThemeToggle } from "../components/ui/ThemeToggle";
@@ -22,14 +23,18 @@ function locationState(value: unknown): LandingLocationState {
   if (!value || typeof value !== "object") return {};
   const state = value as Record<string, unknown>;
   const candidatePath = typeof state.from === "string" ? state.from : undefined;
-  const requestedPath = candidatePath && ["/dashboard", "/applications", "/interviews", "/analytics", "/settings"].some((path) => candidatePath === path || candidatePath.startsWith(`${path}/`)) ? candidatePath : undefined;
+  const requestedPath = safeWorkspaceReturnPath(candidatePath);
   return { from: requestedPath, reason: state.reason === "required" || state.reason === "expired" ? state.reason : undefined };
 }
 
 export function LandingPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { status, isCreating, error, start } = useDemoSession();
+  const { state, controller } = useWorkspaceSession();
+  const isCreating = state.status === "activating" || state.status === "bootstrapping";
+  const error = state.status === "error" ? state.error : undefined;
+  const localMode = import.meta.env.DEV && controller.adapterId === "local";
+  const configurationBlocked = controller.adapterId === undefined;
   const routeState = locationState(location.state);
   const [actionOrigin, setActionOrigin] = useState<"hero" | "coda" | null>(null);
   const closingOwnerRef = useRef<ConnectedClosingOwner | null>(null);
@@ -43,30 +48,34 @@ export function LandingPage() {
     heroMotionActive,
   } = useHeroMotionSession();
 
-  const actionLabel = isCreating
+  const actionLabel = configurationBlocked ? "Workspace unavailable" : isCreating
     ? "Preparing your workspace…"
-    : status === "active"
-      ? "Continue Demo"
+    : state.status === "ready"
+      ? localMode ? "Continue local workspace" : "Continue Demo"
+      : localMode ? "Open local durable workspace"
       : "Explore the Demo";
 
   async function enterDemo(origin: "hero" | "coda") {
     setActionOrigin(origin);
-    if (status === "active") {
+    if (state.status === "ready") {
       navigate(routeState.from ?? "/dashboard");
       return;
     }
     try {
-      await start();
+      const ready = await controller.activate();
+      ready.scope.assertCurrent();
       navigate(routeState.from ?? "/dashboard", { replace: true });
     } catch {
       return;
     }
   }
 
-  const notice = routeState.reason === "expired" || status === "expired"
+  const notice = state.status === "expired" && state.reason === "invalidated"
+    ? "Your workspace session was invalidated. Open a workspace again to continue."
+    : routeState.reason === "expired" || state.status === "expired"
     ? "Your previous demo workspace expired. Start a fresh one to keep exploring."
     : routeState.reason === "required"
-      ? "Start a demo workspace to explore the page."
+      ? localMode ? "Open the local development workspace to explore the page." : "Start a demo workspace to explore the page."
       : null;
 
   return (
@@ -75,7 +84,7 @@ export function LandingPage() {
       <header className="relative z-20 border-b border-line bg-surface/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
         <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8" data-landing-clip-check>
           <div className="flex min-w-0 items-center gap-3 font-bold tracking-tight"><span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-brand-700 text-sm font-black text-white shadow-lg shadow-cyan-950/10">HF</span><span className="truncate">HireFlux</span></div>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3"><span className="hidden rounded-full border border-line bg-surface-raised px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-ink-muted dark:border-slate-700 dark:bg-slate-900 sm:inline-flex">Demo workspace</span><ThemeToggle /></div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3"><span className="hidden rounded-full border border-line bg-surface-raised px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-ink-muted dark:border-slate-700 dark:bg-slate-900 sm:inline-flex">{localMode ? "Local development workspace" : "Demo workspace"}</span><ThemeToggle /></div>
         </div>
       </header>
 
@@ -93,11 +102,11 @@ export function LandingPage() {
               <p className="hf-hero-enter hf-hero-enter-support mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300" data-hero-entrance="support">HireFlux keeps each opportunity’s context intact and turns its history into a clear next action—without creating an account.</p>
 
               {notice ? <div className="mt-7 max-w-xl rounded-xl border border-line border-l-4 border-l-warning bg-warning-soft px-4 py-3 text-sm font-medium text-warning" role="status">{notice}</div> : null}
-              {error && actionOrigin !== "coda" ? <div className="mt-7 max-w-xl"><ErrorPanel compact title="Demo workspace could not be prepared" error={error} /></div> : null}
+              {error && actionOrigin !== "coda" ? <div className="mt-7 max-w-xl"><ErrorPanel compact title={localMode ? "Local workspace could not be prepared" : "Demo workspace could not be prepared"} error={error} /></div> : null}
 
               <div className="hf-hero-enter hf-hero-enter-cta mt-8 flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center" data-hero-entrance="cta">
-                <Button className="group min-w-48 gap-2 shadow-lg shadow-cyan-950/10" aria-busy={isCreating || undefined} disabled={isCreating} onClick={() => void enterDemo("hero")}>{actionLabel}<ArrowRight aria-hidden="true" className="size-4 transition-transform group-hover:translate-x-1 group-focus-visible:translate-x-1" /></Button>
-                <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">No sign-up · Fictional data · Resets anytime</p>
+                <Button className="group min-w-48 gap-2 shadow-lg shadow-cyan-950/10" aria-busy={isCreating || undefined} disabled={isCreating || configurationBlocked} onClick={() => void enterDemo("hero")}>{actionLabel}<ArrowRight aria-hidden="true" className="size-4 transition-transform group-hover:translate-x-1 group-focus-visible:translate-x-1" /></Button>
+                <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{localMode ? "Development only · Fixed backend identity · Durable data · No real sign-in" : "No sign-up · Fictional data · Resets anytime"}</p>
               </div>
             </div>
             <div className="hf-hero-enter hf-hero-enter-visual min-w-0" data-hero-entrance="visual">
@@ -127,6 +136,8 @@ export function LandingPage() {
               <div data-connected-coda-flow>
                 <LandingViewportReveal className="hf-post-story-reveal" normalEntryReady={codaEntryReady}>
                   <QuietCoda
+                    localDevelopment={localMode}
+                    disabled={configurationBlocked}
                     actionLabel={actionLabel}
                     error={actionOrigin === "coda" ? error : null}
                     isCreating={isCreating}

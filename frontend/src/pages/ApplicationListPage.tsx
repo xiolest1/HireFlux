@@ -1,3 +1,4 @@
+import { useWorkspaceNavigate } from "../auth/workspaceSessionContext";
 import {
   Check,
   ChevronDown,
@@ -11,7 +12,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import {
   APPLICATION_SOURCES,
   APPLICATION_STATUSES,
@@ -112,7 +113,7 @@ function applicationViewLabel(view: ApplicationView): string {
 
 export function ApplicationListPage() {
   const location = useLocation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const status = statusFromSearchParam(searchParams.get("status"));
   const settingsQuery = useSettings();

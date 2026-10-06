@@ -1,4 +1,3 @@
-import { QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -8,7 +7,9 @@ import {
 } from "react-router-dom";
 import { createQueryClient } from "../app/queryClient";
 import { appRoutes } from "../app/router";
-import { DemoSessionProvider } from "../auth/DemoSessionProvider";
+import { WorkspaceSessionProvider } from "../auth/WorkspaceSessionProvider";
+import { WorkspaceSessionController } from "../auth/workspaceSessionController";
+import { createDemoAdapter, type SessionAdapter } from "../auth/sessionAdapters";
 import type { DemoSession } from "../api/schemas";
 import { clearDemoSession, saveDemoSession } from "../auth/sessionStore";
 import {
@@ -24,7 +25,7 @@ const testSession = {
 
 export function renderApp(
   initialEntry: InitialEntry = "/applications",
-  options: { withSession?: boolean; autoDetectTimeZone?: boolean; session?: DemoSession } = {},
+  options: { withSession?: boolean; autoDetectTimeZone?: boolean; session?: DemoSession; adapter?: SessionAdapter; controller?: WorkspaceSessionController } = {},
 ) {
   if (options.autoDetectTimeZone) clearManualTimeZonePreference();
   else markManualTimeZonePreference();
@@ -33,25 +34,28 @@ export function renderApp(
   } else {
     saveDemoSession(options.session ?? testSession);
   }
-  const queryClient = createQueryClient();
-  queryClient.setDefaultOptions({
+  const clientFactory = () => {
+    const client = createQueryClient();
+    client.setDefaultOptions({
     queries: { retry: false, staleTime: Number.POSITIVE_INFINITY },
     mutations: { retry: false },
-  });
+    });
+    return client;
+  };
+  const controller = options.controller ?? new WorkspaceSessionController(options.adapter ?? createDemoAdapter(), clientFactory);
   const router = createMemoryRouter(appRoutes, {
     initialEntries: [initialEntry],
   });
   const result = render(
-    <QueryClientProvider client={queryClient}>
-      <DemoSessionProvider>
+      <WorkspaceSessionProvider controller={controller}>
         <RouterProvider router={router} />
-      </DemoSessionProvider>
-    </QueryClientProvider>,
+      </WorkspaceSessionProvider>,
   );
 
   return {
     ...result,
-    queryClient,
+    queryClient: controller.getSnapshot().queryClient,
+    controller,
     router,
     user: userEvent.setup(),
   };

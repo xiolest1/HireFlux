@@ -30,7 +30,7 @@ from hireflux_backend.infrastructure.dynamodb.table_schema import GSI2_NAME
 
 
 def workspace_to_item(workspace: DurableWorkspace) -> dict[str, Any]:
-    return {
+    item: dict[str, Any] = {
         "PK": user_partition(workspace.owner_user_id),
         "SK": "WORKSPACE",
         "entity_type": "DURABLE_WORKSPACE",
@@ -41,6 +41,13 @@ def workspace_to_item(workspace: DurableWorkspace) -> dict[str, Any]:
         "created_at": format_timestamp(workspace.created_at),
         "updated_at": format_timestamp(workspace.updated_at),
     }
+    if workspace.application_manifest_version is not None:
+        item["application_manifest_version"] = workspace.application_manifest_version
+    if workspace.deletion_started_at is not None:
+        item["deletion_started_at"] = format_timestamp(workspace.deletion_started_at)
+    if workspace.deletion_completed_at is not None:
+        item["deletion_completed_at"] = format_timestamp(workspace.deletion_completed_at)
+    return item
 
 
 class DynamoWorkspaceBootstrapRepository:
@@ -98,6 +105,21 @@ class DynamoWorkspaceBootstrapRepository:
                     bootstrap_version=int(workspace_item["bootstrap_version"]),
                     created_at=parse_timestamp(workspace_item["created_at"]),
                     updated_at=parse_timestamp(workspace_item["updated_at"]),
+                    application_manifest_version=(
+                        int(workspace_item["application_manifest_version"])
+                        if "application_manifest_version" in workspace_item
+                        else None
+                    ),
+                    deletion_started_at=(
+                        parse_timestamp(workspace_item["deletion_started_at"])
+                        if "deletion_started_at" in workspace_item
+                        else None
+                    ),
+                    deletion_completed_at=(
+                        parse_timestamp(workspace_item["deletion_completed_at"])
+                        if "deletion_completed_at" in workspace_item
+                        else None
+                    ),
                 )
                 if workspace.identity_kind is IdentityKind.DEMO:
                     return WorkspaceSnapshot(None, None, None, incompatible=True)
@@ -105,6 +127,7 @@ class DynamoWorkspaceBootstrapRepository:
                 workspace,
                 profile_from_item(profile_item) if profile_item else None,
                 settings_from_item(settings_item) if settings_item else None,
+                has_owner_data=bool(items),
             )
         except (KeyError, TypeError, ValueError, OverflowError):
             # Malformed or newer storage cannot silently become a fresh workspace.
@@ -190,6 +213,21 @@ class DynamoWorkspaceBootstrapRepository:
             condition = self._existing_condition(workspace_to_item(prior.workspace))
             put.update({key: value for key, value in condition.items() if key != "Key"})
         transactions.append({"Put": put})
+        if prior.workspace is None and proposed.workspace.application_manifest_version == 1:
+            transactions.append(
+                {
+                    "ConditionCheck": {
+                        "TableName": self._table_name,
+                        "Key": serialize_item(
+                            {
+                                "PK": user_partition(proposed.workspace.owner_user_id),
+                                "SK": "WORKSPACE_QUOTA",
+                            }
+                        ),
+                        "ConditionExpression": "attribute_not_exists(PK)",
+                    }
+                }
+            )
         try:
             self._client.transact_write_items(TransactItems=transactions)
             return True

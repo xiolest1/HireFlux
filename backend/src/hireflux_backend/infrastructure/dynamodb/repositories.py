@@ -51,6 +51,11 @@ from hireflux_backend.infrastructure.dynamodb.mapping import (
 from hireflux_backend.infrastructure.dynamodb.resource_mapping import resource_quota_key
 from hireflux_backend.infrastructure.dynamodb.resource_quota import resource_quota_update
 from hireflux_backend.infrastructure.dynamodb.table_schema import GSI1_NAME, GSI2_NAME, GSI3_NAME
+from hireflux_backend.infrastructure.dynamodb.workspace_guard import (
+    application_ref,
+    guarded_put,
+    guarded_transact,
+)
 
 
 class DynamoUserRepository:
@@ -131,8 +136,21 @@ class DynamoApplicationRepository:
             quota_values[":expires_at"] = application.expires_at
             quota_expression += ", expires_at = :expires_at"
         try:
-            self._client.transact_write_items(
-                TransactItems=[
+            guarded_transact(
+                self._client,
+                self._table_name,
+                application.owner_user_id,
+                application.expires_at,
+                transactions=(
+                    [
+                        application_ref(
+                            self._table_name, application.owner_user_id, application.application_id
+                        )
+                    ]
+                    if application.expires_at is None
+                    else []
+                )
+                + [
                     {
                         "Update": {
                             "TableName": self._table_name,
@@ -189,7 +207,7 @@ class DynamoApplicationRepository:
                             "acceptance_count": int(application.first_acceptance_at is not None),
                         },
                     ),
-                ]
+                ],
             )
         except ClientError as error:
             if _error_code(error) == "TransactionCanceledException":
@@ -577,15 +595,21 @@ class DynamoApplicationRepository:
             )
             return
         try:
-            self._client.put_item(
-                TableName=self._table_name,
+            guarded_put(
+                self._client,
+                self._table_name,
+                application.owner_user_id,
+                application.expires_at,
                 Item=serialize_item(application_to_item(application)),
                 ConditionExpression="attribute_exists(PK) AND #version = :expected_version",
                 ExpressionAttributeNames={"#version": "version"},
                 ExpressionAttributeValues=serialize_item({":expected_version": expected_version}),
             )
         except ClientError as error:
-            if _error_code(error) == "ConditionalCheckFailedException":
+            if _error_code(error) in {
+                "ConditionalCheckFailedException",
+                "TransactionCanceledException",
+            }:
                 raise ConflictError(
                     "The application was changed by another request. Refresh and try again."
                 ) from error
@@ -607,8 +631,12 @@ class DynamoApplicationRepository:
             )
             return
         try:
-            self._client.transact_write_items(
-                TransactItems=[
+            guarded_transact(
+                self._client,
+                self._table_name,
+                application.owner_user_id,
+                application.expires_at,
+                transactions=[
                     {
                         "Put": {
                             "TableName": self._table_name,
@@ -638,7 +666,7 @@ class DynamoApplicationRepository:
                         expires_at=application.expires_at,
                         max_activity=self._max_activity,
                     ),
-                ]
+                ],
             )
         except ClientError as error:
             if _error_code(error) == "TransactionCanceledException":
@@ -751,7 +779,13 @@ class DynamoApplicationRepository:
                 }
             )
         try:
-            self._client.transact_write_items(TransactItems=transaction)
+            guarded_transact(
+                self._client,
+                self._table_name,
+                application.owner_user_id,
+                application.expires_at,
+                transactions=transaction,
+            )
         except ClientError as error:
             if _error_code(error) == "TransactionCanceledException":
                 raise ConflictError(
@@ -796,8 +830,12 @@ class DynamoApplicationRepository:
         activity: Activity,
     ) -> None:
         try:
-            self._client.transact_write_items(
-                TransactItems=[
+            guarded_transact(
+                self._client,
+                self._table_name,
+                application.owner_user_id,
+                application.expires_at,
+                transactions=[
                     {
                         "Put": {
                             "TableName": self._table_name,
@@ -843,7 +881,7 @@ class DynamoApplicationRepository:
                         application,
                         _transition_funnel_deltas(prior_application, application),
                     ),
-                ]
+                ],
             )
         except ClientError as error:
             if _error_code(error) == "TransactionCanceledException":

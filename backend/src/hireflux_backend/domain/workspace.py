@@ -11,11 +11,14 @@ from hireflux_backend.domain.resources import (
 )
 
 BOOTSTRAP_VERSION = 1
+APPLICATION_MANIFEST_VERSION = 1
 
 
 class DurableWorkspaceState(StrEnum):
     PROVISIONING = "PROVISIONING"
     ACTIVE = "ACTIVE"
+    DELETING = "DELETING"
+    DELETED = "DELETED"
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +29,9 @@ class DurableWorkspace:
     bootstrap_version: int
     created_at: datetime
     updated_at: datetime
+    application_manifest_version: int | None = None
+    deletion_started_at: datetime | None = None
+    deletion_completed_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +40,7 @@ class WorkspaceSnapshot:
     profile: UserProfile | None
     settings: WorkspaceSettings | None
     incompatible: bool = False
+    has_owner_data: bool = False
 
 
 @dataclass(frozen=True, slots=True)

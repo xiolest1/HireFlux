@@ -1,4 +1,5 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useWorkspaceQuery, useWorkspaceInfiniteQuery, useWorkspaceMutation } from "../../auth/workspaceQueries";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import {
   createInterview,
@@ -29,6 +30,8 @@ import {
   markManualTimeZonePreference,
 } from "../../auth/timeZonePreference";
 import { applicationKeys } from "../applications/queries";
+import { useWorkspaceSession } from "../../auth/workspaceSessionContext";
+import { inSessionScope } from "../../auth/sessionGeneration";
 
 export const resourceKeys = {
   settings: ["settings"] as const,
@@ -42,7 +45,7 @@ export const resourceKeys = {
 };
 
 export function useSettings({ enabled = true }: { enabled?: boolean } = {}) {
-  return useQuery({
+  return useWorkspaceQuery({
     queryKey: resourceKeys.settings,
     queryFn: ({ signal }) => getSettings(signal),
     enabled,
@@ -51,10 +54,11 @@ export function useSettings({ enabled = true }: { enabled?: boolean } = {}) {
 
 export function useUpdateSettings() {
   const client = useQueryClient();
-  return useMutation({
+  const { state } = useWorkspaceSession();
+  return useWorkspaceMutation({
     mutationFn: (request: UpdateSettingsRequest) => updateSettings(request),
     onSuccess: (settings, request) => {
-      if (request.time_zone !== undefined) markManualTimeZonePreference();
+      if (state.status === "ready" && state.capabilities.temporary && request.time_zone !== undefined) markManualTimeZonePreference();
       client.setQueryData(resourceKeys.settings, settings);
     },
   });
@@ -65,11 +69,12 @@ export function useAutoDetectTimeZone(
   enabled: boolean,
 ): void {
   const client = useQueryClient();
+  const { state } = useWorkspaceSession();
   const attemptedZone = useRef<string | null>(null);
 
   useEffect(() => {
     if (
-      !enabled ||
+      !enabled || state.status !== "ready" || !state.capabilities.temporary ||
       !settings ||
       hasManualTimeZonePreference()
     ) {
@@ -85,12 +90,12 @@ export function useAutoDetectTimeZone(
     }
     attemptedZone.current = browserTimeZone;
     let active = true;
-    void updateSettings({
+    void inSessionScope(state.scope, () => updateSettings({
       expected_version: settings.version,
       time_zone: browserTimeZone,
-    })
+    }))
       .then((nextSettings) => {
-        if (active) client.setQueryData(resourceKeys.settings, nextSettings);
+        if (active && state.scope.isCurrent()) client.setQueryData(resourceKeys.settings, nextSettings);
       })
       .catch(() => {
         // UTC remains a safe fallback when the automatic preference cannot be saved.
@@ -98,19 +103,19 @@ export function useAutoDetectTimeZone(
     return () => {
       active = false;
     };
-  }, [client, enabled, settings]);
+  }, [client, enabled, settings, state]);
 }
 
 export function useExportWorkspace() {
-  return useMutation({ mutationFn: exportWorkspace });
+  return useWorkspaceMutation({ mutationFn: exportWorkspace });
 }
 
 export function useExportApplicationsCsv() {
-  return useMutation({ mutationFn: exportApplicationsCsv });
+  return useWorkspaceMutation({ mutationFn: exportApplicationsCsv });
 }
 
 export function useNotes(applicationId: string) {
-  return useInfiniteQuery({
+  return useWorkspaceInfiniteQuery({
     queryKey: resourceKeys.notes(applicationId),
     queryFn: ({ signal, pageParam }) => listNotes(applicationId, pageParam, signal),
     initialPageParam: null as string | null,
@@ -120,7 +125,7 @@ export function useNotes(applicationId: string) {
 }
 
 export function useNotePreview(applicationId: string, enabled = true) {
-  return useQuery({
+  return useWorkspaceQuery({
     queryKey: resourceKeys.notePreview(applicationId),
     queryFn: ({ signal }) => getNotePreview(applicationId, 2, signal),
     enabled: Boolean(applicationId) && enabled,
@@ -140,7 +145,7 @@ function useResourceInvalidation(applicationId: string) {
 export function useCreateNote(applicationId: string) {
   const client = useQueryClient();
   const invalidateRelated = useResourceInvalidation(applicationId);
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: (content: string) => createNote(applicationId, content),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: resourceKeys.notes(applicationId) });
@@ -153,7 +158,7 @@ export function useCreateNote(applicationId: string) {
 export function useUpdateNote(applicationId: string) {
   const client = useQueryClient();
   const invalidateRelated = useResourceInvalidation(applicationId);
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({ noteId, version, content }: { noteId: string; version: number; content: string }) =>
       updateNote(applicationId, noteId, version, content),
     onSuccess: () => {
@@ -167,7 +172,7 @@ export function useUpdateNote(applicationId: string) {
 export function useDeleteNote(applicationId: string) {
   const client = useQueryClient();
   const invalidateRelated = useResourceInvalidation(applicationId);
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({ noteId, version }: { noteId: string; version: number }) =>
       deleteNote(applicationId, noteId, version),
     onSuccess: () => {
@@ -179,7 +184,7 @@ export function useDeleteNote(applicationId: string) {
 }
 
 export function useApplicationInterviews(applicationId: string) {
-  return useInfiniteQuery({
+  return useWorkspaceInfiniteQuery({
     queryKey: resourceKeys.applicationInterviews(applicationId),
     queryFn: ({ signal, pageParam }) =>
       listApplicationInterviews(applicationId, pageParam, signal),
@@ -190,7 +195,7 @@ export function useApplicationInterviews(applicationId: string) {
 }
 
 export function useUpcomingInterviews() {
-  return useInfiniteQuery({
+  return useWorkspaceInfiniteQuery({
     queryKey: resourceKeys.upcomingInterviews,
     queryFn: ({ signal, pageParam }) => listUpcomingInterviews(pageParam, signal),
     initialPageParam: null as string | null,
@@ -199,7 +204,7 @@ export function useUpcomingInterviews() {
 }
 
 export function useWorkspaceInterviews() {
-  return useInfiniteQuery({
+  return useWorkspaceInfiniteQuery({
     queryKey: resourceKeys.workspaceInterviews,
     queryFn: ({ signal, pageParam }) => listWorkspaceInterviews("ALL", pageParam, signal),
     initialPageParam: null as string | null,
@@ -237,7 +242,7 @@ function invalidateInterviewQueries(
 
 export function useCreateInterview(applicationId: string) {
   const invalidate = useInterviewInvalidation(applicationId);
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: (fields: InterviewFields) => createInterview(applicationId, fields),
     onSuccess: invalidate,
   });
@@ -245,7 +250,7 @@ export function useCreateInterview(applicationId: string) {
 
 export function useUpdateInterview(applicationId: string) {
   const invalidate = useInterviewInvalidation(applicationId);
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({ interviewId, version, fields }: { interviewId: string; version: number; fields: Partial<InterviewFields> }) =>
       updateInterview(applicationId, interviewId, version, fields),
     onSuccess: invalidate,
@@ -254,7 +259,7 @@ export function useUpdateInterview(applicationId: string) {
 
 export function useTransitionInterview(applicationId: string) {
   const invalidate = useInterviewInvalidation(applicationId);
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({ interviewId, version, status }: { interviewId: string; version: number; status: Extract<InterviewStatus, "COMPLETED" | "CANCELED"> }) =>
       transitionInterview(applicationId, interviewId, version, status),
     onSuccess: invalidate,
@@ -263,7 +268,7 @@ export function useTransitionInterview(applicationId: string) {
 
 export function useTransitionWorkspaceInterview() {
   const client = useQueryClient();
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({
       applicationId,
       interviewId,
@@ -283,7 +288,7 @@ export function useTransitionWorkspaceInterview() {
 
 export function useUpdateInterviewWorkspace(applicationId: string) {
   const invalidate = useInterviewInvalidation(applicationId);
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({
       interviewId,
       version,
@@ -308,7 +313,7 @@ export function useUpdateInterviewWorkspace(applicationId: string) {
 
 export function useCreatePreparationItem(applicationId: string) {
   const invalidate = useInterviewInvalidation(applicationId);
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({
       interviewId,
       version,
@@ -324,7 +329,7 @@ export function useCreatePreparationItem(applicationId: string) {
 
 export function useDeletePreparationItem(applicationId: string) {
   const invalidate = useInterviewInvalidation(applicationId);
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({
       interviewId,
       itemId,

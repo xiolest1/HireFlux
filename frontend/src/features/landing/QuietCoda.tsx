@@ -10,6 +10,8 @@ export interface QuietCodaProps {
   error: unknown;
   isCreating: boolean;
   onAction: () => void;
+  localDevelopment?: boolean;
+  disabled?: boolean;
 }
 
 export function QuietCoda({
@@ -17,6 +19,8 @@ export function QuietCoda({
   error,
   isCreating,
   onAction,
+  localDevelopment = false,
+  disabled = false,
 }: QuietCodaProps) {
   return (
     <section
@@ -71,14 +75,14 @@ export function QuietCoda({
             variant="secondary"
             className="w-48 max-w-full"
             aria-busy={isCreating || undefined}
-            disabled={isCreating}
+            disabled={isCreating || disabled}
             onClick={onAction}
             data-quiet-coda-action
           >
             {actionLabel}
           </Button>
           <p className="max-w-xl text-sm leading-6 text-ink-muted dark:text-slate-400">
-            No sign-up. The temporary demo starts with fictional data.
+            {localDevelopment ? "Development only. Reopen the fixed local backend workspace; no real sign-in is provided." : "No sign-up. The temporary demo starts with fictional data."}
           </p>
           {error ? (
             <div className="mt-2 w-full max-w-xl" data-quiet-coda-error>
@@ -86,7 +90,7 @@ export function QuietCoda({
                 compact
                 animate={false}
                 headingLevel={3}
-                title="Demo workspace could not be prepared"
+                title={localDevelopment ? "Local workspace could not be prepared" : "Demo workspace could not be prepared"}
                 error={error}
               />
             </div>

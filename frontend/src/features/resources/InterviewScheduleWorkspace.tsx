@@ -1,3 +1,4 @@
+import { useWorkspaceUnsavedChanges } from "../../auth/workspaceSessionContext";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   INTERVIEW_TYPES,
@@ -95,6 +96,8 @@ export function InterviewScheduleWorkspace({
       setTimeError(null);
     }
   }, [initialDraft, open]);
+
+  useWorkspaceUnsavedChanges(open && !isSaving && JSON.stringify(draft) !== JSON.stringify(initialDraft));
 
   async function submit(event: FormEvent) {
     event.preventDefault();

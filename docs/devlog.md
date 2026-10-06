@@ -1,5 +1,169 @@
 # HireFlux development log
 
+## 2026-10-05 — Durable workspace safety foundation (Phase 2C)
+
+Layered the final local architecture phase on the accepted uncommitted Phase
+2A/2B baseline. Added minimal strong durable APPLICATION_REF inventory, explicit
+manifest completeness, and confirmed local backfill using lifetime quota evidence
+plus strong canonical/ref verification. Archive/status/restore retain references.
+Backfill is non-destructive/idempotent and cannot complete on lagged, orphaned,
+temporary, incompatible, or concurrently changed evidence. Normal local data was
+not reset or migrated automatically.
+
+Durable states now include DELETING/DELETED. Every distinct ordinary write path
+atomically checks ACTIVE/provenance/schema/no TTL with its canonical/version,
+activity, quota, counter, and projection writes. Single-item settings/application
+edits now transact. The local reconciliation path also excludes frozen owners.
+The interview maximum is 96 to keep worst-case label synchronization within 100
+transaction items; its default remains 25.
+
+Authenticated durable DELETE /me and POST /me/deletion/retry freeze and process
+bounded erasure; GET /me/deletion reports safe state/timestamps/retryable failure.
+Strong owner/ref/application queries erase entire partitions, including unknown
+owned records, with bounded UnprocessedItems retries. References disappear only
+after strong empty-partition proof. Owner data is erased before a minimal non-TTL
+DELETED tombstone remains. Bootstrap cannot resurrect a frozen/deleted subject.
+There is no destructive product UI, provider deletion, recent-auth simulation,
+worker, request-path Scan, or TTL-based erasure guarantee.
+
+Full JSON export uses the complete strong manifest and incrementally enforces
+record, actual public-record UTF-8 byte, and injectable monotonic-work limits.
+Exact final JSON bytes/time are checked before delivery, including derived
+interview guidance. Existing application/child record-count semantics and CSV
+formula neutralization/status-index discovery remain. Exports are current copies,
+not transactional snapshots; oversized work returns an explicit 413 error.
+
+Validation: Python 3.14.7 with locked dependencies; Ruff/format/mypy and 358 backend
+tests passed (46 new parameterized cases). Frontend lint/typecheck/build and all
+364 tests in 46 files passed, preserving the 42 Phase 2B session tests. Hosting
+headers passed 3/3. Production demo Playwright passed 12/12; unchanged durable
+browser smoke passed 1/1 (18.8s), including responsive/axe checks and persisted
+application/note/interview/preferences across refresh, leave, and reactivation.
+Sandbox socket/cache restrictions required host validation. A loaded parallel
+frontend run and first browser empty-state wait timed out; lower-concurrency and
+sequential reruns passed without changing assertions or product code.
+
+Real DynamoDB Local smoke used only disposable HireFluxPhase2C-7a284d96285e.
+Paused-after-preflight application creation and settings writes were released
+after committed freeze and failed without any data/counter/ref change. Committed
+applications were strongly discovered and erased. Mixed active/archived data,
+notes/interviews/activity/context/counters, unknown child/owner records, and
+preferences were covered. Non-destructive backfill passed twice; full strong
+export passed; erasure needed ten bounded calls and left only the tombstone.
+Temporary resources were cleaned up; normal local data and user services were
+preserved. No commit/push/deployment occurred.
+
+See [ADR 0007](adr/0007-durable-workspace-manifest-and-erasure.md) and
+[section 39 handoff](production-account-readiness.md#39-phase-2c-implementation-and-handoff).
+Phase 2 is complete. Phase 3 is CDK TypeScript definitions/synth/tests only;
+it has not started. Provider-backed authentication/deletion and production
+retention/backup policy remain Phase 5/6 work.
+
+## 2026-10-05 — General frontend workspace sessions (Phase 2B)
+
+Completed the shared workspace-session boundary on the existing Phase 2A backend
+contract. The discriminated controller/provider orchestrates initialization,
+activation/bootstrap, ready, reset switching, expiry/invalidation, anonymous,
+and safe stable errors. Adapter-specific demo storage, expiry/events, provisioning,
+and durable local behavior remain separate from ordinary product pages.
+
+Development can pair `VITE_WORKSPACE_MODE=local` with `AUTH_MODE=local` to open
+an empty durable workspace, with no browser-selected owner or fabricated bearer.
+Bootstrap is Zod-validated before protected pages mount, and seeds current
+profile/settings caches. Refresh and reactivation preserve saved data/settings;
+intentional leave stores only a tab-local boolean. Production local mode fails
+closed with disabled activation. This is fixed local backend access, not login,
+real sign-out, Cognito, or production account readiness.
+
+Each transition advances an immutable generation before cancelling/clearing old
+queries and mutations. Fresh clients and remounted workspace observers prevent
+cross-identity placeholder data. Request/body/download checks, scoped mutations,
+callbacks, continuations, 401s, navigation, toasts, and theme rollback reject
+stale work. Reset preserves its confirmation/retry intent and restores a previous
+workspace only while still valid. Voluntary leave confirms registered dirty
+forms; forced expiry clears protected content despite navigation blockers.
+
+Durable preferences remain server-authoritative, including UTC/default values.
+Demo-only detection/simulations stay temporary-only. Central identity UI cleanup
+retains harmless device preferences. Layout, Settings, and Landing show truthful
+lifetime differences; durable local Settings exposes the existing JSON export.
+No backend contract, dependency, CSP, diagram, or AWS change was needed.
+
+Validation: frontend lint/typecheck/production build; 46 Vitest files/364 tests
+including 42 new session tests; hosting headers 3/3; production-demo Playwright
+workspace/theme suite 12/12; real durable local smoke 1/1. Python 3.14.7 backend
+Ruff, formatting (93 files), mypy (63 source files), and all 312 tests passed,
+with the existing Starlette/httpx deprecation warning. Deliberately configured
+production local mode was checked in Chromium: disabled activation, no protected
+content, zero API requests, and no forbidden bundled authority/credential markers.
+
+The full-stack smoke used a new disposable DynamoDB Local table and separate
+backend/Vite ports. It verified empty bootstrap, application/note/interview
+creation, Asia/Tokyo/LIGHT preferences through refresh, leave cleanup, and
+reactivation with preserved data. Settings passed responsive overflow checks at
+1280/768/390/320px and axe accessibility. Smoke selectors were corrected to match
+the existing UI; a transient concurrent browser network-resource error cleared
+on a sequential rerun. Temporary resources were removed; HireFluxLocal was not
+reset. Existing dirty documentation was preserved. No commit or push was made.
+
+See [ADR 0006](adr/0006-frontend-workspace-session-boundary.md) and the exact
+[Phase 2B handoff](production-account-readiness.md#38-phase-2b-implementation-and-handoff).
+Phase 2C is next: deletion state, strong application manifest, write guards, and
+export safety. CDK/AWS and real authentication remain later phases. Stop after 2B.
+
+## 2026-10-05 — Durable backend identity and empty workspace bootstrap (Phase 2A)
+
+Completed the local backend foundation identified by the Phase 1 readiness audit.
+The verified principal now contains owner, role, identity kind, and explicit
+`data_expires_at`; name/email come from separate trusted profile attributes.
+Demo identities require data expiry, durable identities forbid it, and demo
+classification is derived from kind. Authentication modes and local deployment
+guards remain unchanged. No Cognito authentication or browser account session
+was introduced.
+
+Added authenticated non-demo `POST /api/v1/me/bootstrap`, accepting no body or
+`{}`. A conditional transaction creates an empty ACTIVE durable workspace,
+profile, and deterministic UTC settings under existing owner keys, without TTL,
+fictional seed data, or eager counters. Replays preserve preferences, versions,
+and timestamps. Compatible legacy records and incomplete provisioning markers
+recover without deleting data; missing settings in an already ACTIVE workspace
+fail explicitly because customized preferences cannot safely be reconstructed.
+Temporary/type/owner/provenance/schema conflicts are never repaired by stripping
+expiry. Legacy application checks include archived applications and child/helper
+items through existing GSI2 access paths; discovery is eventually consistent and
+does not replace the strong manifest deferred to Phase 2C.
+
+One central readiness dependency now blocks ordinary durable owner routes before
+service side effects. Verified demos bypass that durable query and retain their
+existing provisioning flow. GET /me and export read established profiles;
+Demo Recruiter display-name compatibility is demo-only and read-only. The
+deprecated nullable `last_login_at` response is always null rather than claiming
+that profile creation or an ordinary request is a login event. Existing legacy
+storage is preserved.
+
+Phase 2A validation passed all 312 backend tests, Ruff lint/format, and strict
+Mypy across 63 source files; the focused bootstrap/identity suites passed 45
+tests. Because the existing repository environment uses unsupported Python
+3.12, all backend checks were repeated successfully in an isolated Python
+3.14.7 environment using existing manifest pins and lockfile constraints. All
+322 frontend tests across 45 files, frontend lint/typecheck/build, OpenAPI
+generation, and `git diff --check` passed. Existing TestClient deprecation
+warnings remain. No frontend tests, dependency manifests, or lockfiles changed.
+
+Real DynamoDB Local smoke checks proved persistence across separate processes
+for bootstrap, applications, notes, interviews, and customized settings, with no
+durable TTL. Concurrent bootstrap from the same empty snapshot also converged.
+Both checks passed on Python 3.14.7. Disposable smoke tables and the temporary
+validation environment were removed; existing HireFluxLocal data was untouched.
+No AWS deployment, table reset, or application index migration was performed.
+
+Recorded the accepted decision in [ADR 0005](adr/0005-durable-local-workspace-bootstrap.md)
+and the full file/validation/recovery handoff in
+[readiness audit section 37](production-account-readiness.md#37-phase-2a-implementation-and-handoff).
+The current order is Phase 2B frontend sessions, Phase 2C persistent-account
+safety, Phase 3 CDK synth, Phase 4 AWS staging demo, Phase 5 Cognito staging
+accounts, Phase 6 hardening, then Phase 7 production deployment.
+
 ## 2026-09-29 — Repair post-push CI artifact generation and dependency auditing
 
 Investigated the reported commit/push failure against the live GitHub refs and
@@ -3877,14 +4041,13 @@ reviewed and updated for the new hierarchy.
 
 ## Next recommended work
 
-Freeze and commit the validated local Milestone 2 baseline, then build and
-manually validate the cost-bounded AWS staging foundation described in the
-roadmap: TypeScript CDK, Python 3.14
-Lambda/Mangum, HTTP API, a separate DynamoDB table, secret-backed signing keys,
-CloudWatch safeguards, and an Amplify staging branch with explicit CORS,
-asset-aware SPA routing, security headers, throttling, constrained concurrency,
-and budget alerts.
+Continue with Phase 2B's general frontend session architecture and returning-user
+preference handling, followed by Phase 2C's strong application manifest, account
+deletion lifecycle, write guards, and expanded export safety. The durable backend
+foundation is complete; the current browser remains demo-only.
 
-Automated OIDC-based CI/CD should follow only after the staging stack is stable
-under manual smoke testing. Cognito accounts, private attachments, email, and
-real reminder delivery remain deliberately deferred to their later milestones.
+Use the accepted [phase roadmap](roadmap.md#current-execution-order) for subsequent
+work. CDK synth precedes AWS staging of the existing demo; real Cognito accounts
+follow in staging. Private attachments, email, reminder delivery, and production
+deployment remain future work. Legacy adoption and current exports must not be
+presented as complete erasure or production personal-account safety.

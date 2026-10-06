@@ -1,3 +1,4 @@
+import { useWorkspaceScope, useWorkspaceUnsavedChanges } from "../../auth/workspaceSessionContext";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import type { Application } from "../../api/schemas";
@@ -23,6 +24,7 @@ export function NextStepPlanner({
   onLeaveUnclear?: () => void;
   onConflict?: () => void | Promise<unknown>;
 }) {
+  const sessionScope = useWorkspaceScope();
   const initialChoice: CandidateChoice = application.next_step_responsibility ?? (
     hasLaterScheduledInterview ? "NEXT_ROUND" : "UNCLEAR"
   );
@@ -30,6 +32,7 @@ export function NextStepPlanner({
   const [note, setNote] = useState(application.next_step_note ?? "");
   const [date, setDate] = useState(application.follow_up_date ?? "");
   const mutation = useUpdateApplicationNextStep();
+  useWorkspaceUnsavedChanges(!mutation.isPending && (choice !== initialChoice || note !== (application.next_step_note ?? "") || date !== (application.follow_up_date ?? "")));
   const needsDescription = choice === "CANDIDATE";
   const showDetails = choice === "CANDIDATE" || choice === "EMPLOYER";
 
@@ -49,6 +52,7 @@ export function NextStepPlanner({
           follow_up_date: responsibility === "NONE" ? null : date || null,
         },
       });
+      sessionScope.assertCurrent();
       onSaved?.(updated);
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {

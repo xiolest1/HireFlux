@@ -19,7 +19,7 @@ Adding or changing an index is an explicit schema migration decision, not an app
 | Entity | Primary key | Sort key | Relevant index keys |
 | --- | --- | --- | --- |
 | User profile | `USER#<user_id>` | `PROFILE` | none |
-| Durable workspace readiness | `USER#<owner_user_id>` | `WORKSPACE` | none; `DURABLE_WORKSPACE`, identity kind, bootstrap version 1, `PROVISIONING`/`ACTIVE`, UTC timestamps; no TTL |
+| Durable workspace lifecycle | `USER#<owner_user_id>` | `WORKSPACE` | none; `DURABLE_WORKSPACE`, identity kind, bootstrap version 1, `PROVISIONING`/`ACTIVE`/`DELETING`/`DELETED`, manifest version when complete, UTC timestamps; no TTL |
 | Demo workspace lifecycle | `USER#<workspace_id>` | `WORKSPACE` | none; `state` is `PROVISIONING`, `READY`, or `FAILED` |
 | Demo idempotency record | `DEMO_IDEMPOTENCY#<sha256(idempotency-key)>` | `SESSION` | none; stores only the workspace reference, state, timestamps, and TTL |
 | Workspace quota | `USER#<user_id>` | `WORKSPACE_QUOTA` | none |
@@ -84,10 +84,54 @@ preserved. Read APIs present the deprecated login field as null.
 GSI2 discovery during legacy adoption is eventually consistent and cannot prove
 absence of unindexed/orphan application partitions. It is a compatibility path
 for existing local data, not an account-deletion inventory. A strongly consistent
-application manifest, deletion lifecycle, and transaction write guards remain
-Phase 2C. No `Scan` is introduced on request paths. Durable canonical items and
+application manifest, deletion lifecycle, and transaction write guards are now
+implemented in Phase 2C as described below. No `Scan` is introduced on request paths. Durable canonical items and
 lazy quotas/counters/context omit `expires_at`; demos retain the signed workspace
 expiry on every temporary item. Credential expiration cannot supply durable TTL.
+
+## Strong durable inventory and erasure
+
+Durable application references use `PK=USER#<owner>` and
+`SK=APPLICATION_REF#<application_id>`. Their only non-key fields are entity_type,
+owner_user_id, and application_id. They contain no status, labels, or personal
+content, have no TTL/indexes, and are created in the canonical creation transaction.
+Archive/restore/transitions never remove them. Demo creation does not add refs.
+
+`application_manifest_version=1` means completeness is established, not guessed
+from GSI results. The explicit local backfill queries every status for candidates,
+then strongly validates canonical partitions and owner/ref provenance/lifetime.
+Unique canonical/ref count must equal the authoritative lifetime application_count.
+The final completeness update condition-checks that same quota and ACTIVE state,
+so concurrent creation cannot invalidate the proof silently. Candidate and child
+collection work is bounded by configured quotas. Failures preserve all existing
+content/preferences/TTL and may leave safe unversioned refs for a later retry.
+
+Ordinary durable mutations include an ACTIVE/provenance/bootstrap/no-TTL
+ConditionCheck in the same transaction as canonical, activity, quota, counter,
+and projection changes. Single-item application/settings writes also transact.
+The interview cap is 96: label sync can require 96 projections plus four other
+transaction items, matching DynamoDB's 100-item maximum. Default capacity stays 25.
+The explicit local projection repair path also conditionally excludes frozen
+workspaces while continuing to support uninitialized local legacy records.
+
+Erasure freezes ACTIVE to DELETING with supported manifest evidence. Strong base
+queries enumerate refs and complete application partitions. Delete batches contain
+at most 25 keys with at most four bounded retry attempts for UnprocessedItems.
+No ref is removed until its partition is strongly observed empty. After refs are
+gone, all owner items except WORKSPACE are erased, including unknown owned entity
+types. Strong verification precedes conditional DELETED finalization. Remaining
+keys are resumable server progress; there are no client cursors, Scan, GSI authority,
+or TTL assumptions in erasure.
+
+Only the minimal non-TTL lifecycle tombstone remains; profile, settings, counters,
+quotas, refs, content, and application partitions are gone. GSI projection removal
+is eventual and is not the completion/authorization condition. Ordinary access and
+bootstrap deny DELETING/DELETED. Tombstone retention is provisional pending future
+provider-token, privacy, backup, and restore policies.
+
+Full JSON export strongly enumerates the same complete inventory and canonical
+child pages, with incremental record/public-byte/work budgets. It does not promise
+a transactional snapshot. CSV retains its separate bounded status-index path.
 
 ## Cursor contract
 

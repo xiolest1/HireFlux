@@ -71,9 +71,31 @@ The frontend is a React and TypeScript single-page application built by Vite.
 
 The frontend does not decide ownership, legal status transitions, analytics
 denominators, or historical milestones. It renders API contracts such as
-`allowed_transitions`. On demo launch, reset, exit, expiry, or authorization
-failure, it clears query data before switching identity so one workspace's data
-cannot appear in another.
+`allowed_transitions`. A provider-neutral `WorkspaceSessionProvider` owns
+initialization, activation/bootstrap, ready, switching, expired/invalidation,
+anonymous, and stable error states. Each transition advances an immutable
+generation before cancelling and clearing the prior QueryClient. Protected
+query consumers remount with a fresh client; queries, mutation callbacks and
+continuations, 401 handling, settings/theme updates, navigation, toasts, and
+downloads retain and check their originating generation.
+
+The normal build uses the tab-scoped signed demo adapter. Development can pair
+`VITE_WORKSPACE_MODE=local` with backend `AUTH_MODE=local`. This adapter sends no
+fabricated bearer, browser-selected owner, or trusted profile fields. It calls
+the Phase 2A bootstrap before protected consumers mount and seeds validated
+profile/settings into the current cache. Refresh replays bootstrap; leaving
+clears browser state while preserving server data. A tab-local boolean records
+intentional leave. Production local mode fails closed. This is development
+access to the backend's fixed identity, not real login or sign-out.
+
+Temporary/durable capabilities centralize expiry, reset, optional account
+simulation, and full JSON export presentation. Durable preferences remain
+server-authoritative even for UTC/default values and absent tab markers. Demo
+auto-detection remains temporary-only. Voluntary leave confirms registered
+unsaved edits; reset explicitly warns about discarding edits. Forced
+expiry/invalidation immediately fences and removes protected data. Sidebar and
+device appearance preferences remain device UI state. See
+[ADR 0006](docs/adr/0006-frontend-workspace-session-boundary.md).
 
 ## API and backend boundaries
 
@@ -131,7 +153,7 @@ ownership contracts.
 `data_expires_at`. Demo identities require a data expiry; `LOCAL` and the
 provider-neutral future `PERSISTENT` kind prohibit it. Credential expiration
 remains outside that data-lifetime contract. Trusted display name and email are
-separate bootstrap attributes. No Cognito verifier or persistent browser session
+separate bootstrap attributes. No Cognito verifier or production account session
 is implemented. Auth modes remain exclusive; the current SPA still runs demos.
 
 Durable readiness is centrally checked before all ordinary owner routes, including
@@ -202,8 +224,39 @@ operator recovery rather than recreating possibly customized preferences.
 Legacy adoption discovers applications through every existing GSI2 status
 partition and strongly checks their child partitions for TTL conflicts. This is
 eventually consistent discovery, not a strong application manifest or an erasure
-guarantee. Phase 2C owns that stronger safety foundation. No table/index migration
-or reset is required by Phase 2A; schema operations remain explicit commands.
+guarantee. Phase 2C now supplies the stronger inventory described below. Existing
+local data requires explicit manifest backfill, without a table reset or new index;
+schema operations remain explicit commands.
+
+### Durable workspace safety (Phase 2C)
+
+Durable WORKSPACE states are PROVISIONING, ACTIVE, DELETING, and DELETED.
+Only ACTIVE admits ordinary access. Bootstrap never recovers DELETING/DELETED.
+Every ordinary durable write atomically checks ACTIVE/provenance/schema/no TTL
+alongside its existing version/activity/quota/projection writes. Demo writes keep
+their separate verified-token/TTL behavior and pay no durable guard overhead.
+
+Creation adds a minimal owner `APPLICATION_REF#<id>` in that same transaction.
+Archive/restore retain references. `application_manifest_version=1` records known
+completeness independently from bootstrap version. New empty workspaces have it;
+older LOCAL data uses the guarded operator backfill with lifetime quota evidence,
+strong canonical checks, and a quota-conditioned completion marker.
+
+Authenticated durable DELETE `/api/v1/me` and POST `/api/v1/me/deletion/retry`
+freeze and advance bounded synchronous erasure. GET `/api/v1/me/deletion` reports
+safe lifecycle status. Strong reference/application queries discover whole owned
+partitions without Scan/GSI authority. Batch retries are bounded; refs disappear
+only after confirmed empty partitions. Owner data is cleared before a minimal
+non-TTL DELETED tombstone remains. Remaining keys are resumable progress; there is
+no background worker or provider identity deletion. Existing reads that passed
+preflight can finish; commit-time conditions guarantee mutation exclusion.
+
+Full JSON exports require the complete manifest, strongly read canonical records,
+and enforce incremental record/public UTF-8 byte/elapsed-work budgets plus an
+exact final response check. This is not a transactional snapshot. Tombstone
+retention, historical backup erasure, recent-auth policy, and provider finalization
+remain production hardening/authentication work. See
+[ADR 0007](docs/adr/0007-durable-workspace-manifest-and-erasure.md).
 
 Full key shapes and query contracts are documented in
 [docs/dynamodb-access-patterns.md](docs/dynamodb-access-patterns.md).

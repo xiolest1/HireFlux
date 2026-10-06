@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, type RouteObject } from "react-router-dom";
-import { DemoSessionGuard } from "../auth/DemoSessionGuard";
+import { WorkspaceSessionGuard } from "../auth/WorkspaceSessionGuard";
 import { AppLayout } from "../components/AppLayout";
 import { DocumentTitle } from "../components/DocumentTitle";
 import { LoadingState } from "../components/ui/Feedback";
@@ -32,7 +32,7 @@ export const appRoutes: RouteObject[] = [
     errorElement: <RouteErrorPage />,
   },
   {
-    element: <DemoSessionGuard />,
+    element: <WorkspaceSessionGuard />,
     children: [
       {
         element: <AppLayout />,

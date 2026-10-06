@@ -8,9 +8,25 @@ HireFlux uses three intentionally separate environments. The repository currentl
 - FastAPI serves the API at `http://localhost:8000`.
 - Docker runs DynamoDB Local on loopback port `8001`.
 - `AUTH_MODE=demo` enables one-click isolated workspaces with a visibly local-only signing key.
+- `AUTH_MODE=local` supplies a server-configured durable owner for backend development.
+  Call `POST /api/v1/me/bootstrap` before ordinary workspace endpoints. Bootstrap
+  creates empty profile/settings/readiness records without TTL and preserves
+  compatible existing data. Pair `VITE_WORKSPACE_MODE=local` in development to
+  bootstrap automatically before protected browser pages. Local and demo remain
+  separate configurations; production local browser mode fails closed. Leaving
+  the local frontend preserves saved server data and is not authentication logout.
 - The explicit table initializer enables DynamoDB TTL on `expires_at`.
 
+Phase 2A needs no table reset, new index, or AWS resource. Temporary demo items
+carry `expires_at`; durable workspace data omits it. Local authentication fails
+outside local/test and when deployment runtime markers are present. Never enable
+it as a staging/production authentication shortcut.
+
 ## Staging
+
+This is a planned environment. Phase 3 is CDK definitions/synth only; Phase 4
+deploys the existing demo to staging. Real Cognito accounts follow in Phase 5,
+after frontend sessions and the Phase 2C persistent-account safety foundation.
 
 - A `develop` or `staging` branch deploys to its own Amplify branch environment.
 - The API, DynamoDB table, demo-session signing key, cursor key, CORS origin, logs, alarms, and throttles are separate from production.
@@ -18,6 +34,10 @@ HireFlux uses three intentionally separate environments. The repository currentl
 - Hosting-level access protection may be enabled while changes are being reviewed.
 
 ## Production
+
+This is a planned environment. Production deployment is Phase 7, after hardening
+and release qualification; the local durable bootstrap milestone does not claim
+personal-account production readiness.
 
 - Only reviewed `main` changes deploy to the public candidate-demo origin.
 - Production uses a separate DynamoDB table and secret values supplied by the deployment platform.

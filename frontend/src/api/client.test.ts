@@ -4,6 +4,8 @@ import { z } from "zod";
 import { getDemoSession, saveDemoSession } from "../auth/sessionStore";
 import { apiDownload, apiRequest } from "./client";
 import { API_ORIGIN, server } from "../test/server";
+import { WorkspaceSessionController } from "../auth/workspaceSessionController";
+import { createDemoAdapter } from "../auth/sessionAdapters";
 
 describe("apiRequest", () => {
   it("maps the API error envelope to ApiError", async () => {
@@ -52,6 +54,7 @@ describe("apiRequest", () => {
       token_type: "Bearer",
       expires_at: "2099-08-12T12:00:00Z",
     });
+    await new WorkspaceSessionController(createDemoAdapter()).initialize();
     server.use(
       http.get(`${API_ORIGIN}/api/v1/expired`, () =>
         HttpResponse.json(
@@ -79,6 +82,7 @@ describe("apiRequest", () => {
       token_type: "Bearer",
       expires_at: "2099-08-12T12:00:00Z",
     });
+    await new WorkspaceSessionController(createDemoAdapter()).initialize();
     server.use(
       http.get(`${API_ORIGIN}/api/v1/me/applications/export`, ({ request }) => {
         expect(request.headers.get("authorization")).toBe(

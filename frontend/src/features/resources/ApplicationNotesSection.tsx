@@ -1,3 +1,4 @@
+import { useWorkspaceScope, useWorkspaceUnsavedChanges } from "../../auth/workspaceSessionContext";
 import { ChevronDown, Plus } from "lucide-react";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Button } from "../../components/ui/Button";
@@ -16,6 +17,7 @@ export function ApplicationNotesSection({
   timeZone: string;
   composerRequest: number;
 }) {
+  const sessionScope = useWorkspaceScope();
   const rootRef = useRef<HTMLElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const [nearViewport, setNearViewport] = useState(false);
@@ -26,6 +28,7 @@ export function ApplicationNotesSection({
   const fullNotesId = useId();
   const preview = useNotePreview(applicationId, nearViewport);
   const createMutation = useCreateNote(applicationId);
+  useWorkspaceUnsavedChanges(composerOpen && Boolean(content.trim()) && !createMutation.isPending);
 
   useEffect(() => {
     const node = rootRef.current;
@@ -56,6 +59,7 @@ export function ApplicationNotesSection({
     if (!content.trim()) return;
     try {
       const created = await createMutation.mutateAsync(content.trim());
+      sessionScope.assertCurrent();
       setNewNoteId(created.note_id);
       window.setTimeout(() => setNewNoteId(null), 1000);
       setContent("");

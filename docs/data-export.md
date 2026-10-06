@@ -4,6 +4,11 @@ HireFlux has two export capabilities with different audiences. Both are scoped
 to the verified identity on the server; the browser cannot choose another
 owner or upgrade a demo session.
 
+Durable local identities must complete `POST /api/v1/me/bootstrap` before either
+export endpoint, through the same central readiness gate as other owner routes.
+Export reads the established profile and does not initialize a competing durable
+workspace. Verified demos retain their existing CSV behavior.
+
 ## Application CSV
 
 `GET /api/v1/me/applications/export` returns one application per CSV row with
@@ -37,6 +42,34 @@ frontend therefore presents sample CSV export in a demo workspace and does
 not frame fictional, expiring data as an account archive. A future persistent
 account can expose the JSON portability action without changing the endpoint
 contract.
+
+The development-only durable browser workspace now exposes the JSON portability
+action. CSV and JSON requests use the current shared credential scope; stale
+responses cannot expose a browser download and object URLs are revoked. The
+deprecated `last_login_at` profile field is null because HireFlux does not record
+login events.
+
+Full JSON now requires a supported complete durable application manifest and uses
+strong owner/reference/canonical queries, including archived applications and
+current child/activity resources. An older LOCAL workspace without the marker
+receives 409 WORKSPACE_MANIFEST_INCOMPLETE until guarded backfill succeeds.
+CSV deliberately retains its existing eventually consistent status-index path;
+it is a convenient application list rather than a complete account archive.
+
+JSON accounts applications and child/activity records incrementally, with defaults
+of 5,000 records, 4,000,000 UTF-8 bytes, and five seconds of elapsed work. Actual
+public record sizes include derived interview guidance and fixed profile/settings
+records. Exact final serialized JSON size/time is checked before sending.
+CSV also checks record/byte/work limits
+while writing rows and final bytes. Exceeding any limit returns
+413 WORKSPACE_EXPORT_TOO_LARGE with the safe error envelope, never a truncated
+success. Bounds are backend configuration, not VITE settings or claims about
+an AWS gateway limit. Checks between SDK operations cannot interrupt a call.
+
+DELETING/DELETED deny both exports. JSON rechecks ACTIVE after traversal, but
+neither export is a database-wide transactional snapshot: ordinary concurrent
+changes can produce a current best-effort copy. No historical backup deletion,
+demo conversion, import, or async export was added.
 
 ## Future production path
 

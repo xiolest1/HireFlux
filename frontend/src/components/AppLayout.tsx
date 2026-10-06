@@ -23,7 +23,8 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import { useDemoSession } from "../auth/demoSessionContext";
+import { useWorkspaceSession } from "../auth/workspaceSessionContext";
+import { workspaceCapabilities } from "../auth/workspaceCapabilities";
 import { useMe } from "../features/applications/queries";
 import { applicationCreateRouteState } from "../features/applications/createNavigation";
 import {
@@ -138,6 +139,17 @@ function useExpiryLabel(expiresAt: string | undefined): {
 }
 
 export function AppLayout() {
+  const { state } = useWorkspaceSession();
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  // Query observers must be recreated with their new client. Only reset intent
+  // survives the temporary loading scope so failure recovery remains reviewable.
+  return <WorkspaceLayout key={state.scope.generation} confirmingReset={confirmingReset} setConfirmingReset={setConfirmingReset} />;
+}
+
+function WorkspaceLayout({ confirmingReset, setConfirmingReset }: {
+  confirmingReset: boolean;
+  setConfirmingReset: (open: boolean) => void;
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const addApplicationState =
@@ -146,13 +158,18 @@ export function AppLayout() {
       : location.pathname === "/dashboard"
         ? applicationCreateRouteState("dashboard", location.pathname, location.search)
         : undefined;
-  const { session, status, reset, abandonReset, exit, isCreating, error } = useDemoSession();
-  const identityReady = status === "active";
+  const { state, controller } = useWorkspaceSession();
+  const identityReady = state.status === "ready";
+  const capabilities = identityReady ? state.capabilities : workspaceCapabilities(controller.lifetime ?? "temporary");
+  const session = identityReady ? state.workspace.demo : undefined;
+  const isCreating = state.status === "switching";
+  const error = identityReady ? state.error : undefined;
+  const workspaceLabel = capabilities.temporary ? "Demo workspace" : "Local development workspace";
   const meQuery = useMe({ enabled: identityReady });
   const settingsQuery = useSettings({ enabled: identityReady });
   const updateSettingsMutation = useUpdateSettings();
   useAutoDetectTimeZone(settingsQuery.data, identityReady);
-  const [confirmingReset, setConfirmingReset] = useState(false);
+  const [confirmingExit, setConfirmingExit] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [tabletNavOpen, setTabletNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarPreference);
@@ -166,8 +183,8 @@ export function AppLayout() {
   const displayName = session ? "Demo Workspace" : meQuery.data?.name;
 
   useEffect(() => {
-    if (!settingsQuery.data) return;
-    if (settingsQuery.data.theme === "SYSTEM") {
+    if (!identityReady || !state.scope.isCurrent() || !settingsQuery.data) return;
+    if (capabilities.temporary && settingsQuery.data.theme === "SYSTEM") {
       const stored = storedThemePreference();
       if (stored === "light" || stored === "dark") {
         applyTheme(stored);
@@ -177,7 +194,7 @@ export function AppLayout() {
       return;
     }
     setColorThemePreference(settingsQuery.data.theme);
-  }, [settingsQuery.data]);
+  }, [capabilities.temporary, identityReady, settingsQuery.data, state.scope]);
 
   useEffect(() => {
     if (confirmingReset && error) resetErrorRef.current?.focus();
@@ -229,7 +246,7 @@ export function AppLayout() {
 
   function closeResetDialog() {
     if (!isCreating) {
-      abandonReset();
+      controller.abandonReset();
       setConfirmingReset(false);
     }
   }
@@ -241,7 +258,8 @@ export function AppLayout() {
 
   async function resetWorkspace() {
     try {
-      await reset();
+      const ready = await controller.activate(true);
+      ready.scope.assertCurrent();
       clearSearchTour();
       setConfirmingReset(false);
       navigate("/dashboard", {
@@ -253,9 +271,8 @@ export function AppLayout() {
     }
   }
 
-  function exitWorkspace() {
-    clearSearchTour();
-    exit();
+  function exitWorkspace(discard = false) {
+    if (!controller.leave({ discard })) { setConfirmingExit(true); return; }
     navigate("/", { replace: true });
   }
 
@@ -268,7 +285,7 @@ export function AppLayout() {
   }
 
   return (
-    <ToastProvider>
+    <ToastProvider key={state.scope.generation} scope={state.scope}>
       <div data-workspace-shell className="min-h-screen bg-canvas text-ink md:flex">
         <a
           href="#main-content"
@@ -344,9 +361,9 @@ export function AppLayout() {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ink">
-                      {displayName ?? (meQuery.isError ? "Demo guest" : "Connecting…")}
+                      {displayName ?? (meQuery.isError ? "Workspace user" : "Connecting…")}
                     </p>
-                    <p className="truncate text-xs text-ink-muted">Demo workspace</p>
+                    <p className="truncate text-xs text-ink-muted">{workspaceLabel}</p>
                   </div>
                 </div>
               </div>
@@ -391,7 +408,7 @@ export function AppLayout() {
           open={tabletNavOpen}
           onClose={() => setTabletNavOpen(false)}
           title="Workspace navigation"
-          description="Navigate your isolated HireFlux demo workspace."
+          description="Navigate your HireFlux workspace."
           size="sm"
           placement="left"
           sideBreakpoint="md"
@@ -428,9 +445,9 @@ export function AppLayout() {
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-ink">
-                    {displayName ?? (meQuery.isError ? "Demo guest" : "Connecting…")}
+                    {displayName ?? (meQuery.isError ? "Workspace user" : "Connecting…")}
                   </p>
-                  <p className="truncate text-xs text-ink-muted">Demo workspace</p>
+                  <p className="truncate text-xs text-ink-muted">{workspaceLabel}</p>
                 </div>
               </div>
             </div>
@@ -468,17 +485,18 @@ export function AppLayout() {
                   }`}
                 >
                   <Clock3 aria-hidden="true" className="size-3.5" />
-                  {expiry.label}
+                  {capabilities.showExpiry ? expiry.label : "Local development · Durable"}
                 </span>
                 <div className="hidden lg:block">
                   <ThemeToggle
+                    scope={state.scope}
                     disabled={settingsQuery.isPending || updateSettingsMutation.isPending}
                     onPreferenceChange={
                       settingsQuery.data ? persistHeaderTheme : undefined
                     }
                   />
                 </div>
-                <button
+                {capabilities.canReset ? <button
                   ref={resetTriggerRef}
                   type="button"
                   aria-label="Reset demo"
@@ -487,12 +505,12 @@ export function AppLayout() {
                 >
                   <RotateCcw aria-hidden="true" className="size-4" />
                   Reset demo
-                </button>
+                </button> : null}
               </div>
             </div>
           </header>
 
-          {expiry.isExpiringSoon ? (
+          {capabilities.showExpiry && expiry.isExpiringSoon ? (
             <div className="border-b border-warning/30 bg-warning-soft px-4 py-2 text-center text-sm font-medium text-warning">
               This workspace {expiry.label.toLowerCase()}. Save any changes you want to try now.
             </div>
@@ -508,11 +526,11 @@ export function AppLayout() {
             tabIndex={-1}
             className="mx-auto w-full max-w-[100rem] px-4 py-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 sm:pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-10 lg:px-8 lg:py-10 xl:px-10"
           >
-            {status === "replacing" ? (
+            {!identityReady ? (
               <LoadingState label="Preparing a fresh demo workspace..." />
             ) : (
               <div key={location.pathname} className="hf-route-enter">
-                <Outlet />
+                <Outlet key={state.scope.generation} />
               </div>
             )}
           </main>
@@ -587,7 +605,7 @@ export function AppLayout() {
                 ) : (
                   <p className="truncate text-sm font-semibold text-ink">{displayName}</p>
                 )}
-                <p className="truncate text-xs text-ink-muted">Demo workspace</p>
+                <p className="truncate text-xs text-ink-muted">{workspaceLabel}</p>
               </div>
             </div>
             <p
@@ -626,25 +644,26 @@ export function AppLayout() {
                 <p className="text-xs text-ink-muted">Switch the active color mode</p>
               </div>
               <ThemeToggle
+                    scope={state.scope}
                 disabled={settingsQuery.isPending || updateSettingsMutation.isPending}
                 onPreferenceChange={settingsQuery.data ? persistHeaderTheme : undefined}
               />
             </div>
-            <button
+            {capabilities.canReset ? <button
               type="button"
               className="mt-5 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink active:bg-surface-pressed"
               onClick={requestReset}
             >
               <RotateCcw aria-hidden="true" className="size-5" />
               Reset demo
-            </button>
+            </button> : null}
             <button
               type="button"
               className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-danger transition-colors hover:bg-danger-soft"
-              onClick={exitWorkspace}
+              onClick={() => exitWorkspace()}
             >
               <LogOut aria-hidden="true" className="size-5" />
-              Exit demo
+              {capabilities.temporary ? "Exit demo" : "Leave local workspace"}
             </button>
           </div>
         </Drawer>
@@ -653,8 +672,8 @@ export function AppLayout() {
           open={confirmingReset}
           onClose={closeResetDialog}
           title="Reset this demo?"
-          description="You will switch to a newly seeded, isolated workspace. The applications in this workspace will no longer be visible in this browser session."
-          initialFocusRef={resetButtonRef}
+          description="You will switch to a newly seeded, isolated workspace. Unsaved changes will be discarded. The applications in this workspace will no longer be visible in this browser session."
+          initialFocusRef={error ? resetErrorRef : resetButtonRef}
           role="alertdialog"
         >
           <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-accent">
@@ -683,7 +702,7 @@ export function AppLayout() {
               type="button"
               className="min-h-11 rounded-xl px-3 text-sm font-semibold text-ink-muted hover:bg-surface-muted hover:text-ink"
               disabled={isCreating}
-              onClick={exitWorkspace}
+              onClick={() => exitWorkspace()}
             >
               Exit demo
             </button>
@@ -694,6 +713,12 @@ export function AppLayout() {
             >
               {isCreating ? "Resetting…" : error ? "Try again" : "Reset workspace"}
             </Button>
+          </div>
+        </Dialog>
+        <Dialog open={confirmingExit} onClose={() => setConfirmingExit(false)} title="Leave with unsaved changes?" description="Your unsaved edits will be discarded. Saved workspace data stays on the server." role="alertdialog">
+          <div className="mt-6 flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setConfirmingExit(false)}>Keep editing</Button>
+            <Button onClick={() => exitWorkspace(true)}>Discard changes and leave</Button>
           </div>
         </Dialog>
       </div>

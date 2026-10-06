@@ -1,5 +1,7 @@
+import { useWorkspaceScope } from "../auth/workspaceSessionContext";
+import { useWorkspaceNavigate } from "../auth/workspaceSessionContext";
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import type { Application } from "../api/schemas";
 import { ErrorPanel, SuccessBanner } from "../components/ui/Feedback";
 import { ApplicationCreateForm } from "../features/applications/ApplicationCreateForm";
@@ -16,7 +18,8 @@ import { ApplicationFormSkeleton } from "../features/applications/ApplicationSke
 import { WorkspaceFrame } from "../components/ui/WorkspaceComposition";
 
 export function ApplicationCreatePage() {
-  const navigate = useNavigate();
+  const sessionScope = useWorkspaceScope();
+  const navigate = useWorkspaceNavigate();
   const location = useLocation();
   const createMutation = useCreateApplication();
   const settingsQuery = useSettings();
@@ -28,6 +31,7 @@ export function ApplicationCreatePage() {
       const application = await createMutation.mutateAsync(
         toCreateApplicationRequest(values),
       );
+      sessionScope.assertCurrent();
       if (routeState) {
         navigate(routeState.returnTo, {
           replace: true,

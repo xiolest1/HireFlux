@@ -1,6 +1,8 @@
+import { useWorkspaceScope } from "../auth/workspaceSessionContext";
+import { useWorkspaceNavigate } from "../auth/workspaceSessionContext";
 import { CalendarClock, ChevronDown, ChevronLeft, Ellipsis, Pencil } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/client";
 import type { Application, ApplicationStatus, Interview } from "../api/schemas";
 import { Button } from "../components/ui/Button";
@@ -42,7 +44,7 @@ const legacyTabs: Record<string, SectionId> = { notes: "notes", interviews: "int
 export function ApplicationDetailPage() {
   const { applicationId = "" } = useParams();
   const location = useLocation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [notice] = useState(() => (location.state as LocationState | null)?.notice ?? null);
   const [applicationsOrigin] = useState(() =>
@@ -221,6 +223,8 @@ function FollowUpDrawer({ application, open, onClose, timeZone, onReload }: { ap
 }
 
 function ArchiveDialog({ application, open, onClose, onReload }: { application: Application; open: boolean; onClose: () => void; onReload: () => void }) {
+  const sessionScope = useWorkspaceScope();
   const mutation = useTransitionApplication();
-  return <Dialog open={open} onClose={onClose} role="alertdialog" title="Archive this opportunity?" description="It will leave active views but remain available in your history with its activity intact.">{mutation.error ? <div className="mt-4"><ErrorPanel compact error={mutation.error} title={mutation.error instanceof ApiError && mutation.error.status === 409 ? "Opportunity changed" : "Opportunity could not be archived"} onRetry={mutation.error instanceof ApiError && mutation.error.status === 409 ? onReload : undefined} /></div> : null}<div className="mt-6 flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button variant="danger" disabled={mutation.isPending} onClick={async () => { try { await mutation.mutateAsync({ applicationId: application.application_id, request: { status: "ARCHIVED", expected_version: application.version } }); onClose(); } catch { return; } }}>{mutation.isPending ? "Archiving…" : "Archive opportunity"}</Button></div></Dialog>;
+  return <Dialog open={open} onClose={onClose} role="alertdialog" title="Archive this opportunity?" description="It will leave active views but remain available in your history with its activity intact.">{mutation.error ? <div className="mt-4"><ErrorPanel compact error={mutation.error} title={mutation.error instanceof ApiError && mutation.error.status === 409 ? "Opportunity changed" : "Opportunity could not be archived"} onRetry={mutation.error instanceof ApiError && mutation.error.status === 409 ? onReload : undefined} /></div> : null}<div className="mt-6 flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button variant="danger" disabled={mutation.isPending} onClick={async () => { try { await mutation.mutateAsync({ applicationId: application.application_id, request: { status: "ARCHIVED", expected_version: application.version } });
+  sessionScope.assertCurrent(); onClose(); } catch { return; } }}>{mutation.isPending ? "Archiving…" : "Archive opportunity"}</Button></div></Dialog>;
 }

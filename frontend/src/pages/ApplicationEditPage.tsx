@@ -1,7 +1,8 @@
+import { useWorkspaceScope } from "../auth/workspaceSessionContext";
+import { useWorkspaceNavigate } from "../auth/workspaceSessionContext";
 import { useEffect } from "react";
 import {
   Link,
-  useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -24,8 +25,9 @@ import {
 import { useSettings } from "../features/resources/queries";
 
 export function ApplicationEditPage() {
+  const sessionScope = useWorkspaceScope();
   const { applicationId = "" } = useParams();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const [searchParams] = useSearchParams();
   const applicationQuery = useApplication(applicationId);
   const updateMutation = useUpdateApplication();
@@ -78,6 +80,7 @@ export function ApplicationEditPage() {
           expected_version: application.version,
         },
       });
+      sessionScope.assertCurrent();
       navigate(`/applications/${updated.application_id}`, {
         replace: true,
         state: { notice: "Application details updated." },

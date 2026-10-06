@@ -3,14 +3,21 @@ import io
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TypeVar
+from time import monotonic
 
 from hireflux_backend.application.errors import ForbiddenError, WorkspaceExportTooLargeError
-from hireflux_backend.application.resource_ports import ResourcePage
 from hireflux_backend.application.resource_services import WorkspaceResourceService
 from hireflux_backend.application.services import ApplicationService, UserService
+from hireflux_backend.application.workspace_safety import (
+    WorkspaceSafetyRepository,
+    require_active_workspace,
+    require_complete_manifest,
+    require_durable_workspace,
+)
 from hireflux_backend.domain.models import Activity, Application, CurrentIdentity, UserProfile
 from hireflux_backend.domain.resources import Interview, Note, WorkspaceSettings
+
+ExportSizedRecord = Application | Activity | Note | Interview | UserProfile | WorkspaceSettings
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,14 +31,11 @@ class WorkspaceExport:
     interviews: tuple[Interview, ...]
 
 
-ResourceT = TypeVar("ResourceT")
 _SPREADSHEET_FORMULA_PREFIXES = ("=", "+", "-", "@")
 
 
 class WorkspaceExportService:
     """Build an owner-scoped, bounded export without exposing storage details."""
-
-    _PAGE_SIZE = 100
 
     def __init__(
         self,
@@ -40,51 +44,89 @@ class WorkspaceExportService:
         resource_service: WorkspaceResourceService,
         *,
         max_records: int,
+        inventory: WorkspaceSafetyRepository,
+        record_size: Callable[[ExportSizedRecord], int],
+        max_bytes: int = 4_000_000,
+        max_seconds: float = 5,
+        clock: Callable[[], float] = monotonic,
     ) -> None:
         self._users = user_service
         self._applications = application_service
         self._resources = resource_service
         self._max_records = max_records
+        self._inventory = inventory
+        self._record_size = record_size
+        self._max_bytes = max_bytes
+        self._max_seconds = max_seconds
+        self._clock = clock
 
     def export(self, identity: CurrentIdentity) -> WorkspaceExport:
         if identity.is_demo:
             raise ForbiddenError(
                 "Full account data export is unavailable for temporary demo workspaces."
             )
-        applications = self._applications.list_all(identity)
-        record_count = len(applications)
-        self._ensure_record_limit(record_count)
+        workspace = require_durable_workspace(
+            identity, self._inventory.get_workspace(identity.user_id)
+        )
+        require_active_workspace(workspace)
+        require_complete_manifest(workspace)
+        started = self._clock()
+        records = 0
+        byte_count = 512
+        applications: list[Application] = []
         activities: list[Activity] = []
         notes: list[Note] = []
         interviews: list[Interview] = []
-        for application in applications:
-            application_activities = self._all_activity(identity, application.application_id)
-            record_count += len(application_activities)
-            self._ensure_record_limit(record_count)
-            activities.extend(application_activities)
 
-            application_notes = self._all_notes(identity, application.application_id)
-            record_count += len(application_notes)
-            self._ensure_record_limit(record_count)
-            notes.extend(application_notes)
+        def account(
+            item: Application | Activity | Note | Interview | UserProfile | WorkspaceSettings,
+        ) -> None:
+            nonlocal records, byte_count
+            if not isinstance(item, (UserProfile, WorkspaceSettings)):
+                records += 1
+                self._ensure_record_limit(records)
+            # Account before accumulating; transport checks the exact final response too.
+            byte_count += self._record_size(item) + 32
+            self.validate_download(byte_count, self._clock() - started)
 
-            application_interviews = self._all_interviews(identity, application.application_id)
-            record_count += len(application_interviews)
-            self._ensure_record_limit(record_count)
-            interviews.extend(application_interviews)
-
+        profile = self._users.get_profile(identity)
+        account(profile)
+        settings = self._resources.get_settings(identity)
+        account(settings)
+        for item in self._inventory.export_records(
+            identity.user_id, lambda: self.validate_download(byte_count, self._clock() - started)
+        ):
+            account(item)
+            if isinstance(item, Application):
+                applications.append(item)
+            elif isinstance(item, Activity):
+                activities.append(item)
+            elif isinstance(item, Note):
+                notes.append(item)
+            elif isinstance(item, Interview):
+                interviews.append(item)
+        self.validate_download(byte_count, self._clock() - started)
         return WorkspaceExport(
-            exported_at=datetime.now(UTC),
-            profile=self._users.get_profile(identity),
-            settings=self._resources.get_settings(identity),
-            applications=applications,
-            activities=tuple(activities),
-            notes=tuple(notes),
-            interviews=tuple(interviews),
+            datetime.now(UTC),
+            profile,
+            settings,
+            tuple(applications),
+            tuple(activities),
+            tuple(notes),
+            tuple(interviews),
         )
+
+    def validate_download(self, byte_count: int, elapsed_seconds: float) -> None:
+        if byte_count > self._max_bytes or elapsed_seconds > self._max_seconds:
+            raise WorkspaceExportTooLargeError(
+                "This workspace exceeds synchronous export limits. No partial export was returned."
+            )
 
     def export_applications_csv(self, identity: CurrentIdentity) -> str:
         """Build one owner-scoped, human-readable row per application."""
+        started = self._clock()
+        records = 0
+        byte_count = 0
         output = io.StringIO(newline="")
         writer = csv.writer(output, lineterminator="\r\n")
         writer.writerow(
@@ -109,6 +151,9 @@ class WorkspaceExportService:
             )
         )
         for application in self._applications.list_all(identity):
+            records += 1
+            self._ensure_record_limit(records)
+            before = output.tell()
             writer.writerow(
                 (
                     neutralize_spreadsheet_formula(application.company_name),
@@ -134,60 +179,22 @@ class WorkspaceExportService:
                     _format_export_timestamp(application.updated_at),
                 )
             )
-        return output.getvalue()
+            end = output.tell()
+            output.seek(before)
+            byte_count += len(output.read().encode("utf-8"))
+            output.seek(end)
+            self.validate_download(byte_count, self._clock() - started)
+        result = output.getvalue()
+        self.validate_download(len(result.encode("utf-8")), self._clock() - started)
+        return result
 
     def _ensure_record_limit(self, record_count: int) -> None:
         if record_count <= self._max_records:
             return
         raise WorkspaceExportTooLargeError(
-            "This workspace is too large for synchronous JSON export. "
+            "This workspace is too large for synchronous export. "
             "A production-scale export will use an asynchronous downloadable artifact."
         )
-
-    def _all_activity(self, identity: CurrentIdentity, application_id: str) -> tuple[Activity, ...]:
-        items: list[Activity] = []
-        cursor: str | None = None
-        while True:
-            page = self._applications.list_activity(
-                identity, application_id, limit=self._PAGE_SIZE, cursor=cursor
-            )
-            items.extend(page.items)
-            if page.next_cursor is None:
-                return tuple(items)
-            cursor = page.next_cursor
-
-    def _all_notes(self, identity: CurrentIdentity, application_id: str) -> tuple[Note, ...]:
-        return tuple(
-            self._all_resource_pages(
-                lambda cursor: self._resources.list_notes(
-                    identity, application_id, limit=self._PAGE_SIZE, cursor=cursor
-                )
-            )
-        )
-
-    def _all_interviews(
-        self, identity: CurrentIdentity, application_id: str
-    ) -> tuple[Interview, ...]:
-        return tuple(
-            self._all_resource_pages(
-                lambda cursor: self._resources.list_interviews(
-                    identity, application_id, limit=self._PAGE_SIZE, cursor=cursor
-                )
-            )
-        )
-
-    @staticmethod
-    def _all_resource_pages(
-        fetch: Callable[[str | None], ResourcePage[ResourceT]],
-    ) -> list[ResourceT]:
-        items: list[ResourceT] = []
-        cursor: str | None = None
-        while True:
-            page = fetch(cursor)
-            items.extend(page.items)
-            if page.next_cursor is None:
-                return items
-            cursor = page.next_cursor
 
 
 def _format_export_timestamp(value: datetime) -> str:

@@ -8,9 +8,12 @@ from hireflux_backend.application.errors import (
     PersistenceError,
     WorkspaceBootstrapConflictError,
     WorkspaceBootstrapRequiredError,
+    WorkspaceDeletedError,
+    WorkspaceDeletingError,
 )
 from hireflux_backend.domain.models import CurrentIdentity, TrustedProfileAttributes, UserProfile
 from hireflux_backend.domain.workspace import (
+    APPLICATION_MANIFEST_VERSION,
     BOOTSTRAP_VERSION,
     BootstrapResult,
     DurableWorkspace,
@@ -42,6 +45,11 @@ class WorkspaceBootstrapService:
 
     def _validate(self, identity: CurrentIdentity, snapshot: WorkspaceSnapshot) -> None:
         workspace = snapshot.workspace
+        if workspace is not None and workspace.owner_user_id == identity.user_id:
+            if workspace.state is DurableWorkspaceState.DELETING:
+                raise WorkspaceDeletingError("Workspace erasure is in progress.")
+            if workspace.state is DurableWorkspaceState.DELETED:
+                raise WorkspaceDeletedError("This workspace has been erased.")
         if snapshot.incompatible or (
             workspace is not None
             and (
@@ -108,6 +116,9 @@ class WorkspaceBootstrapService:
                     BOOTSTRAP_VERSION,
                     now,
                     now,
+                    application_manifest_version=(
+                        APPLICATION_MANIFEST_VERSION if not snapshot.has_owner_data else None
+                    ),
                 )
             )
             profile = snapshot.profile or UserProfile(

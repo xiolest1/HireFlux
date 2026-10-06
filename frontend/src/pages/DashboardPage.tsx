@@ -1,6 +1,8 @@
+import { useWorkspaceScope } from "../auth/workspaceSessionContext";
+import { useWorkspaceNavigate } from "../auth/workspaceSessionContext";
 import { ArrowRight, ChevronDown, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import type { DashboardRange } from "../api/schemas";
 import { SuccessBanner } from "../components/ui/Feedback";
 import { CollapsibleRegion } from "../components/ui/Motion";
@@ -28,8 +30,9 @@ import {
 const textLink = "hf-home-quiet-link inline-flex min-h-11 items-center text-sm font-semibold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
 export function DashboardPage() {
+  const sessionScope = useWorkspaceScope();
   const location = useLocation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const settingsQuery = useSettings();
   const { showToast } = useToast();
   const [range, setRange] = useState<DashboardRange>("30d");
@@ -90,6 +93,7 @@ export function DashboardPage() {
     setResolvingActionId(action.application_id);
     try {
       await completeMutation.mutateAsync(action.application_id);
+      sessionScope.assertCurrent();
       showToast("Follow-up completed.", { title: "Follow-up updated" });
       decisionHeadingRef.current?.focus();
     } catch {
@@ -103,6 +107,7 @@ export function DashboardPage() {
     if (!followUpDate) return;
     try {
       await rescheduleMutation.mutateAsync({ applicationId, followUpDate });
+      sessionScope.assertCurrent();
       setRescheduling(null);
       setFollowUpDate("");
       showToast("Follow-up rescheduled.", { title: "Follow-up updated" });

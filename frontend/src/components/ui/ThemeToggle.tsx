@@ -10,11 +10,12 @@ import {
 } from "./themePreference";
 
 interface ThemeToggleProps {
+  scope?: import("../../auth/sessionGeneration").SessionScope;
   disabled?: boolean;
   onPreferenceChange?: (preference: "LIGHT" | "DARK") => void | Promise<unknown>;
 }
 
-export function ThemeToggle({ disabled = false, onPreferenceChange }: ThemeToggleProps = {}) {
+export function ThemeToggle({ disabled = false, onPreferenceChange, scope }: ThemeToggleProps = {}) {
   const [theme, setTheme] = useState<ColorMode>(preferredTheme);
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export function ThemeToggle({ disabled = false, onPreferenceChange }: ThemeToggl
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
     } catch {
+      if (scope && !scope.isCurrent()) return;
       // The theme still changes for this page when storage is unavailable.
     }
     setTheme(nextTheme);
@@ -57,6 +59,7 @@ export function ThemeToggle({ disabled = false, onPreferenceChange }: ThemeToggl
       await onPreferenceChange?.(nextTheme.toUpperCase() as "LIGHT" | "DARK");
     } catch {
       try {
+        if (scope && !scope.isCurrent()) return;
         window.localStorage.setItem(THEME_STORAGE_KEY, theme);
       } catch {
         // The previous theme can still be restored for this page.

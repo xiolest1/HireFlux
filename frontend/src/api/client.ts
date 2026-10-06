@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { clearDemoSession, getDemoSession } from "../auth/sessionStore";
+import { requestScope, StaleSessionError, type SessionScope } from "../auth/sessionGeneration";
 
 const DEFAULT_API_BASE_URL = "http://localhost:8000";
 
@@ -59,6 +59,8 @@ export interface DownloadedFile {
 
 type ApiRequestOptions = Omit<RequestInit, "body"> & {
   json?: unknown;
+  scope?: SessionScope;
+  publicRequest?: boolean;
 };
 
 async function readJson(response: Response): Promise<unknown> {
@@ -116,37 +118,34 @@ export async function apiRequest<T>(
   schema: z.ZodType<T>,
   options: ApiRequestOptions = {},
 ): Promise<T> {
+  const scope = options.scope ?? requestScope();
+  scope.assertCurrent();
+  const { scope: _scope, publicRequest, json, ...requestOptions } = options;
+  void _scope;
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
-  const session = getDemoSession();
-  if (session && !headers.has("Authorization")) {
-    headers.set("Authorization", `${session.token_type} ${session.access_token}`);
-  }
+  headers.delete("Authorization");
+  if (!publicRequest && scope.authorization) headers.set("Authorization", scope.authorization);
 
   let body: string | undefined;
-  if (options.json !== undefined) {
+  if (json !== undefined) {
     headers.set("Content-Type", "application/json");
-    body = JSON.stringify(options.json);
+    body = JSON.stringify(json);
   }
 
   try {
     const response = await fetch(`${apiBaseUrl()}${path}`, {
-      ...options,
+      ...requestOptions,
       headers,
       body,
     });
+    scope.assertCurrent();
     const payload = await readJson(response);
+    scope.assertCurrent();
 
     if (!response.ok) {
       const apiError = errorFromResponse(response, payload);
-      if (
-        response.status === 401 &&
-        ["DEMO_SESSION_EXPIRED", "DEMO_SESSION_REQUIRED"].includes(apiError.code)
-      ) {
-        clearDemoSession(
-          apiError.code === "DEMO_SESSION_EXPIRED" ? "expired" : "cleared",
-        );
-      }
+      if (response.status === 401 && !publicRequest) scope.unauthorized(apiError.code === "DEMO_SESSION_EXPIRED" ? "expired" : "invalidated");
       throw apiError;
     }
 
@@ -161,12 +160,14 @@ export async function apiRequest<T>(
 
     return parsed.data;
   } catch (error) {
+    if (error instanceof StaleSessionError) throw error;
     if (error instanceof ApiError) {
       throw error;
     }
     if (error instanceof DOMException && error.name === "AbortError") {
       throw error;
     }
+    scope.assertCurrent();
     throw new ApiError(
       "NETWORK_ERROR",
       "HireFlux could not reach the API. Check that the backend is running.",
@@ -174,35 +175,32 @@ export async function apiRequest<T>(
   }
 }
 
-export async function apiDownload(path: string): Promise<DownloadedFile> {
+export async function apiDownload(path: string, scope = requestScope()): Promise<DownloadedFile> {
+  scope.assertCurrent();
   const headers = new Headers({ Accept: "text/csv" });
-  const session = getDemoSession();
-  if (session) {
-    headers.set("Authorization", `${session.token_type} ${session.access_token}`);
-  }
+  if (scope.authorization) headers.set("Authorization", scope.authorization);
 
   try {
     const response = await fetch(`${apiBaseUrl()}${path}`, { headers });
+    scope.assertCurrent();
     const payload = await readJson(response);
+    scope.assertCurrent();
     if (!response.ok) {
       const apiError = errorFromResponse(response, payload);
-      if (
-        response.status === 401 &&
-        ["DEMO_SESSION_EXPIRED", "DEMO_SESSION_REQUIRED"].includes(apiError.code)
-      ) {
-        clearDemoSession(
-          apiError.code === "DEMO_SESSION_EXPIRED" ? "expired" : "cleared",
-        );
-      }
+      if (response.status === 401) scope.unauthorized(apiError.code === "DEMO_SESSION_EXPIRED" ? "expired" : "invalidated");
       throw apiError;
     }
 
+    const blob = await response.blob();
+    scope.assertCurrent();
     return {
-      blob: await response.blob(),
+      blob,
       filename: parseDownloadFilename(response.headers.get("Content-Disposition")),
     };
   } catch (error) {
+    if (error instanceof StaleSessionError) throw error;
     if (error instanceof ApiError) throw error;
+    scope.assertCurrent();
     throw new ApiError(
       "NETWORK_ERROR",
       "HireFlux could not reach the API. Check that the backend is running.",

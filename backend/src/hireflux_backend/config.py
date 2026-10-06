@@ -54,9 +54,14 @@ class Settings(BaseSettings):
     demo_session_failure_ttl_minutes: int = Field(default=15, ge=1, le=1440)
     max_applications_per_workspace: int = Field(default=100, ge=5, le=500)
     max_notes_per_application: int = Field(default=100, ge=1, le=500)
-    max_interviews_per_application: int = Field(default=25, ge=1, le=100)
+    # Label synchronization also writes application/activity/quota/workspace: 96 + 4 = 100.
+    max_interviews_per_application: int = Field(default=25, ge=1, le=96)
     max_activity_per_application: int = Field(default=500, ge=10, le=5_000)
     max_sync_export_records: int = Field(default=5_000, ge=1, le=25_000)
+    max_sync_export_bytes: int = Field(default=4_000_000, ge=1_024, le=10_000_000)
+    max_sync_export_work_seconds: float = Field(default=5, ge=0.1, le=20)
+    account_erasure_max_items_per_request: int = Field(default=250, ge=1, le=1_000)
+    account_erasure_max_seconds_per_request: float = Field(default=2, ge=0.1, le=10)
     api_docs_enabled: bool | None = None
 
     local_user_id: UUID = UUID("00000000-0000-4000-8000-000000000001")

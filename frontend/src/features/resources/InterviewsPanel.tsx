@@ -1,3 +1,4 @@
+import { useWorkspaceScope } from "../../auth/workspaceSessionContext";
 import {
   CalendarClock,
   CalendarPlus,
@@ -49,6 +50,7 @@ export function InterviewsPanel({
   emptyMessage?: string;
   canSchedule?: boolean;
 }) {
+  const sessionScope = useWorkspaceScope();
   const interviewsQuery = useApplicationInterviews(applicationId);
   const interviews = useMemo(
     () => (interviewsQuery.data?.pages.flatMap((page) => page.items) ?? [])
@@ -107,12 +109,14 @@ export function InterviewsPanel({
           version: editing.version,
           fields: submittedFields,
         });
+        sessionScope.assertCurrent();
         showToast("Interview updated.", {
           title: "Interview updated",
           tone: "success",
         });
       } else {
         await createMutation.mutateAsync(submittedFields);
+        sessionScope.assertCurrent();
         showToast("Interview scheduled.", {
           title: "Interview scheduled",
           tone: "success",
@@ -273,6 +277,7 @@ export function InterviewsPanel({
                               version: interview.version,
                               status: "COMPLETED",
                             });
+                            sessionScope.assertCurrent();
                             showToast("Interview marked complete.", {
                               title: "Interview updated",
                               tone: "success",
@@ -308,6 +313,7 @@ export function InterviewsPanel({
                                   version: interview.version,
                                   status: "CANCELED",
                                 });
+                                sessionScope.assertCurrent();
                                 setCancelingId(null);
                                 showToast("Interview canceled.", {
                                   title: "Interview updated",

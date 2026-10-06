@@ -19,7 +19,10 @@ from hireflux_backend.application.errors import (
     ValidationError,
     WorkspaceBootstrapConflictError,
     WorkspaceBootstrapRequiredError,
+    WorkspaceDeletedError,
+    WorkspaceDeletingError,
     WorkspaceExportTooLargeError,
+    WorkspaceManifestIncompleteError,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,6 +45,9 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(DemoSessionRequiredError, demo_session_required_handler)
     app.add_exception_handler(DemoSessionExpiredError, demo_session_expired_handler)
     app.add_exception_handler(WorkspaceExportTooLargeError, workspace_export_too_large_handler)
+    app.add_exception_handler(WorkspaceDeletedError, workspace_deleted_handler)
+    app.add_exception_handler(WorkspaceDeletingError, workspace_deleting_handler)
+    app.add_exception_handler(WorkspaceManifestIncompleteError, manifest_incomplete_handler)
     app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(Exception, unexpected_exception_handler)
 
@@ -77,6 +83,18 @@ async def conflict_handler(request: Request, error: Exception) -> JSONResponse:
 
 async def bootstrap_required_handler(request: Request, error: Exception) -> JSONResponse:
     return _response(request, 409, "WORKSPACE_BOOTSTRAP_REQUIRED", str(error))
+
+
+async def workspace_deleting_handler(request: Request, error: Exception) -> JSONResponse:
+    return _response(request, 409, "WORKSPACE_DELETING", str(error))
+
+
+async def workspace_deleted_handler(request: Request, error: Exception) -> JSONResponse:
+    return _response(request, 409, "WORKSPACE_DELETED", str(error))
+
+
+async def manifest_incomplete_handler(request: Request, error: Exception) -> JSONResponse:
+    return _response(request, 409, "WORKSPACE_MANIFEST_INCOMPLETE", str(error))
 
 
 async def bootstrap_conflict_handler(request: Request, error: Exception) -> JSONResponse:

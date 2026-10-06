@@ -14,6 +14,7 @@ import {
   type ToastTone,
 } from "./toastContext";
 import { useReducedMotion } from "./motionHooks";
+import type { SessionScope } from "../../auth/sessionGeneration";
 
 interface ToastItem extends Required<Pick<ToastOptions, "tone">> {
   id: number;
@@ -44,7 +45,7 @@ const toneIcons = {
   danger: TriangleAlert,
 };
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+export function ToastProvider({ children, scope }: { children: ReactNode; scope?: SessionScope }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(0);
   const timers = useRef(new Map<number, number>());
@@ -81,6 +82,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const showToast = useCallback(
     (message: ReactNode, options: ToastOptions = {}) => {
+      if (scope && !scope.isCurrent()) return 0;
       const id = ++nextId.current;
       const tone = options.tone ?? "success";
       const duration = options.duration ?? toneDurations[tone];
@@ -91,7 +93,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       scheduleDismissal(id, duration);
       return id;
     },
-    [scheduleDismissal],
+    [scheduleDismissal, scope],
   );
 
   useEffect(() => () => {

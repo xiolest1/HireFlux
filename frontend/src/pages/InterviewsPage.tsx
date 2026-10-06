@@ -1,3 +1,5 @@
+import { useWorkspaceScope } from "../auth/workspaceSessionContext";
+import { useWorkspaceNavigate } from "../auth/workspaceSessionContext";
 import {
   ArrowRight,
   CalendarPlus,
@@ -20,7 +22,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import type { Application, Interview, WorkspaceInterview } from "../api/schemas";
 import type { InterviewFields } from "../api/resources";
 import { buttonClassName } from "../components/ui/buttonStyles";
@@ -177,8 +179,9 @@ function orientation(
 }
 
 export function InterviewsPage() {
+  const sessionScope = useWorkspaceScope();
   const location = useLocation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const [applicationsOrigin] = useState(() =>
     readApplicationsRouteState(location.state),
   );
@@ -335,6 +338,7 @@ export function InterviewsPage() {
         version: interview.version,
         status,
       });
+      sessionScope.assertCurrent();
       setCancelingId(null);
       showToast(
         status === "COMPLETED"
@@ -369,6 +373,7 @@ export function InterviewsPage() {
             fields,
           })
         : await createInterviewMutation.mutateAsync(fields);
+      sessionScope.assertCurrent();
       setScheduleOpen(false);
       setScheduleApplication(null);
       setScheduleEditing(null);

@@ -1,3 +1,4 @@
+import { useWorkspaceSession, useWorkspaceUnsavedChanges } from "../../auth/workspaceSessionContext";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -100,8 +101,10 @@ export function ApplicationForm({
     ["description", "Description", errors.description?.message],
     ["role_family", "Preparation focus", errors.role_family?.message],
   ].filter((item): item is [string, string, string] => typeof item[2] === "string");
+  const { state: workspaceSession } = useWorkspaceSession();
+  useWorkspaceUnsavedChanges(isDirty && !isSubmitting);
   const blocker = useBlocker(
-    () => isDirty && !isSubmitting && !allowNavigationRef.current,
+    () => workspaceSession.scope.isCurrent() && isDirty && !isSubmitting && !allowNavigationRef.current,
   );
 
   function keepEditing() {

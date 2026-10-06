@@ -1,3 +1,4 @@
+import { useWorkspaceSession, useWorkspaceUnsavedChanges } from "../../auth/workspaceSessionContext";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDown, ExternalLink, Sparkles } from "lucide-react";
 import {
@@ -125,8 +126,10 @@ export function ApplicationCreateForm({
       errors.salary_text ||
       errors.description,
   );
+  const { state: workspaceSession } = useWorkspaceSession();
+  useWorkspaceUnsavedChanges(isDirty && !isSubmitting);
   const blocker = useBlocker(
-    () => isDirty && !isSubmitting && !allowNavigationRef.current,
+    () => workspaceSession.scope.isCurrent() && isDirty && !isSubmitting && !allowNavigationRef.current,
   );
   const evidence = useMemo<DuplicateCandidateRequest | null>(() => {
     const company = companyName.trim();

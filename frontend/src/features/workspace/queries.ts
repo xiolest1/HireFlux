@@ -1,7 +1,7 @@
+import { useWorkspaceSession } from "../../auth/workspaceSessionContext";
+import { useWorkspaceQuery, useWorkspaceMutation } from "../../auth/workspaceQueries";
 import {
   keepPreviousData,
-  useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import {
@@ -84,7 +84,7 @@ export function clearSearchTour() {
 }
 
 export function useDashboard(range: DashboardRange) {
-  return useQuery({
+  return useWorkspaceQuery({
     queryKey: workspaceKeys.dashboard(range),
     queryFn: ({ signal }) => getDashboard(range, signal),
     placeholderData: keepPreviousData,
@@ -95,7 +95,7 @@ export function useAnalytics(
   filters: AnalyticsFilters,
   { enabled = true }: { enabled?: boolean } = {},
 ) {
-  return useQuery({
+  return useWorkspaceQuery({
     queryKey: workspaceKeys.analytics(filters),
     queryFn: ({ signal }) => getAnalytics(filters, signal),
     placeholderData: keepPreviousData,
@@ -107,9 +107,11 @@ function useFollowUpMutation(
   mutation: (applicationId: string, version: number) => Promise<unknown>,
 ) {
   const queryClient = useQueryClient();
-  return useMutation({
+  const { state } = useWorkspaceSession();
+  return useWorkspaceMutation({
     mutationFn: async (applicationId: string) => {
       const application = await getApplication(applicationId);
+      state.scope.assertCurrent();
       return mutation(applicationId, application.version);
     },
     onSuccess: () => {
@@ -129,7 +131,8 @@ export function useCompleteFollowUp() {
 
 export function useRescheduleFollowUp() {
   const queryClient = useQueryClient();
-  return useMutation({
+  const { state } = useWorkspaceSession();
+  return useWorkspaceMutation({
     mutationFn: async ({
       applicationId,
       followUpDate,
@@ -138,6 +141,7 @@ export function useRescheduleFollowUp() {
       followUpDate: string;
     }) => {
       const application = await getApplication(applicationId);
+      state.scope.assertCurrent();
       return rescheduleFollowUp(applicationId, application.version, followUpDate);
     },
     onSuccess: () => {

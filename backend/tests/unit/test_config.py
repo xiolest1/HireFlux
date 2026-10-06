@@ -21,6 +21,25 @@ def test_test_environment_supports_local_auth_without_endpoint() -> None:
     assert settings().auth_mode.value == "local"
 
 
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("max_sync_export_bytes", 1023),
+        ("max_sync_export_bytes", 10000001),
+        ("max_sync_export_work_seconds", 0),
+        ("max_sync_export_work_seconds", 21),
+        ("account_erasure_max_items_per_request", 0),
+        ("account_erasure_max_items_per_request", 1001),
+        ("account_erasure_max_seconds_per_request", 0),
+        ("account_erasure_max_seconds_per_request", 11),
+        ("max_interviews_per_application", 97),
+    ],
+)
+def test_safety_limits_reject_invalid_values(name: str, value: int) -> None:
+    with pytest.raises(ValidationError):
+        settings(**{name: value})
+
+
 def test_local_auth_is_rejected_in_deployed_environment() -> None:
     with pytest.raises(ValidationError, match="forbidden outside"):
         settings(environment="production")

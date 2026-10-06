@@ -37,6 +37,7 @@ from hireflux_backend.infrastructure.dynamodb.resource_mapping import (
 )
 from hireflux_backend.infrastructure.dynamodb.resource_quota import resource_quota_update
 from hireflux_backend.infrastructure.dynamodb.table_schema import GSI1_NAME, GSI3_NAME
+from hireflux_backend.infrastructure.dynamodb.workspace_guard import guarded_put, guarded_transact
 
 
 class DynamoWorkspaceResourceRepository:
@@ -71,14 +72,20 @@ class DynamoWorkspaceResourceRepository:
 
     def create_settings(self, settings: WorkspaceSettings) -> WorkspaceSettings:
         try:
-            self._client.put_item(
-                TableName=self._table_name,
+            guarded_put(
+                self._client,
+                self._table_name,
+                settings.owner_user_id,
+                settings.expires_at,
                 Item=serialize_item(settings_to_item(settings)),
                 ConditionExpression="attribute_not_exists(PK) AND attribute_not_exists(SK)",
             )
             return settings
         except ClientError as error:
-            if _error_code(error) != "ConditionalCheckFailedException":
+            if _error_code(error) not in {
+                "ConditionalCheckFailedException",
+                "TransactionCanceledException",
+            }:
                 raise PersistenceError("Unable to initialize workspace settings.") from error
         concurrent = self.get_settings(settings.owner_user_id)
         if concurrent is None:
@@ -87,15 +94,21 @@ class DynamoWorkspaceResourceRepository:
 
     def replace_settings(self, settings: WorkspaceSettings, *, expected_version: int) -> None:
         try:
-            self._client.put_item(
-                TableName=self._table_name,
+            guarded_put(
+                self._client,
+                self._table_name,
+                settings.owner_user_id,
+                settings.expires_at,
                 Item=serialize_item(settings_to_item(settings)),
                 ConditionExpression="attribute_exists(PK) AND #version = :expected_version",
                 ExpressionAttributeNames={"#version": "version"},
                 ExpressionAttributeValues=serialize_item({":expected_version": expected_version}),
             )
         except ClientError as error:
-            if _error_code(error) == "ConditionalCheckFailedException":
+            if _error_code(error) in {
+                "ConditionalCheckFailedException",
+                "TransactionCanceledException",
+            }:
                 raise ConflictError(
                     "The settings were changed by another request. Refresh and try again."
                 ) from error
@@ -188,8 +201,12 @@ class DynamoWorkspaceResourceRepository:
         activity: Activity,
     ) -> None:
         try:
-            self._client.transact_write_items(
-                TransactItems=[
+            guarded_transact(
+                self._client,
+                self._table_name,
+                owner_user_id,
+                activity.expires_at,
+                transactions=[
                     {
                         "Delete": {
                             "TableName": self._table_name,
@@ -212,7 +229,7 @@ class DynamoWorkspaceResourceRepository:
                         note_delta=-1,
                     ),
                     self._activity_put(activity),
-                ]
+                ],
             )
         except ClientError as error:
             if _error_code(error) == "TransactionCanceledException":
@@ -430,7 +447,13 @@ class DynamoWorkspaceResourceRepository:
                 transaction_items.append(
                     self._opportunity_context_write(interview_from_item(item), replacing=False)
                 )
-            self._client.transact_write_items(TransactItems=transaction_items)
+            guarded_transact(
+                self._client,
+                self._table_name,
+                activity.owner_user_id,
+                activity.expires_at,
+                transaction_items,
+            )
         except ClientError as error:
             if _error_code(error) == "TransactionCanceledException":
                 raise ConflictError(
@@ -476,7 +499,13 @@ class DynamoWorkspaceResourceRepository:
                 transaction_items.append(
                     self._opportunity_context_write(interview_from_item(item), replacing=True)
                 )
-            self._client.transact_write_items(TransactItems=transaction_items)
+            guarded_transact(
+                self._client,
+                self._table_name,
+                activity.owner_user_id,
+                activity.expires_at,
+                transaction_items,
+            )
         except ClientError as error:
             if _error_code(error) == "TransactionCanceledException":
                 raise ConflictError(

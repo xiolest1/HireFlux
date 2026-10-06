@@ -1,3 +1,4 @@
+import { useWorkspaceScope, useWorkspaceUnsavedChanges } from "../../auth/workspaceSessionContext";
 import {
   ArrowDown,
   ArrowUp,
@@ -91,6 +92,7 @@ export function InterviewFocusedWorkspace({
   onClose: () => void;
   onEditSchedule?: () => void;
 }) {
+  const sessionScope = useWorkspaceScope();
   const [currentInterview, setCurrentInterview] = useState(interview);
   const [mode, setMode] = useState<DrawerMode>(() => modeFor(interview));
   const [draft, setDraft] = useState<WorkspaceDraft>(() => draftFrom(interview));
@@ -151,6 +153,7 @@ export function InterviewFocusedWorkspace({
     roleMutation.isPending ||
     createItemMutation.isPending ||
     deleteItemMutation.isPending;
+  useWorkspaceUnsavedChanges(dirty && !pending);
   const mutationError =
     workspaceMutation.error ||
     roleMutation.error ||
@@ -175,6 +178,7 @@ export function InterviewFocusedWorkspace({
           debrief_carry_forward: draft.debrief_carry_forward?.trim() || null,
         },
       });
+      sessionScope.assertCurrent();
       showToast(
         debriefComplete ? "Interview reflection saved." : "Interview preparation saved.",
         { title: "Interview workspace updated", tone: "success" },
@@ -214,6 +218,7 @@ export function InterviewFocusedWorkspace({
           role_family: nextChoice === "AUTO" ? null : nextChoice,
         },
       });
+      sessionScope.assertCurrent();
       showToast("Preparation focus updated for every interview round.", {
         title: "Role context saved",
         tone: "success",
@@ -235,6 +240,7 @@ export function InterviewFocusedWorkspace({
         version: currentInterview.version,
         label,
       });
+      sessionScope.assertCurrent();
       setCurrentInterview(updated);
       setCustomLabel("");
       showToast("Custom preparation item added.", { tone: "success" });
@@ -250,6 +256,7 @@ export function InterviewFocusedWorkspace({
         itemId,
         version: currentInterview.version,
       });
+      sessionScope.assertCurrent();
       setCurrentInterview(updated);
       setDraft((current) => ({
         ...current,

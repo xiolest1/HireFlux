@@ -1,8 +1,6 @@
+import { useWorkspaceQuery, useWorkspaceInfiniteQuery, useWorkspaceMutation } from "../../auth/workspaceQueries";
 import {
-  useInfiniteQuery,
   keepPreviousData,
-  useMutation,
-  useQuery,
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
@@ -64,7 +62,7 @@ function updateOpportunityCaches(queryClient: QueryClient, applicationId: string
 }
 
 export function useMe({ enabled = true }: { enabled?: boolean } = {}) {
-  return useQuery({
+  return useWorkspaceQuery({
     queryKey: ["me"],
     queryFn: ({ signal }) => getMe(signal),
     enabled,
@@ -77,7 +75,7 @@ export function useApplications(
   filters: ApplicationListFilters = {},
   enabled = true,
 ) {
-  return useInfiniteQuery({
+  return useWorkspaceInfiniteQuery({
     queryKey: applicationKeys.list(status, limit, filters),
     queryFn: ({ pageParam, signal }) =>
       listApplications(pageParam, signal, limit, status ?? undefined, filters),
@@ -89,7 +87,7 @@ export function useApplications(
 }
 
 export function useOpportunityWorkspace(previewLimit: number, enabled = true) {
-  return useQuery({
+  return useWorkspaceQuery({
     queryKey: applicationKeys.workspace(previewLimit),
     queryFn: ({ signal }) => getOpportunityWorkspace(previewLimit, signal),
     enabled,
@@ -102,7 +100,7 @@ export function useOpportunityGroup(
   limit = 20,
   enabled = true,
 ) {
-  return useInfiniteQuery({
+  return useWorkspaceInfiniteQuery({
     queryKey: applicationKeys.workspaceGroup(group, limit),
     queryFn: ({ pageParam, signal }) =>
       listOpportunityGroup(group, pageParam, signal, limit),
@@ -113,7 +111,7 @@ export function useOpportunityGroup(
 }
 
 export function useApplication(applicationId: string) {
-  return useQuery({
+  return useWorkspaceQuery({
     queryKey: applicationKeys.detail(applicationId),
     queryFn: ({ signal }) => getApplication(applicationId, signal),
     enabled: Boolean(applicationId),
@@ -124,7 +122,7 @@ export function useApplicationActivity(
   applicationId: string,
   { order = "asc", limit = 25 }: { order?: "asc" | "desc"; limit?: number } = {},
 ) {
-  return useInfiniteQuery({
+  return useWorkspaceInfiniteQuery({
     queryKey: applicationKeys.activity(applicationId, order, limit),
     queryFn: ({ signal, pageParam }) =>
       listApplicationActivity(applicationId, pageParam, signal, limit, order),
@@ -136,7 +134,7 @@ export function useApplicationActivity(
 
 export function useCreateApplication() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: (request: CreateApplicationRequest) =>
       createApplication(request),
     onSuccess: (application) => {
@@ -154,7 +152,7 @@ export function useCreateApplication() {
 export function useDuplicateCandidates(
   request: DuplicateCandidateRequest | null,
 ) {
-  return useQuery({
+  return useWorkspaceQuery({
     queryKey: [...applicationKeys.duplicateCandidates(), request],
     queryFn: ({ signal }) => getDuplicateCandidates(request ?? {}, signal),
     enabled: request !== null,
@@ -169,7 +167,7 @@ interface UpdateMutationVariables {
 
 export function useUpdateApplication() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({ applicationId, request }: UpdateMutationVariables) =>
       updateApplication(applicationId, request),
     onSuccess: (application) => {
@@ -198,7 +196,7 @@ interface TransitionMutationVariables {
 
 export function useTransitionApplication() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({ applicationId, request }: TransitionMutationVariables) =>
       transitionApplication(applicationId, request),
     onSuccess: (application) => {
@@ -219,7 +217,7 @@ export function useTransitionApplication() {
 
 export function useCompleteApplicationFollowUp() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({ applicationId, expectedVersion }: {
       applicationId: string;
       expectedVersion: number;
@@ -233,7 +231,7 @@ export function useCompleteApplicationFollowUp() {
 
 export function useRescheduleApplicationFollowUp() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({ applicationId, expectedVersion, followUpDate }: {
       applicationId: string;
       expectedVersion: number;
@@ -248,7 +246,7 @@ export function useRescheduleApplicationFollowUp() {
 
 export function useUpdateApplicationNextStep() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useWorkspaceMutation({
     mutationFn: ({ applicationId, request }: {
       applicationId: string;
       request: NextStepUpdateRequest;

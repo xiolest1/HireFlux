@@ -1,3 +1,4 @@
+import { useWorkspaceScope } from "../../auth/workspaceSessionContext";
 import { useState, type FormEvent } from "react";
 import type { Application, ApplicationStatus } from "../../api/schemas";
 import { Button } from "../../components/ui/Button";
@@ -25,6 +26,7 @@ export function StatusTransitionForm({
   onSuccess,
   embedded = false,
 }: StatusTransitionFormProps) {
+  const sessionScope = useWorkspaceScope();
   const transitionMutation = useTransitionApplication();
   const { showToast } = useToast();
   const [targetStatus, setTargetStatus] = useState<ApplicationStatus | "">(
@@ -78,6 +80,7 @@ export function StatusTransitionForm({
           ...(needsAppliedDate ? { applied_date: appliedDate } : {}),
         },
       });
+      sessionScope.assertCurrent();
       showToast(
         isDraftCorrection
           ? "Application corrected to Draft."

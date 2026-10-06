@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request, Response
 from starlette.middleware.cors import CORSMiddleware
 
 from hireflux_backend.api.error_handlers import register_exception_handlers
+from hireflux_backend.api.export_schemas import export_record_size
 from hireflux_backend.api.routes import (
     applications,
     demo_sessions,
@@ -28,6 +29,7 @@ from hireflux_backend.application.resource_services import WorkspaceResourceServ
 from hireflux_backend.application.services import ApplicationService, UserService
 from hireflux_backend.application.workspace_bootstrap import WorkspaceBootstrapService
 from hireflux_backend.application.workspace_export import WorkspaceExportService
+from hireflux_backend.application.workspace_safety import WorkspaceErasureService
 from hireflux_backend.auth.demo import DemoSessionCodec
 from hireflux_backend.config import Settings, get_settings
 from hireflux_backend.infrastructure.dynamodb.client import build_dynamodb_client
@@ -44,6 +46,9 @@ from hireflux_backend.infrastructure.dynamodb.resource_repositories import (
 )
 from hireflux_backend.infrastructure.dynamodb.workspace_bootstrap_repository import (
     DynamoWorkspaceBootstrapRepository,
+)
+from hireflux_backend.infrastructure.dynamodb.workspace_safety_repository import (
+    DynamoWorkspaceSafetyRepository,
 )
 
 _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
@@ -119,11 +124,23 @@ def create_app(
         ),
     )
     app.state.workspace_resource_service = workspace_resource_service
+    workspace_safety_repository = DynamoWorkspaceSafetyRepository(
+        client,
+        configured.dynamodb_table_name,
+        max_items=configured.account_erasure_max_items_per_request,
+        max_seconds=configured.account_erasure_max_seconds_per_request,
+        max_applications=configured.max_applications_per_workspace,
+    )
+    app.state.workspace_erasure_service = WorkspaceErasureService(workspace_safety_repository)
     app.state.workspace_export_service = WorkspaceExportService(
         user_service,
         application_service,
         workspace_resource_service,
         max_records=configured.max_sync_export_records,
+        inventory=workspace_safety_repository,
+        record_size=export_record_size,
+        max_bytes=configured.max_sync_export_bytes,
+        max_seconds=configured.max_sync_export_work_seconds,
     )
     app.state.demo_session_codec = demo_session_codec
     app.state.demo_session_service = DemoSessionService(

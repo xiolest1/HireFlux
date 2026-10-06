@@ -1,5 +1,40 @@
 # Roadmap
 
+## Current execution order
+
+The accepted production-account phase sequence below supersedes the ordering of
+the earlier product milestone descriptions. Those milestones remain scope
+references. The local demo and Phase 2A backend foundation are implemented;
+AWS resources and real persistent browser accounts are not deployed.
+
+- **Phase 1 — completed:** architecture/readiness audit.
+- **Phase 2A — completed:** provider-neutral durable principal/data lifetime,
+  authenticated empty atomic bootstrap, central durable readiness, compatible
+  local adoption/recovery, and shared demo/durable product services. See
+  [ADR 0005](adr/0005-durable-local-workspace-bootstrap.md).
+- **Phase 2B — completed:** provider-neutral frontend sessions, demo and development-only
+  durable local adapters, validated bootstrap before protected rendering, fresh
+  generation caches, stale async-result fencing, and server-owned durable preferences.
+  See [ADR 0006](adr/0006-frontend-workspace-session-boundary.md).
+- **Phase 2C — completed:** strong durable application manifest, verified local
+  backfill, commit-time ACTIVE guards, one-way bounded resumable erasure with a
+  minimal tombstone, and record/byte/work-bounded strong JSON export. See
+  [ADR 0007](adr/0007-durable-workspace-manifest-and-erasure.md).
+- **Phase 3 — next, not started:** TypeScript CDK definitions and synth/tests only.
+- **Phase 4 — deferred:** AWS staging infrastructure and the existing demo running
+  end-to-end, with cost/security controls and manual smoke validation.
+- **Phase 5 — deferred:** real Cognito accounts in staging; direct verified Cognito
+  `sub` ownership remains the approved direction.
+- **Phase 6 — deferred:** production hardening and release qualification.
+- **Phase 7 — deferred:** production deployment after the preceding gates.
+
+Each phase is bounded work, not authorization to implement subsequent phases.
+Attachments, real reminders/email, and other optional product services remain
+separate future capabilities. The detailed Phase 2A evidence and remaining safety
+limits are in [readiness audit section 37](production-account-readiness.md#37-phase-2a-implementation-and-handoff).
+
+## Earlier product milestone scope references
+
 ## Milestone 1 - local vertical slice
 
 Deliver the complete local path `React -> FastAPI -> DynamoDB Local`.
@@ -8,7 +43,7 @@ Acceptance criteria:
 
 - Root configuration, local setup, architecture, data access patterns, status policy, ADRs, and developer commands are documented.
 - DynamoDB Local has persistent Compose storage and an explicit idempotent table initializer.
-- Local auth creates/reads a fixed user's profile and fails closed outside local/test.
+- Local auth supplies a fixed durable owner and fails closed outside local/test and deployed runtimes. Phase 2A requires explicit bootstrap before ordinary profile/workspace operations.
 - `/health`, `/api/v1/me`, versioned application CRUD/archive/status/activity routes, OpenAPI, CORS, request IDs, and the stable error envelope are implemented.
 - Owner-scoped create, list, get, edit, archive, restore, and status transitions work with cursor pagination and optimistic concurrency.
 - Application creation and every status change append activity.
@@ -29,6 +64,10 @@ AWS infrastructure, persistent accounts, attachments, email delivery, and real n
 
 ## Milestone 3 - optional persistent accounts with Cognito
 
+Execution: Phase 5, after frontend sessions, persistent-account safety, CDK synth,
+and staging of the existing demo. The Phase 2A local durable backend does not
+implement this account authentication capability.
+
 Dependencies: stable identity port and deployed-environment configuration design.
 
 This milestone is needed only if HireFlux expands beyond the temporary demo workspace. Acceptance criteria: signup, verification, login, reset flows; server-side JWT signature/issuer/audience/token-use/expiry validation; Cognito `sub` profile linking; role claims; and proof that local auth cannot start in deployed environments.
@@ -40,6 +79,9 @@ Dependencies: stable owner identity and application child-record authorization; 
 Acceptance criteria: private S3, short-lived presigned operations, metadata-only DynamoDB items, content-type/size/key restrictions, ownership checks, blocked public access, encryption, lifecycle cleanup, and clear UI errors.
 
 ## Milestone 5 - AWS infrastructure
+
+Execution: Phase 3 defines/synthesizes infrastructure; Phase 4 deploys the staging
+demo. Production deployment is Phase 7 after hardening, not part of local bootstrap.
 
 Dependencies: local functional baseline and configuration contracts.
 
