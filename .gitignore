@@ -23,6 +23,10 @@ frontend/test-results/
 coverage/
 *.tsbuildinfo
 
+# Generated CDK assemblies and compiled infrastructure code
+infra/cdk.out/
+infra/build/
+
 # Local data and tools
 .dynamodb/
 dynamodb-data/
@@ -32,6 +36,8 @@ tmp/
 # Generated software inventory artifacts
 sbom/*.cdx.json
 artifacts/hireflux-openapi.json
+artifacts/lambda/
+artifacts/hireflux-dynamodb-schema.json
 
 # Editors and operating systems
 .DS_Store

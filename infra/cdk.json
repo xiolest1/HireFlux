@@ -1,0 +1,10 @@
+{
+  "app": "node build/bin/hireflux.js",
+  "output": "cdk.out",
+  "lookups": false,
+  "versionReporting": false,
+  "telemetry": false,
+  "context": {
+    "@aws-cdk/core:checkSecretUsage": true
+  }
+}

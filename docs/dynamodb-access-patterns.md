@@ -155,6 +155,29 @@ partitions and never uses a normal-path `Scan`. The lifecycle record is retained
 as `FAILED` with a short TTL so operators can distinguish an incomplete seed
 from a successful workspace without exposing internal DynamoDB keys to clients.
 
+## Local/cloud physical schema parity (Phase 3C)
+
+The cloud definition in `infra/lib/hireflux-stack.ts` preserves the exact local
+initializer schema: eight string key attributes (PK, SK, GSI1PK, GSI1SK, GSI2PK,
+GSI2SK, GSI3PK, GSI3SK), the three existing ALL-projection indexes, PAY_PER_REQUEST
+and TTL enabled on `expires_at`. TTL is an optional numeric epoch-seconds item
+attribute, not an AttributeDefinition. Durable items omit it; demo items carry
+their signed data expiry. No key format, query, index projection or item lifetime
+is changed by infrastructure. There is no extra index, stream or replica.
+
+`backend/scripts/export_dynamodb_schema.py` exports the actual initializer request
+and TTL constant. The explicit `infra` schema-parity command compares both
+synthesized templates, with key/index/projection/type/TTL drift tests and CI.
+See [infra commands](../infra/README.md#dynamodb-definition-and-schema-parity-phase-3c).
+Normal synth remains standalone and never calls Python or builds/reads the ZIP.
+
+Each local cloud template contains one table with generated physical naming and
+the stable WorkspaceTable identity; no table is deployed. Staging uses PITR off,
+deletion protection off and destructive removal/replacement; production uses PITR
+on, deletion protection on and retained deletion/replacement. Production historical
+recovery data is outside Phase 2C's live-erasure proof. Phase 6 must define backup
+retention, restore/tombstone handling and privacy reconciliation.
+
 ## Local versus AWS clients
 
 Local configuration explicitly provides `DYNAMODB_ENDPOINT_URL` plus obviously fake SDK credentials. The table initializer refuses non-loopback endpoints, validates an existing table's key/index schema instead of silently accepting drift, and enables TTL on `expires_at`. In AWS, the endpoint and explicit credentials are omitted; boto3 uses the configured region and the Lambda execution role.

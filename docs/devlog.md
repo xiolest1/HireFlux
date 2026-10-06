@@ -1,5 +1,170 @@
 # HireFlux development log
 
+## 2026-10-06 — DynamoDB cloud definition and schema parity (Phase 3C)
+
+Preserved the accepted dirty Phase 3A/3B baseline and inventoried the running
+backend schema before implementation: PK/SK and all six GSI key attributes are
+strings; GSI1/GSI2/GSI3 use ALL projection; TTL is numeric epoch-seconds
+expires_at; local billing is PAY_PER_REQUEST. GSI1 also serves opportunity context
+as well as non-archived applications and owner interviews; canonical architecture
+wording now includes that existing access pattern. No schema/query redesign occurred.
+
+The shared stack now creates one mature single-region Table L2 as WorkspaceTable,
+exposes readonly workspaceTable and leaves physical naming generated. Its pinned
+logical ID is WorkspaceTable68AC2584 in both separate environment stacks. Both
+use the exact eight key attributes, three GSIs, on-demand billing, STANDARD,
+expires_at TTL and AWS-owned encryption. CDK emits SSEEnabled false for AWS-owned
+encryption; this does not disable encryption at rest. No stream, replica, custom
+resource, seed, resource policy, KMS key, application IAM grant or compute is added.
+
+Environment data policy is frozen and validated: staging PITR/deletion protection
+off with Delete removal/replacement; production both on with Retain removal and
+replacement. Tests protect logical/construct identity, generated naming, correct
+tags, table ownership/isolation and the complete one-resource/zero-output inventory.
+Key/path/name/index evolution is explicitly a future migration/replacement review.
+
+A new operator helper exports the actual unchanged Python initializer and TTL
+constant. The explicit parity command compares each synthesized schema's keys,
+types, index names/keys/projections, INCLUDE attributes, TTL and billing. It
+normalizes ordering and excludes lifecycle-only differences. Mutation tests detect
+renaming/type changes, missing/extra/duplicate indexes, projection changes,
+INCLUDE attr loss, TTL aliases/disablement and extra attributes/LSIs. CLI runs
+under network blocking and records even caught attempts. Ordinary CDK synth/tests
+do not need Python, a schema export, Docker or the Lambda ZIP.
+
+Validation: Node 22.20; infra typecheck/build pass; all 60 tests pass (29.481s),
+including existing credential-isolated/offline repeatability and account binding
+tests. Both synth commands and the fresh backend/CDK parity command pass; manually
+inspected templates each contain only WorkspaceTable68AC2584 AWS::DynamoDB::Table
+and zero outputs. No empty-resource warning remains. Bootstrap metadata is still
+a future prerequisite, not an AWS lookup. The preflight audit still reports the
+one high bundled brace-expansion finding; no newer CDK library/CLI was available,
+no override/manual patch/suppression was added and no clean audit is claimed.
+
+Python 3.14.7 Ruff/format and strict Mypy pass (110 files / 70 runtime source
+files). Focused export/initializer, demo TTL, durable bootstrap/manifest/erasure
+regressions pass 85 tests (56.41s), with the existing Starlette/httpx warning.
+The tightened exporter proof also passes with SDK/network calls blocked. Runtime
+source is unchanged, so the full product suite and Lambda rebuild were not needed.
+Hash comparison confirms all 70 runtime files, both dependency locks and the
+accepted Phase 3B ZIP remain byte-identical. No frontend or browser change occurred.
+
+CI adds the fresh export and parity step to the locked backend Python 3.14 job,
+with Node 22 and the locked infra graph. Existing standalone infra and Lambda
+packaging jobs remain independent; permissions stay read-only, with no AWS
+credentials, OIDC or deployment commands. Generated schema evidence stays ignored.
+Updated current architecture, guides, environments, roadmap, readiness and
+[ADR 0010](adr/0010-dynamodb-cloud-lifecycle.md). Production PITR historical
+retention/privacy is explicitly separate from live erasure and remains Phase 6
+hardening (retention, restore, tombstones and reconciliation).
+
+No AWS lookup/mutation/deployment, local table/data operation, Lambda/IAM/API/
+secret resource, artifact rebuild, commit or push occurred. Phase 3D is next,
+not started. See [section 42](production-account-readiness.md#42-phase-3c-implementation-and-handoff).
+
+## 2026-10-06 — Lambda runtime and deterministic backend artifact (Phase 3B)
+
+Added `hireflux_backend.lambda_handler.handler` around the existing factory,
+with one app/SDK client reused across warm requests and explicit Mangum lifespan
+off. No startup/shutdown hooks exist. Environment-only Lambda configuration
+requires the deployment inputs, ignores `.env`, rejects local auth/custom SDK
+endpoints and sanitizes configuration errors. Mangum 0.21 initializes Python
+3.14's event loop itself. A focused filter removes its duplicate internal
+exception traceback after FastAPI sends the safe 500 response.
+
+Selected Python 3.14, standard CPython, Linux x86_64 on AL2023/glibc 2.34.
+The backend builder exports the unchanged uv lock's production graph, installs
+hash-verified Linux wheels with pinned uv 0.12.5 and no source builds, and bundles
+31 distributions including locked boto3/botocore. Sorted POSIX paths, fixed
+timestamps/modes, LF project source, retained relative package metadata and
+fixed compression give identical ZIP hashes/inventories across two clean builds.
+The ZIP and per-file manifest are ignored local evidence, not a CDK asset.
+
+Final ZIP: SHA-256
+`e60378e34385cbd52f81baa9767b1b9e6d64610c1697bbed7cae87847fe8a4d9`,
+26,643,818 compressed bytes; 57,534,564 expanded bytes; 3,755 files.
+This is 25.410/54.869 MiB against project 40/200 MiB budgets and AWS 50/250 MiB
+ZIP/expanded limits. The builder rejects prohibited files, foreign native
+binaries, symlinks and staging escapes. Private configured-value/host-path scan
+passed without printing values. No source tests, tooling, `.env` or credentials
+are bundled; SDK documentation helper subpackages remain required runtime code.
+
+The digest-pinned official Lambda Python 3.14 image (Python 3.14.8) passed all
+six native imports and real cold/warm health 200, missing-route 404, missing-demo
+401, CORS, query/header, base64/cookie/CSV transport, unsupported event and safe
+500/logging cases. The non-root process runs with a read-only root/package,
+no capabilities, no network, no site-packages or checkout fallback, and zero
+recorded network attempts. Docker's default noexec tmpfs initially prevented
+native mappings; only the ephemeral extraction mount permits execution, while
+the package is read-only. Docker is local verification equipment, not the
+deployment package type. Normal unit/API tests continue to use Moto without Docker.
+
+Python 3.14.7 validation passed Ruff, format and strict Mypy (70 source files).
+The final full suite passed 389 tests in 70.12s, including 31 new Lambda and
+packaging cases; results are recorded in readiness section 41. Focused
+Lambda/packaging tests pass 31 cases. Lock check/pip check passed; ignored OpenAPI
+and CycloneDX evidence regenerated. Pip-audit 2.10.1 found zero known
+vulnerabilities across all 31 actual runtime distributions, including Linux-only
+uvloop. The existing Starlette/httpx test-client deprecation warning remains.
+
+Pre-implementation CDK advisory recheck found no newer library/CLI and the same
+bundled brace-expansion vulnerability. It is accurately carried forward:
+Python packaging does not invoke CDK or bundle its Node graph. Infra typecheck,
+build, 37 tests (19.668s), and both synths pass; inspected templates still contain
+zero resources/outputs. CI now tests backend Python 3.13/3.14 and adds a separate
+local two-build/isolated-artifact job with read-only permissions and no AWS
+credentials. YAML/phase-boundary checks passed. Frontend/runtime graphs and
+browser behavior were unchanged; no browser or frontend rerun was needed.
+
+See [backend guide](../backend/README.md),
+[ADR 0009](adr/0009-lambda-runtime-and-deterministic-packaging.md), and
+[section 41](production-account-readiness.md#41-phase-3b-implementation-and-handoff).
+The prior dirty Phase 3A baseline is preserved. No AWS mutation, infrastructure
+resource/asset, deployment, commit or push occurred. Phase 3C is next, not started.
+
+## 2026-10-06 — CDK project and environment foundation (Phase 3A)
+
+Added the independent `infra/` TypeScript CDK v2 package on the clean accepted
+Phase 2 baseline. One shared empty stack receives immutable, validated staging
+or production configuration, distinct stack names/namespaces, common tags, the
+existing `us-east-1` region, and optional separate account context. Generic entry
+has no default/aliases. Naming helpers enforce a conservative project convention;
+future resource construct IDs remain stable semantic identifiers.
+
+Pinned CDK library 2.272.0, CLI 2.1144.0, constructs 10.8.1, TypeScript 5.9.3,
+and Node types 24.10.1 with a lockfile. Node's built-in runner and CDK assertions
+keep the toolchain small. Scripts invoke TypeScript through Node because Windows
+npm shims mishandled the ampersand in this repository path. The CLI wrapper
+isolates credentials/profiles, sets the canonical region, disables telemetry,
+notices and lookups, and allows only local synth/list/version commands.
+
+Validation: normal and cached/offline lockfile installation passed; typecheck and
+build passed; 37 tests passed (21.344s). Network-blocked CLI tests synthesize each
+environment twice with identical template bytes and also exercise distinct explicit
+account bindings. An early test detected CDK probing IMDS for region despite the
+SDK credential-chain switch; explicitly supplying the canonical region removed
+all recorded network attempts. Sandbox temporary lock-file renames required host
+test execution; assertions were preserved.
+
+Both documented synth commands passed. Inspected templates have zero resources
+and outputs, environment metadata, and only default CDK BootstrapVersion parameter/
+CheckBootstrapVersion rule. Empty-template warnings are expected. The quality
+workflow now adds a credential-free infra job; YAML/command/permission checks
+passed. Generated assemblies/build/modules are ignored. Product source, .env,
+.env.example, and Diagrams are unchanged; product suites were not rerun for this
+isolated package/documentation change. Final diff whitespace checks passed.
+
+Npm audit reports one high-severity vulnerable bundled dependency (brace-expansion
+5.0.9 under CDK). Automatic fix and an override cannot replace it; no ineffective
+override or manual dependency patch is retained. This open toolchain finding must
+be rechecked before 3B asset packaging. No audit pass is claimed. No AWS resources,
+bootstrap, deploy/destroy, credentials, commit, or push were added/performed.
+
+See [infra guide](../infra/README.md),
+[ADR 0008](adr/0008-aws-cdk-environment-foundation.md), and
+[section 40](production-account-readiness.md#40-phase-3a-implementation-and-handoff).
+Phase 3B was the next slice; its subsequent implementation is recorded above.
+
 ## 2026-10-05 — Durable workspace safety foundation (Phase 2C)
 
 Layered the final local architecture phase on the accepted uncommitted Phase
@@ -4041,10 +4206,10 @@ reviewed and updated for the new hierarchy.
 
 ## Next recommended work
 
-Continue with Phase 2B's general frontend session architecture and returning-user
-preference handling, followed by Phase 2C's strong application manifest, account
-deletion lifecycle, write guards, and expanded export safety. The durable backend
-foundation is complete; the current browser remains demo-only.
+Phase 2A/2B/2C and Phase 3A/3B/3C are complete locally. Continue with Phase 3D's
+Lambda, least-privilege IAM, HTTP API and secret-reference definition; do not
+implement or deploy later slices implicitly. The public browser remains demo-only;
+its durable adapter remains development-only.
 
 Use the accepted [phase roadmap](roadmap.md#current-execution-order) for subsequent
 work. CDK synth precedes AWS staging of the existing demo; real Cognito accounts

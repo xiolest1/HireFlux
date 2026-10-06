@@ -28,6 +28,13 @@ This is a planned environment. Phase 3 is CDK definitions/synth only; Phase 4
 deploys the existing demo to staging. Real Cognito accounts follow in Phase 5,
 after frontend sessions and the Phase 2C persistent-account safety foundation.
 
+Phase 3A now defines the environment/configuration foundation under `infra/`;
+no application resources exist. Select exact `environment=staging` context, or
+run `npm --prefix infra run synth:staging`. Stack `hireflux-staging` and namespace
+`hireflux-staging` are distinct from production. Region is explicitly `us-east-1`.
+The account is unbound by default; optional `stagingAccount` context must be a
+12-digit string. Branch and AWS profile do not select the CDK environment.
+
 - A `develop` or `staging` branch deploys to its own Amplify branch environment.
 - The API, DynamoDB table, demo-session signing key, cursor key, CORS origin, logs, alarms, and throttles are separate from production.
 - The frontend receives staging-only `VITE_API_BASE_URL` and `VITE_PUBLIC_SITE_URL` values. Every `VITE_*` value is public and must never contain a secret.
@@ -39,11 +46,57 @@ This is a planned environment. Production deployment is Phase 7, after hardening
 and release qualification; the local durable bootstrap milestone does not claim
 personal-account production readiness.
 
+The same Phase 3A stack implementation accepts explicit `environment=production`,
+or `npm --prefix infra run synth:production`. Stack/namespace are
+`hireflux-production`, region is also `us-east-1`, and optional `productionAccount`
+context is separate from staging's binding. Local synth isolates credential files,
+disables lookups/telemetry, and never deploys. Separate accounts are supported;
+future deployment must bind/review each target deliberately. See
+[infra guide](../infra/README.md) for the exact contract and open dependency finding.
+
 - Only reviewed `main` changes deploy to the public candidate-demo origin.
 - Production uses a separate DynamoDB table and secret values supplied by the deployment platform.
 - Lambda uses its IAM execution role; deployed configuration omits local endpoints and explicit AWS credentials.
 - API Gateway throttling, constrained Lambda concurrency, a workspace record limit, short log retention, low budget alerts, and monitoring are release gates rather than assumptions in browser code.
 - Application CSV export is available to the local demo as a human-readable sample download. Full JSON account-data export is reserved for non-demo identities and remains synchronously bounded. Production-scale portability should move to an asynchronous job that reads DynamoDB resources in controlled pages, writes the complete artifact to S3, and returns a short-lived presigned download URL rather than aggregating a maximum workspace into one API response.
+
+## DynamoDB lifecycle contract (defined locally, Phase 3C)
+
+Each environment now synthesizes one independent single-region table with the
+same exact local/cloud key/index/TTL contract, PAY_PER_REQUEST, STANDARD class,
+and AWS-owned encryption. The physical name is generated; no shared table or
+cross-environment lookup exists. The stable WorkspaceTable construct is directly
+available to future Phase 3D, which will inject its name into the proven Lambda.
+
+- Staging: PITR and deletion protection disabled; removal and replacement Delete.
+- Production: PITR and deletion protection enabled; removal and replacement Retain.
+
+No stream, replica, KMS resource, seed, IAM grant or application compute exists.
+These are local CDK definitions/tests, not deployed tables. Normal synth needs
+neither Python nor the Lambda artifact; the explicit parity check needs a fresh
+backend schema export. See [infra guide](../infra/README.md) and
+[ADR 0010](adr/0010-dynamodb-cloud-lifecycle.md).
+
+Production recovery history is outside Phase 2C's live-table erasure guarantee.
+Phase 6 must define historical retention, restore procedures, deletion-tombstone
+handling after restore and privacy/account-erasure reconciliation. Enabling PITR
+does not establish immediate erasure of every historical copy.
+
+## Lambda package contract (implemented locally, Phase 3B)
+
+The ZIP is built and tested locally; no Lambda AWS resource exists yet.
+Phase 3D must use Python 3.14/x86_64 with
+`hireflux_backend.lambda_handler.handler`. Staging/production reuse identical
+code/dependencies and receive separate runtime values. Lambda ignores `.env`
+and requires explicit ENVIRONMENT, AUTH_MODE, AWS_REGION, DYNAMODB_TABLE_NAME,
+CORS_ALLOWED_ORIGINS, CURSOR_SIGNING_KEY and DEMO_SESSION_SIGNING_KEY.
+Local auth and custom application/SDK endpoints fail closed. No secret value
+or environment-specific origin/table is baked into the artifact. The SDK client
+uses the IAM execution-role chain; no keys are passed explicitly. Future secret
+injection remains Phase 3D; this phase does not retrieve or provision secrets.
+Build commands, size/determinism rules and the isolated official-image check are
+in the [backend guide](../backend/README.md). CDK synth remains independent of
+the artifact, Python and Docker. Frontend hosting remains Phase 3E.
 
 ## Single-page application rewrite
 

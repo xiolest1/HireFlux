@@ -20,7 +20,27 @@ AWS resources and real persistent browser accounts are not deployed.
   backfill, commit-time ACTIVE guards, one-way bounded resumable erasure with a
   minimal tombstone, and record/byte/work-bounded strong JSON export. See
   [ADR 0007](adr/0007-durable-workspace-manifest-and-erasure.md).
-- **Phase 3 — next, not started:** TypeScript CDK definitions and synth/tests only.
+- **Phase 3A — completed:** standalone TypeScript CDK v2 foundation, explicit
+  staging/production configuration, shared empty stack, isolated offline synth,
+  naming/tags, tests, and local CI checks. See [infra guide](../infra/README.md)
+  and [ADR 0008](adr/0008-aws-cdk-environment-foundation.md). The CDK bundled
+  dependency advisory is open and must be rechecked before asset packaging.
+- **Phase 3B — completed:** dedicated Mangum entry point and deterministic,
+  self-contained Python 3.14 Linux x86_64 ZIP; locked wheels, isolated native
+  imports/cold/warm HTTP API tests, read-only/runtime security checks and CI.
+  See [backend guide](../backend/README.md) and
+  [ADR 0009](adr/0009-lambda-runtime-and-deterministic-packaging.md). No AWS
+  function or CDK asset is added. The pre-packaging CDK advisory recheck found
+  no new release; backend packaging does not invoke or bundle that toolchain.
+- **Phase 3C — completed locally:** one DynamoDB table per environment with exact
+  local schema/TTL, on-demand capacity, AWS-owned encryption, stable identity,
+  Python/CDK parity, replaceable staging and protected/retained production.
+  See [ADR 0010](adr/0010-dynamodb-cloud-lifecycle.md). No AWS deployment.
+- **Phase 3D — next, not started:** Lambda, IAM, API Gateway, and secret references.
+- **Phase 3E — deferred:** frontend hosting/Amplify integration.
+- **Phase 3F/3G — deferred:** observability, alarms, throttling/cost controls,
+  comprehensive isolation assertions, and template review. All Phase 3 slices
+  stop at local definition/synthesis/tests.
 - **Phase 4 — deferred:** AWS staging infrastructure and the existing demo running
   end-to-end, with cost/security controls and manual smoke validation.
 - **Phase 5 — deferred:** real Cognito accounts in staging; direct verified Cognito

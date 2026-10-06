@@ -105,6 +105,35 @@ deployment remain later phases. See the [current roadmap](docs/roadmap.md#curren
 
 The canonical architecture and current-versus-target boundary are documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
+Phase 3A adds an independent [CDK foundation](infra/README.md) for explicit staging
+and production environments. Phase 3C now defines one DynamoDB table per local
+template, with exact schema parity and separate lifecycle protection. Both
+stacks synthesize without AWS credentials. From the repository root:
+
+```bat
+npm --prefix infra ci
+npm --prefix infra run typecheck
+npm --prefix infra test
+npm --prefix infra run synth:staging
+npm --prefix infra run synth:production
+```
+
+Compute/API/hosting definitions and AWS deployment remain later slices.
+The infra guide records the current open CDK bundled dependency advisory.
+
+Phase 3B now supplies the [backend Lambda ZIP build and validation](backend/README.md):
+Python 3.14, Linux x86_64, locked production wheels, deterministic packaging,
+and isolated cold/warm HTTP API v2 tests. The handler is
+`hireflux_backend.lambda_handler.handler`. No Lambda resource or CDK asset is
+defined or deployed. See [ADR 0009](docs/adr/0009-lambda-runtime-and-deterministic-packaging.md)
+and [Phase 3B evidence](docs/production-account-readiness.md#41-phase-3b-implementation-and-handoff).
+
+The DynamoDB table is defined locally with generated physical names, on-demand
+capacity and the existing three indexes/TTL. Staging is replaceable; production
+enables PITR/deletion protection and retains the table. [ADR 0010](docs/adr/0010-dynamodb-cloud-lifecycle.md)
+and [Phase 3C evidence](docs/production-account-readiness.md#42-phase-3c-implementation-and-handoff)
+record schema parity, lifecycle tests and the separate backup/privacy limitation.
+
 ## Run the local demo
 
 The README is intentionally product-first. The following is the shortest local path for trying the current implementation on Windows Command Prompt.
@@ -214,7 +243,9 @@ table. See [ADR 0007](docs/adr/0007-durable-workspace-manifest-and-erasure.md).
 - [Data export](docs/data-export.md) — current CSV export and future portability boundaries.
 - [Roadmap](docs/roadmap.md) — planned product and infrastructure work.
 - [Development log](docs/devlog.md) — implementation history, decisions, and validation notes.
-- [Production account readiness](docs/production-account-readiness.md) — Phase 1 audit and Phase 2A/2B/2C implementation handoffs.
+- [Production account readiness](docs/production-account-readiness.md) — Phase 1 audit and Phase 2/3A/3B/3C implementation handoffs.
+- [Infrastructure foundation](infra/README.md) — environment contracts, local synth/testing, naming, and later resource insertion points.
+- [CDK environment decision](docs/adr/0008-aws-cdk-environment-foundation.md) — accepted Phase 3A boundary.
 - [Durable bootstrap decision](docs/adr/0005-durable-local-workspace-bootstrap.md) — accepted identity, readiness, recovery, and deferred safety boundaries.
 - [Frontend workspace session decision](docs/adr/0006-frontend-workspace-session-boundary.md) — adapters, bootstrap, generations, isolation, and local-mode limits.
 - [Durable workspace safety decision](docs/adr/0007-durable-workspace-manifest-and-erasure.md) — strong manifests, atomic freeze/write exclusion, erasure, and export limits.

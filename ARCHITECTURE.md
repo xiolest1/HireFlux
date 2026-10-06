@@ -200,11 +200,15 @@ used to address the data.
 
 Three sparse global secondary indexes support current access patterns:
 
-- **GSI1**: non-archived applications by update time and a separate owner
-  interview projection.
+- **GSI1**: non-archived applications by update time, owner interviews, and
+  opportunity context in separate owner-qualified partitions.
 - **GSI2**: applications by owner and status; explicit `ACTIVE`, `ALL`, and
   `ARCHIVED` views query their required status partitions.
 - **GSI3**: outstanding follow-ups and scheduled interviews by owner and time.
+
+The exact physical index keys are GSI1PK/GSI1SK, GSI2PK/GSI2SK and GSI3PK/GSI3SK,
+all strings, with ALL projections. Local initialization and the Phase 3C cloud
+definition share this contract through an explicit Python/CDK parity check.
 
 Normal request paths use `GetItem`, `Query`, conditional writes, and
 `TransactWriteItems`; they never use `Scan`. A guarded, local-only reconciliation
@@ -335,6 +339,70 @@ creates or migrates the table; an operator runs the initializer explicitly.
 Backend tests use isolated Moto tables, so they do not depend on Docker.
 Frontend tests mock the HTTP boundary. The supported Python range is 3.13 and
 3.14.
+
+## Infrastructure foundation (Phase 3A)
+
+`infra/` now contains the standalone TypeScript CDK v2 package. Explicit staging
+and production context selects one shared, minimal stack implementation with
+distinct stack identities/namespaces and common tags. Both retain `us-east-1`.
+Accounts are unbound for local synth unless separately supplied through validated
+environment-specific context. The local CLI wrapper isolates AWS credentials and
+disables lookups/telemetry; tests block network attempts and assert repeatability.
+
+Both templates now contain exactly one DynamoDB table and zero outputs. Default CDK bootstrap parameters/rules
+and assembly role/asset references are future deployment contracts, not deployed
+infrastructure. Phase 3B packaging and 3C data definition are implemented locally;
+3D–3G compute/integration/control definitions and review follow;
+actual staging deployment remains Phase 4 and Cognito remains Phase 5. See
+[infra/README.md](infra/README.md) for commands, naming, secret/lifecycle rules,
+and the open bundled dependency audit finding, and
+[ADR 0008](docs/adr/0008-aws-cdk-environment-foundation.md).
+
+## Cloud data definition (Phase 3C)
+
+The mature single-region CDK Table L2 defines the existing single table, eight
+string key attributes and exactly three ALL-projection GSIs. Both environments
+use PAY_PER_REQUEST, STANDARD class, optional epoch-seconds `expires_at` TTL and
+AWS-owned encryption. No streams, replicas, seeding, custom resources, IAM grants,
+customer KMS keys or additional application resources exist in these templates.
+
+The stable semantic ID WorkspaceTable and logical ID WorkspaceTable68AC2584 are
+stateful contracts. Physical names are generated independently per stack; future
+Phase 3D can consume the readonly `workspaceTable` construct and its name/ARN
+tokens directly. Renaming/reparenting, primary-key/physical-name changes and
+future GSI evolution require deliberate migration/replacement review.
+
+Immutable environment data policy makes staging replaceable (PITR/deletion
+protection off, Delete on removal/replacement) and production protected (PITR/
+deletion protection on, Retain on removal/replacement). The parity helper exports
+the actual local initializer and TTL contract; the explicit network-blocked check
+compares both synthesized schemas. Normal synth stays independent of Python,
+Docker and the Lambda artifact. Local runtime/data and artifact inputs are intact.
+
+Production PITR historical retention is separate from Phase 2C live-table erasure.
+Phase 6 must define backup retention, restore procedures, deletion-tombstone
+handling after restore and privacy/erasure reconciliation. No claim extends live
+erasure to all historical copies. Nothing is deployed. See
+[ADR 0010](docs/adr/0010-dynamodb-cloud-lifecycle.md) and [infra guide](infra/README.md).
+
+## Backend artifact boundary (Phase 3B)
+
+The existing factory now has independent local ASGI and Lambda entry points.
+Lambda uses `hireflux_backend.lambda_handler.handler`, one cold-start app/SDK
+client, Mangum with lifespan off, and environment-only validated configuration.
+No application startup/shutdown hooks or filesystem writes are required.
+Adapter error logging preserves the application's safe-error policy.
+
+The backend-owned builder exports production dependencies from `backend/uv.lock`
+and installs hash-verified CPython 3.14 Linux x86_64 wheels. The ZIP includes
+locked boto3/botocore, native libraries and runtime assets at its root; it excludes
+development tooling and private configuration. Two clean builds match. A pinned
+official AL2023 Python 3.14 image validates isolated imports, read-only execution,
+native dependencies and cold/warm HTTP API v2 invocations without network access.
+Phase 3D must use Python 3.14/x86_64 and the documented handler. CDK currently has
+no artifact binding or Lambda/API/IAM resource; synth does not run the builder.
+See [backend guide](backend/README.md) and
+[ADR 0009](docs/adr/0009-lambda-runtime-and-deterministic-packaging.md).
 
 ## AWS staging target and service choices
 

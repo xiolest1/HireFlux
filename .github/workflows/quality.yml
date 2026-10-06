@@ -9,22 +9,49 @@ permissions:
   contents: read
 
 jobs:
+  infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: infra/package-lock.json
+      - name: Install the locked infrastructure graph
+        run: npm --prefix infra ci
+      - name: Typecheck and test infrastructure
+        run: |
+          npm --prefix infra run typecheck
+          npm --prefix infra test
+      - name: Synthesize both environments locally
+        run: |
+          npm --prefix infra run synth:staging
+          npm --prefix infra run synth:production
+
   backend:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        if: matrix.python == '3.14'
+        with:
+          node-version: "22"
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.12.5"
           enable-cache: true
       - name: Install the locked backend graph
-        run: uv sync --project backend --python 3.13 --extra dev --locked
+        run: uv sync --project backend --python ${{ matrix.python }} --extra dev --locked
       - name: Validate lock and installed dependencies
         run: |
-          uv lock --project backend --python 3.13 --check
+          uv lock --project backend --python ${{ matrix.python }} --check
           uv pip check --python backend/.venv/bin/python
       - name: Ruff
         run: |
@@ -48,15 +75,42 @@ jobs:
         run: uv run --project backend python backend/scripts/generate_sbom.py
       - name: Generate OpenAPI contract
         run: uv run --project backend python backend/scripts/generate_openapi.py
+      - name: Verify local and cloud DynamoDB schema parity
+        if: matrix.python == '3.14'
+        run: |
+          uv run --project backend python backend/scripts/export_dynamodb_schema.py --output artifacts/hireflux-dynamodb-schema.json
+          npm --prefix infra ci
+          npm --prefix infra run test:schema-parity -- --schema ../artifacts/hireflux-dynamodb-schema.json
       - name: Upload backend security artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-supply-chain
+          name: backend-supply-chain-${{ matrix.python }}
           path: |
             sbom/hireflux-backend.cdx.json
             sbom/hireflux-backend-vulnerability-audit.json
             artifacts/hireflux-openapi.json
+          if-no-files-found: error
+
+  lambda-artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.5"
+      - name: Build twice from locked Linux wheels
+        run: python backend/scripts/build_lambda_artifact.py --verify-reproducible
+      - name: Test the ZIP in the isolated Lambda runtime
+        run: python backend/scripts/validate_lambda_artifact.py
+      - name: Upload local packaging evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-lambda-python314-x86-64
+          path: artifacts/lambda/
           if-no-files-found: error
 
   frontend:
