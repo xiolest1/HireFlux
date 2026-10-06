@@ -60,7 +60,12 @@ def event(path: str = "/health", method: str = "GET", **overrides: Any) -> dict[
 
 def configure() -> None:
     for name in list(os.environ):
-        if name.startswith("AWS_") or name in {"DYNAMODB_ENDPOINT_URL", "PYTHONPATH"}:
+        if name.startswith("AWS_") or name in {
+            "DYNAMODB_ENDPOINT_URL",
+            "PYTHONPATH",
+            "CURSOR_SIGNING_KEY",
+            "DEMO_SESSION_SIGNING_KEY",
+        }:
             os.environ.pop(name)
     os.environ.update(
         {
@@ -70,8 +75,26 @@ def configure() -> None:
             "AWS_DEFAULT_REGION": "us-east-1",
             "DYNAMODB_TABLE_NAME": "ArtifactOnlyFixture",
             "CORS_ALLOWED_ORIGINS": "https://demo.example.invalid",
-            "CURSOR_SIGNING_KEY": "synthetic-artifact-cursor-key-never-deploy-0000",
-            "DEMO_SESSION_SIGNING_KEY": "synthetic-artifact-demo-key-never-deploy-0000",
+            "LAMBDA_CORS_POLICY": json.dumps(
+                {
+                    "allow_methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+                    "allow_headers": [
+                        "Accept",
+                        "Authorization",
+                        "Content-Type",
+                        "Idempotency-Key",
+                        "X-Request-ID",
+                    ],
+                    "expose_headers": ["X-Request-ID", "Content-Disposition"],
+                    "allow_credentials": False,
+                }
+            ),
+            "CURSOR_SIGNING_SECRET_ARN": (
+                "arn:aws:secretsmanager:us-east-1:000000000000:secret:artifact-cursor-Ab1234"
+            ),
+            "DEMO_SESSION_SIGNING_SECRET_ARN": (
+                "arn:aws:secretsmanager:us-east-1:000000000000:secret:artifact-demo-Cd5678"
+            ),
             "AWS_EXECUTION_ENV": "AWS_Lambda_python3.14",
             "AWS_LAMBDA_FUNCTION_NAME": "artifact-only-fixture",
             "AWS_EC2_METADATA_DISABLED": "true",
@@ -142,6 +165,22 @@ def main() -> None:
         assert Path(module.__file__).is_relative_to(PACKAGE)
     factory = importlib.import_module("hireflux_backend.app_factory")
     assert not hasattr(factory, "app") and "hireflux_backend.main" not in sys.modules
+    import boto3
+
+    original_client = boto3.client
+    secret_calls: list[str] = []
+
+    class SyntheticSecrets:
+        def get_secret_value(self, *, SecretId: str) -> dict[str, str]:
+            secret_calls.append(SecretId)
+            return {"ARN": SecretId, "SecretString": "S" * 64}
+
+    def synthetic_client(service: str, **kwargs: Any) -> Any:
+        if service == "secretsmanager":
+            return SyntheticSecrets()
+        return original_client(service, **kwargs)
+
+    boto3.client = synthetic_client
     settings_module = importlib.import_module("hireflux_backend.lambda_settings")
     for bad_env in (
         {"AUTH_MODE": "local", "ENVIRONMENT": "local"},
@@ -161,6 +200,7 @@ def main() -> None:
         else:
             raise AssertionError("Invalid Lambda configuration was accepted.")
     configure()
+    secret_calls.clear()
     runtime = importlib.import_module("hireflux_backend.lambda_handler")
     assert runtime.handler.app is runtime.app and runtime.handler.lifespan == "off"
     identity = id(runtime.app)
@@ -182,6 +222,8 @@ def main() -> None:
         assert response["headers"]["x-request-id"] == "artifact-request-1"
         assert response["headers"]["access-control-allow-origin"] == "https://demo.example.invalid"
     assert id(runtime.app) == identity
+    assert len(secret_calls) == 2, "Warm invocation refetched signing secrets."
+    assert "access-control-allow-credentials" not in cold["headers"]
     missing = runtime.handler(event("/missing-artifact-route"), context)
     assert missing["statusCode"] == 404
     assert json.loads(missing["body"])["error"]["request_id"] == "artifact-request-1"
@@ -248,6 +290,25 @@ def main() -> None:
     assert probe_response["isBase64Encoded"] is False
     assert probe_response["cookies"] == ["one=a", "two=b"]
     assert "attachment" in probe_response["headers"]["content-disposition"]
+    # Exercise the deployed wrapper with a nearly 4 MB quote-heavy JSON body.
+    export_body = json.dumps({"data": '"' * 1_999_990}, separators=(",", ":")).encode()
+    assert 3_990_000 < len(export_body) <= 4_000_000
+
+    async def export_transport(scope: Any, receive: Any, send: Any) -> None:
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [[b"content-type", b"application/json"]],
+            }
+        )
+        await send({"type": "http.response.body", "body": export_body})
+
+    exported = runtime._BoundedMangum(export_transport, lifespan="off")(event(), context)
+    assert exported["statusCode"] == 200 and exported["isBase64Encoded"] is True
+    assert base64.b64decode(exported["body"]) == export_body
+    assert len(json.dumps(exported, ensure_ascii=False).encode()) < 6 * 1024 * 1024
+    assert len(secret_calls) == 2
     for name, module in tuple(sys.modules.items()):
         origin = getattr(module, "__file__", None)
         if origin and "site-packages" in origin:
@@ -277,6 +338,9 @@ def main() -> None:
                 "unsupported_event_rejected": True,
                 "safe_500_and_logging": True,
                 "network_attempts": len(NETWORK_ATTEMPTS),
+                "cold_start_secret_reads": len(secret_calls),
+                "warm_secret_reuse": True,
+                "large_json_proxy_envelope": True,
             },
             indent=2,
         )

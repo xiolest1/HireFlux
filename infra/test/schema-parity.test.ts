@@ -1,3 +1,4 @@
+import { fixtureArtifact } from './fixture';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { App } from 'aws-cdk-lib';
@@ -6,7 +7,7 @@ import { composeEnvironment } from '../lib/app';
 import { assertSchemaParity } from '../lib/data/schema-parity';
 
 function cloudSchema() {
-  const stack = composeEnvironment(new App({ context: { environment: 'staging' } }));
+  const stack = composeEnvironment(new App({ context: { environment: 'staging' } }), fixtureArtifact);
   const table = Template.fromStack(stack).findResources('AWS::DynamoDB::Table').WorkspaceTable68AC2584;
   assert.ok(table);
   return table.Properties;

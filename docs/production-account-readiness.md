@@ -2,15 +2,16 @@
 
 Date: 2026-10-05. Status: architecture proposal for review, not an accepted implementation ADR.
 
-**Current Phase 3C update (2026-10-06):** staging and production now each
-synthesize exactly one DynamoDB table with exact local/cloud schema parity,
-TTL/on-demand/default encryption, stable identity and deliberate replaceable
-staging/protected retained production. No table is deployed. Phase 3B's proven
-Python 3.14/x86_64 ZIP and all backend runtime inputs remain unchanged. Phase 3D
-is next, not started. See [ADR 0010](adr/0010-dynamodb-cloud-lifecycle.md) and
-[section 42](#42-phase-3c-implementation-and-handoff). Production PITR historical
-privacy/restore policy remains Phase 6 work; live-table erasure does not prove
-erasure of historical copies. Earlier phase updates/results are completion snapshots.
+**Current Phase 3D update (2026-10-06):** both environment templates now
+define the backend request path: verified Python 3.14/x86_64 ZIP, one Lambda,
+scoped execution IAM, two generated signing secrets, and HTTP API payload 2.0.
+Each has 11 resources and zero outputs; the Phase 3C table identity/schema and
+production protections remain intact. Nothing is deployed. Sentinel origins
+remain fail-closed pending Phase 3E; production Cognito authentication remains
+unavailable pending Phase 5. See [ADR 0011](adr/0011-lambda-http-api-security-boundary.md)
+and [section 43](#43-phase-3d-implementation-and-handoff). Historical updates below
+are completion snapshots. Backup/privacy/rotation qualification remains Phase 6.
+The bundled CDK dependency advisory remains open and is reported in section 43.
 
 **Phase 3A implementation update (2026-10-06):** the standalone TypeScript CDK
 foundation now exists. Explicit staging/production configuration composes one
@@ -2664,3 +2665,199 @@ infra/test/stack.test.ts
 All Phase 3A/3B-only files remain unchanged. Phase 3C is complete locally; stop
 here. Phase 3D has not been started and no application compute/API/IAM resource
 or AWS deployment has been added.
+
+## 43. Phase 3D implementation and handoff
+
+Date: 2026-10-06. Completed locally; no AWS deployment.
+
+1. **Enabled:** locally verified HTTP API → one FastAPI/Mangum ZIP Lambda → the existing per-environment DynamoDB table, with scoped IAM and generated signing secrets. No deployment.
+
+2. **Modules:** `infra/lib/backend/backend-api.ts`, `infra/lib/backend/artifact.ts`, composed in `infra/lib/hireflux-stack.ts`/`infra/lib/app.ts`; runtime `backend/src/hireflux_backend/lambda_settings.py`, `lambda_handler.py`, `cors_policy.py` and `app_factory.py`.
+
+3. **Stable Lambda identity:** `BackendApi/BackendFunction`; logical ID `BackendApiBackendFunctionFFB5248D`. Physical function name is generated.
+
+4. **Runtime:** Python 3.14 (`python3.14`), ZIP package.
+
+5. **Architecture:** Linux x86_64; no runtime/architecture change.
+
+6. **Handler:** `hireflux_backend.lambda_handler.handler`.
+
+7. **Memory:** 1024 MB; default 512 MB ephemeral storage.
+
+8. **Lambda timeout:** 15 seconds.
+
+9. **Integration timeout:** 20 seconds (20,000 ms).
+
+10. **VPC:** none; no networking infrastructure.
+
+11. **Artifact:** `artifacts/lambda/hireflux-backend-lambda.zip` and adjacent `.manifest.json`, generated explicitly by the existing builder.
+
+12. **Verification:** read-only TypeScript ZIP/manifest validation checks SHA-256, runtime/architecture/handler, size budgets, inventory/member hashes, canonical ZIP metadata, Linux ELF architecture, prohibited files, lock/project hashes and exact normalized current runtime source. Missing, arbitrary, stale or mutated input fails with an explicit build diagnostic. No implicit builder/installer/Docker. Not a signed attestation.
+
+13. **ZIP SHA-256:** `950c8d1fbc3c4872dba29d6e4eddd3439f304509cbcd5b0ca370157cc15c4bcf`.
+
+14. **Compressed bytes:** 26,646,067; below the project 40 MiB budget.
+
+15. **Expanded bytes:** 57,540,712; below the project 200 MiB budget.
+
+16. **File count:** 3,756; 31 production distributions.
+
+17. **Same artifact:** both environment syntheses stage the same ZIP bytes. The original SHA is the custom asset-hash basis; CDK derives asset ID `8e4318258b1c724347bcfe6c910314484913f3b10b514dc8e876371bb1e7e036` by hashing that supplied hash string.
+
+18. **Lambda environment:** `ENVIRONMENT`, `AUTH_MODE`, `DYNAMODB_TABLE_NAME`, `CORS_ALLOWED_ORIGINS`, `CURSOR_SIGNING_SECRET_ARN`, `DEMO_SESSION_SIGNING_SECRET_ARN`, `LAMBDA_CORS_POLICY`, `MAX_SYNC_EXPORT_BYTES=4000000`, `MAX_SYNC_EXPORT_WORK_SECONDS=5`, `ACCOUNT_ERASURE_MAX_SECONDS_PER_REQUEST=2`. Table/secrets are direct references; AWS_REGION and credentials are runtime-provided. Conservative token-size assertion stays below 3072 bytes, leaving headroom under 4096.
+
+19. **Staging:** `AUTH_MODE=demo`; existing signed temporary demo behavior. Local authentication is rejected under Lambda.
+
+20. **Production:** `AUTH_MODE=cognito`; existing authentication-unavailable 503 on protected/demo paths, public health still works. No Cognito verifier, fake authentication or production readiness claim.
+
+21. **Secrets:** exactly `CursorSigningSecret` and `DemoSessionSigningSecret`; generated physical names, separate resources per environment.
+
+22. **Generation:** CloudFormation GenerateSecretString with 64 characters, punctuation excluded, spaces excluded. No plaintext SecretString, literal key, output, dynamic secret-value injection or customer KMS key.
+
+23. **Lifecycle:** staging Delete on removal/replacement; production Retain on removal/replacement. No rotation or refresh policy in this phase.
+
+24. **Resolution:** validate ARN references before SDK calls; role-based Secrets Manager GetSecretValue with 2-second connect/read timeouts and at most two total attempts per call; verify returned ARN and raw 64-character alphanumeric SecretString. Ignore .env and reject plaintext keys/endpoint overrides. Errors are sanitized and fail-closed.
+
+25. **Reuse:** module-level composition fetches two keys once per cold start; warm invocations reuse settings and app without additional secret reads. This is not a rotation refresh mechanism.
+
+26. **Secrets IAM:** only `secretsmanager:GetSecretValue`, on the two stack-local secret ARN references. No Describe/List/Put/Update/Delete/Rotate/KMS grants.
+
+27. **Discovered DynamoDB calls:** normal request code calls get_item, put_item, delete_item, query, batch_write_item and transact_write_items. Transactions contain Put/Update/Delete/ConditionCheck. No ordinary Scan, BatchGetItem or TransactGetItems. Describe/create/reset/reconciliation remain explicit local operator paths.
+
+28. **Granted actions:** `dynamodb:GetItem`, `PutItem`, `UpdateItem`, `DeleteItem`, `BatchWriteItem`, `ConditionCheckItem`, `Query`. Transaction operations use underlying item permissions; no invented TransactWriteItems IAM action.
+
+29. **Resources:** exact table ARN `arn:${Partition}:dynamodb:us-east-1:${AccountId}:table/${WorkspaceTableName}` for item/condition actions; Query additionally on exactly that ARN plus `/index/GSI1`, `/index/GSI2`, `/index/GSI3`. Tokens resolve independently per stack; no index wildcard.
+
+30. **Scan:** absent from execution-role grants; existing guarded local reconciliation remains the deliberate scan path.
+
+31. **Admin:** no DynamoDB create/delete/update/describe/list/tag/backup or wildcard grants. Ordinary repositories retain ownership checks and no admin bypass.
+
+32. **Trust:** only `lambda.amazonaws.com` may `sts:AssumeRole` for this role.
+
+33. **Logging:** sole AWS managed policy `service-role/AWSLambdaBasicExecutionRole`. Its standard logging permissions use wildcard resource scope; application grants do not. No explicit log group/retention/alarms/tracing added; Phase 3F owns those.
+
+34. **API module:** `BackendApi.httpApi` in `infra/lib/backend/backend-api.ts`, exposed as `stack.httpApi`; endpoint token available directly to later constructs.
+
+35. **Protocol:** API Gateway HTTP API (`HTTP`), not REST API.
+
+36. **Route:** one `$default` AWS_PROXY route to the single modular monolith; gateway AuthorizationType NONE. FastAPI owns verification/authorization. No gateway authorizer/API key/usage plan/Function URL.
+
+37. **Stage:** auto-deploy `$default` stage; no additional stages. AutoDeploy is a resource definition, not a deployment performed here.
+
+38. **Payload:** explicit Lambda proxy version `2.0`.
+
+39. **Invocation scope:** principal `apigateway.amazonaws.com`, action `lambda:InvokeFunction`, this function ARN, SourceArn `arn:${Partition}:execute-api:us-east-1:${AccountId}:${HttpApiId}/*/*`. Supported L2 stage/method wildcard scope remains tied to the exact API/account.
+
+40. **Origins:** staging only `https://staging.invalid`; production only `https://production.invalid`. No localhost/developer/wildcard origin in deployed config.
+
+41. **Methods:** GET, POST, PATCH, DELETE, OPTIONS.
+
+42. **Request headers:** Accept, Authorization, Content-Type, Idempotency-Key, X-Request-ID.
+
+43. **Exposed headers:** X-Request-ID, Content-Disposition.
+
+44. **Credentials:** false; bearer-header client, no cross-origin cookie credentials. Existing local CORS behavior is preserved.
+
+45. **Phase 3E origin:** centrally replace only each sentinel with the actual reviewed frontend HTTPS origin and update strict configuration/assertions. Gateway and Lambda/FastAPI derive from the same frozen policy; no guessed origin or frontend hosting here.
+
+46. **Limits:** existing export work 5 seconds and erasure work 2 seconds < Lambda 15 seconds < integration 20 seconds < HTTP API maximum 30 seconds. Public JSON budget 4,000,000 bytes stays unchanged. Because proxy escaping can exceed 6 MiB, the Lambda adapter measures the whole envelope, base64-encodes text when needed, and otherwise safely rejects with 413. Envelopes reserve 64 KiB under Lambda 6 MiB and fit gateway 10 MB. Gateway decoding preserves bytes. No streaming/async export.
+
+47. **Staging inventory:** 11 resources, zero outputs. Exact logical IDs/types:
+
+```text
+WorkspaceTable68AC2584 — AWS::DynamoDB::Table
+BackendApiCursorSigningSecret5EF895FB — AWS::SecretsManager::Secret
+BackendApiDemoSessionSigningSecretB7E1C367 — AWS::SecretsManager::Secret
+BackendApiExecutionRoleF9E94D3B — AWS::IAM::Role
+BackendApiExecutionRoleDefaultPolicyDE57D6A3 — AWS::IAM::Policy
+BackendApiBackendFunctionFFB5248D — AWS::Lambda::Function
+BackendApiHttpApiB4B1202A — AWS::ApiGatewayV2::Api
+BackendApiHttpApiDefaultRouteBackendIntegrationC791C627 — AWS::ApiGatewayV2::Integration
+BackendApiHttpApiDefaultRouteBackendIntegrationPermission521AD465 — AWS::Lambda::Permission
+BackendApiHttpApiDefaultRoute408A2CCF — AWS::ApiGatewayV2::Route
+BackendApiHttpApiDefaultStage89B5186D — AWS::ApiGatewayV2::Stage
+```
+
+48. **Production inventory:** the exact same 11 logical IDs/types listed in item 47, independently owned by `hireflux-production`; zero outputs, no imports/cross-stack references. Table PITR/deletion protection and Retain remain enabled; staging retains its replaceable table policy.
+
+49. **IAM negative assertions:** pass in both environments; forbid Scan, wildcard/table-admin/backup/tag actions, unnecessary BatchGetItem, secret administration, KMS, X-Ray and extra managed policies. Application resource scopes contain no wildcard; trust and gateway invocation are separately pinned.
+
+50. **Leak/inventory scans:** actual templates contain no plaintext signing values, credential configuration, local endpoints, dynamic secret-value references or unintended resource families. ZIP CRC/inventory/private-file checks pass; no project credentials, signing values, developer environments or prohibited binaries. Three upstream boto3/botocore example files trigger generic credential/PEM-marker searches; their bytes match the unchanged locked SDK distribution. These are public examples, not project secrets. Generated secret declarations and ARN references are present as intended.
+
+51. **Rebuilt validation:** runtime changes required a fresh artifact. Two clean builds match; official pinned Python 3.14 AL2023 Linux image passes native imports and cold/warm payload-v2 health, errors, CORS, cookies, CSV/base64 and large quote-heavy JSON cases. Network disabled, read-only root, zero network attempts, exactly two cold secret reads and warm reuse. Old source/ZIP mismatch also fails real CLI verification.
+
+52. **Backend checks:** Ruff check and format pass (111 files), strict Mypy passes (71 runtime files), full pytest 419 passed in 65.58 seconds with the existing Starlette/httpx warning; focused Lambda tests 45 passed. uv lock check and installed compatibility pass. ZIP runtime graph contains 31 locked packages and pip-audit reports no known vulnerabilities. OpenAPI and SBOM generated as ignored evidence. Frontend code/contracts unchanged; no browser/layout change.
+
+53. **Schema parity:** fresh canonical Python export matches both actual templates, including key types, exact GSI names/keys/projections, TTL and billing. Original table logical ID and production protections preserved.
+
+54. **Infra checks:** typecheck/build pass; final offline unit suite 84/84 passed (6.113 seconds); real-artifact CLI suite 4/4 passed (22.814 seconds), including credential isolation, zero network attempts, deterministic repeats, staged ZIP hash/size and account binding.
+
+55. **Staging synthesis:** documented command passes with the real verified final ZIP, 11 reviewed resources and zero outputs.
+
+56. **Production synthesis:** documented command passes with the same real ZIP, independent resources, fail-closed future auth and zero outputs. Synthesis is not production readiness.
+
+57. **CDK audit:** verified latest available library 2.272.0 and CLI 2.1144.0; npm audit still reports one high finding in bundled brace-expansion 5.0.9 under minimatch 10.2.5, with GHSA-q2hr-2g5m-vwhr (moderate), GHSA-qhr7-859c-m2p7 (high), GHSA-6j4f-fj2g-mc7p (high). No compatible newer upstream release, override, patch or suppression. Fixed verified ZIP asset takes no user-controlled glob; audit remains open.
+
+58. **CI:** infra waits for backend plus lambda-artifact, downloads validated ZIP and Python-3.14 schema/security evidence, then runs independent unit tests, both synths, real artifact CLI and parity. Backend matrix remains 3.13/3.14; schema export replaces prior premature parity call. Contents-read only; no AWS/OIDC/deploy steps. Workflow parsed/order/layout reviewed locally; remote CI not run.
+
+59. **Documentation:** updated README, ARCHITECTURE, backend/infra guides, architecture index, deployment environments, roadmap, dev log and this readiness handoff; added ADR 0011. Historical phase snapshots remain historical.
+
+60. **Changed files:** exact final inventory below. `infra/test/cli.test.ts` moved to `infra/test/cli.integration.ts`. Generated ZIP/manifests/cloud assemblies/SBOM/audit/tooling remain ignored; no lockfile/dependency/frontend/Diagrams/.env changes, commit or push.
+
+```text
+ M .github/workflows/quality.yml
+ M ARCHITECTURE.md
+ M README.md
+ M backend/README.md
+ M backend/scripts/build_lambda_artifact.py
+ M backend/scripts/lambda_artifact_probe.py
+ M backend/src/hireflux_backend/app_factory.py
+ M backend/src/hireflux_backend/lambda_handler.py
+ M backend/src/hireflux_backend/lambda_settings.py
+ M backend/tests/unit/test_lambda_runtime.py
+ M docs/architecture.md
+ M docs/deployment-environments.md
+ M docs/devlog.md
+ M docs/production-account-readiness.md
+ M docs/roadmap.md
+ M infra/README.md
+ M infra/lib/app.ts
+ M infra/lib/config/environment.ts
+ M infra/lib/hireflux-stack.ts
+ M infra/package.json
+ M infra/scripts/check-schema-parity.mjs
+ D infra/test/cli.test.ts
+ M infra/test/config.test.ts
+ M infra/test/dynamodb.test.ts
+ M infra/test/schema-parity.test.ts
+ M infra/test/stack.test.ts
+?? backend/src/hireflux_backend/cors_policy.py
+?? docs/adr/0011-lambda-http-api-security-boundary.md
+?? infra/lib/backend/artifact.ts
+?? infra/lib/backend/backend-api.ts
+?? infra/scripts/test-unit.mjs
+?? infra/test/artifact.test.ts
+?? infra/test/backend.test.ts
+?? infra/test/cli.integration.ts
+?? infra/test/fixture.ts
+```
+
+61. **Credentials/secrets:** no AWS credential or real secret value entered source, ZIP, environment variables or templates. Tests/probe use visibly synthetic local fixtures only; deployed values will be generated server-side.
+
+62. **AWS activity:** no credential use, lookup, bootstrap, AWS upload, table mutation or deployment. Registry/package downloads and a local official Docker image are validation tooling, not AWS application operations.
+
+63. **Deferred 3E:** frontend hosting definition and real reviewed origin wiring; do not replace sentinels until that phase.
+
+64. **Deferred 3F:** explicit log retention/observability/alarms, API throttling, Lambda concurrency and cost controls.
+
+65. **Deferred 3G:** final environment isolation, CloudFormation/resource and production-readiness infrastructure review; open dependency advisory remains a qualification follow-up.
+
+66. **Deferred 4:** AWS bootstrap and staging-only deployment/smoke validation. No deployment here.
+
+67. **Deferred 5:** real Cognito verification, accounts, OAuth/PKCE and demo/account coexistence; exclusive auth modes remain.
+
+68. **Deferred 6:** hardening, signing-key rotation/cache refresh, backup retention/restore/privacy/erasure reconciliation and release/security qualification.
+
+69. **Phase 3E blocker:** none for local hosting/origin definition work. Open CDK advisory remains documented; AWS launch and production authentication remain later gates.
+
+Is the HireFlux backend AWS request path now safely defined — verified Lambda artifact, least-privilege IAM, Secrets Manager signing material, HTTP API payload v2, and exact DynamoDB access — so that Phase 3E can add the actual frontend hosting/origin without changing backend security architecture?

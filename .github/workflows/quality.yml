@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   infra:
+    needs: [backend, lambda-artifact]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,6 +21,14 @@ jobs:
           cache-dependency-path: infra/package-lock.json
       - name: Install the locked infrastructure graph
         run: npm --prefix infra ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-lambda-python314-x86-64
+          path: artifacts/lambda
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-supply-chain-3.14
+          path: .
       - name: Typecheck and test infrastructure
         run: |
           npm --prefix infra run typecheck
@@ -28,6 +37,10 @@ jobs:
         run: |
           npm --prefix infra run synth:staging
           npm --prefix infra run synth:production
+      - name: Verify real artifact offline synthesis and DynamoDB parity
+        run: |
+          npm --prefix infra run test:artifact
+          npm --prefix infra run test:schema-parity -- --schema ../artifacts/hireflux-dynamodb-schema.json
 
   backend:
     runs-on: ubuntu-latest
@@ -39,10 +52,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - uses: actions/setup-node@v4
-        if: matrix.python == '3.14'
-        with:
-          node-version: "22"
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.12.5"
@@ -75,12 +84,10 @@ jobs:
         run: uv run --project backend python backend/scripts/generate_sbom.py
       - name: Generate OpenAPI contract
         run: uv run --project backend python backend/scripts/generate_openapi.py
-      - name: Verify local and cloud DynamoDB schema parity
+      - name: Export the canonical DynamoDB schema for infrastructure parity
         if: matrix.python == '3.14'
         run: |
           uv run --project backend python backend/scripts/export_dynamodb_schema.py --output artifacts/hireflux-dynamodb-schema.json
-          npm --prefix infra ci
-          npm --prefix infra run test:schema-parity -- --schema ../artifacts/hireflux-dynamodb-schema.json
       - name: Upload backend security artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -90,9 +97,11 @@ jobs:
             sbom/hireflux-backend.cdx.json
             sbom/hireflux-backend-vulnerability-audit.json
             artifacts/hireflux-openapi.json
+            artifacts/hireflux-dynamodb-schema.json
           if-no-files-found: error
 
   lambda-artifact:
+    needs: backend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

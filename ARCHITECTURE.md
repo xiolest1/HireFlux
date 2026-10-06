@@ -349,10 +349,10 @@ Accounts are unbound for local synth unless separately supplied through validate
 environment-specific context. The local CLI wrapper isolates AWS credentials and
 disables lookups/telemetry; tests block network attempts and assert repeatability.
 
-Both templates now contain exactly one DynamoDB table and zero outputs. Default CDK bootstrap parameters/rules
+Both templates now contain the DynamoDB table and ten backend request-path resources, with zero outputs. Default CDK bootstrap parameters/rules
 and assembly role/asset references are future deployment contracts, not deployed
 infrastructure. Phase 3B packaging and 3C data definition are implemented locally;
-3D–3G compute/integration/control definitions and review follow;
+3D compute/integration definitions are complete locally; 3E–3G hosting/control definitions and review follow;
 actual staging deployment remains Phase 4 and Cognito remains Phase 5. See
 [infra/README.md](infra/README.md) for commands, naming, secret/lifecycle rules,
 and the open bundled dependency audit finding, and
@@ -363,12 +363,12 @@ and the open bundled dependency audit finding, and
 The mature single-region CDK Table L2 defines the existing single table, eight
 string key attributes and exactly three ALL-projection GSIs. Both environments
 use PAY_PER_REQUEST, STANDARD class, optional epoch-seconds `expires_at` TTL and
-AWS-owned encryption. No streams, replicas, seeding, custom resources, IAM grants,
-customer KMS keys or additional application resources exist in these templates.
+AWS-owned encryption. No streams, replicas, seeding, custom resources or
+customer KMS keys are added. Phase 3D adds the scoped request-path resources.
 
 The stable semantic ID WorkspaceTable and logical ID WorkspaceTable68AC2584 are
-stateful contracts. Physical names are generated independently per stack; future
-Phase 3D can consume the readonly `workspaceTable` construct and its name/ARN
+stateful contracts. Physical names are generated independently per stack;
+Phase 3D consumes the readonly `workspaceTable` construct and its name/ARN
 tokens directly. Renaming/reparenting, primary-key/physical-name changes and
 future GSI evolution require deliberate migration/replacement review.
 
@@ -376,8 +376,9 @@ Immutable environment data policy makes staging replaceable (PITR/deletion
 protection off, Delete on removal/replacement) and production protected (PITR/
 deletion protection on, Retain on removal/replacement). The parity helper exports
 the actual local initializer and TTL contract; the explicit network-blocked check
-compares both synthesized schemas. Normal synth stays independent of Python,
-Docker and the Lambda artifact. Local runtime/data and artifact inputs are intact.
+compares both synthesized schemas. Normal synth requires the verified prebuilt
+Lambda artifact, but never invokes Python, Docker or the builder. Local data
+and the table schema remain unchanged.
 
 Production PITR historical retention is separate from Phase 2C live-table erasure.
 Phase 6 must define backup retention, restore procedures, deletion-tombstone
@@ -399,10 +400,52 @@ locked boto3/botocore, native libraries and runtime assets at its root; it exclu
 development tooling and private configuration. Two clean builds match. A pinned
 official AL2023 Python 3.14 image validates isolated imports, read-only execution,
 native dependencies and cold/warm HTTP API v2 invocations without network access.
-Phase 3D must use Python 3.14/x86_64 and the documented handler. CDK currently has
-no artifact binding or Lambda/API/IAM resource; synth does not run the builder.
+Phase 3D uses Python 3.14/x86_64 and the documented handler. CDK verifies and binds
+the prebuilt ZIP; synth never runs the builder or installs Python dependencies.
 See [backend guide](backend/README.md) and
 [ADR 0009](docs/adr/0009-lambda-runtime-and-deterministic-packaging.md).
+
+
+## Backend request-path definition (Phase 3D, local synthesis only)
+
+Each environment defines HTTP API `$default` route/stage -> one Python 3.14
+x86_64 ZIP Lambda -> its own DynamoDB table. `BackendApi` exposes the function,
+API and endpoint tokens directly for Phase 3E. No CloudFormation outputs, lookup,
+Function URL, VPC, authorizer, application S3 bucket or deployment is added.
+
+Staging uses `AUTH_MODE=demo`; production uses `AUTH_MODE=cognito` and retains
+the existing 503 authentication-unavailable behavior for protected/demo routes.
+Health is liveness, not production readiness. Phase 5 must evolve exclusive auth
+modes to support demo and persistent accounts together and revisit preflight.
+
+One explicit role trusts only Lambda, with AWSLambdaBasicExecutionRole logging,
+seven audited DynamoDB data actions and exact secret GetSecretValue permissions.
+Item actions are table-only; Query includes the table and its three exact GSI
+ARNs. Scan, table administration, broad secret access and cross-environment
+references are absent. Two generated 64-character signing secrets have disposable
+staging and retained production lifecycles; rotation remains deferred. Runtime
+resolves them once before app construction and reuses the app/keys on warm calls.
+
+Typed environment CORS feeds both HTTP API and FastAPI: GET/POST/PATCH/DELETE/
+OPTIONS; Accept, Authorization, Content-Type, Idempotency-Key, X-Request-ID;
+exposed X-Request-ID and Content-Disposition; credentials false for the bearer
+client. Origins are deliberately `https://staging.invalid` and
+`https://production.invalid`. HTTP API is the deployed CORS authority and handles
+preflight. Phase 3E must bind actual origins before Phase 4 staging deployment.
+
+Memory is 1024 MB, Lambda timeout 15s and integration timeout 20s. The unchanged
+4,000,000-byte export budget sits below Lambda's 6 MiB synchronous response and
+HTTP API's 10 MB payload limits. Proxy JSON escapes a body again; a narrow Lambda
+wrapper switches large bodies to base64 when needed, retaining the original
+browser bytes after API decoding. A 64 KiB envelope reserve and safe 413 fallback
+protect the synchronous limit without lowering/increasing product budgets or
+enabling streaming. Work limits remain export 5s and erasure 2s.
+
+Explicit logging retention, alarms, concurrency and throttling are Phase 3F;
+final qualification is 3G, actual staging deployment 4, Cognito 5 and backup/
+rotation/privacy hardening 6. Production synthesis is not deployability. See
+[ADR 0011](docs/adr/0011-lambda-http-api-security-boundary.md),
+[infra guide](infra/README.md) and [backend guide](backend/README.md).
 
 ## AWS staging target and service choices
 
@@ -413,7 +456,7 @@ flowchart LR
     APIGW --> Lambda["Python 3.14 Lambda: FastAPI + Mangum"]
     Lambda --> DynamoDB["DynamoDB on-demand"]
     Lambda --> CloudWatch["CloudWatch logs and metrics"]
-    Secrets["Secrets Manager or equivalent secret configuration"] --> Lambda
+    Secrets["Secrets Manager signing keys"] --> Lambda
 ```
 
 - **Amplify Hosting** fits a static Vite SPA, supplies managed HTTPS, and keeps
@@ -432,7 +475,7 @@ flowchart LR
   writes. The deployed client uses its IAM role and no explicit credentials.
 - **CloudWatch** supplies structured request-ID logs, metrics, alarms, and
   finite retention. Logs must exclude tokens and private content.
-- **Secret configuration** holds the non-default signing key. It must not be
+- **Secrets Manager** generates the cursor and demo-session signing keys. They are read once at Lambda cold start and must not be
   embedded in frontend assets, source, or deployment output.
 
 The staging stack should be expressed in TypeScript CDK, deployed manually and

@@ -23,11 +23,15 @@ ARM64 is not validated or selected. A runtime/architecture change requires a
 new packaging/validation decision; do not change just the future CDK setting.
 
 Lambda reads process environment variables, **never `.env`**. All of these must
-be explicitly nonempty: `ENVIRONMENT`, `AUTH_MODE`, `AWS_REGION`,
-`DYNAMODB_TABLE_NAME`, `CORS_ALLOWED_ORIGINS`, `CURSOR_SIGNING_KEY`, and
-`DEMO_SESSION_SIGNING_KEY`. Only staging/production environments are accepted.
-Phase 3D supplies `AUTH_MODE=demo`, each environment's table/region/origin, and
-secret values through the future deployment configuration. Existing Settings
+be explicitly nonempty: `ENVIRONMENT`, `AUTH_MODE`, runtime-provided `AWS_REGION`,
+`DYNAMODB_TABLE_NAME`, `CORS_ALLOWED_ORIGINS`, `LAMBDA_CORS_POLICY`,
+`CURSOR_SIGNING_SECRET_ARN`, and `DEMO_SESSION_SIGNING_SECRET_ARN`. Only staging/production environments are accepted.
+Phase 3D supplies staging `AUTH_MODE=demo`, production `AUTH_MODE=cognito`, and
+stack-local table/secret references and CORS configuration. Secrets Manager
+generates raw 64-character alphanumeric signing keys; Lambda resolves both via
+GetSecretValue before composing the app. Production protected/demo routes remain
+503 until Cognito verification exists; health can initialize. No production
+readiness or deployment is claimed. Existing Settings
 validation rejects local authentication, custom DynamoDB endpoints, weak/local
 signing keys, wildcard CORS and invalid values. SDK environment overrides
 `AWS_ENDPOINT_URL` and `AWS_ENDPOINT_URL_DYNAMODB` are also rejected.
@@ -40,7 +44,10 @@ remains responsible for access; automatically supplied temporary role variables
 are supported. No static credentials, table name, origin, environment-specific
 secret, or account ID is baked into the ZIP. `AWS_REGION` may be runtime-provided.
 Optional quotas/time bounds and API documentation controls retain their existing
-Settings defaults/validation. This phase adds no secret-fetching service.
+Settings defaults/validation. Secret resolution is isolated to the Lambda boundary;
+local development does not invoke it. Empty/weak/binary/JSON values, wrong ARN/region/
+account, unreadable secrets and plaintext-key configuration fail closed with safe
+diagnostics. Values are not written back to environment variables.
 
 ## Build from Windows or Linux
 
@@ -154,8 +161,9 @@ remain server-owned; health is liveness, not database readiness.
 
 CI retains the audit/SBOM/OpenAPI gates and now runs the full backend job on
 both 3.13 and 3.14. A separate credential-free Linux job builds twice, validates
-the ZIP and uploads local evidence. It creates no AWS resources and binds no
-CDK asset. Infra synth remains independent of Python, Docker and artifact files.
+the ZIP and uploads local evidence. Phase 3D CI downloads this validated artifact before real infrastructure synthesis.
+Infra unit tests inject a tiny fixture; real synth/parity/CLI integration require
+the canonical verified ZIP and manifest. Synth still needs no Python or Docker.
 Readiness section 41 records full local results and the actual-artifact audit.
 
 The CDK bundled brace-expansion advisory remains open. The pre-3B recheck found
@@ -172,3 +180,31 @@ See [ADR 0009](../docs/adr/0009-lambda-runtime-and-deterministic-packaging.md),
 [runtime packaging requirements](https://docs.aws.amazon.com/lambda/latest/dg/python-package.html),
 [HTTP API v2 events](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html),
 and [uv command reference](https://docs.astral.sh/uv/reference/cli/).
+
+## Phase 3D deployed runtime composition
+
+`lambda_settings.py` requires complete stack-local signing-secret ARNs. It uses
+only Secrets Manager GetSecretValue, bounded SDK connect/read timeouts and two
+maximum attempts, then supplies validated SecretStr values directly to Settings.
+The module-level handler retains the app, DynamoDB client and signing keys across
+warm invocations. No per-request secret read or automatic rotation occurs.
+AWS-injected temporary role credentials are supported; custom endpoints and
+plaintext signing-key environment inputs are rejected.
+
+`cors_policy.py` validates the single typed deployed policy JSON passed by CDK;
+the factory's optional policy preserves existing local defaults. API Gateway
+and backend share origins/methods/headers/exposure/credential decisions.
+
+The Lambda wrapper measures the full proxy response before return. Large escaped
+JSON bodies can exceed 6 MiB even when public UTF-8 bytes are below 4,000,000.
+When needed, it base64-encodes the body and sets isBase64Encoded; HTTP API restores
+the browser's original bytes. It reserves 64 KiB and returns a safe 413 envelope
+if the response still cannot fit. Product budgets and local ASGI output are unchanged.
+Quote/backslash/control/Unicode export fixtures and the official-image probe
+cover this behavior.
+
+The external build manifest also records pyproject.toml SHA-256. Infra verifies
+current source against each packaged project member, the lock/project hashes,
+ZIP/per-file hashes, target and budgets before binding the asset. Generated
+manifests are provenance consistency evidence, not cryptographic attestations.
+See [ADR 0011](../docs/adr/0011-lambda-http-api-security-boundary.md).

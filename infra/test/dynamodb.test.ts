@@ -1,3 +1,4 @@
+import { fixtureArtifact } from './fixture';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { App } from 'aws-cdk-lib';
@@ -9,12 +10,12 @@ import { HireFluxStack } from '../lib/hireflux-stack';
 for (const environment of ['staging', 'production'] as const) {
   test(`${environment} has the exact single-region table schema and lifecycle`, () => {
     const config = loadEnvironmentConfig(environment);
-    const stack = new HireFluxStack(new App(), `HireFlux-${environment}`, config);
+    const stack = new HireFluxStack(new App(), `HireFlux-${environment}`, config, fixtureArtifact);
     const template = Template.fromStack(stack);
     const json = template.toJSON();
     const tables = template.findResources('AWS::DynamoDB::Table');
     assert.deepEqual(Object.keys(tables), ['WorkspaceTable68AC2584']);
-    assert.equal(Object.keys(json.Resources).length, 1);
+    assert.equal(Object.keys(json.Resources).length, 11);
     assert.deepEqual(json.Outputs ?? {}, {});
     const table = tables.WorkspaceTable68AC2584;
     assert.ok(table);
@@ -57,7 +58,7 @@ for (const environment of ['staging', 'production'] as const) {
 
 test('stateful construct path and logical ID are fixed across environments', () => {
   for (const environment of ['staging', 'production'] as const) {
-    const stack = new HireFluxStack(new App(), `HireFlux-${environment}`, loadEnvironmentConfig(environment));
+    const stack = new HireFluxStack(new App(), `HireFlux-${environment}`, loadEnvironmentConfig(environment), fixtureArtifact);
     assert.equal(stack.workspaceTable.node.id, 'WorkspaceTable');
     assert.equal(stack.workspaceTable.node.path, `HireFlux-${environment}/WorkspaceTable`);
     const resource = stack.workspaceTable.node.defaultChild;
@@ -69,8 +70,8 @@ test('stateful construct path and logical ID are fixed across environments', () 
 
 test('each environment owns a separate table without a shared physical name or cross-stack reference', () => {
   const app = new App();
-  const staging = new HireFluxStack(app, 'HireFlux-staging', loadEnvironmentConfig('staging', '111111111111'));
-  const production = new HireFluxStack(app, 'HireFlux-production', loadEnvironmentConfig('production', '222222222222'));
+  const staging = new HireFluxStack(app, 'HireFlux-staging', loadEnvironmentConfig('staging', '111111111111'), fixtureArtifact);
+  const production = new HireFluxStack(app, 'HireFlux-production', loadEnvironmentConfig('production', '222222222222'), fixtureArtifact);
   assert.notEqual(staging.stackName, production.stackName);
   assert.notEqual(staging.account, production.account);
   assert.notEqual(staging.workspaceTable, production.workspaceTable);

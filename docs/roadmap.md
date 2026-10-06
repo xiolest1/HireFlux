@@ -36,8 +36,13 @@ AWS resources and real persistent browser accounts are not deployed.
   local schema/TTL, on-demand capacity, AWS-owned encryption, stable identity,
   Python/CDK parity, replaceable staging and protected/retained production.
   See [ADR 0010](adr/0010-dynamodb-cloud-lifecycle.md). No AWS deployment.
-- **Phase 3D — next, not started:** Lambda, IAM, API Gateway, and secret references.
-- **Phase 3E — deferred:** frontend hosting/Amplify integration.
+- **Phase 3D — completed locally:** verified prebuilt Python 3.14/x86_64 ZIP,
+  one Lambda/HTTP API per environment, explicit least-privilege execution role,
+  generated signing secrets read at cold start, shared fail-closed CORS policy,
+  production Cognito-unavailable semantics and bounded proxy response encoding.
+  See [ADR 0011](adr/0011-lambda-http-api-security-boundary.md). Nothing deployed.
+- **Phase 3E — next, not started:** frontend hosting/Amplify integration and
+  replacement of the separate staging/production `.invalid` sentinel origins.
 - **Phase 3F/3G — deferred:** observability, alarms, throttling/cost controls,
   comprehensive isolation assertions, and template review. All Phase 3 slices
   stop at local definition/synthesis/tests.

@@ -2,15 +2,18 @@
   "name": "hireflux-infra",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": ">=22.12.0" },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "build": "node node_modules/typescript/bin/tsc",
-    "test": "npm run build && node --test build/test/*.test.js",
+    "test": "npm run build && node scripts/test-unit.mjs",
     "test:schema-parity": "npm run build && node --require ./build/test/block-network.js scripts/check-schema-parity.mjs",
     "cdk": "npm run build && node scripts/cdk-local.mjs",
     "synth:staging": "npm run cdk -- synth -c environment=staging --no-lookups --output cdk.out/staging",
-    "synth:production": "npm run cdk -- synth -c environment=production --no-lookups --output cdk.out/production"
+    "synth:production": "npm run cdk -- synth -c environment=production --no-lookups --output cdk.out/production",
+    "test:artifact": "npm run build && node --test build/test/cli.integration.js"
   },
   "dependencies": {
     "aws-cdk-lib": "2.272.0",

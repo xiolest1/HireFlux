@@ -1,5 +1,63 @@
 # HireFlux development log
 
+## 2026-10-06 — Backend AWS request-path definition (Phase 3D)
+
+Started from a clean worktree and preserved the accepted Phase 3A/3B/3C
+foundations. Audited all current DynamoDB calls before granting permissions.
+The new BackendApi construct binds the separately built, manifest/source-verified
+ZIP to one Python 3.14/x86_64 Lambda, with 1024 MB/15 seconds, an explicit role,
+two generated signing secrets, and HTTP API default route/stage with explicit
+payload 2.0/20-second integration. Both environments synthesize 11 resources and
+zero outputs. The original WorkspaceTable68AC2584 identity/schema is unchanged.
+
+The role grants only exact table item/transaction actions, Query on the table
+and GSI1/GSI2/GSI3, and GetSecretValue on the two generated secret references.
+No Scan/admin/wildcard application grants are present. Basic Lambda logging is
+the sole managed policy; explicit retention/alarms/concurrency remain Phase 3F.
+Signing values resolve once at cold start with bounded SDK retries/timeouts and
+sanitized failures. Warm invocations reuse them; no plaintext enters environment
+variables or CloudFormation. Staging uses demo with Delete secret lifecycle;
+production uses unavailable cognito with Retain. Shared frozen CORS policy uses
+only per-environment .invalid origins; Phase 3E must replace them centrally.
+
+Found and fixed a concrete synchronous transport issue: a 4,000,000-byte JSON
+body can exceed Lambda's 6 MiB response limit when nested proxy JSON escapes
+quotes/backslashes. The Lambda-only adapter measures the full envelope, switches
+to base64 when necessary, and otherwise returns a safe 413. Gateway decoding
+preserves response bytes. Existing local ASGI behavior/public export budgets,
+frontend code, business policy, ownership and table data are unchanged.
+
+Two clean builds match: SHA-256
+950c8d1fbc3c4872dba29d6e4eddd3439f304509cbcd5b0ca370157cc15c4bcf;
+26,646,067 compressed bytes; 57,540,712 expanded bytes; 3,756 files and 31
+production distributions. The official pinned Linux Lambda image passes native
+imports, cold/warm payload-v2 cases, two cold secret reads/warm reuse, large JSON,
+sanitized errors and invalid configuration with zero network attempts.
+
+Validation: Ruff/format pass (111 files); strict Mypy passes (71 runtime files);
+full backend 419 tests pass (65.58s, existing Starlette/httpx warning); uv lock
+and installed dependency checks pass. Infra typecheck/build pass; final unit
+suite 84/84 passes (6.113s); real artifact offline CLI suite 4/4 passes (22.814s),
+including deterministic repeated synthesis and staged ZIP identity. Both actual
+synth commands and fresh Python/CDK schema parity pass. The ZIP's 31 locked
+dependencies pass pip-audit with no known vulnerabilities. Frontend is unchanged.
+CI now builds/validates the ZIP before infra synthesis and downloads the backend
+schema export for parity; remote CI has not run in this session.
+
+Rechecked current CDK library 2.272.0/CLI 2.1144.0: the bundled brace-expansion
+5.0.9 advisory remains one high npm finding, with three reported advisories.
+No newer compatible upstream release, override, patch or suppression is used.
+The fixed ZIP asset accepts no user-controlled glob; this does not make the CDK
+audit clean. Windows sandbox temp-file restrictions were resolved by running
+the same local checks on the host, with credential isolation/network blocking
+retained for synthesis. No AWS lookup/bootstrap/upload/mutation/deployment,
+credential use, commit or push occurred. Phase 3E is next; the advisory is an
+open qualification follow-up, not a blocker to local hosting definition work.
+
+Updated canonical architecture, README/backend/infra guides, environment/roadmap
+docs, ADR 0011 and the complete 69-point section 43 handoff. Earlier dev-log
+entries remain historical snapshots.
+
 ## 2026-10-06 — DynamoDB cloud definition and schema parity (Phase 3C)
 
 Preserved the accepted dirty Phase 3A/3B baseline and inventoried the running

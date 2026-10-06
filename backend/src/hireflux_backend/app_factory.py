@@ -32,6 +32,7 @@ from hireflux_backend.application.workspace_export import WorkspaceExportService
 from hireflux_backend.application.workspace_safety import WorkspaceErasureService
 from hireflux_backend.auth.demo import DemoSessionCodec
 from hireflux_backend.config import Settings, get_settings
+from hireflux_backend.cors_policy import CorsPolicy
 from hireflux_backend.infrastructure.dynamodb.client import build_dynamodb_client
 from hireflux_backend.infrastructure.dynamodb.cursor import CursorCodec
 from hireflux_backend.infrastructure.dynamodb.demo_workspace_repository import (
@@ -58,6 +59,7 @@ def create_app(
     settings: Settings | None = None,
     *,
     dynamodb_client: Any | None = None,
+    cors_policy: CorsPolicy | None = None,
 ) -> FastAPI:
     configured = settings or get_settings()
     client = dynamodb_client or build_dynamodb_client(configured)
@@ -156,10 +158,16 @@ def create_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(configured.cors_origins),
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Request-ID"],
-        expose_headers=["X-Request-ID", "Content-Disposition"],
+        allow_credentials=cors_policy.allow_credentials if cors_policy else True,
+        allow_methods=list(cors_policy.allow_methods)
+        if cors_policy
+        else ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=list(cors_policy.allow_headers)
+        if cors_policy
+        else ["Authorization", "Content-Type", "Idempotency-Key", "X-Request-ID"],
+        expose_headers=list(cors_policy.expose_headers)
+        if cors_policy
+        else ["X-Request-ID", "Content-Disposition"],
     )
 
     @app.middleware("http")

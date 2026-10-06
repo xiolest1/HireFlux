@@ -106,9 +106,11 @@ deployment remain later phases. See the [current roadmap](docs/roadmap.md#curren
 The canonical architecture and current-versus-target boundary are documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Phase 3A adds an independent [CDK foundation](infra/README.md) for explicit staging
-and production environments. Phase 3C now defines one DynamoDB table per local
-template, with exact schema parity and separate lifecycle protection. Both
-stacks synthesize without AWS credentials. From the repository root:
+and production environments. Phase 3D defines each backend request path with
+one DynamoDB table, one ZIP Lambda, generated signing secrets, scoped IAM and
+HTTP API. Both stacks synthesize without AWS credentials. Build and validate
+the ZIP first using the [backend packaging commands](backend/README.md), then
+run from the repository root:
 
 ```bat
 npm --prefix infra ci
@@ -118,14 +120,15 @@ npm --prefix infra run synth:staging
 npm --prefix infra run synth:production
 ```
 
-Compute/API/hosting definitions and AWS deployment remain later slices.
+Frontend hosting definitions and AWS deployment remain later slices.
 The infra guide records the current open CDK bundled dependency advisory.
 
 Phase 3B now supplies the [backend Lambda ZIP build and validation](backend/README.md):
 Python 3.14, Linux x86_64, locked production wheels, deterministic packaging,
 and isolated cold/warm HTTP API v2 tests. The handler is
-`hireflux_backend.lambda_handler.handler`. No Lambda resource or CDK asset is
-defined or deployed. See [ADR 0009](docs/adr/0009-lambda-runtime-and-deterministic-packaging.md)
+`hireflux_backend.lambda_handler.handler`. Phase 3D verifies and binds the rebuilt
+ZIP to the defined Lambda resource; nothing is deployed. See
+[ADR 0009](docs/adr/0009-lambda-runtime-and-deterministic-packaging.md)
 and [Phase 3B evidence](docs/production-account-readiness.md#41-phase-3b-implementation-and-handoff).
 
 The DynamoDB table is defined locally with generated physical names, on-demand
@@ -243,7 +246,7 @@ table. See [ADR 0007](docs/adr/0007-durable-workspace-manifest-and-erasure.md).
 - [Data export](docs/data-export.md) — current CSV export and future portability boundaries.
 - [Roadmap](docs/roadmap.md) — planned product and infrastructure work.
 - [Development log](docs/devlog.md) — implementation history, decisions, and validation notes.
-- [Production account readiness](docs/production-account-readiness.md) — Phase 1 audit and Phase 2/3A/3B/3C implementation handoffs.
+- [Production account readiness](docs/production-account-readiness.md) — Phase 1 audit and Phase 2/3A/3B/3C/3D implementation handoffs.
 - [Infrastructure foundation](infra/README.md) — environment contracts, local synth/testing, naming, and later resource insertion points.
 - [CDK environment decision](docs/adr/0008-aws-cdk-environment-foundation.md) — accepted Phase 3A boundary.
 - [Durable bootstrap decision](docs/adr/0005-durable-local-workspace-bootstrap.md) — accepted identity, readiness, recovery, and deferred safety boundaries.
@@ -258,3 +261,12 @@ backend identity/bootstrap foundation and general frontend session boundary are
 complete, including the Phase 2C local data-safety foundation. AWS staging, real Cognito accounts, private attachments,
 reminders, email delivery, and large asynchronous exports remain future phases
 rather than hidden dependencies of the current app.
+
+## Phase 3D infrastructure status
+
+The backend AWS request path is now defined and validated locally: verified ZIP,
+Lambda, scoped IAM, generated signing secrets and HTTP API. Nothing is deployed.
+The frontend remains unchanged; the `.invalid` origins must be replaced in
+Phase 3E. Production authentication remains unavailable until Phase 5.
+See [ADR 0011](docs/adr/0011-lambda-http-api-security-boundary.md),
+[infra commands](infra/README.md) and [current handoff](docs/production-account-readiness.md#43-phase-3d-implementation-and-handoff).

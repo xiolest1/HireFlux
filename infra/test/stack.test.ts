@@ -1,3 +1,4 @@
+import { fixtureArtifact } from './fixture';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -14,10 +15,10 @@ for (const environment of ['staging', 'production'] as const) {
     const outdir = mkdtempSync(join(tmpdir(), 'hireflux-stack-test-'));
     try {
       const app = new App({ outdir, analyticsReporting: false, context: { environment } });
-      const stack = composeEnvironment(app);
+      const stack = composeEnvironment(app, fixtureArtifact);
       const template = Template.fromStack(stack);
       template.resourceCountIs('AWS::DynamoDB::Table', 1);
-      assert.equal(Object.keys(template.toJSON().Resources).length, 1);
+      assert.equal(Object.keys(template.toJSON().Resources).length, 11);
       const assembly = app.synth();
       assert.equal(assembly.stacks.length, 1);
       assert.equal(assembly.manifest.missing, undefined);
@@ -27,7 +28,7 @@ for (const environment of ['staging', 'production'] as const) {
       assert.equal(artifact.environment.region, 'us-east-1');
       assert.equal(artifact.environment.account, 'unknown-account');
       assert.deepEqual(artifact.tags, { Project: 'HireFlux', Environment: environment, ManagedBy: 'AWS-CDK' });
-      assert.equal(Object.keys(artifact.template.Resources).length, 1);
+      assert.equal(Object.keys(artifact.template.Resources).length, 11);
       assert.deepEqual(artifact.template.Metadata.HireFlux, {
         environmentName: environment,
         resourceNamePrefix: `hireflux-${environment}`,
@@ -46,7 +47,7 @@ test('explicit account binding selects only the requested environment account', 
   const app = new App({ analyticsReporting: false, context: {
     environment: 'production', stagingAccount: '111111111111', productionAccount: '222222222222',
   } });
-  const stack = composeEnvironment(app);
+  const stack = composeEnvironment(app, fixtureArtifact);
   assert.equal(stack.account, '222222222222');
   assert.equal(stack.region, 'us-east-1');
 });
@@ -54,7 +55,7 @@ test('explicit account binding selects only the requested environment account', 
 test('composition rejects missing/invalid selection and malformed selected binding', () => {
   assert.throws(() => composeEnvironment(new App()), /explicit environment/);
   assert.throws(() => composeEnvironment(new App({ context: { environment: 'prod' } })), /explicit environment/);
-  assert.throws(() => composeEnvironment(new App({ context: { environment: 'staging', stagingAccount: '' } })), /12-digit/);
+  assert.throws(() => composeEnvironment(new App({ context: { environment: 'staging', stagingAccount: '' } }), fixtureArtifact), /12-digit/);
 });
 
 test('stack validates configuration before creating a construct', () => {
@@ -65,8 +66,8 @@ test('stack validates configuration before creating a construct', () => {
 });
 
 test('stable construct paths control logical IDs independently of physical stack names', () => {
-  const staging = new HireFluxStack(new App(), 'HireFlux-staging', loadEnvironmentConfig('staging'));
-  const production = new HireFluxStack(new App(), 'HireFlux-production', loadEnvironmentConfig('production'));
+  const staging = new HireFluxStack(new App(), 'HireFlux-staging', loadEnvironmentConfig('staging'), fixtureArtifact);
+  const production = new HireFluxStack(new App(), 'HireFlux-production', loadEnvironmentConfig('production'), fixtureArtifact);
   // Parameters demonstrate CDK logical identity without inventing an AWS resource.
   const stagingParameter = new CfnParameter(staging, 'StableContract', { type: 'String' });
   const productionParameter = new CfnParameter(production, 'StableContract', { type: 'String' });

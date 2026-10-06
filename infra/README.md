@@ -1,8 +1,8 @@
 # HireFlux infrastructure
 
 Phase 3A provides a standalone TypeScript AWS CDK v2 package, a shared environment
-stack, and local validation. Phase 3C now defines one DynamoDB table in each
-environment's local template. Nothing is deployed. The product still runs
+stack, and local validation. Phase 3C defines one DynamoDB table per environment; Phase 3D now defines
+its Lambda, IAM, signing secrets and HTTP API request path in each local template. Nothing is deployed. The product still runs
 through Vite, FastAPI, and DynamoDB Local.
 
 ## Install and validate
@@ -17,8 +17,10 @@ npm --prefix infra ci
 npm --prefix infra run typecheck
 npm --prefix infra run build
 npm --prefix infra test
+rem Build and validate the real ZIP explicitly before actual synth (see backend guide).
 npm --prefix infra run synth:staging
 npm --prefix infra run synth:production
+npm --prefix infra run test:artifact
 ```
 
 Scripts are `typecheck`, `build`, `test`, `cdk`, `synth:staging`, and
@@ -39,9 +41,9 @@ npm --prefix infra run cdk -- synth -c environment=production --output cdk.out/p
 
 `lib/config/environment.ts` owns the readonly configuration: `environmentName`,
 `stackName`, `resourceNamePrefix`, `awsRegion`, optional `awsAccount`, and common
-tags, and immutable `data` lifecycle policy. Stacks and prefixes are `hireflux-staging` and `hireflux-production`.
+tags, immutable `data` lifecycle policy and readonly `backend` auth/secret/CORS policy. Stacks and prefixes are `hireflux-staging` and `hireflux-production`.
 Both use the existing repository region `us-east-1`; changing it requires a
-reviewed source change. Origins remain a later integration concern. Data policy
+reviewed source change. Origins are distinct reserved `.invalid` sentinels until Phase 3E. Data policy
 sets PITR, deletion protection and removal policy declaratively; validation rejects
 cross-wiring or weakening the selected environment's accepted posture.
 
@@ -81,13 +83,13 @@ produce the same template; toolchain upgrades require renewed review.
 production outputs have separate directories. Do not edit or commit assemblies,
 CloudFormation JSON, or context lookup caches. No lookup cache is required here.
 
-Both templates contain exactly **one AWS::DynamoDB::Table** and no outputs. They contain
-environment metadata plus the default CDK `BootstrapVersion` parameter and
-`CheckBootstrapVersion` rule. Assemblies describe future bootstrap role/asset
-locations; those references do not create resources, query SSM during synth, or
-mean an account is bootstrapped. The Phase 3A empty-resource warning no longer
-applies. Bootstrap prerequisites belong to Phase 4. No synth step needs Python,
-Docker, the Lambda ZIP or backend configuration.
+Each template contains **11 reviewed resources and zero outputs**: the existing
+DynamoDB table, two generated signing secrets, execution role and data policy,
+one Lambda, HTTP API, integration, invoke permission, route and stage. Assemblies
+also reference the future bootstrap asset bucket/roles. No application bucket or
+AWS lookup is created. These local references do not upload assets or bootstrap
+an account. Real synth requires the verified ZIP/manifest; it never invokes Python,
+Docker, dependency installation or a bundler. Bootstrap remains Phase 4.
 
 ## DynamoDB definition and schema parity (Phase 3C)
 
@@ -107,9 +109,9 @@ Authorization still expires at the signed-token boundary, independently of TTL.
 `TableEncryption.DEFAULT` emits `SSEEnabled: false`, selecting AWS-owned encrypted
 storage under [CloudFormation's documented semantics](https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-dynamodb-table-ssespecification.html).
 No customer-managed KMS key is required or created. There is no stream, global
-table/replica, seeding/custom resource, resource policy, application IAM grant,
-Lambda, API or output. The complete resource inventory per environment is:
-`WorkspaceTable68AC2584: AWS::DynamoDB::Table`.
+table/replica, seeding/custom resource, resource policy or output. Phase 3D adds
+explicit application IAM and compute/API resources described below. The table
+remains `WorkspaceTable68AC2584: AWS::DynamoDB::Table`.
 
 - **Staging:** PITR false, deletion protection false, DESTROY. DeletionPolicy and
   UpdateReplacePolicy both Delete; deliberate teardown can remove disposable data.
@@ -144,8 +146,9 @@ and INCLUDE attribute set, TTL name/enabled flag and billing. Array order and
 environment-only lifecycle differences are normalized away. Drift tests exercise
 renamed keys, changed types, omitted/extra/duplicate indexes, projection changes,
 missing INCLUDE attributes, TTL aliases/disablement and extra attributes/LSIs.
-The parity process also blocks and records network attempts. Normal infra tests
-and synth do not invoke Python or read this generated file.
+The parity process also blocks and records network attempts. Normal infra unit tests and synth do not invoke Python or read this generated
+file. Unit tests inject a fixture; the explicit parity command composes the actual
+backend stack with the verified real artifact and inspects only its table schema.
 
 PITR historical recovery data has separate privacy semantics from Phase 2C live
 erasure. Delete Account is not proven to remove every historical copy. Phase 6
@@ -175,8 +178,7 @@ stack naming without adding dummy AWS resources.
 
 Common tags are `Project=HireFlux`, `Environment=staging|production`, and
 `ManagedBy=AWS-CDK`. They appear in the assembly's stack tags and will propagate
-to supported taggable resources when those are added. No resources exist for
-resource-level tag assertions yet. Never tag personal details or secrets.
+to supported taggable resources when those are added. Current supported resources have resource-level tag assertions. Never tag personal details or secrets.
 
 ## Extending the foundation
 
@@ -186,10 +188,10 @@ Extend typed configuration as real requirements appear rather than scattering
 environment conditionals through constructs.
 
 - **3B (completed locally):** [backend-owned Lambda ZIP packaging](../backend/README.md),
-  Python 3.14/x86_64, isolated runtime validation. No CDK asset binding exists.
+  Python 3.14/x86_64, isolated runtime validation; Phase 3D now binds the verified ZIP.
 - **3C (completed locally):** exact DynamoDB schema and validated lifecycle policy,
   stable identity, schema parity and one table per environment. No deployment.
-- **3D:** Lambda, least-privilege IAM, API Gateway, and secret references.
+- **3D (completed locally):** Lambda, explicit least-privilege IAM, generated signing secrets and HTTP API.
 - **3E:** frontend hosting/Amplify integration and actual public origin contracts.
 - **3F/3G:** observability, throttling/cost controls, comprehensive isolation
   assertions, and synthesized-template review.
@@ -230,3 +232,123 @@ work; no clean audit is claimed. Product and infra locks are unchanged.
 See [ADR 0008](../docs/adr/0008-aws-cdk-environment-foundation.md),
 [AWS synthesis documentation](https://docs.aws.amazon.com/cdk/v2/guide/ref-cli-cmd-synth.html),
 and [CDK CLI compatibility](https://github.com/aws/aws-cdk-cli/blob/main/COMPATIBILITY.md).
+
+## Backend API definition and artifact binding (Phase 3D)
+
+`lib/backend/backend-api.ts` composes `BackendApi`, with stable child IDs
+BackendFunction, ExecutionRole, CursorSigningSecret, DemoSessionSigningSecret and
+HttpApi. Stack properties `backendFunction`, `httpApi` and `workspaceTable` expose
+references directly; `httpApi.apiEndpoint` is Phase 3E's VITE_API_BASE_URL input.
+No output parsing, AWS lookup or shared mutable resource is needed. Generated
+physical function/table/role/secret names are retained; HTTP API's CDK display
+Name HttpApi is not a fixed API identifier.
+
+`lib/backend/artifact.ts` requires the canonical prebuilt ZIP and adjacent manifest:
+artifacts/lambda/hireflux-backend-lambda.zip and .manifest.json. It validates
+Python 3.14/x86_64/handler/wheel target, pinned builder uv, ZIP and every member
+hash/size, canonical ZIP layout/native ELF architecture, 40/200 MiB budgets,
+lock/project hashes and exact normalized current runtime source inventory/content.
+Missing/stale/arbitrary artifacts fail with an explicit build diagnostic. This
+is build consistency verification, not a signed provenance attestation.
+
+CDK Code.fromAsset uses the verified ZIP SHA-256 as its custom hash input (CDK
+hashes that input to derive its asset identifier). Both environments stage the
+same bytes; integration tests rehash the staged ZIP. No backend/src asset,
+bundling, automatic build, upload or application S3 bucket exists.
+
+Run packaging separately from synth, from the repository root:
+
+```text
+uv run --no-project --python 3.14 python backend/scripts/build_lambda_artifact.py --verify-reproducible
+uv run --no-project --python 3.14 python backend/scripts/validate_lambda_artifact.py
+npm --prefix infra run typecheck
+npm --prefix infra test
+npm --prefix infra run synth:staging
+npm --prefix infra run synth:production
+npm --prefix infra run test:artifact
+```
+
+`npm test` uses injected temporary fixtures and blocked network access; it needs
+no real ZIP, Python or Docker. `test:artifact` runs the real credential-isolated
+CLI offline twice per environment, checks byte repeatability, bindings, staged
+asset hashes and invalid-command rejection. Neither path builds the artifact.
+The Python schema-export/parity commands above remain a separate regression gate.
+
+Lambda uses python3.14, x86_64, hireflux_backend.lambda_handler.handler, ZIP,
+1024 MB and 15s timeout. Default ephemeral storage is 512 MB. No VPC, layers,
+Function URL, reserved/provisioned concurrency, SnapStart, X-Ray, DLQ or async
+destination is defined. Explicit log resources/retention, metrics/alarms and
+traffic/cost controls are Phase 3F.
+
+An explicit role trusts lambda.amazonaws.com only. Its sole managed policy is
+service-role/AWSLambdaBasicExecutionRole for normal logging. The custom data
+policy has exactly three statements:
+
+- GetItem, PutItem, UpdateItem, DeleteItem, BatchWriteItem and ConditionCheckItem
+  on workspaceTable.tableArn only.
+- Query on that table and exact /index/GSI1, /index/GSI2, /index/GSI3 ARNs.
+- secretsmanager:GetSecretValue on the two stack-owned secret ARNs only.
+
+The audit found these in normal repositories and workspace guards. UpdateItem
+is used through transaction Update operations; ConditionCheckItem authorizes
+transaction ACTIVE/existing-item guards. TransactWriteItems has underlying-item
+IAM authorization, not a separate broad transaction action. BatchGetItem and
+TransactGetItems are unused. Scan belongs to guarded local reconciliation and
+test tooling; DescribeTable/create/TTL schema calls belong to operator setup.
+None is granted to Lambda. Tests inspect all effective custom/inline/managed
+role policy attachments, positive scopes and negative permissions.
+
+Two CloudFormation-generated 64-character alphanumeric signing secrets use the
+normal Secrets Manager encryption posture, with no custom KMS key. Staging uses
+Delete/Delete; production Retain/Retain. No rotation schedule exists. Only ARNs
+enter Lambda configuration. Runtime GetSecretValue occurs once per secret at
+app composition, with safe failures and warm reuse; local ASGI remains unchanged.
+
+Environment variables supplied by CDK are ENVIRONMENT, AUTH_MODE,
+DYNAMODB_TABLE_NAME, CORS_ALLOWED_ORIGINS, LAMBDA_CORS_POLICY,
+CURSOR_SIGNING_SECRET_ARN, DEMO_SESSION_SIGNING_SECRET_ARN,
+MAX_SYNC_EXPORT_BYTES=4000000, MAX_SYNC_EXPORT_WORK_SECONDS=5 and
+ACCOUNT_ERASURE_MAX_SECONDS_PER_REQUEST=2. AWS_REGION and temporary execution-role
+credentials come from Lambda, never our explicit environment configuration.
+No static credential or local endpoint is supplied. Tests conservatively budget
+768 bytes per secret ARN and 255 for the table name; the total is below 3 KiB,
+leaving at least 1 KiB against the 4 KiB aggregate limit.
+
+Staging uses demo; production uses cognito and returns the existing safe 503
+authentication-unavailable response on protected/demo routes. Production health
+is liveness, not readiness. No Cognito verifier or coexistence refactor is added.
+
+HTTP API has one AWS_PROXY integration, explicit payload 2.0, 20s integration
+timeout, one $default route with NONE authorization, and an auto-deploy $default
+stage. Invocation permission trusts only apigateway.amazonaws.com and scopes
+SourceArn to the stack's API/account/region with /*/* route/method suffix. There
+is no direct public function ingress, authorizer, custom domain or API key.
+
+One readonly CORS policy drives gateway and runtime. Origins are
+https://staging.invalid and https://production.invalid; methods GET/POST/PATCH/
+DELETE/OPTIONS; request headers Accept, Authorization, Content-Type,
+Idempotency-Key, X-Request-ID; exposed X-Request-ID and Content-Disposition;
+allowCredentials false. The frontend uses bearer headers, no credentialed cookies,
+and version fields in bodies rather than If-Match/ETag. Gateway manages deployed
+CORS/preflight; FastAPI receives the same policy for parity/direct ASGI behavior.
+Phase 3E replaces sentinel origins before any Phase 4 staging deployment.
+
+The 4,000,000-byte public export limit is unchanged. Lambda's 6 MiB synchronous
+envelope is narrower than API Gateway's 10 MB payload limit. Large quote/backslash
+JSON doubles during proxy serialization, so the runtime wrapper switches to
+base64 as needed; Gateway restores the original browser bytes. A 64 KiB reserve
+and safe 413 fallback protect the envelope. No streaming is enabled.
+
+CI now orders backend quality/schema evidence -> reproducible artifact build and
+official-image validation -> infra tests/parity/real artifact synth inspection.
+Artifact download/upload is GitHub workflow evidence, never AWS upload. Permissions
+remain contents:read; no credentials, OIDC, bootstrap or deployment is introduced.
+
+The Phase 3D audit recheck still reports bundled brace-expansion 5.0.9 under
+minimatch 10.2.5; 2.272.0/2.1144.0 remain the latest library/CLI. No safe upstream
+fix is available, no override/patch/suppression is used, and no clean CDK audit is
+claimed. Asset input is one verified fixed-path ZIP, with no caller-provided glob
+pattern or bundling. This Node dependency is absent from the Python artifact.
+
+See [ADR 0011](../docs/adr/0011-lambda-http-api-security-boundary.md) and
+[current handoff](../docs/production-account-readiness.md#43-phase-3d-implementation-and-handoff).

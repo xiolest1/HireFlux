@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util';
+
 export type EnvironmentName = 'staging' | 'production';
 
 export interface DynamoDBLifecycleConfig {
@@ -18,11 +20,40 @@ export interface HireFluxEnvironmentConfig {
   readonly awsRegion: string;
   readonly awsAccount: string | undefined;
   readonly data: DynamoDBLifecycleConfig;
+  readonly backend: Readonly<{
+    authMode: 'demo' | 'cognito';
+    secretRemovalPolicy: 'DESTROY' | 'RETAIN';
+    cors: DeployedCorsPolicy;
+  }>;
   readonly tags: Readonly<{
     Project: 'HireFlux';
     Environment: EnvironmentName;
     ManagedBy: 'AWS-CDK';
   }>;
+}
+
+export interface DeployedCorsPolicy {
+  readonly allowOrigins: readonly string[];
+  readonly allowMethods: readonly ('GET' | 'POST' | 'PATCH' | 'DELETE' | 'OPTIONS')[];
+  readonly allowHeaders: readonly string[];
+  readonly exposeHeaders: readonly string[];
+  readonly allowCredentials: false;
+}
+
+const CORS_METHODS = Object.freeze(['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'] as const);
+const CORS_HEADERS = Object.freeze(['Accept', 'Authorization', 'Content-Type', 'Idempotency-Key', 'X-Request-ID']);
+const CORS_EXPOSE = Object.freeze(['X-Request-ID', 'Content-Disposition']);
+
+function backendConfig(environment: EnvironmentName): HireFluxEnvironmentConfig['backend'] {
+  return Object.freeze({
+    authMode: environment === 'staging' ? 'demo' : 'cognito',
+    secretRemovalPolicy: environment === 'staging' ? 'DESTROY' : 'RETAIN',
+    cors: Object.freeze({
+      allowOrigins: Object.freeze([`https://${environment}.invalid`]),
+      allowMethods: CORS_METHODS, allowHeaders: CORS_HEADERS, exposeHeaders: CORS_EXPOSE,
+      allowCredentials: false,
+    }),
+  });
 }
 
 export const AWS_REGION = 'us-east-1';
@@ -54,6 +85,7 @@ export function loadEnvironmentConfig(
     awsRegion: AWS_REGION,
     awsAccount: resolveAccount(accountBinding),
     data: DATA_LIFECYCLE[environmentName],
+    backend: backendConfig(environmentName),
     tags: Object.freeze({
       Project: 'HireFlux',
       Environment: environmentName,
@@ -80,6 +112,9 @@ export function validateEnvironmentConfig(config: HireFluxEnvironmentConfig): vo
     throw new Error('Resource name prefix must match the selected HireFlux environment.');
   }
   resolveAccount(config.awsAccount);
+  if (!isDeepStrictEqual(config.backend, backendConfig(environmentName))) {
+    throw new Error('Backend auth, secret lifecycle and sentinel CORS must match the selected environment.');
+  }
   const lifecycle = DATA_LIFECYCLE[environmentName];
   if (
     config.data === undefined ||

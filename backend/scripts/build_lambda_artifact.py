@@ -149,6 +149,7 @@ def write_zip(stage: Path, output: Path) -> dict[str, Any]:
         "handler": "hireflux_backend.lambda_handler.handler",
         "uv_version": UV_VERSION,
         "lock_sha256": digest((BACKEND / "uv.lock").read_bytes()),
+        "project_sha256": digest((BACKEND / "pyproject.toml").read_bytes()),
         "sha256": digest(output.read_bytes()),
         "compressed_bytes": compressed,
         "expanded_bytes": expanded,

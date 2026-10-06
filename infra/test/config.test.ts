@@ -94,3 +94,16 @@ test('data lifecycle cannot be cross-wired or weakened across environments', () 
     { ...production.data, removalPolicy: 'DESTROY' as const },
   ]) assert.throws(() => validateEnvironmentConfig({ ...production, data }), /DynamoDB lifecycle/);
 });
+
+
+test('backend configuration rejects cross-environment auth, secret lifecycle and CORS drift', () => {
+  const staging = loadEnvironmentConfig('staging');
+  const production = loadEnvironmentConfig('production');
+  assert.ok(Object.isFrozen(staging.backend) && Object.isFrozen(staging.backend.cors) && Object.isFrozen(staging.backend.cors.allowOrigins));
+  for (const backend of [production.backend, { ...staging.backend, authMode: 'cognito' as const },
+    { ...staging.backend, secretRemovalPolicy: 'RETAIN' as const },
+    { ...staging.backend, cors: { ...staging.backend.cors, allowOrigins: ['*'] } },
+    { ...staging.backend, cors: { ...staging.backend.cors, allowOrigins: ['https://guessed.example.com'] } }]) {
+    assert.throws(() => validateEnvironmentConfig({ ...staging, backend }), /Backend auth/);
+  }
+});

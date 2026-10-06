@@ -2,11 +2,18 @@ import { RemovalPolicy, Stack, Tags } from 'aws-cdk-lib';
 import { AttributeType, BillingMode, ProjectionType, Table, TableClass, TableEncryption } from 'aws-cdk-lib/aws-dynamodb';
 import type { Construct } from 'constructs';
 import { validateEnvironmentConfig, type HireFluxEnvironmentConfig } from './config/environment';
+import { BackendApi } from './backend/backend-api';
+import { verifyBackendArtifact, type BackendArtifact } from './backend/artifact';
+import type { Function } from 'aws-cdk-lib/aws-lambda';
+import type { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 
 export class HireFluxStack extends Stack {
   public readonly workspaceTable: Table;
+  public readonly backend: BackendApi;
+  public readonly backendFunction: Function;
+  public readonly httpApi: HttpApi;
 
-  constructor(scope: Construct, id: string, config: HireFluxEnvironmentConfig) {
+  constructor(scope: Construct, id: string, config: HireFluxEnvironmentConfig, artifact?: BackendArtifact) {
     validateEnvironmentConfig(config);
     super(scope, id, {
       stackName: config.stackName,
@@ -15,7 +22,7 @@ export class HireFluxStack extends Stack {
         ...(config.awsAccount === undefined ? {} : { account: config.awsAccount }),
       },
       analyticsReporting: false,
-      description: `HireFlux ${config.environmentName} DynamoDB infrastructure (Phase 3C).`,
+      description: `HireFlux ${config.environmentName} backend request path (Phase 3D; not deployed).`,
     });
 
     for (const [key, value] of Object.entries(config.tags)) {
@@ -49,5 +56,8 @@ export class HireFluxStack extends Stack {
         projectionType: ProjectionType.ALL,
       });
     }
+    this.backend = new BackendApi(this, 'BackendApi', this.workspaceTable, config, artifact ?? verifyBackendArtifact());
+    this.backendFunction = this.backend.backendFunction;
+    this.httpApi = this.backend.httpApi;
   }
 }
