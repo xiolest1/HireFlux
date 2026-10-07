@@ -13,12 +13,13 @@ const ids = {
   api: 'BackendApiHttpApiB4B1202A', integration: 'BackendApiHttpApiDefaultRouteBackendIntegrationC791C627',
   permission: 'BackendApiHttpApiDefaultRouteBackendIntegrationPermission521AD465',
   route: 'BackendApiHttpApiDefaultRoute408A2CCF', stage: 'BackendApiHttpApiDefaultStage89B5186D',
+  app: 'FrontendHostingApp3EC0FC15', branch: 'FrontendHostingBranchB5734B41',
 };
 const getAtt = (id: string) => ({ 'Fn::GetAtt': [id, 'Arn'] });
 const ref = (id: string) => ({ Ref: id });
 const itemActions = ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem',
   'dynamodb:BatchWriteItem', 'dynamodb:ConditionCheckItem'];
-const inventory = ['AWS::DynamoDB::Table', 'AWS::SecretsManager::Secret', 'AWS::SecretsManager::Secret',
+const inventory = ['AWS::DynamoDB::Table', 'AWS::Amplify::App', 'AWS::Amplify::Branch', 'AWS::SecretsManager::Secret', 'AWS::SecretsManager::Secret',
   'AWS::IAM::Role', 'AWS::IAM::Policy', 'AWS::Lambda::Function', 'AWS::ApiGatewayV2::Api',
   'AWS::ApiGatewayV2::Integration', 'AWS::Lambda::Permission', 'AWS::ApiGatewayV2::Route', 'AWS::ApiGatewayV2::Stage'];
 
@@ -61,7 +62,8 @@ for (const environment of ['staging', 'production'] as const) {
     assert.deepEqual(variables.DEMO_SESSION_SIGNING_SECRET_ARN, ref(ids.demo));
     // Resolve token values conservatively: 768 bytes/secret ARN and 255/table name.
     const bytes = Object.entries(variables).reduce((sum, [key, value]) => sum + Buffer.byteLength(key) +
-      (typeof value === 'string' ? Buffer.byteLength(value) : key === 'DYNAMODB_TABLE_NAME' ? 255 : 768), 0);
+      (typeof value === 'string' ? Buffer.byteLength(value) : key === 'DYNAMODB_TABLE_NAME' ? 255 :
+        key === 'CORS_ALLOWED_ORIGINS' ? 268 : 768), 0);
     assert.ok(bytes < 3072, `Environment exceeds headroom budget: ${bytes}`);
     assert.equal(variables.MAX_SYNC_EXPORT_BYTES, '4000000');
     assert.ok(Number(variables.MAX_SYNC_EXPORT_BYTES) < 6 * 1024 * 1024);
@@ -137,12 +139,12 @@ for (const environment of ['staging', 'production'] as const) {
     const variables = resources[ids.function].Properties.Environment.Variables;
     const runtime = JSON.parse(variables.LAMBDA_CORS_POLICY);
     assert.deepEqual(gateway, {
-      AllowCredentials: false, AllowOrigins: [`https://${environment}.invalid`],
+      AllowCredentials: false, AllowOrigins: [{ 'Fn::Join': ['', ['https://main.', { 'Fn::GetAtt': [ids.app, 'DefaultDomain'] }]] }],
       AllowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
       AllowHeaders: ['Accept', 'Authorization', 'Content-Type', 'Idempotency-Key', 'X-Request-ID'],
       ExposeHeaders: ['X-Request-ID', 'Content-Disposition'],
     });
-    assert.equal(variables.CORS_ALLOWED_ORIGINS, gateway.AllowOrigins.join(','));
+    assert.deepEqual(variables.CORS_ALLOWED_ORIGINS, gateway.AllowOrigins[0]);
     assert.deepEqual(runtime, { allow_methods: gateway.AllowMethods, allow_headers: gateway.AllowHeaders,
       expose_headers: gateway.ExposeHeaders, allow_credentials: gateway.AllowCredentials });
   });

@@ -120,7 +120,8 @@ npm --prefix infra run synth:staging
 npm --prefix infra run synth:production
 ```
 
-Frontend hosting definitions and AWS deployment remain later slices.
+Phase 3E adds independent static Amplify app/branch definitions and token-derived
+frontend/API wiring. Hosting is not deployed; AWS deployment remains Phase 4.
 The infra guide records the current open CDK bundled dependency advisory.
 
 Phase 3B now supplies the [backend Lambda ZIP build and validation](backend/README.md):
@@ -246,7 +247,7 @@ table. See [ADR 0007](docs/adr/0007-durable-workspace-manifest-and-erasure.md).
 - [Data export](docs/data-export.md) — current CSV export and future portability boundaries.
 - [Roadmap](docs/roadmap.md) — planned product and infrastructure work.
 - [Development log](docs/devlog.md) — implementation history, decisions, and validation notes.
-- [Production account readiness](docs/production-account-readiness.md) — Phase 1 audit and Phase 2/3A/3B/3C/3D implementation handoffs.
+- [Production account readiness](docs/production-account-readiness.md) — Phase 1 audit and Phase 2/3A/3B/3C/3D/3E implementation handoffs.
 - [Infrastructure foundation](infra/README.md) — environment contracts, local synth/testing, naming, and later resource insertion points.
 - [CDK environment decision](docs/adr/0008-aws-cdk-environment-foundation.md) — accepted Phase 3A boundary.
 - [Durable bootstrap decision](docs/adr/0005-durable-local-workspace-bootstrap.md) — accepted identity, readiness, recovery, and deferred safety boundaries.
@@ -262,11 +263,13 @@ complete, including the Phase 2C local data-safety foundation. AWS staging, real
 reminders, email delivery, and large asynchronous exports remain future phases
 rather than hidden dependencies of the current app.
 
-## Phase 3D infrastructure status
+## Phase 3E infrastructure status
 
-The backend AWS request path is now defined and validated locally: verified ZIP,
-Lambda, scoped IAM, generated signing secrets and HTTP API. Nothing is deployed.
-The frontend remains unchanged; the `.invalid` origins must be replaced in
-Phase 3E. Production authentication remains unavailable until Phase 5.
-See [ADR 0011](docs/adr/0011-lambda-http-api-security-boundary.md),
-[infra commands](infra/README.md) and [current handoff](docs/production-account-readiness.md#43-phase-3d-implementation-and-handoff).
+The full browser-to-backend topology is defined locally: static Amplify WEB
+hosting, branch-level public API configuration, exact App-domain-token CORS,
+and the unchanged verified backend. Each environment synthesizes 13 resources.
+Nothing is deployed and no frontend domain exists yet. Production auto-build
+is disabled and authentication remains unavailable until Phase 5.
+See [ADR 0012](docs/adr/0012-amplify-hosting-origin-wiring.md),
+[frontend build guide](frontend/README.md),
+[infra commands](infra/README.md) and [current handoff](docs/production-account-readiness.md#44-phase-3e-implementation-and-handoff).

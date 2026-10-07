@@ -1,4 +1,4 @@
-import { RemovalPolicy, Stack, Tags } from 'aws-cdk-lib';
+import { CfnParameter, RemovalPolicy, Stack, Tags } from 'aws-cdk-lib';
 import { AttributeType, BillingMode, ProjectionType, Table, TableClass, TableEncryption } from 'aws-cdk-lib/aws-dynamodb';
 import type { Construct } from 'constructs';
 import { validateEnvironmentConfig, type HireFluxEnvironmentConfig } from './config/environment';
@@ -6,12 +6,16 @@ import { BackendApi } from './backend/backend-api';
 import { verifyBackendArtifact, type BackendArtifact } from './backend/artifact';
 import type { Function } from 'aws-cdk-lib/aws-lambda';
 import type { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
+import type { CfnBranch } from 'aws-cdk-lib/aws-amplify';
+import { FrontendHosting } from './hosting/frontend-hosting';
 
 export class HireFluxStack extends Stack {
   public readonly workspaceTable: Table;
   public readonly backend: BackendApi;
   public readonly backendFunction: Function;
   public readonly httpApi: HttpApi;
+  public readonly frontendHosting: FrontendHosting;
+  public readonly frontendBranch: CfnBranch;
 
   constructor(scope: Construct, id: string, config: HireFluxEnvironmentConfig, artifact?: BackendArtifact) {
     validateEnvironmentConfig(config);
@@ -22,7 +26,7 @@ export class HireFluxStack extends Stack {
         ...(config.awsAccount === undefined ? {} : { account: config.awsAccount }),
       },
       analyticsReporting: false,
-      description: `HireFlux ${config.environmentName} backend request path (Phase 3D; not deployed).`,
+      description: `HireFlux ${config.environmentName} browser-to-backend definition (Phase 3E; not deployed).`,
     });
 
     for (const [key, value] of Object.entries(config.tags)) {
@@ -56,8 +60,15 @@ export class HireFluxStack extends Stack {
         projectionType: ProjectionType.ALL,
       });
     }
-    this.backend = new BackendApi(this, 'BackendApi', this.workspaceTable, config, artifact ?? verifyBackendArtifact());
+    const accessToken = new CfnParameter(this, 'AmplifyGitHubAccessToken', {
+      type: 'String', noEcho: true, minLength: 1, maxLength: 4096,
+      description: 'Deploy-time Amplify GitHub repository authorization; Phase 4 prerequisite.',
+    });
+    this.frontendHosting = new FrontendHosting(this, 'FrontendHosting', config, accessToken.valueAsString);
+    this.backend = new BackendApi(this, 'BackendApi', this.workspaceTable, config,
+      artifact ?? verifyBackendArtifact(), this.frontendHosting.frontendOrigin);
     this.backendFunction = this.backend.backendFunction;
     this.httpApi = this.backend.httpApi;
+    this.frontendBranch = this.frontendHosting.addBranch(this.httpApi.apiEndpoint);
   }
 }

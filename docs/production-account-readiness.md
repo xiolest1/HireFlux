@@ -2,16 +2,18 @@
 
 Date: 2026-10-05. Status: architecture proposal for review, not an accepted implementation ADR.
 
-**Current Phase 3D update (2026-10-06):** both environment templates now
-define the backend request path: verified Python 3.14/x86_64 ZIP, one Lambda,
-scoped execution IAM, two generated signing secrets, and HTTP API payload 2.0.
-Each has 11 resources and zero outputs; the Phase 3C table identity/schema and
-production protections remain intact. Nothing is deployed. Sentinel origins
-remain fail-closed pending Phase 3E; production Cognito authentication remains
-unavailable pending Phase 5. See [ADR 0011](adr/0011-lambda-http-api-security-boundary.md)
-and [section 43](#43-phase-3d-implementation-and-handoff). Historical updates below
-are completion snapshots. Backup/privacy/rotation qualification remains Phase 6.
-The bundled CDK dependency advisory remains open and is reported in section 43.
+**Current Phase 3E update (2026-10-06):** both environment templates now
+define the full browser-to-backend path with separate static Amplify App/Branch
+resources, NoEcho GitHub deployment input, public branch-level API/site variables
+and exact App.DefaultDomain-derived CORS. Each has 13 resources and zero outputs.
+The graph is acyclic App → backend → Branch; SPA/header/build checks pass.
+No hosting/domain exists and no AWS/GitHub authorization or deployment occurred.
+Production auto-build is disabled and Cognito remains unavailable until Phase 5.
+The Phase 3D runtime ZIP and all 71 backend runtime sources remain unchanged.
+See [ADR 0012](adr/0012-amplify-hosting-origin-wiring.md) and
+[section 44](#44-phase-3e-implementation-and-handoff). Earlier updates are
+historical completion snapshots. Phase 3F is next; the CDK bundled advisory
+remains open and production hardening/launch qualification remains later work.
 
 **Phase 3A implementation update (2026-10-06):** the standalone TypeScript CDK
 foundation now exists. Explicit staging/production configuration composes one
@@ -2861,3 +2863,214 @@ BackendApiHttpApiDefaultStage89B5186D — AWS::ApiGatewayV2::Stage
 69. **Phase 3E blocker:** none for local hosting/origin definition work. Open CDK advisory remains documented; AWS launch and production authentication remain later gates.
 
 Is the HireFlux backend AWS request path now safely defined — verified Lambda artifact, least-privilege IAM, Secrets Manager signing material, HTTP API payload v2, and exact DynamoDB access — so that Phase 3E can add the actual frontend hosting/origin without changing backend security architecture?
+
+## 44. Phase 3E implementation and handoff
+
+Date: 2026-10-06. Completed locally; no AWS deployment/live hosting.
+
+1. **Enabled:** complete locally defined browser → Amplify Vite SPA → HTTP API → Lambda → DynamoDB topology, preserving backend security; no deployed hosting.
+
+2. **Module paths:** infra/lib/hosting/frontend-hosting.ts composes hosting; infra/lib/hireflux-stack.ts connects App → backend → Branch; infra/lib/config/environment.ts owns typed source/build policy. Frontend hosting validators live in frontend/scripts/.
+
+3. **App identity:** FrontendHosting/App; logical ID FrontendHostingApp3EC0FC15. Names hireflux-staging-frontend / hireflux-production-frontend.
+
+4. **Branch identity:** FrontendHosting/Branch; logical ID FrontendHostingBranchB5734B41.
+
+5. **Abstraction:** aws_amplify.CfnApp/CfnBranch for exact stable CloudFormation properties and dependency control.
+
+6. **Platform:** static WEB; no WEB_COMPUTE/WEB_DYNAMIC/SSR/Amplify backend/compute role.
+
+7. **Repository:** https://github.com/xiolest1/HireFlux, verified against local remote https://github.com/xiolest1/HireFlux.git. Source config is explicit, not dynamically discovered during synth.
+
+8. **GitHub input:** AmplifyGitHubAccessToken, String, 1–4096 characters, used solely by App.AccessToken. No value is supplied here; Phase 4 owns authorization/operator handling.
+
+9. **NoEcho/default:** NoEcho=true, no Default. Tests prove its only Ref path is App.AccessToken, with no output/build/Lambda/metadata use.
+
+10. **Staging source:** main, explicit DNS-safe configured branch.
+
+11. **Production source:** main in its independent app. Existing CI targets main; older develop/staging documentation was a proposal, superseded by this explicit policy.
+
+12. **Staging stage:** BETA.
+
+13. **Production stage:** PRODUCTION, a branch label rather than readiness qualification.
+
+14. **Staging auto-build:** true after future repository connection/deployment; no build/job was started here.
+
+15. **Production auto-build:** false; no automatic publication on pushes. Backend remains cognito/unavailable.
+
+16. **Previews:** false; automatic branch creation and branch auto-deletion disabled. Exactly one explicit branch per app.
+
+17. **Monorepo:** appRoot=frontend, matching static App AMPLIFY_MONOREPO_APP_ROOT=frontend. Commands run from frontend, not repository/backend/infra root.
+
+18. **Exact build specification:**
+
+```yaml
+version: 1
+applications:
+  - appRoot: frontend
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - nvm install 22
+            - nvm use 22
+            - npm ci
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        baseDirectory: dist
+        files:
+          - '**/*'
+```
+
+19. **Node policy:** nvm install 22 and nvm use 22, matching existing CI Node major and frontend >=22.12 requirement; never latest. No new repository-wide toolchain policy.
+
+20. **Dependency installation:** npm ci against committed frontend/package-lock.json. js-yaml 4.3.2 was already locked and is now explicitly dev-only; all other package resolutions/lock metadata remain identical.
+
+21. **Artifacts:** dist relative to frontend appRoot; files **/*. Source maps retain the disabled Vite default.
+
+22. **Staging Branch variables:** VITE_API_BASE_URL=GetAtt own HTTP API.ApiEndpoint, VITE_WORKSPACE_MODE=demo, VITE_PUBLIC_SITE_URL=https://main.<own App.DefaultDomain>. App contains only AMPLIFY_MONOREPO_APP_ROOT=frontend.
+
+23. **Production Branch variables:** the same public names using production-local API/App tokens, demo adapter, auto-build false and unavailable backend Cognito. Phase 5 must replace the account/session model before launch.
+
+24. **Public only:** no signing key, secret ARN, database/credential input or GitHub parameter enters Vite/Branch variables. API and site URLs are public by design.
+
+25. **Frontend origin:** construct once as configured branch string + App.attrDefaultDomain: https://main.${DefaultDomain}. No Branch attribute, hard-coded App ID, copied URL or live lookup.
+
+26. **Graph:** prerequisite direction App → HTTP API/Lambda CORS → Branch, with App → Branch also present. Existing table/role/secret dependencies remain; all Ref/GetAtt/Sub/DependsOn edges are acyclic.
+
+27. **No cycle:** App contains no API/Lambda/Branch reference; backend contains no Branch reference; Branch consumes App and API. Endpoint-on-App and origin-from-Branch mutation tests both fail as intended.
+
+28. **Staging CORS:** Fn::Join of empty separator with [https://main., Fn::GetAtt(FrontendHostingApp3EC0FC15, DefaultDomain)] in the staging stack. Identical expression feeds gateway AllowOrigins and Lambda CORS_ALLOWED_ORIGINS.
+
+29. **Production CORS:** the same expression resolved against the production-owned App, never staging. Separate app identity makes the future origins distinct even though branch names match.
+
+30. **Sentinels:** no staging.invalid/production.invalid, localhost, wildcard CORS origin or guessed Amplify hostname in actual environment templates.
+
+31. **Methods:** GET, POST, PATCH, DELETE, OPTIONS, unchanged.
+
+32. **Request headers:** Accept, Authorization, Content-Type, Idempotency-Key, X-Request-ID, unchanged. Audit found no additional client requirement.
+
+33. **Exposed headers:** X-Request-ID, Content-Disposition, unchanged.
+
+34. **Credentials:** false, unchanged bearer-header model; no credentialed-cookie auth added.
+
+35. **SPA rewrite:** 200 to /index.html using the AWS SPA extension-exclusion expression, extended for jpeg/mjs/avif/html/pdf/wasm/webmanifest in addition to standard JS/CSS/images/fonts/map/JSON. Source: </^[^.]+$|\.(?!(css|gif|ico|jpg|jpeg|js|mjs|png|txt|svg|woff|woff2|ttf|map|json|webp|avif|html|pdf|wasm|webmanifest)$)([^.]+$)/>
+
+36. **Deep links:** regex tests pass for /, applications/details/edit, interviews and settings; known assets/favicon are preserved. Loopback browser QA at 390/1280px passes protected deep-link redirect, SPA HTTP 200 and missing JS HTTP 404. Actual Amplify refresh behavior remains Phase 4 smoke validation.
+
+37. **Header location/syntax:** repository-root customHttp.yml, applications:[{appRoot:frontend,customHeaders:...}]. Existing monorepo syntax preserved; aligned template/helper now renders a static policy. No competing App.CustomHeaders.
+
+38. **Headers:** HSTS, nosniff, DENY frame policy, strict-origin-when-cross-origin referrer, existing Permissions-Policy, COOP/CORP and CSP preserved. Scripts self-only; existing style inline allowance remains.
+
+39. **CSP egress:** connect-src self plus https://*.execute-api.us-east-1.amazonaws.com; no connect-src * or unrestricted https:. Generated API ID prevents static exact endpoint source without conflicting App dependency. CORS remains exact. Future reviewed custom API domain could narrow egress.
+
+40. **Header checks:** 4/4 parsed YAML/security tests pass, including wrong-root, duplicate/missing/weakened headers and broad CSP negatives. Browser confirms regional synthetic API fetch allowed and unrelated HTTPS blocked, with zero unexpected external requests.
+
+41. **Frontend build:** final synthetic deployment-style npm build passes using Node 22.20.0, API https://phase3e-example.execute-api.us-east-1.amazonaws.com, site https://main.phase3e-example.amplifyapp.com and demo mode. No real API call. Windows used --script-shell pwsh for the ampersand path; no persisted setting changed.
+
+42. **Built scan:** 39 files; index/assets and expected public URLs present, no private config/signing/credential inputs, localhost API, unresolved placeholders or source maps. Negative scanner tests 4/4 pass. No bundle dump.
+
+43. **Phase 3D IAM:** all exact positive/negative role/secret assertions pass; no Scan, DynamoDB wildcard/admin, secret administration, extra role, Function URL, VPC or gateway authorizer. Payload 2.0, secret lifecycle and production fail-closed auth unchanged.
+
+44. **Schema parity:** fresh backend export matches both actual templates; PK/SK, three GSIs/projections, expires_at TTL, PAY_PER_REQUEST and production protections unchanged.
+
+45. **Artifact:** unchanged SHA-256 950c8d1fbc3c4872dba29d6e4eddd3439f304509cbcd5b0ca370157cc15c4bcf; 26,646,067 compressed bytes, 57,540,712 expanded, 3,756 files. All 71 backend runtime sources, pyproject/uv lock/builder inputs match HEAD. Real synthesis verifies/stages this artifact; no rebuild/official-image rerun needed.
+
+46. **Staging inventory:** 13 resources, zero outputs. Exact IDs/types/purposes:
+
+```text
+WorkspaceTable68AC2584 — AWS::DynamoDB::Table — existing workspace data
+FrontendHostingApp3EC0FC15 — AWS::Amplify::App — static repository/build/header hosting definition
+FrontendHostingBranchB5734B41 — AWS::Amplify::Branch — explicit main branch and public build configuration
+BackendApiCursorSigningSecret5EF895FB — AWS::SecretsManager::Secret — generated signing key
+BackendApiDemoSessionSigningSecretB7E1C367 — AWS::SecretsManager::Secret — generated signing key
+BackendApiExecutionRoleF9E94D3B — AWS::IAM::Role — Lambda execution trust/basic logging
+BackendApiExecutionRoleDefaultPolicyDE57D6A3 — AWS::IAM::Policy — exact table/index/secret permissions
+BackendApiBackendFunctionFFB5248D — AWS::Lambda::Function — verified FastAPI/Mangum ZIP
+BackendApiHttpApiB4B1202A — AWS::ApiGatewayV2::Api — HTTP entry point and exact CORS
+BackendApiHttpApiDefaultRouteBackendIntegrationC791C627 — AWS::ApiGatewayV2::Integration — payload-v2 proxy
+BackendApiHttpApiDefaultRouteBackendIntegrationPermission521AD465 — AWS::Lambda::Permission — scoped gateway invocation
+BackendApiHttpApiDefaultRoute408A2CCF — AWS::ApiGatewayV2::Route — $default routing
+BackendApiHttpApiDefaultStage89B5186D — AWS::ApiGatewayV2::Stage — $default auto-deploy definition
+```
+
+47. **Production inventory:** exactly the same 13 logical IDs/types/purposes listed in item 46, owned independently by hireflux-production. Zero outputs; production data/secret retention and table deletion/PITR protections remain.
+
+48. **Parameters:** AmplifyGitHubAccessToken (String, NoEcho, no default, 1–4096) and existing BootstrapVersion (AWS::SSM::Parameter::Value<String>, default /cdk-bootstrap/hnb659fds/version). Bootstrap reference is a future deployment contract, not a synth lookup.
+
+49. **Unexpected resources:** none. Exactly two Amplify additions; no S3 hosting bucket, CloudFront distribution, service/compute role, Cognito, custom domain/DNS/certificate/WAF, KMS, layers/URL, VPC/database/cache/queue/event/workflow/custom resource.
+
+50. **Isolation:** tests pass for independently bound staging/production stacks; distinct App/Branch objects/origin tokens, only same-stack API/domain references, no imports or stack dependencies.
+
+51. **Cycle checks:** full graph acyclic in both templates; negative App→API and API→Branch mutations rejected. Synthesis success is supplemented with explicit graph assertions.
+
+52. **Frontend results:** locked install, lint and typecheck pass; final full Vitest 46 files / 364 tests pass in 72.43s with maxWorkers=2 and unchanged timeouts. Initial parallel run under concurrent load failed five cases (four timeouts); final full rerun passes. Headers 4/4, scanner negatives 4/4, final build/scan and loopback Chromium QA pass. Existing jsdom navigation diagnostic remains. Full visual snapshots/Playwright suite not rerun: frontend runtime/UI/session source unchanged; no live Amplify smoke test.
+
+53. **Infra results:** typecheck/build pass; 99/99 unit tests pass (13.296s), 4/4 real-artifact CLI integrations pass (25.232s), both documented synths and fresh schema parity pass. Actual template inventories, parameter/credential/sentinel/family scans and build-spec YAML semantics reviewed.
+
+54. **Backend results:** full cross-stack gates run despite no source changes: Ruff/format pass (111 files), strict Mypy pass (71 runtime files), pytest 419 passed (140.41s) with existing Starlette/httpx warning. No behavioral/policy/test change.
+
+55. **Audit:** frontend zero vulnerabilities. CDK remains one high bundled brace-expansion 5.0.9 finding under minimatch 10.2.5; library 2.272.0 / CLI 2.1144.0 are latest rechecked. Same three GHSA advisories, no compatible upstream fix, override/manual patch/suppression. No clean CDK audit claimed.
+
+56. **CI:** all existing frontend/backend/artifact/infra gates retained; added hosted-build negatives, synthetic public production build inputs and real artifact scan. Infra still waits for backend+validated ZIP. YAML/public-only configuration reviewed locally; remote CI not run. No AWS/OIDC/deploy/token step.
+
+57. **Documentation:** README, ARCHITECTURE, new frontend guide, infra guide, architecture index, deployment environments, roadmap, dev log, readiness section 44 and new ADR 0012. Phase 4 prerequisites recorded; earlier handoffs remain historical.
+
+58. **Changed files:** exact final inventory below. No backend runtime/lock/builder, frontend runtime/UI/session, .env or Diagrams changes. Generated assemblies/builds/validation helpers/evidence remain ignored. No commit/push.
+
+```text
+ M .github/workflows/quality.yml
+ M ARCHITECTURE.md
+ M README.md
+ M customHttp.template.yml
+ M customHttp.yml
+ M docs/architecture.md
+ M docs/deployment-environments.md
+ M docs/devlog.md
+ M docs/production-account-readiness.md
+ M docs/roadmap.md
+ M frontend/package-lock.json
+ M frontend/package.json
+ M frontend/scripts/render-hosting-headers.mjs
+ M frontend/scripts/render-hosting-headers.test.mjs
+ M infra/README.md
+ M infra/lib/backend/backend-api.ts
+ M infra/lib/config/environment.ts
+ M infra/lib/hireflux-stack.ts
+ M infra/scripts/check-schema-parity.mjs
+ M infra/test/backend.test.ts
+ M infra/test/cli.integration.ts
+ M infra/test/config.test.ts
+ M infra/test/dynamodb.test.ts
+ M infra/test/stack.test.ts
+?? docs/adr/0012-amplify-hosting-origin-wiring.md
+?? frontend/README.md
+?? frontend/scripts/verify-hosted-build.mjs
+?? frontend/scripts/verify-hosted-build.test.mjs
+?? infra/lib/hosting/frontend-hosting.ts
+?? infra/test/hosting.test.ts
+```
+
+59. **GitHub credential:** none created, supplied, committed or embedded. Only a NoEcho input reference exists; no GitHub installation/account/API action.
+
+60. **AWS credentials/secrets:** none introduced. Existing signing secret generation/ARN-only configuration intact; no secret enters public build inputs or output.
+
+61. **External actions:** no AWS/GitHub account lookup/mutation/authorization, bootstrap, AWS upload/deployment or live hosting build. Read-only AWS documentation and npm registry/package access are validation research/tooling, not account actions.
+
+62. **Phase 4 prerequisites:** account binding/review and CDK bootstrap; regional Amplify GitHub App authorization; securely available GitHub token for NoEcho input through a reviewed operator workflow; clean CI/qualified controls; staging-only deploy; observe build, confirm domain, end-to-end smoke (routes/static 404, headers/CORS, ownership/reset/expiry). Recorded only, none performed; no token shell-history recipe.
+
+63. **Deferred 3F:** explicit log retention/observability/alarms, API throttling, Lambda concurrency and cost controls.
+
+64. **Deferred 3G:** full isolation/CloudFormation/resource/security/cost readiness qualification; open CDK audit follow-up.
+
+65. **Deferred 4:** authorization/bootstrap and actual staging-only deployment/live Amplify+backend smoke validation.
+
+66. **Deferred 5:** Cognito, real accounts, OAuth/PKCE/JWT verification and demo/account session coexistence; production frontend mode must be intentionally reviewed before launch.
+
+67. **Deferred 6:** production hardening, privacy/backup/restore/erasure qualification and signing-key rotation/cache refresh.
+
+68. **Phase 3F blocker:** none for local definitions. CDK advisory remains open; repository authorization, staging deployment and production authentication are still later gates.
+
+Is HireFlux's complete browser-to-backend AWS topology now safely defined — Amplify-hosted Vite frontend, token-derived exact CORS origin, same-stack HTTP API endpoint injection, SPA routing, security headers, and environment isolation — so that Phase 3F can add observability, throttling and cost controls without changing application topology?

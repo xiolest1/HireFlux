@@ -21,6 +21,8 @@ Detailed supporting contracts remain in this directory:
 - [Lambda runtime and packaging decision](adr/0009-lambda-runtime-and-deterministic-packaging.md)
 - [DynamoDB cloud schema and lifecycle decision](adr/0010-dynamodb-cloud-lifecycle.md)
 - [Lambda, IAM, secrets and HTTP API boundary](adr/0011-lambda-http-api-security-boundary.md)
+- [Static Amplify hosting and origin wiring](adr/0012-amplify-hosting-origin-wiring.md)
+- [Frontend hosting/build validation](../frontend/README.md)
 - [Durable local workspace bootstrap decision](adr/0005-durable-local-workspace-bootstrap.md)
 - [Frontend workspace session boundary](adr/0006-frontend-workspace-session-boundary.md)
 - [Durable manifest, write guards, and erasure](adr/0007-durable-workspace-manifest-and-erasure.md)

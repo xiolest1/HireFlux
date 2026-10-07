@@ -41,9 +41,13 @@ AWS resources and real persistent browser accounts are not deployed.
   generated signing secrets read at cold start, shared fail-closed CORS policy,
   production Cognito-unavailable semantics and bounded proxy response encoding.
   See [ADR 0011](adr/0011-lambda-http-api-security-boundary.md). Nothing deployed.
-- **Phase 3E — next, not started:** frontend hosting/Amplify integration and
-  replacement of the separate staging/production `.invalid` sentinel origins.
-- **Phase 3F/3G — deferred:** observability, alarms, throttling/cost controls,
+- **Phase 3E — completed locally:** independent static Amplify app/branch,
+  NoEcho deployment credential input, frontend monorepo build, token-derived
+  exact CORS origin, branch-level API injection, acyclic references, SPA/header
+  validation and deployment-style artifact scans. See
+  [ADR 0012](adr/0012-amplify-hosting-origin-wiring.md). No hosting deployed.
+- **Phase 3F — next, not started:** observability, alarms, throttling/cost controls.
+- **Phase 3G — deferred:**
   comprehensive isolation assertions, and template review. All Phase 3 slices
   stop at local definition/synthesis/tests.
 - **Phase 4 — deferred:** AWS staging infrastructure and the existing demo running

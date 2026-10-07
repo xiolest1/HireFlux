@@ -42,9 +42,9 @@ for (const environment of ['staging', 'production'] as const) {
           existsSync(auditPath) ? readFileSync(auditPath, 'utf8') : 'No network attempts expected.');
         const template = readFileSync(join(outdir, `HireFlux-${environment}.template.json`), 'utf8');
         const parsed = JSON.parse(template);
-        assert.equal(Object.keys(parsed.Resources).length, 11);
+        assert.equal(Object.keys(parsed.Resources).length, 13);
         assert.deepEqual(Object.values(parsed.Resources).map((resource: unknown) =>
-          (resource as { Type: string }).Type), ['AWS::DynamoDB::Table', 'AWS::SecretsManager::Secret', 'AWS::SecretsManager::Secret', 'AWS::IAM::Role', 'AWS::IAM::Policy', 'AWS::Lambda::Function', 'AWS::ApiGatewayV2::Api', 'AWS::ApiGatewayV2::Integration', 'AWS::Lambda::Permission', 'AWS::ApiGatewayV2::Route', 'AWS::ApiGatewayV2::Stage']);
+          (resource as { Type: string }).Type), ['AWS::DynamoDB::Table', 'AWS::Amplify::App', 'AWS::Amplify::Branch', 'AWS::SecretsManager::Secret', 'AWS::SecretsManager::Secret', 'AWS::IAM::Role', 'AWS::IAM::Policy', 'AWS::Lambda::Function', 'AWS::ApiGatewayV2::Api', 'AWS::ApiGatewayV2::Integration', 'AWS::Lambda::Permission', 'AWS::ApiGatewayV2::Route', 'AWS::ApiGatewayV2::Stage']);
         assert.deepEqual(parsed.Outputs ?? {}, {});
         templates.push(template);
         const accepted = JSON.parse(readFileSync(join(packageRoot, '../artifacts/lambda/hireflux-backend-lambda.manifest.json'), 'utf8'));
@@ -83,9 +83,9 @@ test('explicit environment accounts synthesize independently without credential 
       const artifact = new CloudAssembly(outdir).getStackArtifact(`HireFlux-${environment}`);
       assert.equal(artifact.environment.account, account);
       assert.equal(artifact.environment.region, 'us-east-1');
-      assert.equal(Object.keys(artifact.template.Resources).length, 11);
+      assert.equal(Object.keys(artifact.template.Resources).length, 13);
       assert.deepEqual(Object.values(artifact.template.Resources).map((resource: unknown) =>
-        (resource as { Type: string }).Type), ['AWS::DynamoDB::Table', 'AWS::SecretsManager::Secret', 'AWS::SecretsManager::Secret', 'AWS::IAM::Role', 'AWS::IAM::Policy', 'AWS::Lambda::Function', 'AWS::ApiGatewayV2::Api', 'AWS::ApiGatewayV2::Integration', 'AWS::Lambda::Permission', 'AWS::ApiGatewayV2::Route', 'AWS::ApiGatewayV2::Stage']);
+        (resource as { Type: string }).Type), ['AWS::DynamoDB::Table', 'AWS::Amplify::App', 'AWS::Amplify::Branch', 'AWS::SecretsManager::Secret', 'AWS::SecretsManager::Secret', 'AWS::IAM::Role', 'AWS::IAM::Policy', 'AWS::Lambda::Function', 'AWS::ApiGatewayV2::Api', 'AWS::ApiGatewayV2::Integration', 'AWS::Lambda::Permission', 'AWS::ApiGatewayV2::Route', 'AWS::ApiGatewayV2::Stage']);
     }
   } finally {
     rmSync(scratch, { recursive: true, force: true });

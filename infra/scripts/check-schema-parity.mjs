@@ -20,7 +20,7 @@ for (const environment of ['staging', 'production']) {
     const stack = composeEnvironment(new App({ outdir: scratch, analyticsReporting: false, context: { environment } }));
     const template = Template.fromStack(stack);
     const resources = template.toJSON().Resources;
-    assert.equal(Object.keys(resources).length, 11, 'Unexpected backend resource inventory.');
+    assert.equal(Object.keys(resources).length, 13, 'Unexpected browser-to-backend resource inventory.');
     const tables = template.findResources('AWS::DynamoDB::Table');
     assert.equal(Object.keys(tables).length, 1, 'Exactly one DynamoDB table is required.');
     const [logicalId, table] = Object.entries(tables)[0];

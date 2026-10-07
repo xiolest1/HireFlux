@@ -2,7 +2,9 @@
 
 Phase 3A provides a standalone TypeScript AWS CDK v2 package, a shared environment
 stack, and local validation. Phase 3C defines one DynamoDB table per environment; Phase 3D now defines
-its Lambda, IAM, signing secrets and HTTP API request path in each local template. Nothing is deployed. The product still runs
+its Lambda, IAM, signing secrets and HTTP API request path. Phase 3E adds independent
+static Amplify apps/branches and exact token-derived frontend/API wiring.
+Nothing is deployed. The product still runs
 through Vite, FastAPI, and DynamoDB Local.
 
 ## Install and validate
@@ -41,9 +43,11 @@ npm --prefix infra run cdk -- synth -c environment=production --output cdk.out/p
 
 `lib/config/environment.ts` owns the readonly configuration: `environmentName`,
 `stackName`, `resourceNamePrefix`, `awsRegion`, optional `awsAccount`, and common
-tags, immutable `data` lifecycle policy and readonly `backend` auth/secret/CORS policy. Stacks and prefixes are `hireflux-staging` and `hireflux-production`.
+tags, immutable `data` lifecycle policy, readonly `backend` auth/secret/CORS policy
+and explicit `hosting` repository/branch/build policy. Stacks and prefixes are `hireflux-staging` and `hireflux-production`.
 Both use the existing repository region `us-east-1`; changing it requires a
-reviewed source change. Origins are distinct reserved `.invalid` sentinels until Phase 3E. Data policy
+reviewed source change. Origins derive from each App.DefaultDomain token and the
+validated configured main branch, with no literal sentinel or guessed hostname. Data policy
 sets PITR, deletion protection and removal policy declaratively; validation rejects
 cross-wiring or weakening the selected environment's accepted posture.
 
@@ -83,9 +87,10 @@ produce the same template; toolchain upgrades require renewed review.
 production outputs have separate directories. Do not edit or commit assemblies,
 CloudFormation JSON, or context lookup caches. No lookup cache is required here.
 
-Each template contains **11 reviewed resources and zero outputs**: the existing
+Each template contains **13 reviewed resources and zero outputs**: the existing
 DynamoDB table, two generated signing secrets, execution role and data policy,
-one Lambda, HTTP API, integration, invoke permission, route and stage. Assemblies
+one Lambda, HTTP API, integration, invoke permission, route/stage and static
+Amplify App/Branch. Parameters are the NoEcho GitHub input and BootstrapVersion. Assemblies
 also reference the future bootstrap asset bucket/roles. No application bucket or
 AWS lookup is created. These local references do not upload assets or bootstrap
 an account. Real synth requires the verified ZIP/manifest; it never invokes Python,
@@ -192,7 +197,8 @@ environment conditionals through constructs.
 - **3C (completed locally):** exact DynamoDB schema and validated lifecycle policy,
   stable identity, schema parity and one table per environment. No deployment.
 - **3D (completed locally):** Lambda, explicit least-privilege IAM, generated signing secrets and HTTP API.
-- **3E:** frontend hosting/Amplify integration and actual public origin contracts.
+- **3E (completed locally):** static Amplify app/branch, deployment input, exact
+  origin/API token wiring, acyclic graph and SPA/header/build validation.
 - **3F/3G:** observability, throttling/cost controls, comprehensive isolation
   assertions, and synthesized-template review.
 - **Phase 4:** bootstrap/deployment prerequisites and actual staging deployment.
@@ -325,13 +331,14 @@ SourceArn to the stack's API/account/region with /*/* route/method suffix. There
 is no direct public function ingress, authorizer, custom domain or API key.
 
 One readonly CORS policy drives gateway and runtime. Origins are
-https://staging.invalid and https://production.invalid; methods GET/POST/PATCH/
+the configured main branch plus the stack-local Amplify App.DefaultDomain token;
+methods GET/POST/PATCH/
 DELETE/OPTIONS; request headers Accept, Authorization, Content-Type,
 Idempotency-Key, X-Request-ID; exposed X-Request-ID and Content-Disposition;
 allowCredentials false. The frontend uses bearer headers, no credentialed cookies,
 and version fields in bodies rather than If-Match/ETag. Gateway manages deployed
 CORS/preflight; FastAPI receives the same policy for parity/direct ASGI behavior.
-Phase 3E replaces sentinel origins before any Phase 4 staging deployment.
+Phase 3E replaces the sentinel with that exact token expression. No domain is live.
 
 The 4,000,000-byte public export limit is unchanged. Lambda's 6 MiB synchronous
 envelope is narrower than API Gateway's 10 MB payload limit. Large quote/backslash
@@ -352,3 +359,65 @@ pattern or bundling. This Node dependency is absent from the Python artifact.
 
 See [ADR 0011](../docs/adr/0011-lambda-http-api-security-boundary.md) and
 [current handoff](../docs/production-account-readiness.md#43-phase-3d-implementation-and-handoff).
+
+## Static frontend hosting and origin wiring (Phase 3E)
+
+`lib/hosting/frontend-hosting.ts` uses CfnApp/CfnBranch for exact property and
+dependency control. Each stack owns FrontendHosting/App and Branch, with stable
+logical IDs FrontendHostingApp3EC0FC15 and FrontendHostingBranchB5734B41.
+Names are hireflux-staging-frontend and hireflux-production-frontend. Platform
+is WEB. Repository is the verified https://github.com/xiolest1/HireFlux.
+Both source main; staging is BETA/auto-build true, production PRODUCTION/false.
+No role, basic auth, SSR/backend, auto-created branch or PR preview is added.
+Both hosting resources use Delete removal/replacement; protected data/secret
+lifecycles remain unchanged.
+
+The stack defines AmplifyGitHubAccessToken: String, NoEcho true, no default,
+length 1–4096; only App.AccessToken references it. No credential value is needed
+for synthesis. App's only environment value is AMPLIFY_MONOREPO_APP_ROOT=frontend.
+Its monorepo build selects Node 22 through nvm install/use, npm ci, npm run build,
+publishing dist/** from appRoot=frontend. No repository amplify.yml overrides it.
+
+Branch receives only VITE_API_BASE_URL=the local HTTP API endpoint token,
+VITE_WORKSPACE_MODE=demo, and VITE_PUBLIC_SITE_URL=the local frontend-origin token.
+All are public. Production remains non-launch-ready with unavailable cognito
+backend auth and auto-build disabled. No new frontend adapter is invented.
+
+The origin is constructed once from the configured branch string and
+App.DefaultDomain: https://main.<DefaultDomain>. Both gateway and Lambda CORS
+use the same expression. App has no API/Branch reference, backend has no Branch
+reference, and Branch references App/API: prerequisite order App → backend →
+Branch. Tests traverse all Ref/GetAtt/Sub/DependsOn edges and reject both endpoint-
+on-App and origin-from-Branch cycle regressions. No copied URL, lookup, import,
+custom domain or .invalid sentinel remains in deployed templates.
+
+Repository customHttp.yml alone owns headers in applications/appRoot=frontend
+format. App.CustomHeaders is absent; the aligned template/helper use static
+regional execute-api CSP egress rather than an exact API-ID token. Other headers
+and directives remain. The SPA 200 regex rewrite excludes Vite/static extensions.
+[Frontend guide](../frontend/README.md) records build/header/scan commands,
+source-map posture and the Windows npm shell workaround.
+
+Each actual template now has 13 resources, zero outputs, the GitHub parameter
+and existing BootstrapVersion parameter. Unit fixtures remain ZIP-independent;
+real synth consumes the unchanged verified Phase 3D ZIP. Frontend build is an
+independent CI/local check, never executed by CDK. No GitHub/AWS account API is
+called during validation. Frontend CI adds synthetic public build inputs and
+hosted-artifact negative/real scans; deployment credentials remain absent.
+
+The Phase 3E npm registry recheck still reports one high bundled brace-expansion
+finding, with library 2.272.0 / CLI 2.1144.0 still current. No compatible upstream
+fix, override, patch or suppression is used. Review remains open; the frontend
+audit is clean, and js-yaml 4.3.2 is only promoted from the existing lock graph
+to an explicit development parser dependency.
+
+Phase 4 prerequisites, not performed: select/review account and CDK bootstrap,
+authorize the regional Amplify GitHub App for this repository, securely supply
+the NoEcho deployment credential through a reviewed operator workflow, require
+clean CI/qualified controls, deploy staging only, observe Amplify's build,
+confirm the generated origin and smoke-test deep links/static 404s/headers/CORS/
+demo identity isolation/reset/expiry end-to-end. No token shell recipe is included.
+Phase 3F controls, 3G qualification, Phase 5 Cognito and Phase 6 hardening remain.
+
+See [ADR 0012](../docs/adr/0012-amplify-hosting-origin-wiring.md) and
+[current handoff](../docs/production-account-readiness.md#44-phase-3e-implementation-and-handoff).

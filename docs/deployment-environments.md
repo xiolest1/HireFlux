@@ -29,14 +29,15 @@ deploys the existing demo to staging. Real Cognito accounts follow in Phase 5,
 after frontend sessions and the Phase 2C persistent-account safety foundation.
 
 Phase 3A defines the environment/configuration foundation under `infra/`;
-Phase 3D now adds the backend request-path resources. Select exact
+Phase 3D adds the backend and Phase 3E adds static frontend hosting/origin wiring. Select exact
 `environment=staging` context, or
 run `npm --prefix infra run synth:staging`. Stack `hireflux-staging` and namespace
 `hireflux-staging` are distinct from production. Region is explicitly `us-east-1`.
 The account is unbound by default; optional `stagingAccount` context must be a
 12-digit string. Branch and AWS profile do not select the CDK environment.
 
-- A `develop` or `staging` branch deploys to its own Amplify branch environment.
+- The explicit source branch is `main` in a separate staging Amplify app,
+  BETA stage, auto-build enabled; no automatic branch creation or PR previews.
 - The API, DynamoDB table, demo-session signing key, cursor key, CORS origin, logs, alarms, and throttles are separate from production.
 - The frontend receives staging-only `VITE_API_BASE_URL` and `VITE_PUBLIC_SITE_URL` values. Every `VITE_*` value is public and must never contain a secret.
 - Hosting-level access protection may be enabled while changes are being reviewed.
@@ -55,7 +56,8 @@ disables lookups/telemetry, and never deploys. Separate accounts are supported;
 future deployment must bind/review each target deliberately. See
 [infra guide](../infra/README.md) for the exact contract and open dependency finding.
 
-- Only reviewed `main` changes deploy to the public candidate-demo origin.
+- The separate production app also uses `main`, PRODUCTION stage, auto-build
+  disabled. No production build publication or working authentication is claimed.
 - Production uses a separate DynamoDB table and secret values supplied by the deployment platform.
 - Lambda uses its IAM execution role; deployed configuration omits local endpoints and explicit AWS credentials.
 - API Gateway throttling, constrained Lambda concurrency, a workspace record limit, short log retention, low budget alerts, and monitoring are release gates rather than assumptions in browser code.
@@ -100,7 +102,8 @@ uses the IAM execution-role chain; no keys are passed explicitly. Signing keys a
 Lambda cold start. Only ARNs enter Lambda configuration; no plaintext keys do.
 Build commands, size/determinism rules and the isolated official-image check are
 in the [backend guide](../backend/README.md). Real CDK synth requires the verified prebuilt artifact but never builds it;
-Python and Docker remain explicit packaging/validation tools. Frontend hosting remains Phase 3E.
+Python and Docker remain explicit packaging/validation tools. Phase 3E hosting
+is defined locally, with no frontend job during synthesis.
 
 ## Single-page application rewrite
 
@@ -108,17 +111,16 @@ Amplify must serve `/index.html` with status `200` for routes that do not look l
 
 ## Hosted security headers
 
-The repository root `customHttp.yml` is the fail-closed Amplify Hosting policy
+The repository root `customHttp.yml` is the canonical Amplify Hosting policy
 for the `frontend/` monorepo app. It applies a strict CSP, HTTPS enforcement,
 clickjacking protection, MIME sniffing protection, referrer and permissions
 policies, and cross-origin isolation headers to hosted responses. Its committed
-`connect-src` permits only `'self'`, so an unrendered deployment cannot send a
-demo bearer token to any external API. Before packaging each hosted environment,
-set that branch's exact `VITE_API_BASE_URL` and run
-`npm --prefix frontend run render:hosting-headers`. The command renders
-`customHttp.template.yml` into `customHttp.yml`, rejects HTTP, paths, and
-wildcards, and fails when the origin is missing. The rendered deployment policy
-then permits only `'self'` and that environment's exact HTTPS API origin.
+connect-src permits only self and https://*.execute-api.us-east-1.amazonaws.com.
+The narrow regional source supports generated API IDs while keeping App independent
+of API references; exact origin enforcement remains in backend CORS. The aligned
+template/render helper preserves the same static policy without URL inputs.
+No App.CustomHeaders duplicates it. This supersedes the earlier exact-API rendering
+workflow; header validation checks the complete parsed monorepo/CSP contract.
 
 The pre-React theme bootstrap lives in `frontend/public/theme-bootstrap.js`,
 so the policy does not need `unsafe-inline` in `script-src`. The existing
@@ -151,14 +153,15 @@ Before a release, verify direct navigation and refresh for every client route, a
 5. Review alarms, throttles, concurrency, TTL, log retention, and budget alerts.
 6. Promote the same reviewed revision to production and repeat the smoke checks.
 
-## Phase 3D deployment gates
+## Phase 3E deployment gates
 
-The current templates define 11 resources and no outputs per environment. They
+The current templates define 13 resources and no outputs per environment. They
 remain synthesis-only. CORS source of truth is the readonly environment backend
-policy: staging https://staging.invalid and production https://production.invalid,
-with explicit bearer-client methods/headers and allowCredentials false. These
-reserved sentinel origins are not hosted URLs; Phase 3E must replace them before
-Phase 4 staging deployment. HTTP API manages deployed CORS/preflight.
+policy with explicit bearer-client methods/headers and allowCredentials false.
+Each origin is https://main.<that stack's Amplify App.DefaultDomain>, represented
+as CloudFormation tokens rather than an existing hosted URL. Lambda and HTTP API
+receive the same expression. No .invalid sentinel appears in either template.
+HTTP API manages deployed CORS/preflight.
 
 Staging is demo; production is cognito with the existing authentication-unavailable
 503 response. No JWT verifier, login or demo/Cognito coexistence is implemented.
@@ -167,3 +170,20 @@ Two signing secrets are generated server-side, with staging Delete/Delete and
 production Retain/Retain lifecycle; only ARNs enter Lambda configuration. No
 rotation or historical erasure guarantee is added. Logs use basic runtime
 permissions; retention/alarms/concurrency/throttling remain Phase 3F.
+
+The static WEB App requires only an AmplifyGitHubAccessToken NoEcho/no-default
+deployment parameter; its sole use is App.AccessToken. App contains the static
+monorepo root; Branch contains API/site URL and demo workspace mode build inputs.
+App → backend → Branch is acyclic. No compute/service role, custom domain,
+Amplify backend or preview environment exists. See
+[ADR 0012](adr/0012-amplify-hosting-origin-wiring.md) and
+[frontend build checks](../frontend/README.md).
+
+Phase 4 prerequisites are recorded, not performed: select/bind the AWS account,
+review/bootstrap CDK, authorize the regional Amplify GitHub App for this repository,
+securely supply its GitHub credential through the NoEcho input, require clean CI
+and qualified controls, deploy staging only, observe the frontend build, confirm
+the generated origin and smoke-test browser → API → Lambda → DynamoDB, including
+deep links, missing assets, headers/CORS, identity isolation, reset and expiry.
+Phase 4 must define the secure operator workflow; no token command/history recipe
+or live authorization is provided here. Production remains behind later gates.

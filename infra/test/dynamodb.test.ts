@@ -15,7 +15,7 @@ for (const environment of ['staging', 'production'] as const) {
     const json = template.toJSON();
     const tables = template.findResources('AWS::DynamoDB::Table');
     assert.deepEqual(Object.keys(tables), ['WorkspaceTable68AC2584']);
-    assert.equal(Object.keys(json.Resources).length, 11);
+    assert.equal(Object.keys(json.Resources).length, 13);
     assert.deepEqual(json.Outputs ?? {}, {});
     const table = tables.WorkspaceTable68AC2584;
     assert.ok(table);

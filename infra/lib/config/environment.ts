@@ -25,6 +25,14 @@ export interface HireFluxEnvironmentConfig {
     secretRemovalPolicy: 'DESTROY' | 'RETAIN';
     cors: DeployedCorsPolicy;
   }>;
+  readonly hosting: Readonly<{
+    repositoryUrl: string;
+    sourceBranch: string;
+    stage: 'BETA' | 'PRODUCTION';
+    autoBuild: boolean;
+    appRoot: 'frontend';
+    workspaceMode: 'demo';
+  }>;
   readonly tags: Readonly<{
     Project: 'HireFlux';
     Environment: EnvironmentName;
@@ -33,7 +41,6 @@ export interface HireFluxEnvironmentConfig {
 }
 
 export interface DeployedCorsPolicy {
-  readonly allowOrigins: readonly string[];
   readonly allowMethods: readonly ('GET' | 'POST' | 'PATCH' | 'DELETE' | 'OPTIONS')[];
   readonly allowHeaders: readonly string[];
   readonly exposeHeaders: readonly string[];
@@ -49,7 +56,6 @@ function backendConfig(environment: EnvironmentName): HireFluxEnvironmentConfig[
     authMode: environment === 'staging' ? 'demo' : 'cognito',
     secretRemovalPolicy: environment === 'staging' ? 'DESTROY' : 'RETAIN',
     cors: Object.freeze({
-      allowOrigins: Object.freeze([`https://${environment}.invalid`]),
       allowMethods: CORS_METHODS, allowHeaders: CORS_HEADERS, exposeHeaders: CORS_EXPOSE,
       allowCredentials: false,
     }),
@@ -57,6 +63,20 @@ function backendConfig(environment: EnvironmentName): HireFluxEnvironmentConfig[
 }
 
 export const AWS_REGION = 'us-east-1';
+
+function hostingConfig(environment: EnvironmentName): HireFluxEnvironmentConfig['hosting'] {
+  return Object.freeze({
+    repositoryUrl: 'https://github.com/xiolest1/HireFlux', sourceBranch: 'main',
+    stage: environment === 'staging' ? 'BETA' : 'PRODUCTION',
+    autoBuild: environment === 'staging', appRoot: 'frontend', workspaceMode: 'demo',
+  });
+}
+
+export function validateSourceBranch(branch: string): void {
+  if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(branch) || branch.length > 63) {
+    throw new Error('Hosting source branch must be a lowercase DNS-safe label of at most 63 characters.');
+  }
+}
 
 export function resolveEnvironment(value: unknown): EnvironmentName {
   if (value !== 'staging' && value !== 'production') {
@@ -86,6 +106,7 @@ export function loadEnvironmentConfig(
     awsAccount: resolveAccount(accountBinding),
     data: DATA_LIFECYCLE[environmentName],
     backend: backendConfig(environmentName),
+    hosting: hostingConfig(environmentName),
     tags: Object.freeze({
       Project: 'HireFlux',
       Environment: environmentName,
@@ -113,8 +134,12 @@ export function validateEnvironmentConfig(config: HireFluxEnvironmentConfig): vo
   }
   resolveAccount(config.awsAccount);
   if (!isDeepStrictEqual(config.backend, backendConfig(environmentName))) {
-    throw new Error('Backend auth, secret lifecycle and sentinel CORS must match the selected environment.');
+    throw new Error('Backend auth, secret lifecycle and CORS policy must match the selected environment.');
   }
+  if (!isDeepStrictEqual(config.hosting, hostingConfig(environmentName))) {
+    throw new Error('Hosting repository, branch, stage and build policy must match the selected environment.');
+  }
+  validateSourceBranch(config.hosting.sourceBranch);
   const lifecycle = DATA_LIFECYCLE[environmentName];
   if (
     config.data === undefined ||

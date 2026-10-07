@@ -16,7 +16,7 @@ export class BackendApi extends Construct {
   public readonly cursorSecret: Secret;
   public readonly demoSessionSecret: Secret;
 
-  constructor(scope: Construct, id: string, table: Table, config: HireFluxEnvironmentConfig, artifact: BackendArtifact) {
+  constructor(scope: Construct, id: string, table: Table, config: HireFluxEnvironmentConfig, artifact: BackendArtifact, frontendOrigin: string) {
     super(scope, id);
     const secretProperties = {
       generateSecretString: { passwordLength: 64, excludePunctuation: true, includeSpace: false },
@@ -42,7 +42,7 @@ export class BackendApi extends Construct {
       actions: ['secretsmanager:GetSecretValue'],
       resources: [this.cursorSecret.secretArn, this.demoSessionSecret.secretArn],
     }));
-    const cors = config.backend.cors;
+    const cors = { ...config.backend.cors, allowOrigins: [frontendOrigin] };
     this.backendFunction = new Function(this, 'BackendFunction', {
       runtime: Runtime.PYTHON_3_14, architecture: Architecture.X86_64,
       handler: 'hireflux_backend.lambda_handler.handler',

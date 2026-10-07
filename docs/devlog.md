@@ -1,5 +1,142 @@
 # HireFlux development log
 
+## 2026-10-06 — Two-week development-log reconciliation
+
+Reviewed the rolling two-week window from 2026-09-22 through 2026-10-06 against
+all 11 commits in that interval, the current uncommitted Phase 3E changes, the
+accepted Home implementation contract, ADRs, roadmap, and phase handoffs. Commit
+dates below are repository author dates in America/New_York; the existing phase
+entries retain their recorded work dates, which can precede the eventual commit.
+This is a documentation backfill, not a new implementation or test run.
+
+The review found missing dedicated entries for the September 25 Home redesign,
+the October 5 Phase 1 readiness audit, and the October 6 dependency lock fixes.
+Those entries are now included below with their evidence and validation limits.
+The footer was also stale at Phase 3C and now identifies Phase 3F as next.
+Existing detailed light-theme, landing, CI, Phase 2A/2B/2C, and Phase 3A–3E
+entries are retained; rejected landing work remains explicitly superseded.
+
+Coverage of the reviewed history:
+
+- **September 25 — Home semantics and composition:** `4b99630` and `1ad1ccc`.
+  Backend action corrections, the Home presentation model, date-led commitments,
+  quieter reporting, disclosure/retrieval behavior, research/contract documents,
+  focused tests and reviewed Home snapshots are recorded in the backfilled entry.
+- **September 26 — Workspace light theme:** `b91bddd`. The existing detailed
+  entry records scoped tokens, portal inheritance, contrast/keyboard/responsive
+  checks, one corrected light snapshot, and the pre-existing focus limitation.
+- **September 26 — Landing story restoration and closing boundary:** `fb629df`
+  records the rejected natural-flow experiment and restoration; `18a1760`
+  contains the subsequent shared animated workspace/Quiet Coda boundary. The
+  existing entries distinguish the superseded experiment from the retained
+  shared owner, geometry, reveal, restored-scroll, focus and fallback behavior.
+- **September 29 — CI/OpenAPI and frontend dependency repair:** `533cee1`.
+  The existing entry records the side-effect-free application factory, clean
+  OpenAPI generation, separately named artifact steps, dependency refresh,
+  supported-Python checks, and the exact historical validation results.
+- **October 5–6 — Account-readiness and durable local foundation:** `c854e02`
+  includes the Phase 1 audit and Phase 2A backend; `db7fa98` commits Phase 2B
+  frontend sessions and Phase 2C manifest/ACTIVE guards/export/erasure work.
+  Their work entries are dated October 5. See the detailed
+  [Phase 1–2C readiness record](production-account-readiness.md).
+- **October 6 — Dependency lock corrections:** `cd0995a`. The separate entry
+  records the exact urllib3 and source-map-js version changes without inventing
+  a standalone test/audit result for that commit.
+- **October 6 — AWS definitions and packaging:** `f5be6f8` commits the Phase
+  3A/3B/3C foundation together; `645e834` commits Phase 3D. The current Phase 3E
+  hosting work remains uncommitted. Individual entries preserve each slice's
+  artifact hashes, inventory, security boundary and validation scope; these
+  infrastructure definitions have not been deployed.
+
+Current cumulative state: local demo plus development-only durable workspaces;
+strong durable manifest, guarded writes, bounded export and resumable erasure;
+general frontend sessions with identity-generation fencing; deterministic
+Lambda packaging; and separate staging/production browser-to-backend templates
+with 13 resources and zero outputs each. Phase 3F controls, Phase 3G qualification,
+AWS staging, Cognito accounts, production hardening and deployment remain future
+work. The latest validation evidence remains the Phase 3E record below, not a
+fresh suite run during this documentation review. The open CDK bundled dependency
+advisory and historical UI limitations are not silently marked resolved.
+
+Documentation checks passed: every reviewed commit is referenced, all 19 local
+Markdown links resolve, existing committed historical entries are unchanged,
+and `git diff --check` is clean. Only this development log was edited for the
+reconciliation; prior uncommitted Phase 3E changes were preserved.
+
+## 2026-10-06 — Static Amplify hosting and exact origin wiring (Phase 3E)
+
+Started from clean accepted commit 645e834 (Phase 3D). Verified the local origin
+remote as https://github.com/xiolest1/HireFlux.git; source config explicitly uses
+the equivalent canonical URL without .git. No branch/profile/machine inference.
+AWS documentation was checked for static App/Branch properties, GitHub connection,
+monorepo build/header syntax, default-domain URL shape, SPA rewrites and Node
+selection. No AWS/GitHub account lookup, authorization or mutation occurred.
+
+Added focused FrontendHosting CfnApp/CfnBranch composition. Each stack owns a
+static WEB app and one main branch. Staging BETA auto-builds; production
+PRODUCTION does not. No service/compute role, backend, previews or auto-branches.
+App names use the existing environment naming helper; hosting is replaceable
+Delete/Delete while protected production table/secret lifecycle is unchanged.
+The NoEcho/no-default AmplifyGitHubAccessToken parameter is referenced only by
+App.AccessToken; no value is supplied, synthesized or added to build inputs.
+
+App's static monorepo root is frontend; the appRoot build selects Node 22,
+npm ci and npm run build, publishing dist/** only. Branch receives same-stack
+VITE_API_BASE_URL, demo workspace mode and token-derived VITE_PUBLIC_SITE_URL.
+Production's existing demo build adapter does not supply production auth.
+Configured main + App.DefaultDomain produces the exact single CORS origin for
+gateway/Lambda. App has no backend references, backend has no Branch references,
+Branch references App/API. Tests traverse all references/DependsOn and inject
+both known cycle regressions. No sentinel, lookup or manual URL copying remains.
+
+Preserved the existing monorepo customHttp.yml authority and security headers.
+CSP now permits self plus the narrow us-east-1 execute-api HTTPS source because
+an exact API-ID App header dependency would conflict with App-derived CORS.
+No other directive weakens. The aligned template/helper is static rather than
+environment-rendered; YAML validation rejects wrong roots, duplicate/weakened
+headers and broad CSP. Already locked js-yaml 4.3.2 is promoted to direct dev
+tooling; proof confirms all other lock metadata/package resolutions unchanged.
+Added 200 SPA regex/static-extension tests and a hosted-build verifier with
+negative fixtures; Vite source-map default and all frontend runtime/session code
+remain unchanged. No backend runtime/source/lock input changed or ZIP rebuild.
+
+Validation: frontend locked install, lint and types pass; full final Vitest
+46 files / 364 tests pass (72.43s) with two workers and unchanged timeouts.
+Initial fully parallel local run under concurrent validation had five failures;
+four were timeouts. Final limited-worker full run passes, with the existing jsdom
+navigation diagnostic. Hosting-header 4/4 and hosted-build negative 4/4 pass.
+Synthetic deployment-style npm build passes; 39 files contain expected public
+API/site URLs, no private/local endpoints/placeholders or source maps. Local
+headless Chromium QA at 390/1280px with actual hosted headers and rewrite passes
+deep-link redirect, SPA 200, missing JS 404, regional API fetch and CSP denial of
+unrelated HTTPS. Zero page errors/unexpected external requests. No full visual
+snapshot/Playwright suite or live Amplify smoke run; UI/session source unchanged.
+
+Backend Ruff/format (111 files), strict Mypy (71 runtime files) and full pytest
+419 pass (140.41s, existing Starlette/httpx warning). Infra typecheck/build pass;
+99/99 offline unit tests pass (13.296s), real artifact CLI 4/4 (25.232s), both
+documented synths and fresh Python/CDK parity pass. Actual templates each have
+13 reviewed resources, zero outputs, GitHub input and BootstrapVersion parameters.
+Credential/sentinel/prohibited-resource scans and YAML/CI layout review pass.
+Original table/backend logical IDs/security and same artifact are preserved:
+950c8d1fbc3c4872dba29d6e4eddd3439f304509cbcd5b0ca370157cc15c4bcf;
+26,646,067 compressed / 57,540,712 expanded bytes / 3,756 files.
+
+Frontend audit reports zero vulnerabilities. CDK remains library 2.272.0 / CLI
+2.1144.0 (latest verified) with one high bundled brace-expansion 5.0.9 finding;
+no safe compatible upstream fix, override, patch or suppression. Advisory remains
+an open qualification follow-up, not a blocker to local Phase 3F definitions.
+CI preserves all gates and adds synthetic public frontend build variables plus
+header/build checks and artifact scanning; no credential/deploy/OIDC step.
+Windows npm executable scripts used --script-shell pwsh for the ampersand path;
+no persisted npm setting changed. Generated validation evidence remains ignored.
+
+Updated README/canonical architecture/frontend/infra/environment/roadmap guides,
+ADR 0012, dev log and complete 68-point section 44 handoff. Recorded Phase 4
+account/bootstrap/GitHub prerequisites and live staging smoke gates without
+performing them. No Phase 3F/3G/4/5/6 implementation, AWS deployment, credential,
+commit or push. Phase 3F is next; production remains non-launch-ready.
+
 ## 2026-10-06 — Backend AWS request-path definition (Phase 3D)
 
 Started from a clean worktree and preserved the accepted Phase 3A/3B/3C
@@ -223,6 +360,21 @@ See [infra guide](../infra/README.md),
 [section 40](production-account-readiness.md#40-phase-3a-implementation-and-handoff).
 Phase 3B was the next slice; its subsequent implementation is recorded above.
 
+## 2026-10-06 — Backend and frontend dependency lock corrections (backfilled)
+
+Commit `cd0995a` (`Dependency-audit issue fixed`) updates exactly two locked
+packages: backend urllib3 from 2.7.0 to 2.8.0, and frontend source-map-js from
+1.2.1 to 1.2.2. Their distribution URLs and integrity hashes were updated with
+the versions. Dependency manifests, application behavior, tests, audit thresholds
+and CI policy were not changed by that commit.
+
+This entry is reconstructed from the committed lockfile diff. That diff does
+not establish an independent test run, audit output, or advisory identifier;
+none is invented here. Later Phase 3B/3D/3E entries record the actual locked
+installation, runtime artifact and dependency-audit checks performed against
+the updated graph. The separate CDK bundled brace-expansion advisory introduced
+with the infrastructure toolchain remains open in the latest Phase 3E record.
+
 ## 2026-10-05 — Durable workspace safety foundation (Phase 2C)
 
 Layered the final local architecture phase on the accepted uncommitted Phase
@@ -386,6 +538,41 @@ and the full file/validation/recovery handoff in
 The current order is Phase 2B frontend sessions, Phase 2C persistent-account
 safety, Phase 3 CDK synth, Phase 4 AWS staging demo, Phase 5 Cognito staging
 accounts, Phase 6 hardening, then Phase 7 production deployment.
+
+## 2026-10-05 — Production-account architecture and readiness audit (Phase 1, backfilled)
+
+Created [production-account-readiness.md](production-account-readiness.md) as a
+documentation-only audit before the durable-workspace implementation. It was
+later committed with Phase 2A in `c854e02`; that shared commit date does not make
+the audit itself an account-authentication implementation. The original audit
+and its validation record remain distinct from the later implementation handoffs
+appended to the same document.
+
+Inspected backend verified identity/ownership, role and profile authority,
+temporary versus durable TTL, readiness/provisioning, transactional quotas and
+projections, export/erasure gaps, and deployed configuration guards. Inspected
+frontend demo credentials, storage, cache/session replacement, saved preferences,
+route protection and identity-bound asynchronous work. Recorded the persistence
+inventory, threat/privacy findings, first-login failure/recovery matrix, test
+matrix, decision boundaries and the smallest backend-first Phase 2 slice.
+
+Recommended preserving the modular monolith and existing DynamoDB access paths,
+separating credential lifetime from data lifetime, empty idempotent durable
+bootstrap, general frontend sessions with generation fencing, and strong
+manifest/account-state gates before public personal-data access. The target
+auth direction was direct verified Cognito sub ownership and managed login with
+authorization code/PKCE, with verification at the FastAPI boundary. These were
+architecture recommendations; the audit added no Cognito verifier, provider
+session, account login, AWS resources or new database/index.
+
+Historical validation is deliberately limited: four focused backend unit suites
+passed 20 tests, with the existing TestClient warning. The broader attempted
+backend run was interrupted after unit progress stalled; integration tests were
+inspected but no integration success was claimed. Frontend attempts failed
+before test execution because of the Windows ampersand path and sandbox cache
+rename restrictions; no frontend pass was claimed. Document structure/references
+and diff whitespace were checked. Later Phase 2/3 full checks are recorded in
+their own entries and do not retroactively change this audit's evidence.
 
 ## 2026-09-29 — Repair post-push CI artifact generation and dependency auditing
 
@@ -863,6 +1050,63 @@ Production files changed: `frontend/src/styles.css`,
 and the single intentional Home light snapshot. Stage 1/2/3 documents, backend,
 API contracts, dependencies, routes, models and landing production files are
 unchanged. No generated evidence or build output was added to Git state.
+
+## 2026-09-25 — Home decision semantics and date-led composition (backfilled)
+
+Reconstructed from commits `4b99630` (`Home page improvement`) and `1ad1ccc`
+(`Homepage improvement`), the retained production code, focused tests, and
+[Home implementation contract](home-implementation-contract.md). The supporting
+Stage 1 cognition audit, Stage 2 information architecture, and Stage 3 composition
+research/translation documents record the design basis; their document dates
+may precede the September 25 implementation commits.
+
+Corrected the server-owned Dashboard action contract: undated candidate steps
+are CANDIDATE_ACTION_UNDATED without an invented due date; the 14-day
+APPLIED/SCREENING cue is STALE_APPLICATION without an overdue date; optional
+next-step responsibility is explicit; and scheduled interviews beyond 24 hours
+can appear as INTERVIEW_UPCOMING. Search Health's separate 21/14/9-day heuristics
+remain strategic interpretation, not recorded deadlines. Pydantic responses,
+central frontend validation and timezone-focused backend tests were updated.
+The contract records frontend-first compatibility ordering for a split release
+and the existing 100-follow-up/five-interview source limits.
+
+Added the small Home presentation model over server facts, with distinct loading,
+failure, cached partial evidence, available work, waiting, no known action and
+no-records states. A failed refresh or ownership query cannot imply an all-clear.
+Applications classification is consulted only when Home surfaces no action;
+Analytics failure stays independent of operational work. React does not invent
+ownership, commitments, milestone facts or rate denominators.
+
+Replaced the crowded Dashboard composition with one decision area. Recorded
+follow-ups and interviews use date-led commitment cards; a single eligible
+commitment can be focal, multiple commitments remain peers, and undated steps
+and stage-age suggestions stay quieter. Small peer sets remain visible; larger
+returned groups have disclosure access to every returned item. Reasons, ownership,
+evidence limits and existing complete/reschedule controls remain discoverable.
+Date-only follow-ups preserve their saved calendar day; interview instants use
+the workspace timezone. Interview links target the owning application's
+Interviews section, and mutation failures stay beside the relevant work.
+
+Recently updated records, search activity and the optional Search tour became
+supporting context. Selected-range weekly history, totals, comparison and
+interpretation use the Analytics response; all-time and empty periods do not
+fabricate miniature trends or period comparisons. Focused composition tests
+cover those distinctions and independent Analytics failure.
+
+Added Home model/component/composition coverage and deterministic browser
+fixtures for peers, focal work, high volume, undated work, waiting and partial
+failure. Browser assertions cover disclosure/keyboard behavior, navigation,
+mutation recovery, accessibility and responsive overflow. The two Home desktop
+light/dark snapshots changed with the redesign; the September 26 theme entry
+records the later correction of a falsely dark light fixture separately.
+The remaining API routes, storage model and status policy were not redesigned.
+
+The commit diffs and retained tests establish implementation and coverage, but
+no original September 25 full-suite result or count was found in the dev log;
+none is reconstructed as a claimed pass. The subsequent September 26 entry
+records lint/types, 310 frontend tests, accessibility/build/header checks and
+the completed browser run against this Home baseline plus the theme changes.
+Those are later validation results, not a new test run for this backfill.
 
 ## 2026-09-15 — Connected Workspace → Demo Coda transition polish
 
@@ -4264,13 +4508,17 @@ reviewed and updated for the new hierarchy.
 
 ## Next recommended work
 
-Phase 2A/2B/2C and Phase 3A/3B/3C are complete locally. Continue with Phase 3D's
-Lambda, least-privilege IAM, HTTP API and secret-reference definition; do not
-implement or deploy later slices implicitly. The public browser remains demo-only;
-its durable adapter remains development-only.
+Phase 1, Phase 2A/2B/2C and Phase 3A/3B/3C/3D/3E are complete locally. Continue
+with Phase 3F's observability, log retention, alarms, throttling, concurrency and
+cost-control definitions; do not implement or deploy later slices implicitly.
+Phase 3E has defined the complete staging/production browser-to-backend topology,
+with 13 resources and zero outputs per stack, but nothing is deployed. The public
+browser remains demo-only; its durable adapter remains development-only.
 
 Use the accepted [phase roadmap](roadmap.md#current-execution-order) for subsequent
 work. CDK synth precedes AWS staging of the existing demo; real Cognito accounts
 follow in staging. Private attachments, email, reminder delivery, and production
-deployment remain future work. Legacy adoption and current exports must not be
-presented as complete erasure or production personal-account safety.
+deployment remain future work. Phase 2C's local strong manifest, guarded writes,
+bounded export and resumable erasure do not establish provider-account deletion,
+backup erasure, deployed cost controls or production personal-account readiness.
+Recheck the open CDK dependency advisory during subsequent qualification.

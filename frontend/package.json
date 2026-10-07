@@ -16,6 +16,8 @@
     "test:watch": "vitest",
     "test:a11y": "vitest run src/test/accessibility.test.tsx",
     "test:hosting-headers": "node --test scripts/render-hosting-headers.test.mjs",
+    "test:hosting-build": "node --test scripts/verify-hosted-build.test.mjs",
+    "verify:hosting-build": "node scripts/verify-hosted-build.mjs",
     "render:hosting-headers": "node scripts/render-hosting-headers.mjs",
     "test:browser": "playwright test",
     "test:browser:update": "playwright test --update-snapshots"
@@ -52,6 +54,7 @@
     "eslint-plugin-react-hooks": "7.0.1",
     "eslint-plugin-react-refresh": "0.4.24",
     "globals": "16.5.0",
+    "js-yaml": "4.3.2",
     "jsdom": "29.0.0",
     "msw": "2.15.0",
     "tailwindcss": "4.3.3",

@@ -5,6 +5,7 @@ import {
   loadEnvironmentConfig,
   resolveEnvironment,
   validateEnvironmentConfig,
+  validateSourceBranch,
 } from '../lib/config/environment';
 import { explicitResourceName, MAX_EXPLICIT_NAME_LENGTH } from '../lib/config/naming';
 
@@ -99,11 +100,31 @@ test('data lifecycle cannot be cross-wired or weakened across environments', () 
 test('backend configuration rejects cross-environment auth, secret lifecycle and CORS drift', () => {
   const staging = loadEnvironmentConfig('staging');
   const production = loadEnvironmentConfig('production');
-  assert.ok(Object.isFrozen(staging.backend) && Object.isFrozen(staging.backend.cors) && Object.isFrozen(staging.backend.cors.allowOrigins));
+  assert.ok(Object.isFrozen(staging.backend) && Object.isFrozen(staging.backend.cors) && Object.isFrozen(staging.backend.cors.allowMethods));
   for (const backend of [production.backend, { ...staging.backend, authMode: 'cognito' as const },
     { ...staging.backend, secretRemovalPolicy: 'RETAIN' as const },
     { ...staging.backend, cors: { ...staging.backend.cors, allowOrigins: ['*'] } },
     { ...staging.backend, cors: { ...staging.backend.cors, allowOrigins: ['https://guessed.example.com'] } }]) {
     assert.throws(() => validateEnvironmentConfig({ ...staging, backend }), /Backend auth/);
+  }
+});
+
+test('hosting configuration is explicit, frozen and cannot cross-wire environments or invent auth', () => {
+  const staging = loadEnvironmentConfig('staging');
+  const production = loadEnvironmentConfig('production');
+  assert.ok(Object.isFrozen(staging.hosting));
+  assert.deepEqual(staging.hosting, { repositoryUrl: 'https://github.com/xiolest1/HireFlux',
+    sourceBranch: 'main', stage: 'BETA', autoBuild: true, appRoot: 'frontend', workspaceMode: 'demo' });
+  assert.deepEqual(production.hosting, { ...staging.hosting, stage: 'PRODUCTION', autoBuild: false });
+  for (const hosting of [production.hosting, { ...staging.hosting, repositoryUrl: 'https://github.com/other/repo' },
+    { ...staging.hosting, sourceBranch: 'develop' }, { ...staging.hosting, workspaceMode: 'local' as any }]) {
+    assert.throws(() => validateEnvironmentConfig({ ...staging, hosting }), /Hosting repository/);
+  }
+});
+
+test('source branch validates exact DNS-label semantics without guessing Git branch transformations', () => {
+  for (const value of ['main', 'staging', 'release-2']) assert.doesNotThrow(() => validateSourceBranch(value));
+  for (const value of ['', 'feature/topic', 'Main', 'a.b', '-main', 'main-', 'a'.repeat(64), 'a_b']) {
+    assert.throws(() => validateSourceBranch(value), /DNS-safe/);
   }
 });

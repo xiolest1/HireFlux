@@ -139,8 +139,19 @@ jobs:
           npm --prefix frontend run typecheck
           npm --prefix frontend run test
           npm --prefix frontend run test:hosting-headers
+          npm --prefix frontend run test:hosting-build
       - name: Build
+        env:
+          VITE_API_BASE_URL: https://phase3e-example.execute-api.us-east-1.amazonaws.com
+          VITE_PUBLIC_SITE_URL: https://main.phase3e-example.amplifyapp.com
+          VITE_WORKSPACE_MODE: demo
         run: npm --prefix frontend run build
+      - name: Verify deployment-style static artifacts
+        env:
+          VITE_API_BASE_URL: https://phase3e-example.execute-api.us-east-1.amazonaws.com
+          VITE_PUBLIC_SITE_URL: https://main.phase3e-example.amplifyapp.com
+          VITE_WORKSPACE_MODE: demo
+        run: npm --prefix frontend run verify:hosting-build
       - name: Audit frontend dependencies
         run: npm --prefix frontend audit --audit-level=high
       - name: Generate frontend CycloneDX SBOM

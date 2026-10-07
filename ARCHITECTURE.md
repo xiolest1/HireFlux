@@ -349,10 +349,12 @@ Accounts are unbound for local synth unless separately supplied through validate
 environment-specific context. The local CLI wrapper isolates AWS credentials and
 disables lookups/telemetry; tests block network attempts and assert repeatability.
 
-Both templates now contain the DynamoDB table and ten backend request-path resources, with zero outputs. Default CDK bootstrap parameters/rules
+Both templates now contain the DynamoDB table, ten backend request-path resources
+and two static Amplify hosting resources, with zero outputs. Default CDK bootstrap parameters/rules
 and assembly role/asset references are future deployment contracts, not deployed
 infrastructure. Phase 3B packaging and 3C data definition are implemented locally;
-3D compute/integration definitions are complete locally; 3E–3G hosting/control definitions and review follow;
+3D compute/integration and 3E hosting/origin definitions are complete locally;
+3F/3G controls and review follow;
 actual staging deployment remains Phase 4 and Cognito remains Phase 5. See
 [infra/README.md](infra/README.md) for commands, naming, secret/lifecycle rules,
 and the open bundled dependency audit finding, and
@@ -429,9 +431,9 @@ resolves them once before app construction and reuses the app/keys on warm calls
 Typed environment CORS feeds both HTTP API and FastAPI: GET/POST/PATCH/DELETE/
 OPTIONS; Accept, Authorization, Content-Type, Idempotency-Key, X-Request-ID;
 exposed X-Request-ID and Content-Disposition; credentials false for the bearer
-client. Origins are deliberately `https://staging.invalid` and
-`https://production.invalid`. HTTP API is the deployed CORS authority and handles
-preflight. Phase 3E must bind actual origins before Phase 4 staging deployment.
+client. Phase 3E derives each exact frontend origin from the configured main
+branch and that stack's Amplify App.DefaultDomain token. HTTP API is the deployed
+CORS authority and handles preflight. No hostname has been provisioned yet.
 
 Memory is 1024 MB, Lambda timeout 15s and integration timeout 20s. The unchanged
 4,000,000-byte export budget sits below Lambda's 6 MiB synchronous response and
@@ -449,6 +451,23 @@ rotation/privacy hardening 6. Production synthesis is not deployability. See
 
 ## AWS staging target and service choices
 
+Phase 3E locally defines static WEB Amplify App/Branch resources for each
+environment. App uses a NoEcho/no-default GitHub deployment input only for
+repository connection, plus the static frontend monorepo root. Branch uses
+same-stack API endpoint and frontend URL tokens at Vite build time. Both source
+main; staging BETA auto-builds, production PRODUCTION does not. No App/domain is
+live, and production's demo frontend adapter does not implement Cognito.
+
+Configured branch + App.DefaultDomain → exact backend CORS; API endpoint →
+Branch variables. App contains no API reference and backend contains no Branch
+reference, preserving acyclic prerequisite order App → backend → Branch.
+Repository-root customHttp.yml owns static headers; the regional HTTPS API CSP
+source supports generated IDs without an App→API edge. The asset-aware 200 SPA
+rewrite preserves static-file errors. Source maps and frontend runtime/session
+code remain unchanged. See
+[ADR 0012](docs/adr/0012-amplify-hosting-origin-wiring.md) and
+[frontend validation guide](frontend/README.md).
+
 ```mermaid
 flowchart LR
     Browser["Browser"] --> Amplify["Amplify Hosting"]
@@ -463,7 +482,8 @@ flowchart LR
   frontend deployment separate from API execution. It needs an asset-aware SPA
   rewrite and security headers. The repository root `customHttp.yml` supplies
   the hosted security-header policy for the `frontend/` monorepo app; its CSP
-  `connect-src` must be kept aligned with each environment's API origin.
+  `connect-src` permits self and the narrow us-east-1 execute-api HTTPS pattern;
+  exact origin enforcement remains in API/FastAPI CORS.
 - **API Gateway HTTP API** provides the public HTTPS boundary and routing with
   less complexity and lower baseline cost than an ALB/API Gateway REST API for
   this small JSON API.
