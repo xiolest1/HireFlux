@@ -4776,7 +4776,8 @@ the existing shared-credentials profile, with long-lived keys and no temporary
 session. Only credential-source classification was retained in public prose.
 No key/token, full account ID, caller ARN, user name or profile name is published.
 Temporary/SSO credentials remain preferred before a future mutation; no new
-credentials, aws configure operation, rotation or deletion occurred.
+credentials, credential configuration, rotation or deletion occurred. The
+credential-source inspection used read-only `aws configure list` only.
 
 The human user positively confirmed the masked STS account as the intended
 staging account and specifically selected **shared account; deployment
