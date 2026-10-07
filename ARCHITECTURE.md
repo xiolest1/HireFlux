@@ -392,6 +392,15 @@ erasure to all historical copies. Nothing is deployed. See
 
 ## Backend artifact boundary (Phase 3B)
 
+Phase 4A verifies the accepted source on GitHub with all five quality jobs green
+and actual artifact/contract checks. The Linux CI ZIP and Windows zlib-ng ZIP
+have identical expanded files and protected inputs; a controlled compression
+experiment reproduces the remote ZIP hash exactly. Artifact identity includes
+the compression toolchain, so retain the chosen ZIP with its own manifest.
+The [Phase 4A record](docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification)
+closes source/CI condition L01 and carries nineteen AWS/release qualifications.
+Account/bootstrap preflight is next; no AWS resource has been created.
+
 The existing factory now has independent local ASGI and Lambda entry points.
 Lambda uses `hireflux_backend.lambda_handler.handler`, one cold-start app/SDK
 client, Mangum with lifespan off, and environment-only validated configuration.

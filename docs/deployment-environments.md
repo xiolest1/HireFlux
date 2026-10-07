@@ -5,8 +5,10 @@ HireFlux uses three intentionally separate environments. The repository currentl
 The [Phase 3G complete synthesized review](production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff)
 concludes PASS WITH EXPLICIT PHASE 4 CONDITIONS. It revalidated both full
 environment graphs and a rebuilt Linux runtime after two interview correctness/
-transaction-bound fixes. AWS staging remains uncreated. Phase 4 must obtain clean
-remote CI and authorized account/bootstrap/GitHub/quota/billing prerequisites,
+transaction-bound fixes. AWS staging remains uncreated. Phase 4A has verified
+the accepted GitHub source, five green quality jobs, actual artifacts and fresh
+local gates; see the [remote qualification record](production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
+Phase 4B and later slices must obtain authorized account/bootstrap/GitHub/quota/billing prerequisites,
 then qualify real hosting, IAM, timing, logs, metrics, TTL and costs under active
 supervision. The local synth-only wrapper cannot deploy. Budgets/rate/reserved
 concurrency are not a cumulative cost cap; anonymous issuance remains a risk.
@@ -218,4 +220,6 @@ can miss shared/untaggable charges and billing data is delayed. Review actual
 account totals as well; do not infer a complete cost forecast or hard cap.
 No REST API Gateway account logging role, BudgetsAction or runtime SNS access
 is defined. See [operational contract](../infra/README.md#operational-guardrails-phase-3f)
-and [ADR 0013](adr/0013-operational-guardrails.md). Phase 3G final review is next.
+and [ADR 0013](adr/0013-operational-guardrails.md). Phase 3G local review and
+Phase 4A source/remote-CI qualification are complete; AWS commissioning remains
+separately authorized work beginning with Phase 4B.

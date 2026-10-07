@@ -15,7 +15,11 @@ interview pagination/transaction-capacity defects were fixed; default/max capaci
 is now 25 and the verified ZIP was rebuilt. Fresh full runtime/frontend checks,
 119 infrastructure tests, four offline real-artifact CLI tests, both synths and
 schema parity pass. Inventory remains 25 declarations/22 with blank email and
-zero outputs. Twenty live qualifications remain; no AWS action or remote CI ran.
+zero outputs. That review left twenty qualification rows pending and ran no
+remote CI. Phase 4A subsequently qualified the accepted GitHub checkpoint and
+all five quality jobs, downloaded the actual artifacts and verified approximately
+90-day retention. L01 is satisfied; nineteen inherited AWS/release qualifications
+remain. See the [Phase 4A record](../docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
 The high CDK bundled advisory and anonymous issuance cost risk remain open.
 Initial staging qualification requires active supervision and authorized stop
 controls; production is still deferred. The detailed resource, IAM, replacement,
@@ -219,8 +223,9 @@ environment conditionals through constructs.
   origin/API token wiring, acyclic graph and SPA/header/build validation.
 - **3F (completed locally):** finite logs, scoped logging IAM, focused alarms,
   dashboard, optional notifications, API/Lambda scaling limits and tagged budgets.
-- **3G (next):** final synthesized infrastructure/security/cost-readiness review.
-- **Phase 4:** bootstrap/deployment prerequisites and actual staging deployment.
+- **3G (complete locally):** final synthesized infrastructure/security/cost-readiness review.
+- **4A (source qualified):** GitHub checkpoint, remote quality and artifact evidence.
+- **4B onward:** separately authorized bootstrap/deployment prerequisites and actual staging deployment.
 - **Phase 5:** Cognito and real accounts. Production follows hardening/release gates.
 
 `VITE_*` configuration is public. Server signing keys are secrets. Future execution

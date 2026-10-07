@@ -4445,3 +4445,307 @@ authorization/live-qualification prerequisites are satisfied?**
 fixed, and the final combined definitions/runtime/builds pass their local gates.
 Proceed only with the explicit supervised Phase 4 qualifications above; retain
 the CDK/anonymous-issuance risks and production deferrals. Nothing is deployed.
+
+## 47. Phase 4A source control and remote CI qualification
+
+Date: 2026-10-07, client's America/New_York date. This section supersedes the
+3G snapshot's pending source-control/CI condition L01. Section 46 remains the
+authoritative historical combined-system review; no architecture or runtime
+behavior changed in 4A. No AWS account interaction or deployment occurred.
+
+### Decision and source checkpoint
+
+**PASS WITH DOCUMENTED NON-BLOCKING CONDITIONS — READY FOR PHASE 4B.**
+
+The accepted source is remotely stored and passes the real quality workflow.
+Zero unresolved blockers prevent the next separately authorized account/bootstrap
+preflight. This is not authorization to run AWS commands, bootstrap, deploy,
+authorize Amplify or publish production. The inherited CDK/anonymous-issuance
+risks, nineteen remaining qualification rows and six production groups remain.
+
+- Initial branch: main; upstream origin/main.
+- Accepted checkpoint: `067ade6ee14cd3e0b6e72ae0542c80b55181a19e`.
+- Subject: `3G: Final Adversarial readiness review`.
+- Repository: [xiolest1/HireFlux](https://github.com/xiolest1/HireFlux), public,
+  default branch main; fetch/push origin is its ordinary HTTPS .git URL.
+- Initial modified/untracked counts: 0/0. The thirteen accepted 3G files in
+  section 46 AD were already committed and pushed before 4A started; none was
+  omitted. No empty commit was made to pretend this task created that checkpoint.
+- Normal `git fetch --prune origin` confirmed local HEAD, origin/main and
+  merge-base equal that SHA, ahead/behind 0/0. No reconciliation was needed.
+- Commit tree: `989e2b89337f169f9d579a930d7d6ec8e0179413`.
+
+The evidence below qualifies that exact source. A separate documentation commit
+records this result. quality.yml has no documentation path filter, so final
+delivery also requires its own successful push run at the final documentation
+HEAD. The delivered 4A handoff records that final full SHA/run and branch equality.
+Do not manufacture an endless chain of commits trying to embed a commit's own
+SHA or a future run result inside itself. Any later source change needs its own
+qualification; this record does not bless an arbitrary future main revision.
+
+### Source/private-file and workflow review
+
+The complete tracked inventory contains 436 paths. Pattern and path review found
+no real AWS/GitHub token, private-key marker, tracked .env/private credential
+configuration, generated Lambda ZIP/manifest, node_modules, virtual environment,
+cache or CDK assembly. .env was intentionally excluded and its contents were not
+printed. .env.example has visibly fake local credentials and interview cap 25.
+The scan is evidence, not a claim that regex detects every conceivable secret.
+
+All 42 existing binaries are intentional original diagram PDFs, visual-test
+baselines and the public OG image. The largest tracked file is
+frontend/public/og.png, 1,109,662 bytes; no new binary or large artifact is added.
+The two /home/dynamodblocal paths are container paths backed by a named volume.
+Six older devlog paths identify external September QA evidence rather than
+repository links or runtime inputs; none was introduced in 3G/4A. Synthetic
+account-like digits occur in test UUIDs/accounts; email examples use reserved
+example domains. New documentation links are repository-relative. No private
+account/profile/email value or machine-specific executable path is introduced.
+
+Generated evidence stays ignored: .tools/phase4a-*, artifacts/lambda,
+OpenAPI/schema/SBOM outputs, infra/build and infra/cdk.out, frontend/dist,
+node_modules, virtual environments and test caches. An ignored legacy backend
+pytest cache directory could not be enumerated; it is outside every candidate
+commit and artifact scope. No unrelated file was staged or edited.
+
+Reviewed the exact `.github/workflows/quality.yml`: pull_request and push to
+main only, no dangerous privileged PR trigger, workflow_run dispatch or path
+filter. All jobs use ubuntu-latest. Workflow token authority is contents:read;
+there is no id-token:write, AWS credential, role assumption, real operator email,
+Amplify token, environment deployment, bootstrap, upload-to-AWS or deploy step.
+Shell expressions use trusted fixed matrix values, not untrusted PR titles or
+branch/body text. No shell-context injection issue was found.
+
+Six external action references remain mutable major tags:
+actions/checkout@v4, actions/setup-python@v5, actions/setup-node@v4,
+actions/upload-artifact@v4, actions/download-artifact@v4 and
+astral-sh/setup-uv@v6. uv itself is pinned at 0.12.5. This is inherited F08,
+a before-production requirement, not a newly invented pre-4 blocker. No action,
+workflow permission, dependency lock or check was changed.
+
+### Fresh local evidence
+
+| Gate | Actual 4A result |
+| --- | --- |
+| Backend locked install/lock/pip check | Pass, isolated standard CPython 3.14.7 validation environment; 63 installed development/runtime packages compatible |
+| Ruff / format / Mypy | Pass; 111 files formatted, 71 typed source files |
+| Backend complete suite | 422 passed, 121.81s; existing Starlette/httpx deprecation warning |
+| Frontend locked install/lint/typecheck | Pass; Node 22.20.0; no lock changes |
+| Frontend complete suite | 364 tests in 46 files passed, 76.51s |
+| Hosted headers / negative builds | 4/4 and 4/4 passed |
+| Frontend deployment-style build | Pass; synthetic HTTPS endpoints/demo mode, 39 files, no maps/private material/local endpoints |
+| Infra locked install/typecheck/build/unit | Pass; 119 tests, 18.47s |
+| Actual staging and production synth | Pass, no AWS lookup; 25 declarations, 3 parameters, zero outputs each |
+| Real ZIP CLI integration | 4/4 passed, 25.83s; repeat synth/account-selection/negative/offline checks intact |
+| Fresh schema parity | Both environments match Python keys/types, three GSIs/projections, TTL and billing |
+| Graph/conditional inventory | Acyclic, same logical IDs as 3G; blank/nonempty email selects 22/25 |
+| Backend SBOM / OpenAPI / schema generation | Pass; 63 lock-derived SBOM components; remote contracts equal fresh local JSON |
+| Lambda build | Two clean locked builds reproduce post-3G Windows bytes and complete manifest |
+| Pinned official-runtime probe | Pass; six native imports, cold/warm HTTP/auth/CORS/safe errors/transport/config checks, 31 distributions, zero network attempts |
+| Backend audits | Host-selected and exact Linux-manifest sets each 31 packages, zero findings |
+| Frontend audit | Zero findings |
+| Infra audit | One high vulnerable bundled package / three advisories remains open; details below |
+| Diff/source review | No product-policy/test/timeout weakening; generated/private artifacts excluded |
+
+The configured interview maximum remains 1–25 with default 25. The accepted
+adapter follows every interview-key LastEvaluatedKey before guarded atomic
+label synchronization; ordinary and forced continuation-page integration cases
+passed locally and remotely. The 3G capacity analysis remains valid: at most
+29 durable actions and conservative 2,529,011 aggregate bytes at current content
+bounds. Both fixes are in every verified packaged source member.
+
+Local unbound template hashes remain exactly the 3G values:
+
+- staging: `887a1cfa589f1133d879f7f443182f13b95fd0b749d571b0dc98a18d642bf89d`;
+- production: `1301f68f1b6593ce90f9282732d80fceeef0c0b4df596daaaa4e9e7b144c3afc`.
+
+The initial Windows npm Command Prompt shim failed on the repository path's
+ampersand; the already documented --script-shell pwsh option resolved it.
+Sandboxed frontend/real-CLI runs then hit EPERM renaming temporary cache/lock
+files; authorized host runs passed unchanged. Those local environment failures
+are recorded, not silently counted as passes. No CI rerun or fix commit was needed.
+
+### Exact remote run and jobs
+
+Workflow: **Quality and supply chain**, `.github/workflows/quality.yml`.
+Run **37574880027**, number **71**, attempt **1**, event **push**, main,
+head **067ade6ee14cd3e0b6e72ae0542c80b55181a19e**.
+[Run and logs](https://github.com/xiolest1/HireFlux/actions/runs/37574880027).
+Started 2026-10-07T05:08:48Z; completed by 05:13:03Z.
+Status completed, conclusion success. A successful unrelated run was not used.
+
+| Job | ID | Result and measured evidence |
+| --- | --- | --- |
+| backend (3.13) | 112641414284 | Success; Ruff/Mypy, 422 tests (78.38s), lock/pip checks, 31 audited runtime packages / 0 findings, SBOM/OpenAPI |
+| backend (3.14) | 112641414067 | Success; Ruff/Mypy, 422 tests (74.07s), lock/pip checks, 31 audited runtime packages / 0 findings, SBOM/OpenAPI/fresh schema |
+| frontend | 112641414355 | Success; lint/types, 364 tests, 4 headers + 4 negative builds, verified 39-file build, audit 0, SBOM |
+| lambda-artifact | 112641881332 | Success; two clean Linux builds byte-identical; isolated pinned-image probe, six native modules and network attempts 0 |
+| infra | 112642087397 | Success; 119 unit + 4 real-artifact CLI tests, staging/production synths, fresh downloaded schema parity |
+
+The 3.13 schema-export step is deliberately skipped; 3.14 is the canonical schema
+producer. No required job or required test was skipped. Infra requires both
+backend matrix jobs and Lambda packaging and downloads their named artifacts.
+Remote backend counts match local 422; frontend 364 and infra 119+4 also match.
+Both remote synths use the Linux ZIP's custom CDK asset key
+`ee374ad8661035832c785da52fc5ad600c40f8989129b3d62ddd6b18bcf68202.zip`.
+It differs from the local Windows ZIP's 477a5915... key because actual ZIP bytes
+differ; resource topology/schema/policy are unchanged. A CDK custom asset key is
+not the raw ZIP SHA-256. No asset was uploaded to an AWS account.
+
+### Downloaded Lambda identity and discrepancy investigation
+
+The authoritative post-3G Windows packaging evidence remains:
+
+- SHA-256 `a7d89abc928d7e87dc445df03da4d17811d013d3f193aa0e289478995ba7b72e`;
+- 26,646,194 compressed bytes, 57,541,431 expanded bytes;
+- 3,756 files, 31 runtime distributions, 71 application sources.
+
+Downloaded run 71's actual Lambda artifact, verified its outer artifact digest,
+read its embedded ZIP and manifest, and compared every expanded member:
+
+- Linux CI ZIP SHA-256
+  `4fb0923cd4fb0e817c0a6b9ceb724218c6cbb4cfab0462fd6ccceec1ce8b75d3`;
+- 26,642,450 compressed bytes; expanded size/count/distributions/source count
+  exactly equal the post-3G values;
+- Python 3.14, Linux x86_64/manylinux_2_34,
+  hireflux_backend.lambda_handler.handler, uv 0.12.5;
+- lock SHA `04e94e210771753218d9275cee207f18ba7f7fb1b93dab2804aa9c9c669ba561`;
+- project SHA `91ef6b71814140a260b25c5e708525239232ca2fcdf4159c60c1f989b062249a`.
+
+**The raw ZIP hashes are different.** This was treated as an unresolved blocker
+until investigated. All 3,756 file bytes/hashes, file order, CRCs, fixed timestamps,
+regular-file modes, compression method, flags and metadata match. Manifests are
+identical except ZIP SHA/compressed byte count. Exactly 629 members have different
+compressed lengths. All 71 packaged application files equal current normalized
+source bytes. There is no source, lock, dependency, native binary or config drift.
+
+The local CPython 3.14.7 compressor reports 1.3.1.zlib-ng. A controlled read-only,
+unprivileged, network-disabled experiment recompressed the accepted Windows ZIP
+members with the exact builder's sorted/fixed metadata and DEFLATE level 9 inside
+the digest-pinned official Lambda image. Its Python 3.14.8/classic zlib 1.2.11
+produced **exactly the remote 4fb0923c... hash and 26,642,450 bytes**. This full-byte
+reconstruction isolates compression implementation as the cause; it is more than
+an assertion that machines differ. CI's own zlib version was not separately
+printed, so the experiment does not invent that runner-version observation.
+
+ADR 0009 already says compression-toolchain changes can alter ZIP bytes and
+require renewed evidence. The controlled comparison supplies that evidence.
+Both clean repeated builds within each observed toolchain match. The discrepancy
+is fully explained and no longer blocks 4A; cross-compressor raw-byte equality
+is not claimed. For later deployment, select the verified Linux CI ZIP with its
+matching manifest and record its full hash. A rebuild with different compression
+inputs requires a new comparison rather than copying an old manifest or ignoring
+a changed hash. No builder/test/lock modification, attestation or OIDC expansion
+was necessary. The historical 3F 950c8d... hash is not a deployment candidate.
+
+### Artifact scope, retention, privacy and repository observations
+
+| Artifact | ID | Downloaded outer ZIP digest |
+| --- | --- | --- |
+| backend-lambda-python314-x86-64 | 11462781010 | 66f5643578a5e21e47a41eb2d99f73acc82125d7fa06149f03db1c793bc62ed3 |
+| backend-supply-chain-3.13 | 11462386407 | cd6ee513e8dca1fcce3b1a89812239ee30b3c758d6846a80a0660630793d2f63 |
+| backend-supply-chain-3.14 | 11462136946 | 442dab9208231751f84c1368d73e3a2d70d4334836c060b7cc7d6cc43aba9858 |
+| frontend-supply-chain | 11461939370 | 1f860bfb8476df8d7a8625ef68f564b3c14fd940d2197be3a561516a32286dbd |
+
+All four were downloaded and their digests match GitHub metadata/upload logs.
+The Lambda outer ZIP contains only the deployment ZIP and its manifest. The two
+backend bundles contain only lock-derived SBOM/audit/OpenAPI JSON and the 3.14
+schema JSON; the frontend bundle contains its SBOM (483 components). Fresh local
+backend SBOM, OpenAPI and schema exactly match the remote JSON. Both remote audit
+JSON files have 31 packages and zero findings. No private configuration, token,
+key, user data, developer-home directory, database or entire checkout was uploaded.
+The Lambda package intentionally contains application source and runtime metadata.
+Prohibited-member review and all per-file/source hashes pass. All five downloaded
+job logs were also reviewed for credential/private-key markers, with no hits;
+checkout authorization is masked and test values remain synthetic.
+
+Artifacts were created between 05:10:32Z and 05:11:26Z and expire at
+2027-01-05T05:08:48Z, approximately 90 days from run start. quality.yml sets no
+retention-days, so these observed expiries are inherited rather than an invented
+repository-setting read. The bounded, nonsensitive scope makes that retention
+reasonable for this public portfolio qualification. F09's artifact scope/actual
+retention evidence is now satisfied; broad governance inspection is not claimed.
+
+Repository is public, main is default, archived false; connector metadata reports
+push/admin capability. The readable ruleset collection is empty. Reading main's
+classic branch protection returned 403 Resource not accessible by integration;
+Actions permission/default-retention settings were outside the connector's
+approved endpoint family. Thus classic protection, default token settings and
+repository policy are **unknown**, not inferred disabled. Workflow-level
+contents:read and actual artifact expiry are directly observed. No permission,
+branch protection, visibility, retention or other security setting was changed.
+The final normal push must obey existing policy; a rejection requires stopping,
+not bypassing it.
+
+### Findings, remaining conditions and Phase 4B boundary
+
+Fresh npm audit retains bundled brace-expansion **5.0.9** at
+aws-cdk-lib/node_modules/brace-expansion, one high vulnerable package and three
+advisories: GHSA-q2hr-2g5m-vwhr, GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p.
+The exact library/CLI versions 2.272.0/2.1144.0 are still latest in the registry
+recheck. npm's fixAvailable flag does not demonstrate a compatible repaired CDK
+bundle. No override, suppression, force upgrade or installed-package patch was
+used. This is a trusted-input local/CI tooling exposure, not a Lambda or Vite
+dependency. It remains non-blocking for supervised staging/preflight and required
+before production. **The remote workflow has no infra npm-audit step**; green CI
+does not certify a clean CDK graph. Backend/frontend remote audits are clean.
+
+Anonymous fresh-key demo issuance can still amplify API/Lambda/DynamoDB/log/storage
+work. No per-IP/global cap was added. The 3G one-seed attempted-operation evidence
+and repeated-key semantics remain valid; no AWS load or cost measurement occurred.
+Workspace quotas, TTL, API throttles, reserved concurrency and delayed budgets do
+not cap cumulative spend. L11/L13/L18/L19 require authorized bounded staging
+tests, active whole-account cost monitoring and a human stop owner. No unattended
+public-launch approval is implied.
+
+Of the **20 inherited qualification rows, L01 is satisfied** by the exact remote
+source/run/artifact/retention evidence, subject to final delivery's own green
+documentation HEAD. **19 remain: L02–L20**:
+
+1. L02 staging account/us-east-1/operator identity.
+2. L03 existing resources, whole-account cost baseline and supervised window.
+3. L04 bootstrap version/assets, deployer/trust/execution/log-delivery IAM.
+4. L05 regional concurrency headroom for reservation and unreserved pool.
+5. L06 Amplify App/repository authorization and secure deploy-time PAT.
+6. L07 authorized optional email or explicit omission/manual monitoring.
+7. L08 authorized cost tags and propagation/whole-account fallback.
+8. L09 account-bound staging synth/change set, exact assets and replacement review.
+9. L10 actual independent CloudFormation resources and wiring.
+10. L11 runtime IAM, two signing reads and cold/warm initialization.
+11. L12 actual Amplify revision/URLs/HTTPS/headers/SPA/assets.
+12. L13 end-to-end demo/browser/API/CORS/ownership/conflicts/retries.
+13. L14 actual schema/TTL/temp writes and signed expiry independent of cleanup.
+14. L15 privacy-safe logs and sufficient request correlation.
+15. L16 actual metrics, alarms and dashboard publication/scope.
+16. L17 optional confirmed SNS and budget delivery; N/A only if email omitted.
+17. L18 bounded throttle/reservation/synchronous latency qualification.
+18. L19 budget scope and whole-account cost/backlog observation.
+19. L20 complete staging evidence and rollback/stop readiness.
+
+The six production finding groups remain open: F03 CDK advisory, F04 anonymous
+abuse/cost policy, F07 backup/restore/erasure and retained-resource governance,
+F08 immutable action pinning, F10 signing-key rotation/cache overlap, F11 real
+authentication/coexistence. F05 diagnostics and F06 deadlines/retries remain live
+qualification; F12 is only partially satisfied by source/CI, and F13 regional CSP
+egress remains accepted. Production remains synthesized, undeployed, Cognito
+unavailable, auto-build disabled and non-launch-ready.
+
+Phase 4B prerequisites delivered: one intended remote checkpoint; fresh passing
+local gates; exact successful remote run; explained reproducible packaging;
+no credential/private artifact; no unresolved remote-CI defect; retained 3G live
+conditions. Phase 4B must separately authorize AWS account identity, resource/cost
+baseline, region/deployer/bootstrap trust and quota review before any mutation.
+Amplify/billing inputs belong to 4C, deployment 4D, live backend 4E, browser 4F,
+operations/cost 4G and acceptance freeze 4H. No later slice was begun.
+
+4A changed documentation only: README.md, ARCHITECTURE.md, backend/README.md,
+infra/README.md, docs/architecture.md, docs/deployment-environments.md,
+docs/devlog.md, docs/roadmap.md and this canonical readiness record. No runtime,
+test, workflow, lock, .env.example or Diagrams change. Generated downloaded/local
+receipts remain ignored and are not committed deployment assets. The final
+handoff supplies all 56 exit answers, all 79 requested evidence fields, the
+documentation commit and its exact green run without adding a self-reference
+commit. Required final state is clean tracked source with local/remote/final SHA
+agreement. No force push, reset, rebase, history rewrite, release/tag, security
+setting mutation, AWS command/account interaction, Amplify authorization, PAT,
+real operational email or AWS credential creation/commit is part of 4A.

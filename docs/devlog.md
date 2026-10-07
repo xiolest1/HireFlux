@@ -1,5 +1,66 @@
 # HireFlux development log
 
+## 2026-10-07 — Source checkpoint and remote CI qualification (Phase 4A)
+
+Started with a clean main at `067ade6ee14cd3e0b6e72ae0542c80b55181a19e`
+(`3G: Final Adversarial readiness review`). The accepted thirteen-file 3G change
+was already committed and pushed before this task. Verified the intended
+xiolest1/HireFlux origin, fetched normally and confirmed origin/main, local HEAD
+and merge-base agree, with zero ahead/behind. No empty checkpoint was invented.
+
+Inspected push run [37574880027](https://github.com/xiolest1/HireFlux/actions/runs/37574880027),
+attempt 1, for that exact SHA. All five jobs succeeded: backend 3.13 and 3.14
+each passed 422 tests; frontend passed 364 tests plus four header and four
+negative-build fixtures; infrastructure passed 119 unit and four real-artifact
+tests, both synths and fresh schema parity; Lambda built twice and passed the
+isolated official-runtime probe with zero network attempts. Downloaded all four
+artifacts, checked their contents, contracts, digests and approximately 90-day
+retention. No private file or credential marker was found. Rulesets read empty;
+branch-protection access was denied by the integration and Actions settings were
+outside the connector's supported endpoints, so neither is claimed inspected.
+
+Investigated a real ZIP hash discrepancy instead of treating green CI as proof
+of byte equality. Post-3G Windows zlib-ng ZIP is `a7d89abc...` (26,646,194 bytes);
+Linux CI ZIP is `4fb0923c...` (26,642,450). All 3,756 extracted files and manifest
+inputs match; 629 members have different compressed lengths. Recompressing the
+accepted members inside the pinned Lambda image using classic zlib 1.2.11
+reproduces the exact remote hash. This explains the discrepancy and renews
+ADR 0009's compression-toolchain evidence; it does not pretend the two raw hashes
+are equal. Expanded bytes remain 57,541,431, with 31 distributions/71 sources.
+
+Fresh locked local checks pass Ruff/format (111 files), Mypy (71 sources),
+422 backend tests (121.81s), frontend lint/typecheck, 364 tests in 46 files
+(76.51s), four header/four negative-build fixtures and a verified 39-file build.
+Infra passes typecheck/build, 119 tests (18.47s), four real-CLI artifact tests
+(25.83s), both actual synths and fresh schema parity. Both templates retain
+25 declarations, three parameters, zero outputs, 22/25 conditional selection
+and acyclic graphs; their local hashes match 3G. Rebuilt Lambda twice reproduces
+the accepted Windows hash and passes the pinned official-runtime probe. Initial
+Windows npm shim and sandbox temporary-file errors were resolved using the
+already documented PowerShell script shell and authorized host execution; no
+test, timeout, assertion or product policy changed.
+
+Host-selected and exact Linux runtime audits each report 31 packages and zero
+findings; frontend is clean. Infra still reports one high bundled brace-expansion
+5.0.9 package with three advisories, at latest checked CDK library 2.272.0/CLI
+2.1144.0. Remote CI has no infra-audit step; its green state does not clear this
+finding. No lock, dependency override, audit suppression or workflow change.
+The tracked-file scan reviewed 436 paths. Existing PDFs/PNG baselines and the
+1,109,662-byte OG image are intentional; no new binary/large artifact is added.
+Container /home paths and six historical external QA paths are explained;
+all new documentation links are repository-relative. Local .env was excluded.
+
+The [canonical 4A record](production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification)
+qualifies the source with documented non-blocking conditions, closes L01 and
+retains L02–L20 and all six production finding groups. This evidence is committed
+separately; the final delivery requires the documentation HEAD's own green push
+run because quality.yml has no documentation path filter. The final handoff
+records that SHA/run without an endless self-referential documentation commit.
+No AWS command/account interaction, bootstrap, deploy, upload, Amplify
+authorization, PAT/email/credential creation, repository security-setting change,
+force push or history rewrite occurred. Phase 4B remains a separate request;
+production is untouched and not launch-ready.
+
 ## 2026-10-07 — Final combined AWS readiness review (Phase 3G)
 
 Started on clean main at accepted Phase 3F commit `67b7843`. Reviewed the complete

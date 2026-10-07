@@ -58,8 +58,19 @@ AWS resources and real persistent browser accounts are not deployed.
   See [complete handoff](production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff).
   All Phase 3 slices stop at local definition/synthesis/tests; the advisory and
   anonymous issuance risk remain open for supervised staging acceptance only.
-- **Phase 4 — deferred:** AWS staging infrastructure and the existing demo running
-  end-to-end, with cost/security controls and manual smoke validation.
+- **Phase 4A — source qualified:** accepted 3G checkpoint is stored on the intended
+  GitHub main branch; all five quality jobs passed, downloaded artifacts and
+  retention were inspected, and fresh local gates passed. The cross-compressor
+  ZIP hash discrepancy is fully explained with identical extracted files and
+  a controlled reconstruction of the exact remote hash. See the
+  [Phase 4A handoff](production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
+- **Phase 4B — next, separately authorized:** AWS account identity, regional
+  baseline, deployer/bootstrap trust and concurrency preflight. No AWS action
+  occurred in 4A.
+- **Phase 4C–4H — deferred:** deployment inputs/GitHub authorization/billing
+  preparation; first staging deployment; live backend; hosted browser E2E;
+  operations/scaling/cost; final staging evidence freeze. Nineteen inherited
+  qualification rows remain after 4A closes L01; production is still deferred.
 - **Phase 5 — deferred:** real Cognito accounts in staging; direct verified Cognito
   `sub` ownership remains the approved direction.
 - **Phase 6 — deferred:** production hardening and release qualification.

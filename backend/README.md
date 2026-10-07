@@ -159,6 +159,20 @@ remain server-owned; health is liveness, not database readiness.
 
 ## Quality and phase boundaries
 
+Phase 4A verified the actual Linux CI artifact for the accepted post-3G source.
+Its SHA-256 is
+`4fb0923cd4fb0e817c0a6b9ceb724218c6cbb4cfab0462fd6ccceec1ce8b75d3`
+(26,642,450 compressed bytes); the Windows zlib-ng build remains
+`a7d89abc928d7e87dc445df03da4d17811d013d3f193aa0e289478995ba7b72e`
+(26,646,194 bytes). Every one of the 3,756 expanded members, all 31 dependency
+records, all 71 application sources and lock/project inputs match. Recompressing
+the Windows members with classic zlib in the pinned official Lambda image
+reproduces the exact CI ZIP hash. Two clean builds within each toolchain match;
+cross-compressor ZIP-byte equality is not asserted. Preserve the chosen ZIP and
+its matching manifest together, record its full hash, and renew evidence after
+compression-toolchain changes as ADR 0009 requires. See the
+[complete comparison](../docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
+
 CI retains the audit/SBOM/OpenAPI gates and now runs the full backend job on
 both 3.13 and 3.14. A separate credential-free Linux job builds twice, validates
 the ZIP and uploads local evidence. Phase 3D CI downloads this validated artifact before real infrastructure synthesis.

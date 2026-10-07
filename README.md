@@ -281,3 +281,12 @@ action and byte limits. Fresh full tests, rebuilt Linux ZIP, both synths and sch
 parity pass. The CDK bundled dependency advisory and anonymous issuance cost risk
 remain open; initial staging qualification must be supervised. Budget alerts are not spending caps;
 quota, log delivery, email confirmation and cost-tag qualification remain Phase 4.
+
+Phase 4A has qualified the accepted source checkpoint on GitHub with all five
+quality jobs green and fresh local gates. The downloaded Linux Lambda ZIP has
+identical file contents to the post-3G Windows build; a controlled compression
+experiment explains their different ZIP hashes. See the
+[Phase 4A evidence and remaining conditions](docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
+Phase 4B account/bootstrap preflight is next and requires its own authorization.
+Nothing has been deployed; the CDK advisory, anonymous-demo cost risk and
+production deferrals remain open.
