@@ -153,9 +153,10 @@ Before a release, verify direct navigation and refresh for every client route, a
 5. Review alarms, throttles, concurrency, TTL, log retention, and budget alerts.
 6. Promote the same reviewed revision to production and repeat the smoke checks.
 
-## Phase 3E deployment gates
+## Phase 3F deployment gates
 
-The current templates define 13 resources and no outputs per environment. They
+The current templates declare 25 resources and no outputs per environment (22
+selected with the default blank alert email, 25 with a supplied email). They
 remain synthesis-only. CORS source of truth is the readonly environment backend
 policy with explicit bearer-client methods/headers and allowCredentials false.
 Each origin is https://main.<that stack's Amplify App.DefaultDomain>, represented
@@ -168,8 +169,11 @@ Staging is demo; production is cognito with the existing authentication-unavaila
 Production is not deployable before its remaining authentication/operational gates.
 Two signing secrets are generated server-side, with staging Delete/Delete and
 production Retain/Retain lifecycle; only ARNs enter Lambda configuration. No
-rotation or historical erasure guarantee is added. Logs use basic runtime
-permissions; retention/alarms/concurrency/throttling remain Phase 3F.
+rotation or historical erasure guarantee is added. Phase 3F supplies explicit
+14-day staging / 30-day production log groups, scoped runtime logging permissions,
+five native alarms and a dashboard. Staging API rate/burst is 10/20 and Lambda
+reservation 5; production is 20/40 and 10. Throttling is best-effort. Monthly
+AND-tagged cost budgets are USD 10/30; they are notifications, not hard caps.
 
 The static WEB App requires only an AmplifyGitHubAccessToken NoEcho/no-default
 deployment parameter; its sole use is App.AccessToken. App contains the static
@@ -187,3 +191,21 @@ the generated origin and smoke-test browser → API → Lambda → DynamoDB, inc
 deep links, missing assets, headers/CORS, identity isolation, reset and expiry.
 Phase 4 must define the secure operator workflow; no token command/history recipe
 or live authorization is provided here. Production remains behind later gates.
+
+Operational qualification remains Phase 4: verify the regional concurrency quota
+and available reservations while leaving Lambda's required 100 unreserved
+executions; verify deployer HTTP API log-delivery permissions and actual JSON
+delivery to both explicit groups; inspect logs for private content; exercise
+throttling and alarms; optionally supply the NoEcho OperationalAlertEmail input,
+confirm its SNS email subscription, and test delivery. With email omitted,
+alarms/dashboard/budget exist without SNS resources or email actions.
+
+Activate Project and Environment cost-allocation tags through the authorized
+billing operator, allow propagation, and verify observed cost attribution and
+the budget's Project=HireFlux AND Environment=<selected environment> filter.
+Tag availability and activation can each take up to 24 hours. Tagged budgets
+can miss shared/untaggable charges and billing data is delayed. Review actual
+account totals as well; do not infer a complete cost forecast or hard cap.
+No REST API Gateway account logging role, BudgetsAction or runtime SNS access
+is defined. See [operational contract](../infra/README.md#operational-guardrails-phase-3f)
+and [ADR 0013](adr/0013-operational-guardrails.md). Phase 3G final review is next.

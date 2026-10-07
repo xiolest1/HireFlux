@@ -1,5 +1,90 @@
 # HireFlux development log
 
+## 2026-10-06 — Operational logs, scaling and cost guardrails (Phase 3F)
+
+Started from clean accepted Phase 3E commit 1e0184f. Added focused
+OperationalLogs/OperationalGuardrails constructs and immutable environment
+policy without changing application architecture or runtime source. Existing
+thirteen topology resource IDs remain stable; each template now declares 25
+resources and zero outputs. Blank alert email selects 22; nonempty email selects
+25. AWS deployment, account lookups and later phases were not performed.
+
+Separate STANDARD Lambda/API log groups retain 14 days in staging with
+Delete/Delete and 30 days in production with Retain/Retain. Explicit Lambda JSON
+logging uses application/system WARN: the installed Mangum version logs raw
+request paths at INFO. Existing sanitized application/adapter error logging
+remains unchanged; access logs use request ID and route key without raw paths,
+IP/user agent, tokens, query strings or bodies. Scoped CreateLogStream and
+PutLogEvents replace AWSLambdaBasicExecutionRole; no CreateLogGroup, custom
+metric, SNS or billing permission enters the execution role.
+
+The existing HTTP API default stage disables detailed metrics and applies
+rate/burst 10/20 staging, 20/40 production. Lambda reservations are 5/10; quota
+qualification remains Phase 4 and throttling is best-effort. Five native alarms
+monitor Lambda Errors/Throttles, API 5xx and DynamoDB throttles/system errors,
+using five-minute sums >=1 and notBreaching missing data. SystemErrors requires
+2 of 3 windows; the rest 1 of 1. DynamoDB sums use TableName+Operation across
+the six actual request operations, avoiding silently empty table-only metrics.
+Partial batch throttles still require additional manual diagnostic metrics.
+No routine validation/conditional-conflict alarm or custom collection was added.
+
+One six-graph dashboard per environment contains 14 visible series / 24 native
+metric inputs, all scoped locally. Optional NoEcho OperationalAlertEmail
+conditions topic/subscription/topic policy and alarm/budget delivery; absent
+email creates no SNS resource. Publishing is restricted to CloudWatch from this
+account's five exact alarm ARNs. Email confirmation/delivery remains Phase 4.
+Monthly COST/UNBLENDED_COST budgets are USD 10/30 with an explicit AND filter
+for Project=HireFlux and Environment=selected. Actual >80%/>100% notifications
+are optional. There is no BudgetsAction or spending cap. Billing-tag activation,
+propagation and observed attribution are future gates; shared/untaggable charges
+can be excluded and budget data is delayed. Pricing includes fifteen underlying
+alarm metrics, not merely five alarm resources; no fixed/free monthly claim.
+
+Validation: locked infra install, typecheck/build and all 119 unit tests pass
+(14.08s final run). The four real-ZIP offline CLI tests pass (22.74s), including
+both environments twice with identical template bytes, separate synthetic
+account bindings, staged asset hashes and rejected mutation/profile commands.
+Actual staging/production CLI synth passes with 25 resources and zero outputs;
+fresh backend export and both schema-parity checks pass. Full inventory,
+logging/privacy, alarm statistics/dimensions, dashboard statistics/scope and the
+actual blank/nonempty notification conditions are tested. Existing IAM/CORS,
+hosting graph, schema and protected production lifecycle assertions pass.
+
+Backend Ruff check/format (111 files) and Mypy (71 sources) pass; focused Lambda
+runtime and schema-export tests pass 47/47 in 1.35s, including sanitized errors,
+secrets, cold/warm reuse and proxy bounds. The existing Starlette/httpx
+deprecation warning remains. A local probe against installed Mangum confirms
+INFO path emission, WARN suppression and the existing ERROR exception sanitizer;
+AWS-managed JSON delivery remains a Phase 4 gate. Frontend hosting-header 4/4 and hosted-build
+negative 4/4 pass. Backend/frontend runtime source and locks are unchanged;
+full product suites and browser QA were not rerun for this infrastructure-only
+change. Sandbox DNS blocked the first locked reinstall and sandbox temporary
+lock-file rename blocked the first real-CLI tests; host reruns passed without
+weakening tests/network blocking. The sandbox Python run stalled; its host
+focused rerun passed. No product failure is masked as a passing sandbox run.
+
+The verified ZIP SHA remains
+950c8d1fbc3c4872dba29d6e4eddd3439f304509cbcd5b0ca370157cc15c4bcf
+(26,646,067 compressed bytes; 57,540,712 expanded; 3,756 files). All 71 runtime
+source inputs and lock/project hashes still match; no rebuild was required.
+CDK library 2.272.0 / CLI 2.1144.0 remain latest at recheck, with one high bundled
+brace-expansion 5.0.9 finding. Upstream brace-expansion fixes exist but no newer
+compatible CDK release was available. No lock/override/patch/suppression change;
+frontend audit reports zero vulnerabilities. This remains an open review item.
+
+CI's existing infrastructure step now names the operational guards; npm test
+automatically includes them. Existing read-only, artifact, synth and parity gates
+remain; no deploy credentials/OIDC or account actions are added, and remote CI
+was not run. Updated README, canonical architecture, architecture index,
+environment guide, roadmap, infra guide, this devlog and readiness section 45;
+added [ADR 0013](adr/0013-operational-guardrails.md) and the full 71-point handoff.
+No real email, credentials or secret value was added. Phase 3G review is next,
+with no local-definition blocker; Phase 4 operational qualification and Phase
+5/6 authentication/hardening remain required. Nothing was committed or pushed.
+Documentation checks: all 136 local links across the nine changed Markdown files
+resolve and git diff --check passes. Exactly 22 reviewed files are changed;
+generated evidence remains ignored.
+
 ## 2026-10-06 — Two-week development-log reconciliation
 
 Reviewed the rolling two-week window from 2026-09-22 through 2026-10-06 against
@@ -4508,11 +4593,12 @@ reviewed and updated for the new hierarchy.
 
 ## Next recommended work
 
-Phase 1, Phase 2A/2B/2C and Phase 3A/3B/3C/3D/3E are complete locally. Continue
-with Phase 3F's observability, log retention, alarms, throttling, concurrency and
-cost-control definitions; do not implement or deploy later slices implicitly.
-Phase 3E has defined the complete staging/production browser-to-backend topology,
-with 13 resources and zero outputs per stack, but nothing is deployed. The public
+Phase 1, Phase 2A/2B/2C and Phase 3A/3B/3C/3D/3E/3F are complete locally. Continue
+with Phase 3G's final synthesized infrastructure/security/cost-readiness review;
+do not implement or deploy later slices implicitly. Phase 3F adds operational
+guards to the complete staging/production browser-to-backend topology, with 25
+declared resources (22 with blank email, 25 with email) and zero outputs per stack,
+but nothing is deployed. The public
 browser remains demo-only; its durable adapter remains development-only.
 
 Use the accepted [phase roadmap](roadmap.md#current-execution-order) for subsequent

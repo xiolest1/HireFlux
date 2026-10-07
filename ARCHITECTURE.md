@@ -350,11 +350,13 @@ environment-specific context. The local CLI wrapper isolates AWS credentials and
 disables lookups/telemetry; tests block network attempts and assert repeatability.
 
 Both templates now contain the DynamoDB table, ten backend request-path resources
-and two static Amplify hosting resources, with zero outputs. Default CDK bootstrap parameters/rules
+and two static Amplify hosting resources, plus twelve operational declarations
+(three conditional on an alert email), with zero outputs. Each template declares
+25 resources; the blank-email configuration selects 22. Default CDK bootstrap parameters/rules
 and assembly role/asset references are future deployment contracts, not deployed
 infrastructure. Phase 3B packaging and 3C data definition are implemented locally;
 3D compute/integration and 3E hosting/origin definitions are complete locally;
-3F/3G controls and review follow;
+3F operational controls are defined locally; 3G final review follows;
 actual staging deployment remains Phase 4 and Cognito remains Phase 5. See
 [infra/README.md](infra/README.md) for commands, naming, secret/lifecycle rules,
 and the open bundled dependency audit finding, and
@@ -420,7 +422,8 @@ the existing 503 authentication-unavailable behavior for protected/demo routes.
 Health is liveness, not production readiness. Phase 5 must evolve exclusive auth
 modes to support demo and persistent accounts together and revisit preflight.
 
-One explicit role trusts only Lambda, with AWSLambdaBasicExecutionRole logging,
+One explicit role trusts only Lambda, with scoped CreateLogStream/PutLogEvents
+permissions for its explicit log group,
 seven audited DynamoDB data actions and exact secret GetSecretValue permissions.
 Item actions are table-only; Query includes the table and its three exact GSI
 ARNs. Scan, table administration, broad secret access and cross-environment
@@ -443,11 +446,46 @@ browser bytes after API decoding. A 64 KiB envelope reserve and safe 413 fallbac
 protect the synchronous limit without lowering/increasing product budgets or
 enabling streaming. Work limits remain export 5s and erasure 2s.
 
-Explicit logging retention, alarms, concurrency and throttling are Phase 3F;
+Phase 3F defines explicit logging retention, alarms, concurrency and throttling;
 final qualification is 3G, actual staging deployment 4, Cognito 5 and backup/
 rotation/privacy hardening 6. Production synthesis is not deployability. See
 [ADR 0011](docs/adr/0011-lambda-http-api-security-boundary.md),
 [infra guide](infra/README.md) and [backend guide](backend/README.md).
+
+## Operational guardrails (Phase 3F, local synthesis only)
+
+`OperationalLogs` owns separate STANDARD Lambda and HTTP API access log groups.
+Both retain 14 days in staging (Delete/Delete) and 30 days in production
+(Retain/Retain). Lambda selects JSON, application WARN and system WARN: installed
+Mangum logs raw request paths at INFO, so INFO is deliberately excluded. Existing
+sanitized error logging remains. Access logs contain request ID, route key,
+method, status, response size, latency, integration latency/status and protocol;
+they omit raw paths, IPs, user agents, credentials and request/response contents.
+Only CreateLogStream and PutLogEvents for the Lambda group's ARN are granted.
+
+The existing default HTTP API stage disables detailed metrics and applies
+rate/burst 10/20 in staging and 20/40 in production. Lambda reservations are
+5/10. These controls constrain scaling; throttling is best-effort and reserved
+concurrency needs Phase 4 account-quota qualification. No provisioned concurrency
+or new request-path service is introduced.
+
+`OperationalGuardrails` owns five native alarms and six dashboard graphs per
+environment. Lambda Errors/Throttles, HTTP API 5xx and DynamoDB ThrottledRequests
+alarm at one event in one five-minute window; DynamoDB SystemErrors requires
+two of three such windows. All missing data is notBreaching. DynamoDB error and
+throttle sums use TableName plus each actual request Operation; table-only
+SystemErrors would silently miss data. Routine 4xx, conditional conflicts and
+user errors are not alarms. No custom metrics, log queries or collectors exist.
+
+An optional NoEcho deployment email conditions the SNS topic/subscription/policy,
+five alarm actions and direct budget emails. Empty input creates no SNS resource;
+confirmation and delivery tests remain Phase 4. Monthly USD 10/30 COST budgets
+use Project=HireFlux AND Environment=<environment>, UNBLENDED_COST and actual
+80%/100% notifications. Tags need billing activation and attribution validation.
+Budgets are delayed advisory controls, can miss shared/untaggable costs, and do
+not stop spending. No BudgetsAction exists. See [ADR 0013](docs/adr/0013-operational-guardrails.md)
+and [infra operational contract](infra/README.md#operational-guardrails-phase-3f).
+AWS deployment, notification delivery and billing activation have not occurred.
 
 ## AWS staging target and service choices
 
@@ -488,8 +526,8 @@ flowchart LR
   less complexity and lower baseline cost than an ALB/API Gateway REST API for
   this small JSON API.
 - **Lambda with Mangum** reuses the tested FastAPI application without managing
-  servers. Reserved concurrency, throttling, and timeouts will bound demo abuse
-  and cost.
+  servers. Defined reserved concurrency, throttling, and timeouts bound backend
+  scaling; they do not establish a spending cap.
 - **DynamoDB on-demand** matches the implemented access-pattern-first model,
   requires no idle database capacity, and supports conditional and transactional
   writes. The deployed client uses its IAM role and no explicit credentials.

@@ -5,6 +5,8 @@ import { Template } from 'aws-cdk-lib/assertions';
 import { loadEnvironmentConfig } from '../lib/config/environment';
 import { HireFluxStack } from '../lib/hireflux-stack';
 import { fixtureArtifact } from './fixture';
+import { REVIEWED_RESOURCES } from './resource-inventory';
+import { HTTP_ACCESS_LOG_FORMAT } from '../lib/operations/operational-guardrails';
 
 const ids = {
   table: 'WorkspaceTable68AC2584', cursor: 'BackendApiCursorSigningSecret5EF895FB',
@@ -19,9 +21,6 @@ const getAtt = (id: string) => ({ 'Fn::GetAtt': [id, 'Arn'] });
 const ref = (id: string) => ({ Ref: id });
 const itemActions = ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem',
   'dynamodb:BatchWriteItem', 'dynamodb:ConditionCheckItem'];
-const inventory = ['AWS::DynamoDB::Table', 'AWS::Amplify::App', 'AWS::Amplify::Branch', 'AWS::SecretsManager::Secret', 'AWS::SecretsManager::Secret',
-  'AWS::IAM::Role', 'AWS::IAM::Policy', 'AWS::Lambda::Function', 'AWS::ApiGatewayV2::Api',
-  'AWS::ApiGatewayV2::Integration', 'AWS::Lambda::Permission', 'AWS::ApiGatewayV2::Route', 'AWS::ApiGatewayV2::Stage'];
 
 for (const environment of ['staging', 'production'] as const) {
   const config = loadEnvironmentConfig(environment);
@@ -29,8 +28,7 @@ for (const environment of ['staging', 'production'] as const) {
   const json = Template.fromStack(stack).toJSON();
   const resources = json.Resources;
   test(`${environment} contains only the reviewed resource families and stable logical identities`, () => {
-    assert.deepEqual(Object.keys(resources).sort(), Object.values(ids).sort());
-    assert.deepEqual(Object.values(resources).map((resource: any) => resource.Type), inventory);
+    assert.deepEqual(Object.fromEntries(Object.entries(resources).map(([id, resource]: [string, any]) => [id, resource.Type])), REVIEWED_RESOURCES);
     assert.deepEqual(json.Outputs ?? {}, {});
     for (const construct of [stack.backendFunction, stack.httpApi, stack.backend.executionRole,
       stack.backend.cursorSecret, stack.backend.demoSessionSecret]) {
@@ -49,8 +47,11 @@ for (const environment of ['staging', 'production'] as const) {
     assert.equal(properties.Code.ZipFile, undefined);
     assert.ok(properties.Code.S3Bucket && properties.Code.S3Key.endsWith('.zip'));
     assert.deepEqual(properties.Role, getAtt(ids.role));
-    for (const property of ['FunctionName', 'VpcConfig', 'ReservedConcurrentExecutions', 'TracingConfig',
-      'Layers', 'SnapStart', 'DeadLetterConfig', 'EphemeralStorage', 'LoggingConfig']) assert.equal(properties[property], undefined);
+    for (const property of ['FunctionName', 'VpcConfig', 'TracingConfig',
+      'Layers', 'SnapStart', 'DeadLetterConfig', 'EphemeralStorage']) assert.equal(properties[property], undefined);
+    assert.equal(properties.ReservedConcurrentExecutions, config.operations.lambdaReservedConcurrency);
+    assert.deepEqual(properties.LoggingConfig, { ApplicationLogLevel: 'WARN', LogFormat: 'JSON',
+      LogGroup: ref('OperationalLogsBackendFunctionLogs44D131F8'), SystemLogLevel: 'WARN' });
     const variables = properties.Environment.Variables;
     assert.deepEqual(Object.keys(variables).sort(), ['ENVIRONMENT', 'AUTH_MODE', 'DYNAMODB_TABLE_NAME',
       'CORS_ALLOWED_ORIGINS', 'CURSOR_SIGNING_SECRET_ARN', 'DEMO_SESSION_SIGNING_SECRET_ARN', 'LAMBDA_CORS_POLICY',
@@ -78,8 +79,7 @@ for (const environment of ['staging', 'production'] as const) {
     ] });
     assert.equal(role.RoleName, undefined);
     assert.equal(role.Policies, undefined);
-    assert.deepEqual(role.ManagedPolicyArns, [{ 'Fn::Join': ['', ['arn:', ref('AWS::Partition'),
-      ':iam::aws:policy/service-role/AWSLambdaBasicExecutionRole']] }]);
+    assert.equal(role.ManagedPolicyArns, undefined);
     const policy = resources[ids.policy].Properties;
     assert.deepEqual(policy.Roles, [ref(ids.role)]);
     assert.deepEqual(policy.PolicyDocument.Statement, [
@@ -87,6 +87,7 @@ for (const environment of ['staging', 'production'] as const) {
       { Effect: 'Allow', Action: 'dynamodb:Query', Resource: [getAtt(ids.table),
         ...['GSI1', 'GSI2', 'GSI3'].map((index) => ({ 'Fn::Join': ['', [getAtt(ids.table), `/index/${index}`]] }))] },
       { Effect: 'Allow', Action: 'secretsmanager:GetSecretValue', Resource: [ref(ids.cursor), ref(ids.demo)] },
+      { Effect: 'Allow', Action: ['logs:CreateLogStream', 'logs:PutLogEvents'], Resource: getAtt('OperationalLogsBackendFunctionLogs44D131F8') },
     ]);
     const text = JSON.stringify(policy.PolicyDocument);
     for (const forbidden of ['dynamodb:Scan', 'dynamodb:*', 'dynamodb:CreateTable', 'dynamodb:DeleteTable',
@@ -94,7 +95,8 @@ for (const environment of ['staging', 'production'] as const) {
       'dynamodb:UpdateContinuousBackups', 'dynamodb:TagResource', 'dynamodb:UntagResource',
       'secretsmanager:*', 'secretsmanager:DescribeSecret', 'secretsmanager:ListSecrets',
       'secretsmanager:CreateSecret', 'secretsmanager:PutSecretValue', 'secretsmanager:DeleteSecret',
-      'secretsmanager:UpdateSecret', 'secretsmanager:RotateSecret', 'kms:', 'xray:', 'sts:AssumeRole']) {
+      'secretsmanager:UpdateSecret', 'secretsmanager:RotateSecret', 'kms:', 'xray:', 'sts:AssumeRole',
+      'logs:*', 'logs:CreateLogGroup', 'cloudwatch:PutMetricData', 'sns:Publish']) {
       assert.ok(!text.includes(forbidden), `Forbidden execution action ${forbidden}`);
     }
     for (const statement of policy.PolicyDocument.Statement) assert.ok(!JSON.stringify(statement.Resource).includes('*'));
@@ -126,6 +128,9 @@ for (const environment of ['staging', 'production'] as const) {
     assert.equal(resources[ids.route].Properties.AuthorizationType, 'NONE');
     assert.deepEqual(resources[ids.stage].Properties, {
       ApiId: ref(ids.api), AutoDeploy: true, StageName: '$default', Tags: config.tags,
+      AccessLogSettings: { DestinationArn: getAtt('OperationalLogsHttpApiAccessLogs3515ABA0'), Format: HTTP_ACCESS_LOG_FORMAT },
+      DefaultRouteSettings: { DetailedMetricsEnabled: false,
+        ThrottlingRateLimit: config.operations.apiThrottleRate, ThrottlingBurstLimit: config.operations.apiThrottleBurst },
     });
     assert.ok(resources[ids.function].Properties.Timeout * 1000 < resources[ids.integration].Properties.TimeoutInMillis);
     assert.deepEqual(resources[ids.permission].Properties, {

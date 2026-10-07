@@ -263,13 +263,17 @@ complete, including the Phase 2C local data-safety foundation. AWS staging, real
 reminders, email delivery, and large asynchronous exports remain future phases
 rather than hidden dependencies of the current app.
 
-## Phase 3E infrastructure status
+## Phase 3F infrastructure status
 
 The full browser-to-backend topology is defined locally: static Amplify WEB
 hosting, branch-level public API configuration, exact App-domain-token CORS,
-and the unchanged verified backend. Each environment synthesizes 13 resources.
+and the unchanged verified backend. Phase 3F adds finite JSON logs, five native
+alarms, a dashboard, API throttles, reserved concurrency and a tag-scoped budget.
+Each environment declares 25 resources: 22 without an alert email, 25 with one.
 Nothing is deployed and no frontend domain exists yet. Production auto-build
 is disabled and authentication remains unavailable until Phase 5.
-See [ADR 0012](docs/adr/0012-amplify-hosting-origin-wiring.md),
+See [ADR 0013](docs/adr/0013-operational-guardrails.md),
 [frontend build guide](frontend/README.md),
-[infra commands](infra/README.md) and [current handoff](docs/production-account-readiness.md#44-phase-3e-implementation-and-handoff).
+[infra commands](infra/README.md) and [current handoff](docs/production-account-readiness.md#45-phase-3f-implementation-and-handoff).
+Phase 3G's final synthesized review is next. Budget alerts are not spending caps;
+quota, log delivery, email confirmation and cost-tag qualification remain Phase 4.

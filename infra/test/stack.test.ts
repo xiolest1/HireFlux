@@ -1,3 +1,4 @@
+import { REVIEWED_RESOURCE_COUNT } from './resource-inventory';
 import { fixtureArtifact } from './fixture';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -18,7 +19,7 @@ for (const environment of ['staging', 'production'] as const) {
       const stack = composeEnvironment(app, fixtureArtifact);
       const template = Template.fromStack(stack);
       template.resourceCountIs('AWS::DynamoDB::Table', 1);
-      assert.equal(Object.keys(template.toJSON().Resources).length, 13);
+      assert.equal(Object.keys(template.toJSON().Resources).length, REVIEWED_RESOURCE_COUNT);
       const assembly = app.synth();
       assert.equal(assembly.stacks.length, 1);
       assert.equal(assembly.manifest.missing, undefined);
@@ -28,7 +29,7 @@ for (const environment of ['staging', 'production'] as const) {
       assert.equal(artifact.environment.region, 'us-east-1');
       assert.equal(artifact.environment.account, 'unknown-account');
       assert.deepEqual(artifact.tags, { Project: 'HireFlux', Environment: environment, ManagedBy: 'AWS-CDK' });
-      assert.equal(Object.keys(artifact.template.Resources).length, 13);
+      assert.equal(Object.keys(artifact.template.Resources).length, REVIEWED_RESOURCE_COUNT);
       assert.deepEqual(artifact.template.Metadata.HireFlux, {
         environmentName: environment,
         resourceNamePrefix: `hireflux-${environment}`,

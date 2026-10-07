@@ -128,3 +128,16 @@ test('source branch validates exact DNS-label semantics without guessing Git bra
     assert.throws(() => validateSourceBranch(value), /DNS-safe/);
   }
 });
+
+test('operational policies are frozen, distinct and reject invalid or cross-environment guardrails', () => {
+  const staging = loadEnvironmentConfig('staging');
+  const production = loadEnvironmentConfig('production');
+  assert.ok(Object.isFrozen(staging.operations) && Object.isFrozen(production.operations));
+  assert.deepEqual(staging.operations, { lambdaLogRetentionDays: 14, apiLogRetentionDays: 14,
+    logRemovalPolicy: 'DESTROY', apiThrottleRate: 10, apiThrottleBurst: 20, lambdaReservedConcurrency: 5, monthlyBudgetUsd: 10 });
+  assert.deepEqual(production.operations, { lambdaLogRetentionDays: 30, apiLogRetentionDays: 30,
+    logRemovalPolicy: 'RETAIN', apiThrottleRate: 20, apiThrottleBurst: 40, lambdaReservedConcurrency: 10, monthlyBudgetUsd: 30 });
+  for (const operations of [production.operations, undefined, ...Object.keys(staging.operations).map((key) => ({
+    ...staging.operations, [key]: key === 'logRemovalPolicy' ? 'RETAIN' : 0,
+  }))]) assert.throws(() => validateEnvironmentConfig({ ...staging, operations: operations as any }), /Operational retention/);
+});

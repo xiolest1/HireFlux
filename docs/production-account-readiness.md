@@ -2,7 +2,23 @@
 
 Date: 2026-10-05. Status: architecture proposal for review, not an accepted implementation ADR.
 
-**Current Phase 3E update (2026-10-06):** both environment templates now
+**Current Phase 3F update (2026-10-06):** both environment templates now include
+finite explicit JSON logs, scoped logging IAM, five native alarms, one dashboard,
+API throttles, reserved concurrency and AND-tagged monthly budgets. Each declares
+25 resources and zero outputs; blank optional alert email selects 22 resources
+without SNS or notification actions. Retention is 14/30 days, rate/burst 10/20
+and 20/40, reservations 5/10, budgets USD 10/30. The unchanged runtime ZIP,
+schema, protected production data and acyclic hosting/CORS wiring remain intact.
+All 119 infra unit tests, four real-artifact CLI tests, both actual synths and
+fresh schema parity pass; focused backend and frontend hosting checks pass.
+No AWS/Billing/SNS account action or deployment occurred. Cost-tag coverage,
+concurrency quota, log delivery and confirmed optional emails remain Phase 4.
+Budget alerts do not cap spend or cover every untaggable/shared charge.
+See [ADR 0013](adr/0013-operational-guardrails.md) and
+[section 45](#45-phase-3f-implementation-and-handoff). Phase 3G review is next;
+the CDK bundled advisory and later production/authentication gates remain open.
+
+**Phase 3E implementation update (2026-10-06):** both environment templates
 define the full browser-to-backend path with separate static Amplify App/Branch
 resources, NoEcho GitHub deployment input, public branch-level API/site variables
 and exact App.DefaultDomain-derived CORS. Each has 13 resources and zero outputs.
@@ -3074,3 +3090,363 @@ BackendApiHttpApiDefaultStage89B5186D — AWS::ApiGatewayV2::Stage — $default 
 68. **Phase 3F blocker:** none for local definitions. CDK advisory remains open; repository authorization, staging deployment and production authentication are still later gates.
 
 Is HireFlux's complete browser-to-backend AWS topology now safely defined — Amplify-hosted Vite frontend, token-derived exact CORS origin, same-stack HTTP API endpoint injection, SPA routing, security headers, and environment isolation — so that Phase 3F can add observability, throttling and cost controls without changing application topology?
+
+## 45. Phase 3F implementation and handoff
+
+Date: 2026-10-06. Started from clean accepted Phase 3E commit 1e0184f.
+Status: implemented and validated locally only; nothing deployed or subscribed.
+This section supersedes earlier descriptions of Phase 3F as future work.
+
+1. **Enabled:** operational definitions around the existing topology: finite
+   privacy-safe logs, native alarms/dashboard, constrained API/Lambda scaling,
+   optional operator alerts and honest advisory budgets. No application redesign.
+
+2. **Modules:** infra/lib/operations/operational-guardrails.ts defines
+   OperationalLogs and OperationalGuardrails; infra/lib/config/environment.ts
+   owns policy; backend/backend-api.ts and hireflux-stack.ts wire existing resources.
+
+3. **Lambda log identity:** OperationalLogs/BackendFunctionLogs/Resource →
+   OperationalLogsBackendFunctionLogs44D131F8, AWS::Logs::LogGroup, STANDARD,
+   generated physical name.
+
+4. **Lambda retention:** staging 14 days; production 30 days.
+
+5. **Lambda lifecycle:** staging DESTROY (Delete/Delete); production RETAIN
+   (Retain/Retain for deletion/replacement). Finite event retention remains on
+   retained groups; subsequent operator cleanup is deliberate.
+
+6. **Lambda format:** explicit LoggingConfig.LogFormat JSON, bound to that group.
+
+7. **Levels:** ApplicationLogLevel WARN and SystemLogLevel WARN. Installed Mangum
+   0.21.0 logs raw paths at INFO, so INFO is deliberately excluded. Existing
+   constant/sanitized error logging and exception filter remain unchanged.
+   Service-side JSON delivery/level behavior is qualified in Phase 4.
+
+8. **Logging IAM:** only logs:CreateLogStream and logs:PutLogEvents on the explicit
+   Lambda group's ARN, including its stream suffix; no CreateLogGroup or wildcard
+   group access. The execution role has no SNS/billing/PutMetricData permission.
+
+9. **Basic policy:** AWSLambdaBasicExecutionRole removed. An explicit group makes
+   broad group creation/log access unnecessary; no managed policy remains.
+
+10. **API log identity:** OperationalLogs/HttpApiAccessLogs/Resource →
+    OperationalLogsHttpApiAccessLogs3515ABA0, STANDARD, separate generated name.
+
+11. **API retention:** staging 14 days; production 30 days.
+
+12. **API lifecycle:** staging Delete/Delete; production Retain/Retain.
+
+13. **Exact API log format:**
+
+    ```json
+    {"requestId":"$context.requestId","routeKey":"$context.routeKey","httpMethod":"$context.httpMethod","status":"$context.status","responseLength":"$context.responseLength","responseLatency":"$context.responseLatency","integrationLatency":"$context.integrationLatency","protocol":"$context.protocol","integrationStatus":"$context.integration.status"}
+    ```
+
+14. **Privacy:** no raw path/resource identifiers, query strings, IP, user agent,
+    tokens, cookies, credentials, claims/email, body contents or raw exceptions.
+    RouteKey is the configured $default route; access values are strings to allow
+    missing-value `-`. Exact-field and negative privacy tests pass.
+
+15. **Detailed metrics:** false on the existing default HTTP API stage. Native
+    API aggregates suffice; no paid route-level collection or custom metric.
+
+16. **Staging throttles:** rate 10 RPS; burst 20 requests.
+
+17. **Production throttles:** rate 20 RPS; burst 40 requests.
+
+18. **Throttle limit:** best-effort, not exact admission or a spending cap.
+    [HTTP API throttling semantics](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-throttling.html).
+
+19. **Staging concurrency:** reserved 5 executions.
+
+20. **Production concurrency:** reserved 10 executions. No provisioned capacity.
+
+21. **Quota gate:** Phase 4 verifies each regional account quota, other
+    reservations and available capacity while leaving Lambda's required 100
+    unreserved executions. No lookup now.
+    [Reserved concurrency](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html).
+
+22. **Five alarms:** OperationsLambdaErrors5904FFE2 / lambda-errors;
+    OperationsLambdaThrottles66F0659C / lambda-throttles;
+    OperationsHttpApiServerErrors8A0F4370 / api-5xx;
+    OperationsDynamoDBThrottlesAF8DF63F / dynamodb-throttles;
+    OperationsDynamoDBSystemErrorsB63796D3 / dynamodb-system-errors.
+    Physical names are hireflux-staging-<suffix> / hireflux-production-<suffix>.
+
+23. **Lambda Errors:** AWS/Lambda, Errors, FunctionName=this function, Sum,
+    period 300 seconds, >=1, evaluation 1 period / 1 datapoint.
+
+24. **Lambda Throttles:** same configuration using Throttles.
+
+25. **API 5xx:** AWS/ApiGateway, lowercase 5xx, ApiId=this HTTP API, Sum,
+    300 seconds, >=1, 1 of 1. No REST metric/name/dimension is assumed.
+
+26. **DynamoDB throttles:** AWS/DynamoDB ThrottledRequests; SUM of six native
+    TableName+Operation Sum metrics, 300 seconds, >=1, 1 of 1. Operations:
+    GetItem, PutItem, DeleteItem, Query, BatchWriteItem, TransactWriteItems.
+    Partial batch throttles can escape this request metric; manually inspect
+    ReadThrottleEvents/WriteThrottleEvents when diagnosing them.
+
+27. **DynamoDB system errors:** same six-operation sum using SystemErrors,
+    300 seconds, >=1, 2 datapoints of 3 periods (two affected windows in fifteen
+    minutes). Table-only SystemErrors has no matching published series; tests
+    reject missing Operation. [DynamoDB metric dimensions](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/metrics-dimensions.html).
+
+28. **Missing data:** notBreaching on all five alarms. Idle gaps do not page;
+    absence of metrics is not proof that telemetry is functioning.
+
+29. **Excluded alarms:** routine 4xx, ConditionalCheckFailedRequests and UserErrors
+    are expected validation/conflict behavior; latency lacks a measured threshold;
+    AWS/Billing would duplicate the budget. No custom metric/log metric filter.
+
+30. **Dashboard:** OperationalDashboard → OperationsOperationalDashboard098A469E;
+    hireflux-staging-operations / hireflux-production-operations.
+
+31. **Dashboard inventory:** six graphs, six-hour default view, 300-second period,
+    14 visible series / 24 underlying native metrics. HTTP Count/4xx/5xx Sum;
+    Latency/IntegrationLatency Average; Lambda Invocations/Errors/Throttles Sum;
+    Duration p95/ConcurrentExecutions Maximum with reservation annotation;
+    DynamoDB throttle/system-error sums; Query SuccessfulRequestLatency Average
+    and TransactionConflict Sum. No Logs Insights/custom collection.
+
+32. **Isolation:** all graphs reference only their own stack's function/API/table
+    in its region. Independently bound synthetic accounts, distinct tokens and
+    absence of imports/other-environment references are tested.
+
+33. **Email parameter:** OperationalAlertEmail String, default empty, NoEcho true,
+    max 254, pattern `^$|^[^\s@]+@[^\s@]+\.[^\s@]+$`. Deploy-time configuration only; never in
+    Lambda, Amplify, Vite, outputs or committed real contact data.
+
+34. **Conditional SNS:** HasOperationalAlertEmail controls
+    OperationsOperationalAlerts7AC1A668 (Topic),
+    OperationsOperationalAlertSubscription953AAEA9 (email Subscription),
+    OperationsOperationalAlertPolicy4A085B4E (TopicPolicy).
+    Publishing is cloudwatch.amazonaws.com only, current SourceAccount and the
+    five exact SourceArn alarm ARNs; no runtime grant.
+
+35. **No email:** all three SNS declarations are excluded, all five alarm action
+    arrays resolve empty and budget subscribers are omitted. Twenty-two resources
+    remain; monitoring/budget visibility still exists. Actual Fn::If conditions tested.
+
+36. **With email:** twenty-five resources; all five actions reference that
+    environment's topic, with its one email subscription. Budget notifications
+    use direct email to the same parameter, independently of SNS publishing.
+
+37. **Confirmation:** the operator must confirm SNS email and test delivery in
+    Phase 4; a template alone provides no delivery proof.
+    [SNS email subscriptions](https://docs.aws.amazon.com/sns/latest/dg/sns-email-notifications.html).
+
+38. **Budget implemented:** native AWS::Budgets::Budget MonthlyCostBudget →
+    OperationsMonthlyCostBudgetFC194922; COST/MONTHLY/USD/UNBLENDED_COST. New
+    FilterExpression expresses an explicit AND, not legacy OR-valued tags.
+
+39. **Staging budget:** USD 10; hireflux-staging-monthly-cost.
+
+40. **Production budget:** USD 30; hireflux-production-monthly-cost.
+
+41. **Exact filters:**
+
+    ```json
+    {"And":[{"Tags":{"Key":"Project","Values":["HireFlux"],"MatchOptions":["EQUALS"]}},{"Tags":{"Key":"Environment","Values":["staging or production, selected explicitly"],"MatchOptions":["EQUALS"]}}]}
+    ```
+
+    Actual templates use the single value staging or production respectively.
+    No legacy CostFilters or mixed CostTypes are emitted. Resource tags preserve
+    Project, Environment and ManagedBy; budget tags do not guarantee attribution.
+
+42. **Tag prerequisite:** an authorized Phase 4 billing operator activates Project
+    and Environment cost-allocation tags, waits for availability/propagation and
+    verifies observed cost attribution and budget scope. Tag appearance and
+    activation can each take up to 24 hours. Shared/untaggable charges can be
+    excluded; also inspect account totals.
+    [Cost-allocation tag activation](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/activating-tags.html).
+
+43. **Budget notifications:** email present → ACTUAL, GREATER_THAN, PERCENTAGE,
+    thresholds 80 and 100, one EMAIL subscriber from the parameter per threshold.
+    Empty email → no subscriber/notification configuration. No forecast/SNS budget
+    publisher is used.
+
+44. **No action:** no AWS::Budgets::BudgetsAction, automatic shutdown or IAM
+    mutation; no runtime billing permission.
+
+45. **Cost limits:** budgets warn using delayed attributed cost, never stop spend.
+    Starting amounts are not a forecast. Finite logs still incur ingestion/storage;
+    dashboard and alarms can incur charges. Five alarms price fifteen underlying
+    standard-resolution metrics (3+6+6), not five; optional SNS can add delivery
+    costs. No fixed monthly/free-tier claim or complete tag coverage claim.
+    [Budgets limitations](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html),
+    [CloudWatch pricing](https://aws.amazon.com/cloudwatch/pricing/).
+
+46. **Staging inventory:** 25 declarations, 22 default / 25 with email, zero outputs.
+    The complete logical-ID/type map is:
+
+    ```text
+    WorkspaceTable68AC2584: AWS::DynamoDB::Table
+    FrontendHostingApp3EC0FC15: AWS::Amplify::App
+    FrontendHostingBranchB5734B41: AWS::Amplify::Branch
+    OperationalLogsBackendFunctionLogs44D131F8: AWS::Logs::LogGroup
+    OperationalLogsHttpApiAccessLogs3515ABA0: AWS::Logs::LogGroup
+    BackendApiCursorSigningSecret5EF895FB: AWS::SecretsManager::Secret
+    BackendApiDemoSessionSigningSecretB7E1C367: AWS::SecretsManager::Secret
+    BackendApiExecutionRoleF9E94D3B: AWS::IAM::Role
+    BackendApiExecutionRoleDefaultPolicyDE57D6A3: AWS::IAM::Policy
+    BackendApiBackendFunctionFFB5248D: AWS::Lambda::Function
+    BackendApiHttpApiB4B1202A: AWS::ApiGatewayV2::Api
+    BackendApiHttpApiDefaultRouteBackendIntegrationC791C627: AWS::ApiGatewayV2::Integration
+    BackendApiHttpApiDefaultRouteBackendIntegrationPermission521AD465: AWS::Lambda::Permission
+    BackendApiHttpApiDefaultRoute408A2CCF: AWS::ApiGatewayV2::Route
+    BackendApiHttpApiDefaultStage89B5186D: AWS::ApiGatewayV2::Stage
+    OperationsOperationalAlerts7AC1A668: AWS::SNS::Topic (conditional)
+    OperationsOperationalAlertSubscription953AAEA9: AWS::SNS::Subscription (conditional)
+    OperationsOperationalAlertPolicy4A085B4E: AWS::SNS::TopicPolicy (conditional)
+    OperationsLambdaErrors5904FFE2: AWS::CloudWatch::Alarm
+    OperationsLambdaThrottles66F0659C: AWS::CloudWatch::Alarm
+    OperationsHttpApiServerErrors8A0F4370: AWS::CloudWatch::Alarm
+    OperationsDynamoDBThrottlesAF8DF63F: AWS::CloudWatch::Alarm
+    OperationsDynamoDBSystemErrorsB63796D3: AWS::CloudWatch::Alarm
+    OperationsOperationalDashboard098A469E: AWS::CloudWatch::Dashboard
+    OperationsMonthlyCostBudgetFC194922: AWS::Budgets::Budget
+    ```
+
+47. **Production inventory:** exactly the same 25 logical-ID/type declarations
+    listed in item 46, in the separate hireflux-production stack; 22 default /
+    25 with email, zero outputs. Resource IDs can match across isolated stacks.
+    Generated physical names/tokens and environment-prefixed operational names
+    are separate; lifecycle/limits/amounts differ as documented. Full map tested
+    against both actual templates and both bound-account CLI templates.
+
+48. **Parameters:** AmplifyGitHubAccessToken String/NoEcho/no default/length
+    1–4096, referenced only by App.AccessToken; OperationalAlertEmail as item 33;
+    existing BootstrapVersion SSM parameter/default bootstrap version path.
+    No credential/contact values are synthesized. Bootstrap is not performed.
+
+49. **Families:** only the reviewed Table, Amplify App/Branch, Secrets, IAM
+    Role/Policy, Lambda Function/Permission, HTTP API/Integration/Route/Stage,
+    LogGroup, Alarm, Dashboard, Budget and conditional SNS types. No custom
+    resources, extra bucket/role, REST account resource, collector or telemetry service.
+
+50. **IAM regressions:** all Phase 3D tests pass: six underlying item actions
+    table-only; Query table+three exact GSI ARNs; GetSecretValue two exact secrets.
+    Only scoped logging is added. Scan/admin/cross-environment/broad secret grants
+    and custom metric/SNS/billing access remain absent; Lambda-only trust preserved.
+
+51. **Schema parity:** fresh Python export and explicit network-blocked comparison
+    pass for both environments: keys/types, all three ALL GSIs, expires_at TTL,
+    PAY_PER_REQUEST. Production PITR, deletion protection and retention unchanged.
+
+52. **Hosting/CORS:** existing graph and regression tests pass; App → backend →
+    Branch remains acyclic. Same exact token-derived origins, bearer CORS,
+    SPA rewrite/security headers/public inputs/production auto-build policy.
+    Frontend/backend runtime and customHttp.yml unchanged.
+
+53. **Artifact:** unchanged verified SHA-256
+    950c8d1fbc3c4872dba29d6e4eddd3439f304509cbcd5b0ca370157cc15c4bcf;
+    26,646,067 compressed bytes, 57,540,712 expanded, 3,756 files. All 71 runtime
+    source inputs and lock/project hashes still match. Python 3.14/x86_64/handler,
+    1024 MB/15s and existing ZIP-only binding remain; no rebuild/upload.
+
+54. **Backend checks:** Ruff check and format (111 files), Mypy (71 sources)
+    pass; focused test_lambda_runtime.py + test_dynamodb_schema_export.py pass
+    47/47 in 1.35s. Local installed-Mangum probe confirms INFO raw-path emission,
+    WARN suppression and the existing ERROR exception sanitizer; AWS JSON delivery
+    remains untested until Phase 4. Existing Starlette/httpx warning remains. Sanitized logs,
+    secret failures/reuse, proxy bounds and export are covered. Runtime unchanged;
+    full product suite/Docker image validation not rerun. Sandbox run stalled;
+    host focused rerun passed without code changes.
+
+55. **Frontend checks:** hosting-header 4/4 and hosted-build negative 4/4 pass.
+    No frontend source/lock/UI change; no fresh full Vitest/build/browser run
+    claimed. Existing Phase 3E UI/build evidence remains historical.
+
+56. **Infra results:** locked npm ci, typecheck/build pass; 119/119 unit tests,
+    zero fail/skip (14.08s final run). Four offline real-ZIP CLI tests pass
+    (22.74s), covering repeated bytes, staged hashes, independent account binding
+    and invalid/mutation commands. Fresh schema parity passes. Sandbox DNS and
+    temporary lock-file EPERM required host reruns; network assertions remain.
+
+57. **Staging synth:** actual canonical wrapper command passes; 25 declarations,
+    zero outputs; real-ZIP repeated offline synthesis matches byte-for-byte.
+
+58. **Production synth:** same result with independent output/account/resources.
+    Synth success is not production deployment/authentication readiness.
+
+59. **Audit:** library 2.272.0 / CLI 2.1144.0 remain latest at npm recheck.
+    One high vulnerable bundled dependency, brace-expansion 5.0.9 under minimatch
+    10.2.5; advisory set GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p and
+    GHSA-q2hr-2g5m-vwhr. Upstream brace-expansion fixes exist but no newer compatible
+    CDK release was available. No override/patch/suppression/lock change or clean
+    CDK audit claim. Frontend npm audit: zero vulnerabilities.
+
+60. **CI:** existing step renamed to Typecheck and test topology and operational
+    guardrails; npm test automatically includes new tests. Existing synth, real
+    ZIP and parity gates remain. No AWS credential, OIDC/deploy step or permission
+    increase; remote Actions was not run.
+
+61. **Documentation:** README, ARCHITECTURE, docs architecture/environment/roadmap/
+    devlog/readiness, infra guide updated; ADR 0013 added. Historical phase
+    completion snapshots remain historical; current status now points to 3G.
+
+62. **Exact changed files (22, repository-relative):**
+
+    ```text
+    .github/workflows/quality.yml
+    ARCHITECTURE.md
+    README.md
+    docs/adr/0013-operational-guardrails.md
+    docs/architecture.md
+    docs/deployment-environments.md
+    docs/devlog.md
+    docs/production-account-readiness.md
+    docs/roadmap.md
+    infra/README.md
+    infra/lib/backend/backend-api.ts
+    infra/lib/config/environment.ts
+    infra/lib/hireflux-stack.ts
+    infra/lib/operations/operational-guardrails.ts
+    infra/scripts/check-schema-parity.mjs
+    infra/test/backend.test.ts
+    infra/test/cli.integration.ts
+    infra/test/config.test.ts
+    infra/test/dynamodb.test.ts
+    infra/test/operations.test.ts
+    infra/test/resource-inventory.ts
+    infra/test/stack.test.ts
+    ```
+
+63. **Contact data:** no real email/contact value added. Test input is the visibly
+    fake operator@example.invalid; the default parameter is empty.
+
+64. **Credentials:** no AWS credential or secret value added to source/templates;
+    only existing generated secrets/ARN references and NoEcho deployment inputs.
+    No .env or generated artifact is tracked. Existing fake test values stay fake.
+
+65. **Account actions:** no AWS/Billing/SNS account lookup/mutation, tag activation,
+    live subscription, bootstrap, upload/deployment, GitHub authorization, commit
+    or push. Read-only official documentation/npm access is research, not account work.
+
+66. **Phase 4 prerequisites:** existing account binding/bootstrap/GitHub operator
+    workflow/clean remote CI/staging smoke gates plus regional concurrency and
+    reservation review, HTTP API deployer log-delivery permissions, actual JSON
+    privacy/delivery checks, metrics/alarms/throttling exercise, optional confirmed
+    SNS and budget email tests, authorized tag activation/propagation, observed
+    budget scope and overall account-cost review. No REST logging role/runtime
+    billing grant is required by this implementation.
+
+67. **Deferred 3G:** final synthesized infrastructure/security/cost-readiness and
+    comprehensive isolation review, including the open bundled CDK advisory.
+    Not performed as a separate phase here.
+
+68. **Deferred 4:** all account authorization, bootstrap, deployment and live
+    service/billing/notification qualification; staging only when authorized.
+
+69. **Deferred 5:** Cognito, OAuth/PKCE/JWT verification, persistent accounts,
+    demo/account coexistence and reviewed production frontend auth mode.
+
+70. **Deferred 6:** production hardening, privacy/backup/restore/erasure
+    reconciliation, signing-key rotation and launch qualification.
+
+71. **3G blocker:** none for local final review. The toolchain advisory remains
+    open and operational/authentication/deployment qualifications remain explicit
+    later gates; production is not launch-ready.
+
+Is HireFlux's existing AWS topology now wrapped in proportionate operational guardrails — finite privacy-safe logs, focused alarms, dashboard visibility, bounded API/Lambda scaling and honest cost controls — so that Phase 3G can perform the final synthesized infrastructure/security/cost-readiness review without changing the application architecture?

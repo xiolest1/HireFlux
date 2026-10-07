@@ -29,7 +29,7 @@ jobs:
         with:
           name: backend-supply-chain-3.14
           path: .
-      - name: Typecheck and test infrastructure
+      - name: Typecheck and test topology and operational guardrails
         run: |
           npm --prefix infra run typecheck
           npm --prefix infra test

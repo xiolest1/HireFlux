@@ -20,6 +20,15 @@ export interface HireFluxEnvironmentConfig {
   readonly awsRegion: string;
   readonly awsAccount: string | undefined;
   readonly data: DynamoDBLifecycleConfig;
+  readonly operations: Readonly<{
+    lambdaLogRetentionDays: 14 | 30;
+    apiLogRetentionDays: 14 | 30;
+    logRemovalPolicy: 'DESTROY' | 'RETAIN';
+    apiThrottleRate: number;
+    apiThrottleBurst: number;
+    lambdaReservedConcurrency: number;
+    monthlyBudgetUsd: number;
+  }>;
   readonly backend: Readonly<{
     authMode: 'demo' | 'cognito';
     secretRemovalPolicy: 'DESTROY' | 'RETAIN';
@@ -64,6 +73,16 @@ function backendConfig(environment: EnvironmentName): HireFluxEnvironmentConfig[
 
 export const AWS_REGION = 'us-east-1';
 
+function operationsConfig(environment: EnvironmentName): HireFluxEnvironmentConfig['operations'] {
+  return Object.freeze(environment === 'staging' ? {
+    lambdaLogRetentionDays: 14, apiLogRetentionDays: 14, logRemovalPolicy: 'DESTROY',
+    apiThrottleRate: 10, apiThrottleBurst: 20, lambdaReservedConcurrency: 5, monthlyBudgetUsd: 10,
+  } : {
+    lambdaLogRetentionDays: 30, apiLogRetentionDays: 30, logRemovalPolicy: 'RETAIN',
+    apiThrottleRate: 20, apiThrottleBurst: 40, lambdaReservedConcurrency: 10, monthlyBudgetUsd: 30,
+  });
+}
+
 function hostingConfig(environment: EnvironmentName): HireFluxEnvironmentConfig['hosting'] {
   return Object.freeze({
     repositoryUrl: 'https://github.com/xiolest1/HireFlux', sourceBranch: 'main',
@@ -105,6 +124,7 @@ export function loadEnvironmentConfig(
     awsRegion: AWS_REGION,
     awsAccount: resolveAccount(accountBinding),
     data: DATA_LIFECYCLE[environmentName],
+    operations: operationsConfig(environmentName),
     backend: backendConfig(environmentName),
     hosting: hostingConfig(environmentName),
     tags: Object.freeze({
@@ -133,6 +153,9 @@ export function validateEnvironmentConfig(config: HireFluxEnvironmentConfig): vo
     throw new Error('Resource name prefix must match the selected HireFlux environment.');
   }
   resolveAccount(config.awsAccount);
+  if (!isDeepStrictEqual(config.operations, operationsConfig(environmentName))) {
+    throw new Error('Operational retention, lifecycle, throttle, concurrency and budget policy must match the selected environment.');
+  }
   if (!isDeepStrictEqual(config.backend, backendConfig(environmentName))) {
     throw new Error('Backend auth, secret lifecycle and CORS policy must match the selected environment.');
   }

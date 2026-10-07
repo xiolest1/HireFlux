@@ -46,8 +46,11 @@ AWS resources and real persistent browser accounts are not deployed.
   exact CORS origin, branch-level API injection, acyclic references, SPA/header
   validation and deployment-style artifact scans. See
   [ADR 0012](adr/0012-amplify-hosting-origin-wiring.md). No hosting deployed.
-- **Phase 3F — next, not started:** observability, alarms, throttling/cost controls.
-- **Phase 3G — deferred:**
+- **Phase 3F — completed locally:** explicit finite JSON log groups, privacy-safe
+  access logs, scoped logging IAM, five native alarms, one dashboard, API throttles,
+  reserved concurrency, optional operator notifications and AND-tagged budgets.
+  See [ADR 0013](adr/0013-operational-guardrails.md). No operational resource is live.
+- **Phase 3G — next, not started:**
   comprehensive isolation assertions, and template review. All Phase 3 slices
   stop at local definition/synthesis/tests.
 - **Phase 4 — deferred:** AWS staging infrastructure and the existing demo running
