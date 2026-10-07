@@ -4749,3 +4749,208 @@ commit. Required final state is clean tracked source with local/remote/final SHA
 agreement. No force push, reset, rebase, history rewrite, release/tag, security
 setting mutation, AWS command/account interaction, Amplify authorization, PAT,
 real operational email or AWS credential creation/commit is part of 4A.
+
+## 48. Phase 4B read-only AWS preflight and blocked bootstrap
+
+**BLOCK PHASE 4C.** This attempt completed the authorized read-only preflight
+on 2026-10-07 and stopped before AWS mutation. It does not qualify the account
+for bootstrap or mark Phase 4B successful. No later Phase 4 slice was begun.
+
+### Qualified source and identity
+
+Entered on clean `main` at
+`f86eeb78512e5191fa1b01d9ce3e6bd06aaf2467`, equal to origin/main on the intended
+xiolest1/HireFlux GitHub remote, with zero ahead/behind. Its own accepted green
+push run is [37636032540](https://github.com/xiolest1/HireFlux/actions/runs/37636032540),
+attempt 1, all five jobs successful. This attempt changes documentation only;
+the delivery handoff records any documentation commit and that HEAD's own CI.
+No source change required returning through the Phase 4A qualification gate.
+
+Tooling: AWS CLI **2.36.47**, pinned CDK CLI **2.1144.0**, aws-cdk-lib
+**2.272.0**, Node **22.20.0**, npm **10.9.3**. All regional AWS reads explicitly
+selected **us-east-1**. The existing configured default region was diagnostic
+only and was not changed. No global/unpinned CDK was used.
+
+STS authenticated an existing **IAM user**, not root. Credentials came from
+the existing shared-credentials profile, with long-lived keys and no temporary
+session. Only credential-source classification was retained in public prose.
+No key/token, full account ID, caller ARN, user name or profile name is published.
+Temporary/SSO credentials remain preferred before a future mutation; no new
+credentials, aws configure operation, rotation or deletion occurred.
+
+The human user positively confirmed the masked STS account as the intended
+staging account and specifically selected **shared account; deployment
+permissions need separate review**. Successful authentication was not treated
+as proof of dedicated staging. No separate production context was selected or
+mutated; this evidence does not certify that a shared account has no unrelated
+important workloads in other services or regions.
+
+### Read-only resource, cost and quota evidence
+
+Targeted names/metadata reads covered CloudFormation, Lambda, DynamoDB,
+API Gateway v2, Amplify, Secrets Manager, CloudWatch log groups/dashboards/alarms,
+SNS and Budgets. The inspected regional baseline contains unrelated existing
+stack/log metadata and no HireFlux name collisions. Exact counts/names and
+identifiers are in ignored local receipts. No unrelated bodies or secret values
+were retrieved. GetSecretValue and BatchGetSecretValue were not called.
+
+`hireflux-staging` and `CDKToolkit` are both absent. Targeted reads also confirm
+absence of the standard hnb659fds bootstrap bucket, ECR repository, five named
+roles and `/cdk-bootstrap/hnb659fds/version`. There is no existing/custom toolkit
+to update, trust to adopt or orphaned expected bootstrap resource to import.
+No arbitrary existing resource was adopted, deleted or modified.
+
+The current operator's IAM metadata and read-only simulation permit the 31
+reviewed bootstrap actions. No permissions were granted. Simulation is an
+assessment, not a guarantee against organization controls, resource policies,
+session differences or state changes; no bootstrap execution was attempted.
+
+The small Cost Explorer query requested MONTHLY grouped-by-service
+**UnblendedCost** for 2026-10-01 through exclusive 2026-10-07. It returned
+**AccessDeniedException**. No cost figures were obtained, and missing access
+does not establish zero spending. A manual Billing/Cost Management review
+explicitly confirmed by the user, or an already authorized read-only billing
+identity, is required before bootstrap. No Cost Explorer feature, report,
+billing permission, cost-allocation tag or budget was created/enabled.
+
+Lambda GetAccountSettings returned **ConcurrentExecutions 10** and
+**UnreservedConcurrentExecutions 10**, **FunctionCount 0**, **TotalCodeSize 0**.
+The planned reservation is 5. AWS requires preserving 100 unreserved, so the
+preflight threshold is **105**, and this account fails it. This is the actual
+account setting; the historical 1,000 default was not assumed. See
+[AWS reserved-concurrency guidance](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html).
+No reservation was removed, quota increase requested or source guardrail relaxed.
+The observed Lambda code-storage and inspected service usage show no additional
+obvious capacity concern; this was not an exhaustive Service Quotas audit.
+
+### Reviewed bootstrap and permission stop
+
+The repository-pinned CLI rendered its standard template with credentials
+isolated and networking blocked. Reviewed **template version 32**, SHA-256
+`ed382e6eaab4bfddfe9b4fdb5a81fed0dfb7cc1dc6118fb11c41a0381377e89f`.
+The template declares 14 resources; the reviewed no-customer-key/no-example-
+boundary configuration selects **11**: one S3 bucket and policy, one ECR
+repository, five IAM roles, two IAM policies and one SSM version parameter.
+Qualifier **hnb659fds** and toolkit stack **CDKToolkit** match the synthesized
+application contract; minimum required bootstrap version is **6**.
+
+The proposed bucket is private, public-access-blocked, versioned, TLS-enforced
+and encrypted with an AWS-managed key; no customer-managed KMS resource is
+selected. The ECR repository is standard bootstrap infrastructure, not an
+application container deployment. Publishing/deployment/lookup trust is confined
+to the target account; CloudFormation alone assumes its execution role.
+No external --trust/--trust-for-lookup account, GitHub OIDC or deploy role is
+included. These are reviewed template facts, not claims about deployed resources.
+
+The standard CloudFormation execution-role policy is **AdministratorAccess**.
+It confers broad account deployment authority and is not least privilege.
+The user confirmed a shared account, so this default is **not accepted** and
+bootstrap was stopped for a separately reviewed deployment-permission design.
+No giant ad hoc policy, permission boundary or IAM grant was invented to bypass
+the gate. See [AWS bootstrap customization and privilege guidance](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping-customizing.html).
+
+No bootstrap command was executed; there is no bootstrap start, rollback,
+successful toolkit status, deployed version, actual bucket/role trust verification
+or post-bootstrap synth. Termination protection was reviewed as a proposed
+enabled setting only. No customer-managed KMS key or AWS application asset was
+created. A future attempt must recheck the account, quota, cost and permissions
+and obtain a supervised window with the current user/operator as stop owner.
+The local synth-only wrapper remains unchanged and rejects bootstrap/deploy/
+destroy and profile arguments. An eventual authorized bootstrap must use the
+pinned direct CLI with an explicit aws://verified-account/us-east-1 target; the
+blocked proposed command is not an instruction to execute it now.
+
+### Exact Linux artifact and account-bound offline synth
+
+The actual accepted run-72 artifact **11490690168** remains unexpired through
+**2027-01-05T14:21:39Z**. Fresh metadata still binds it to the exact qualified
+source/run. Its outer digest is
+`5e33dc8e66cc282fb684da5ac791b4fab0bfb1833d6363936d09876deb13be7e`.
+The inner Linux ZIP full SHA-256 is
+`4fb0923cd4fb0e817c0a6b9ceb724218c6cbb4cfab0462fd6ccceec1ce8b75d3`,
+**26,642,450 compressed / 57,541,431 expanded bytes**, **3,756 files**, **31
+distributions**, **71 application sources**. Every member hash and source,
+lock/project input was revalidated. The downloaded ZIP and matching manifest
+now occupy the ignored canonical artifact paths; the prior Windows variant is
+preserved privately and is not an accepted Phase 4D deployment input.
+
+Phase 4D acquisition contract: download the exact accepted GitHub run/artifact
+while available, verify its workflow source SHA and outer digest, take only the
+inner ZIP and its matching manifest, require the exact Linux SHA/size and all
+member/input checks, then run the existing artifact verifier and account-bound
+synth. Do not recreate a Windows compression variant and call it equivalent.
+If the artifact expires or source changes, return to qualified Linux build/
+reproduction and source/CI evidence before deployment; never silently substitute
+a different ZIP. Nothing was uploaded to AWS in this attempt.
+
+Candidate account-bound staging synth passed offline with **25 declarations,
+three parameters, zero outputs**, **22 selected with blank email / 25 with
+email**, and unchanged acyclic graphs. Actual stack name is `hireflux-staging`;
+`HireFlux-staging` is the CDK artifact/construct ID. Bound and unbound templates
+are semantically equal after expected account token binding. The complete
+qualified-template comparison changes only the verified Linux ZIP asset key,
+preserving resource identities, lifecycle, IAM, CORS, metrics and controls.
+Its verified asset object key is
+`ee374ad8661035832c785da52fc5ad600c40f8989129b3d62ddd6b18bcf68202.zip`.
+The reviewed bootstrap minimum/SSM contract is 6 at
+`/cdk-bootstrap/hnb659fds/version`; actual deployed version remains absent.
+
+### Blockers and retained qualification rows
+
+There are **three B4-BLOCKER findings**:
+
+1. **Shared-account deployment permission design:** the standard broad
+   AdministratorAccess execution role is unaccepted; use a positively verified
+   isolated staging account or complete a separate reviewed shared-account
+   deployment-permission design before another mutation attempt.
+2. **Insufficient Lambda concurrency:** 10 unreserved cannot admit reservation
+   5 while preserving 100. An authorized account/quota resolution and fresh
+   GetAccountSettings evidence are required; this attempt makes no quota request.
+3. **Unconfirmed whole-account cost baseline:** Cost Explorer access denied;
+   no explicit manual Billing confirmation received at this snapshot.
+
+Bootstrap absence follows from these stops and is not a successfully completed
+gate. Credential choice and a supervised mutation window remain future
+conditions. Operator IAM simulation success does not close execution-policy
+design. L02 has human-confirmed identity/region evidence but not dedicated-account
+isolation; L03 remains partial/blocked on cost/window; L04 remains blocked on
+permission design and actual bootstrap/asset/deployment/log-delivery IAM; L05
+fails the measured concurrency preflight. **L06–L20 remain outstanding**:
+
+1. L06 Amplify/repository authorization and secure deployment PAT.
+2. L07 authorized optional email or omission/manual monitoring.
+3. L08 authorized cost tags/propagation/account-wide fallback.
+4. L09 bound deployment change set/assets/replacement review; offline synth
+   evidence alone does not satisfy the actual deployment gate.
+5. L10 actual independent stack resources and wiring.
+6. L11 runtime IAM, signing reads and cold/warm initialization.
+7. L12 actual Amplify revision/build/URLs/HTTPS/headers/SPA/assets.
+8. L13 browser/API demo, CORS, ownership, conflicts and retries.
+9. L14 real schema/TTL/temp writes and signed expiry.
+10. L15 privacy-safe logs and sufficient correlation.
+11. L16 actual metrics, alarms and dashboard scope.
+12. L17 optional confirmed SNS/budget delivery; N/A only if email omitted.
+13. L18 bounded throttle/reservation/synchronous latency qualification.
+14. L19 budget scope, whole-account cost and backlog observation.
+15. L20 complete staging evidence and rollback/stop readiness.
+
+Fresh npm audit still reports one high bundled brace-expansion **5.0.9** package
+and the three 4A advisories. Registry checks still report CLI/library
+**2.1144.0/2.272.0** as current. No compatible repaired CDK bundle is established;
+fixAvailable is not evidence of one. No suppression, override, force fix,
+node_modules patch or lock change. The tooling finding remains a documented
+staging condition and production remediation requirement. Anonymous-demo
+issuance amplification, lack of a global/IP cap and delayed budget/cost data
+remain open; no runtime/load/cost qualification or unattended launch is implied.
+
+The six production finding groups F03/F04/F07/F08/F10/F11 and remaining live
+diagnostic/timing/CSP conditions are unchanged. Production remains undeployed,
+Cognito unavailable, auto-build off and non-launch-ready. No app stack/Lambda
+asset/Amplify authorization/PAT/GitHub OIDC/tag activation/SNS email/budget
+setup/production action occurred. Private account/operator/resource evidence is
+ignored, and public docs contain status only. The full delivered handoff has
+all 79 requested fields and 64 explicit exit answers. The final answer is **NO**:
+the exact qualified source is available, but account cost, deployment privilege,
+Lambda headroom and modern bootstrap have not all been safely qualified.
+
+Phase 4C and deployment stay blocked. Stop at Phase 4B.

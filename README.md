@@ -287,6 +287,9 @@ quality jobs green and fresh local gates. The downloaded Linux Lambda ZIP has
 identical file contents to the post-3G Windows build; a controlled compression
 experiment explains their different ZIP hashes. See the
 [Phase 4A evidence and remaining conditions](docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
-Phase 4B account/bootstrap preflight is next and requires its own authorization.
+Phase 4B's authorized read-only account/bootstrap preflight is **blocked** by
+shared-account deployment permissions, insufficient Lambda concurrency and an
+unconfirmed Billing baseline. No bootstrap or application deployment occurred.
+See the [Phase 4B record](docs/production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap).
 Nothing has been deployed; the CDK advisory, anonymous-demo cost risk and
 production deferrals remain open.

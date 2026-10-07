@@ -399,7 +399,11 @@ experiment reproduces the remote ZIP hash exactly. Artifact identity includes
 the compression toolchain, so retain the chosen ZIP with its own manifest.
 The [Phase 4A record](docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification)
 closes source/CI condition L01 and carries nineteen AWS/release qualifications.
-Account/bootstrap preflight is next; no AWS resource has been created.
+Phase 4B completed read-only preflight and is blocked: the confirmed target is
+shared and needs a reviewed deployment-permission design, Lambda concurrency
+cannot admit the planned reservation, and the Billing baseline is unconfirmed.
+No bootstrap or HireFlux resource was created. See the
+[Phase 4B record](docs/production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap).
 
 The existing factory now has independent local ASGI and Lambda entry points.
 Lambda uses `hireflux_backend.lambda_handler.handler`, one cold-start app/SDK

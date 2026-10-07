@@ -17,6 +17,7 @@ Detailed supporting contracts remain in this directory:
 - [Production account readiness and Phase 2/3A–3G handoffs](production-account-readiness.md)
 - [Final combined AWS review and Phase 4 conditions](production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff)
 - [Phase 4A source checkpoint and remote CI qualification](production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification)
+- [Phase 4B read-only AWS preflight and blocked bootstrap](production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap)
 - [Local CDK environment foundation](../infra/README.md)
 - [CDK environment decision](adr/0008-aws-cdk-environment-foundation.md)
 - [Backend Lambda packaging and runtime contract](../backend/README.md)

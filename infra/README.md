@@ -21,6 +21,12 @@ all five quality jobs, downloaded the actual artifacts and verified approximatel
 90-day retention. L01 is satisfied; nineteen inherited AWS/release qualifications
 remain. See the [Phase 4A record](../docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
 The high CDK bundled advisory and anonymous issuance cost risk remain open.
+Phase 4B's [read-only AWS preflight](../docs/production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap)
+is blocked by shared-account deployment permissions, insufficient Lambda
+concurrency and an unconfirmed Billing baseline. Its account-bound offline synth
+preserves this topology and uses the qualified Linux CI ZIP. CDKToolkit remains
+absent; the reviewed standard bootstrap was not executed. The local wrapper
+still rejects bootstrap/deploy/destroy and profiles.
 Initial staging qualification requires active supervision and authorized stop
 controls; production is still deferred. The detailed resource, IAM, replacement,
 cost and all 86 exit-gate answers are in the linked handoff.

@@ -64,9 +64,14 @@ AWS resources and real persistent browser accounts are not deployed.
   ZIP hash discrepancy is fully explained with identical extracted files and
   a controlled reconstruction of the exact remote hash. See the
   [Phase 4A handoff](production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
-- **Phase 4B — next, separately authorized:** AWS account identity, regional
-  baseline, deployer/bootstrap trust and concurrency preflight. No AWS action
-  occurred in 4A.
+- **Phase 4B — blocked after authorized read-only preflight:** the intended
+  staging account is confirmed as shared. A separate deployment-permission
+  design is required before standard AdministratorAccess bootstrap. Actual
+  Lambda concurrency cannot admit reservation 5, and Cost Explorer access is
+  denied without a confirmed manual Billing baseline. Account-bound offline
+  synth and the exact qualified Linux artifact pass. CDKToolkit and the app
+  stack remain absent; no AWS resource mutation occurred. See the
+  [Phase 4B record](production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap).
 - **Phase 4C–4H — deferred:** deployment inputs/GitHub authorization/billing
   preparation; first staging deployment; live backend; hosted browser E2E;
   operations/scaling/cost; final staging evidence freeze. Nineteen inherited

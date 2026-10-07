@@ -1,5 +1,60 @@
 # HireFlux development log
 
+## 2026-10-07 — Read-only AWS preflight; bootstrap blocked (Phase 4B)
+
+Entered at clean, source-qualified main
+`f86eeb78512e5191fa1b01d9ce3e6bd06aaf2467`, with the intended GitHub origin
+and zero local/remote divergence. Used AWS CLI v2 2.36.47, repository-pinned
+CDK CLI 2.1144.0 and aws-cdk-lib 2.272.0. STS authenticated a non-root IAM user
+through an existing shared-credentials profile; no credentials were created,
+rotated or persisted. The user positively identified the account as intended
+staging but **shared**, requiring a separate deployment-permission review.
+
+Completed targeted metadata reads in explicit us-east-1. CDKToolkit and
+hireflux-staging are absent; the expected bootstrap bucket, ECR repository,
+five roles and version parameter are also absent. Inspected resource names
+show no HireFlux collisions. Unrelated names, caller identity and exact account
+receipts remain ignored/local. No secret values were read. The current operator's
+IAM simulation allowed all 31 reviewed actions; this neither grants permission
+nor proves freedom from SCP/resource-policy constraints.
+
+Found actual Lambda total/unreserved concurrency of **10/10**, with no functions
+or code storage consumed. Reservation 5 requires at least 105 unreserved under
+AWS's remaining-100 rule, so the qualified stack cannot be deployed as defined.
+No concurrency, other workload reservation or quota was changed. Cost Explorer's
+small month-to-date UnblendedCost query returned AccessDeniedException. Spending
+is unknown, not zero; manual Billing review or an authorized read-only billing
+identity is still required. No billing feature or permission was enabled.
+
+Rendered and reviewed the pinned standard bootstrap offline with networking
+blocked: template version 32, qualifier hnb659fds, 11 selected resources without
+a customer-managed KMS key or external trusted account. Its standard
+CloudFormation execution-role default is AdministratorAccess, which is broad
+account deployment authority and is **not accepted for this shared account**.
+No custom policy was invented and bootstrap was not attempted. The decision is
+**BLOCK PHASE 4C**, with three blockers: shared-account permission design,
+insufficient concurrency, and the unconfirmed account cost baseline.
+
+Revalidated the actual run-72 Linux artifact, outer digest, all 3,756 member
+hashes, 71 application sources, dependency lock and project input. Preserved the
+qualified Linux ZIP/manifest in the ignored canonical artifact location; its
+full SHA is `4fb0923cd4fb0e817c0a6b9ceb724218c6cbb4cfab0462fd6ccceec1ce8b75d3`.
+The Windows compression variant is not a Phase 4D input. Account-bound offline
+synth passed with 25 declarations, three parameters and zero outputs. The full
+template comparison preserved policy, topology and conditional graphs apart
+from expected account binding and qualified Linux asset identity. Required
+bootstrap version is 6. No application asset was uploaded.
+
+Fresh registry/audit checks retain the same one-high-package/three-advisory CDK
+finding at the current pinned releases. Anonymous issuance cost amplification
+also remains open. L02's identity/region evidence is captured; L03/L04/L05 are
+blocked or partial, and L06–L20 remain pending. The
+[complete preflight record](production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap)
+distinguishes this blocked attempt from successful bootstrap. Only documentation
+changes; no app/infrastructure source, test, workflow, lock, .env.example or
+Diagrams changes. No application deployment, Amplify authorization/PAT, OIDC,
+tag activation, SNS/email setup, AWS resource mutation or production action.
+
 ## 2026-10-07 — Source checkpoint and remote CI qualification (Phase 4A)
 
 Started with a clean main at `067ade6ee14cd3e0b6e72ae0542c80b55181a19e`
