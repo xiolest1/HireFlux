@@ -109,8 +109,16 @@ content/preferences/TTL and may leave safe unversioned refs for a later retry.
 Ordinary durable mutations include an ACTIVE/provenance/bootstrap/no-TTL
 ConditionCheck in the same transaction as canonical, activity, quota, counter,
 and projection changes. Single-item application/settings writes also transact.
-The interview cap is 96: label sync can require 96 projections plus four other
-transaction items, matching DynamoDB's 100-item maximum. Default capacity stays 25.
+The supported interview cap and default are both 25. Phase 3G corrected the
+previous 96 bound, which considered only the 100-action limit and could exceed
+DynamoDB's separate 4 MiB aggregate-item limit. At current schema text limits,
+25 full interview items plus a 64 KiB reserve for all other touched items total
+at most a conservative 2,529,011 bytes; durable label sync uses 29 actions.
+Changing text/child limits requires renewed action and byte analysis. The label
+projection query follows every LastEvaluatedKey: the 1 MiB Query boundary applies
+before projection. All collected versioned labels then update atomically with
+the existing quota and workspace conditions. Lowering configuration does not
+migrate legacy over-quota local data; any necessary disposable reset is explicit.
 The explicit local projection repair path also conditionally excludes frozen
 workspaces while continuing to support uninitialized local legacy records.
 

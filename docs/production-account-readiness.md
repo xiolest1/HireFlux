@@ -2,7 +2,19 @@
 
 Date: 2026-10-05. Status: architecture proposal for review, not an accepted implementation ADR.
 
-**Current Phase 3F update (2026-10-06):** both environment templates now include
+**Current Phase 3G update (2026-10-07): PASS WITH EXPLICIT PHASE 4 CONDITIONS.**
+The complete synthesized/runtime system was reviewed and freshly revalidated.
+Two local defects were corrected: interview-key query pagination and the unsafe
+96 interview transaction setting (maximum/default now 25). Final backend 422,
+frontend 364, infra 119 and real-artifact CLI four tests pass; the rebuilt Linux
+ZIP, both actual synths, schema parity, condition/graph and secret/build checks pass.
+There are zero open local pre-4 defects, 20 pending Phase 4 live qualifications
+and six production finding groups. CDK's bundled high dependency finding and
+anonymous issuance cost amplification remain open; initial staging must be
+supervised. No AWS/GitHub/Billing/SNS action, commit/push or remote CI occurred.
+See [complete A–AF handoff and all 86 exit questions](#46-phase-3g-final-synthesized-review-and-handoff).
+
+**Historical Phase 3F update (2026-10-06):** both environment templates now include
 finite explicit JSON logs, scoped logging IAM, five native alarms, one dashboard,
 API throttles, reserved concurrency and AND-tagged monthly budgets. Each declares
 25 resources and zero outputs; blank optional alert email selects 22 resources
@@ -3450,3 +3462,986 @@ This section supersedes earlier descriptions of Phase 3F as future work.
     later gates; production is not launch-ready.
 
 Is HireFlux's existing AWS topology now wrapped in proportionate operational guardrails — finite privacy-safe logs, focused alarms, dashboard visibility, bounded API/Lambda scaling and honest cost controls — so that Phase 3G can perform the final synthesized infrastructure/security/cost-readiness review without changing the application architecture?
+
+## 46. Phase 3G final synthesized review and handoff
+
+Review date: 2026-10-07, using the client's America/New_York date. Starting
+checkpoint: clean `main` at `67b7843` (Phase 3F). This section supersedes earlier
+"3G next" statements and old runtime hashes/capacity claims. Earlier phase
+handoffs remain historical records. Nothing has been deployed.
+
+### A. Executive decision
+
+**PASS WITH EXPLICIT PHASE 4 CONDITIONS.**
+
+The complete locally synthesized system has no remaining demonstrated defect
+that prevents the first authorized, monitored staging deployment. Two concrete
+backend defects were found and corrected: incomplete interview-key pagination
+and an unsafe configurable transaction capacity. The whole final system was
+revalidated with a newly built real ZIP, rather than accepting earlier phase
+results. This decision permits proceeding to Phase 4 authorization and live
+qualification; it does not authorize deployment or claim deployed correctness.
+
+Public anonymous issuance is intentionally available and can amplify costs.
+The initial staging exercise must remain supervised with the stop procedure,
+whole-account cost visibility and qualification gates below. This is not approval
+for unattended broad public traffic. Production authentication, operational
+hardening and release qualification are still incomplete.
+
+### B. Changes made during 3G
+
+| Finding | Files | Correction | Why permitted | Earlier work affected | Revalidation |
+| --- | --- | --- | --- | --- | --- |
+| F01 | backend/src/hireflux_backend/infrastructure/dynamodb/repositories.py; backend/tests/integration/test_workspace_resources.py | Paginate the strongly consistent interview projection query through every LastEvaluatedKey | A legitimate continuation page made application rename return 409 indefinitely; it violates the accepted atomic label-sync contract | 2C repository behavior; 3B/3D packaged runtime | Existing end-to-end rename assertions now run with ordinary and forced continuation pages; failure before correction, success after; full backend and fresh artifact/infra gates |
+| F02 | backend/src/hireflux_backend/config.py; backend/tests/unit/test_config.py | Support MAX_INTERVIEWS_PER_APPLICATION only from 1 through 25, keeping its default unchanged | 96 fits 100 actions but can exceed DynamoDB's separate 4 MiB transaction constraint with valid content | 2C configurable bound; 3B/3D packaged runtime | Reject 26 and 96; accept default/25/1; schema-maxima byte probe; full backend and fresh artifact/infra gates |
+
+No infrastructure resource, IAM policy, authentication policy, schema/index,
+frontend runtime, dependency or lockfile was changed. Lower existing interview
+limits remain valid. An old local override above 25 now fails configuration
+validation; reduce it deliberately. If a disposable local workspace already has
+more than 25 interviews, lowering configuration does not migrate existing data;
+use the documented explicit local reset if needed. No existing data was reset.
+The cloud templates never set an override above the default.
+
+### C. Findings
+
+Severity describes impact; timing describes when action is required. Fixed
+findings retain their original timing without counting as open blockers.
+
+| ID | Severity | Area | Finding / evidence | Impact | Timing | Status / action |
+| --- | --- | --- | --- | --- | --- | --- |
+| F01 | MEDIUM | DynamoDB correctness | Key projection ignored LastEvaluatedKey; forced one-key pages reproduced 409 | Valid rename could not update all interview labels | MUST FIX BEFORE PHASE 4 | FIXED; all pages collected before the existing guarded atomic transaction |
+| F02 | HIGH | DynamoDB limits | The accepted 96 setting permitted more than 8.79 MB of text values alone across a valid label-sync transaction | Atomic mutation rejected by AWS despite satisfying action count | MUST FIX BEFORE PHASE 4 | FIXED; maximum is now 25, conservative transaction estimate 2,529,011 bytes / 29 actions |
+| F03 | HIGH | CDK supply chain | npm audit: bundled brace-expansion 5.0.9, one high vulnerable package, three advisories; current CDK library/CLI still latest | Tooling CPU/stack denial of service on crafted brace patterns; absent from deployed Python/frontend graph | MUST FIX BEFORE PRODUCTION | OPEN; accepted for this controlled staging qualification; recheck before Phase 4, restrict trusted operator inputs, upgrade compatible CDK when fixed; no suppression/override |
+| F04 | HIGH | Anonymous cost amplification | No per-IP/global issuance quota; one seed attempts 71 transactions and 236 transaction Update actions | New keys/workspaces can multiply storage, writes, logs and availability pressure | MUST FIX BEFORE PRODUCTION | OPEN; bounded concurrency/rate and workspace quotas help, but do not cap spend; supervised staging only under L18/L19; choose measured abuse controls before broad unattended launch |
+| F05 | MEDIUM | Diagnostics | Sanitized caller X-Request-ID is separate from API Gateway and Lambda native IDs; no explicit end-to-end bridge | IDs can collide; automatic cross-service joins and normalized route context are incomplete | MUST VERIFY DURING PHASE 4 | OPEN; L15 must prove operator triage with controlled requests; client IDs are never trusted identity |
+| F06 | MEDIUM | Deadlines / retries | DynamoDB SDK defaults can outlast soft export/erasure budgets; two bounded serial secret reads can consume initialization headroom | Timeout/indeterminate-result availability risk; not a bypass of ownership or atomic guards | MUST VERIFY DURING PHASE 4 | OPEN; L11/L13/L18 must measure cold/normal/retry behavior; stop if synchronous paths are unreliable; production tuning follows evidence |
+| F07 | MEDIUM | Retained data / restore | Retain/PITR preserve historical data and can leave orphaned resources | Live erasure does not erase recovery history; a restored table could revive erased content | MUST FIX BEFORE PRODUCTION | OPEN; Phase 6 restore/privacy/tombstone reconciliation and retained-resource ownership runbook |
+| F08 | LOW | CI supply chain | Workflow actions use mutable major tags | Future action-tag changes alter trusted CI code | MUST FIX BEFORE PRODUCTION | OPEN; pin reviewed action commit SHAs and establish updates; quality workflow currently has read-only permission and no deployment credentials |
+| F09 | LOW | CI evidence retention | Uploads omit retention-days; actual repository policy has not been inspected | Evidence lifetime cannot be certified locally | MUST VERIFY DURING PHASE 4 | OPEN; L01 records remote run, artifact contents and actual retention; set an explicit reasonable policy if required |
+| F10 | LOW | Signing-key lifecycle | Values are cached per warm Lambda environment; no rotation/refresh overlap policy | Replacement/manual rotation can invalidate demo sessions/cursors and temporarily mix warm caches | MUST FIX BEFORE PRODUCTION | OPEN; Phase 6 versioned rotation, overlap/recycling and recovery procedure |
+| F11 | MEDIUM | Production release | Production cognito mode deliberately returns unavailable; production hosting auto-build is off | Production synthesis is not a working account release | MUST FIX BEFORE PRODUCTION | OPEN; Phase 5 verified accounts/coexistence and Phase 6/7 release gates |
+| F12 | INFORMATIONAL | Live qualification | AWS account, bootstrap, quotas, deployment, managed delivery, billing and remote CI are unexecuted | Local proof cannot certify external permissions/configuration or live service behavior | MUST VERIFY DURING PHASE 4 | OPEN; all 20 qualification rows below must be recorded; optional SNS rows are N/A only when email is omitted |
+| F13 | LOW | Browser egress | CSP permits any HTTPS execute-api host in us-east-1 for acyclic generated-origin wiring | Broader egress than a single API hostname, while CORS remains exact | DEFERRED / ACCEPTED RISK | ACCEPTED; scripts remain self-only; future custom-domain tightening is optional reviewed work, not an added dependency |
+
+F03 advisories:
+[quadratic expansion](https://github.com/advisories/GHSA-q2hr-2g5m-vwhr),
+[nested-group recursion](https://github.com/advisories/GHSA-qhr7-859c-m2p7),
+[comma-parser recursion](https://github.com/advisories/GHSA-6j4f-fj2g-mc7p).
+The vulnerable path is CDK's bundled minimatch/brace expansion tooling. No public
+HTTP request becomes a CDK pattern, no CDK module enters the Lambda ZIP or Vite
+assets, and the controlled synth inputs do not exercise hostile brace patterns.
+These exposure limits support staged acceptance; they do not close the advisory.
+
+### D. Full synthesized resource inventory
+
+Both environments contain the following exact logical IDs and types. Identical
+logical IDs belong to different stacks, not shared physical resources. Every
+entry has the same environment-local purpose in both stacks. C means conditional
+on nonempty OperationalAlertEmail; S means retained state/history. Public means
+an internet-facing application or notification endpoint, not an IAM-authorized
+AWS management API. Replacement sensitivity applies to logical identity changes
+and the provider's replacement properties, not every ordinary update.
+
+| Logical ID | CloudFormation type | C | State | Public | Replacement sensitivity | Cost surface | Purpose |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| WorkspaceTable68AC2584 | AWS::DynamoDB::Table | No | S | No | High | reads/writes/storage/PITR | Canonical workspace data and indexes |
+| FrontendHostingApp3EC0FC15 | AWS::Amplify::App | No | Config | Yes | High | build/storage/transfer | Static frontend repository/build authority |
+| FrontendHostingBranchB5734B41 | AWS::Amplify::Branch | No | Config | Yes | High | build/transfer | main branch publication and Vite wiring |
+| OperationalLogsBackendFunctionLogs44D131F8 | AWS::Logs::LogGroup | No | S | No | High | log ingestion/storage | Lambda privacy-safe diagnostic history |
+| OperationalLogsHttpApiAccessLogs3515ABA0 | AWS::Logs::LogGroup | No | S | No | High | log ingestion/storage | API access diagnostics |
+| BackendApiCursorSigningSecret5EF895FB | AWS::SecretsManager::Secret | No | S | No | High | secret/storage/API | Cursor signing domain |
+| BackendApiDemoSessionSigningSecretB7E1C367 | AWS::SecretsManager::Secret | No | S | No | High | secret/storage/API | Demo credential signing domain |
+| BackendApiExecutionRoleF9E94D3B | AWS::IAM::Role | No | Config | No | High | indirect | Lambda service trust |
+| BackendApiExecutionRoleDefaultPolicyDE57D6A3 | AWS::IAM::Policy | No | Config | No | High | indirect | Runtime data/secret/log permissions |
+| BackendApiBackendFunctionFFB5248D | AWS::Lambda::Function | No | Code/config | No | High | invocations/GB-seconds | FastAPI/Mangum application runtime |
+| BackendApiHttpApiB4B1202A | AWS::ApiGatewayV2::Api | No | Config | Yes | High | requests/transfer | Public regional HTTP entry |
+| BackendApiHttpApiDefaultRouteBackendIntegrationC791C627 | AWS::ApiGatewayV2::Integration | No | Config | Via API | High | indirect | HTTP v2 Lambda proxy |
+| BackendApiHttpApiDefaultRouteBackendIntegrationPermission521AD465 | AWS::Lambda::Permission | No | Config | No | High | indirect | API-scoped Lambda invocation |
+| BackendApiHttpApiDefaultRoute408A2CCF | AWS::ApiGatewayV2::Route | No | Config | Via API | Medium | indirect | Default proxy routing |
+| BackendApiHttpApiDefaultStage89B5186D | AWS::ApiGatewayV2::Stage | No | Config | Via API | Medium | requests/logs | Automatic default stage, throttles/logging |
+| OperationsOperationalAlerts7AC1A668 | AWS::SNS::Topic | Yes | Config | No | Medium | SNS delivery | Optional operator alarm topic |
+| OperationsOperationalAlertSubscription953AAEA9 | AWS::SNS::Subscription | Yes | Config | Email | Medium | delivery | Optional operator email subscription |
+| OperationsOperationalAlertPolicy4A085B4E | AWS::SNS::TopicPolicy | Yes | Config | No | Medium | indirect | Topic publisher boundary |
+| OperationsLambdaErrors5904FFE2 | AWS::CloudWatch::Alarm | No | Config | No | Medium | alarm metric | Lambda execution failure alarm |
+| OperationsLambdaThrottles66F0659C | AWS::CloudWatch::Alarm | No | Config | No | Medium | alarm metric | Lambda throttling alarm |
+| OperationsHttpApiServerErrors8A0F4370 | AWS::CloudWatch::Alarm | No | Config | No | Medium | alarm metric | HTTP server-failure alarm |
+| OperationsDynamoDBThrottlesAF8DF63F | AWS::CloudWatch::Alarm | No | Config | No | Medium | six alarm metrics | DDB operation throttle alarm |
+| OperationsDynamoDBSystemErrorsB63796D3 | AWS::CloudWatch::Alarm | No | Config | No | Medium | six alarm metrics | DDB operation system-failure alarm |
+| OperationsOperationalDashboard098A469E | AWS::CloudWatch::Dashboard | No | Config | No | Low | dashboard | Environment metrics view |
+| OperationsMonthlyCostBudgetFC194922 | AWS::Budgets::Budget | No | Config | No | Medium | budget feature | Environment-filtered cost warning |
+
+Staging lifecycle is Delete/Delete for table, secrets and both logs. Production
+is Retain/Retain for those five resources. All other declarations use ordinary
+CloudFormation removal/replacement behavior. This does not make Amplify hosting,
+dashboards or budget configuration durable business storage. Generated table,
+secret, role, Lambda and log names avoid fixed-name replacement collisions.
+Operations names are environment-prefixed. No unexpected resource family exists.
+
+Parameter/output inventory is identical in both environments:
+
+| Parameter | Type / default | Confidentiality / bounds | Consumer / classification |
+| --- | --- | --- | --- |
+| AmplifyGitHubAccessToken | String; no default, required at deploy | NoEcho; length 1–4096 | Sole consumer App.AccessToken; deployment authorization only |
+| OperationalAlertEmail | String; default empty | NoEcho; max 254; empty-or-email-shaped regex | Condition, subscription endpoint and budget email subscribers; optional operator PII |
+| BootstrapVersion | AWS::SSM::Parameter::Value<String>; /cdk-bootstrap/hnb659fds/version | Nonsecret bootstrap infrastructure version; rule excludes versions 1–5 | CDK bootstrap prerequisite only; actual existence/version is live-only |
+
+There are **zero outputs**: no secret, credential, private email, table key,
+token or guessed deployed endpoint is emitted. Generated domains/IDs are not
+known until actual deployment.
+
+Resource-level threat/failure review:
+
+| Resource logical ID | Primary risk/failure and mitigation |
+| --- | --- |
+| WorkspaceTable68AC2584 | Role compromise exposes this environment; wrong schema/lifecycle loses access/data; quotas, owner services and production retention limit risk |
+| FrontendHostingApp3EC0FC15 | Compromised repo/deploy token can publish hostile JS; secure GitHub input, locked builds, CSP and no backend credential exposure |
+| FrontendHostingBranchB5734B41 | Wrong endpoint/revision leaks/misdirects browser requests; same-stack variables and disabled production auto-build |
+| OperationalLogsBackendFunctionLogs44D131F8 | Raw application logs could expose content; WARN, sanitizer and finite retention; replacement loses/orphans history |
+| OperationalLogsHttpApiAccessLogs3515ABA0 | Wrong format/delivery creates privacy/observability gaps; exact safe fields, local ARN and live verification |
+| BackendApiCursorSigningSecret5EF895FB | Disclosure enables forged cursors; exact read role/domain separation; retention and replacement/rotation procedure |
+| BackendApiDemoSessionSigningSecretB7E1C367 | Disclosure forges workspace tokens; exact read role and independent secret; rotation invalidates sessions |
+| BackendApiExecutionRoleF9E94D3B | Broad trust permits credential misuse; only Lambda principal; compromise reaches selected table/secrets |
+| BackendApiExecutionRoleDefaultPolicyDE57D6A3 | Broad policies widen blast radius; exact four statements and negative assertions; no admin or Scan |
+| BackendApiBackendFunctionFFB5248D | Public API abuse and init/timeouts; auth, quotas, transport guard and reservation; hard timeout can be indeterminate |
+| BackendApiHttpApiB4B1202A | Direct bots bypass CORS; server auth/rate limits; changed API origin breaks frontend wiring |
+| BackendApiHttpApiDefaultRouteBackendIntegrationC791C627 | Wrong format/timeout/target fails requests; exact v2 contract and same-function reference |
+| BackendApiHttpApiDefaultRouteBackendIntegrationPermission521AD465 | Broad SourceArn admits extra callers; account/API scope with justified stage/method suffix |
+| BackendApiHttpApiDefaultRoute408A2CCF | Unexpected authorizer/target/path blocks intended service; server auth deliberately owns policy |
+| BackendApiHttpApiDefaultStage89B5186D | Missing rate/log config increases abuse/diagnostic risk; best-effort limits and exact log destination |
+| OperationsOperationalAlerts7AC1A668 | Broad publish policy permits unwanted delivery; exact service/source constraints |
+| OperationsOperationalAlertSubscription953AAEA9 | Unconfirmed/wrong mailbox loses or exposes alerts; NoEcho input, intended recipient and live confirmation |
+| OperationsOperationalAlertPolicy4A085B4E | Missing/wrong policy silently blocks or broadens publishing; same-account five-alarm condition |
+| OperationsLambdaErrors5904FFE2 | Wrong scope/missing metrics hides errors; native local dimensions, idle notBreaching and delivery qualification |
+| OperationsLambdaThrottles66F0659C | Quota pressure harms availability; exact function metric and reservation/headroom qualification |
+| OperationsHttpApiServerErrors8A0F4370 | Handled 500s may evade Lambda Errors; local API 5xx covers HTTP outcomes |
+| OperationsDynamoDBThrottlesAF8DF63F | Table-only dimensions or partial batch behavior miss problems; six operations plus manual throttle-event diagnosis |
+| OperationsDynamoDBSystemErrorsB63796D3 | Incorrect dimensions or idle behavior hides/creates alerts; six-operation Sum, 2-of-3 and notBreaching |
+| OperationsOperationalDashboard098A469E | Wrong dimensions/region mislead operators; six graphs, local metrics and live publication review |
+| OperationsMonthlyCostBudgetFC194922 | Inactive/missing tags/delay hide spend; AND tags plus whole-account review; no automatic stop |
+
+### E. Public attack surface
+
+- One public Amplify static main-branch domain per environment. It distributes
+  HTML/JS/CSS/fonts and public configuration. No basic authentication, preview
+  branch, SSR/backend compute or custom domain is configured.
+- One public regional execute-api HTTPS endpoint per environment, with a
+  $default proxy route/stage. FastAPI implements routing/authentication; there is
+  no API Gateway authorizer, API key, private endpoint or resource firewall.
+- GET /health and POST /api/v1/demo-sessions are intentionally public in staging.
+  Demo issuance validates an optional idempotency key but has no caller-specific
+  issuance cap. CORS/preflight does not constrain scripts, bots or direct clients.
+- Other API resources require verified demo identity in staging. Missing/foreign
+  resources share 404 behavior. Production health is public; account/demo paths
+  remain deliberately unavailable in the unimplemented cognito mode. Public API
+  docs are disabled under the synthesized deployed defaults.
+- Optional SNS email has a human destination, but the topic has no public
+  publish/subscribe policy. DynamoDB, secrets and log storage expose no browser
+  credentials or application public resource policy.
+
+### F. IAM review
+
+The only execution-role trust statement allows sts:AssumeRole to
+lambda.amazonaws.com. No account, wildcard principal, external identity or
+deployer role is trusted by the application role. The role has no managed
+policies; AWSLambdaBasicExecutionRole was replaced in 3F.
+
+| Statement | Actions | Exact resource scope | Justification |
+| --- | --- | --- | --- |
+| Item mutations/reads | dynamodb:GetItem, PutItem, UpdateItem, DeleteItem, BatchWriteItem, ConditionCheckItem | this stack's table ARN only | Owner-qualified reads, guarded canonical/projection/activity changes, bounded erasure and transaction conditions |
+| Queries | dynamodb:Query | table ARN plus only /index/GSI1, /index/GSI2, /index/GSI3 | Base strong reads and accepted sparse index access patterns |
+| Secret reads | secretsmanager:GetSecretValue | only the two same-stack signing-secret ARN references | Cold-start retrieval, cached afterward |
+| Logging | logs:CreateLogStream, logs:PutLogEvents | this stack's Lambda log-group ARN | Runtime logs only; the log-group ARN's stream suffix covers streams in that group |
+
+Transactions use the underlying item actions, including ConditionCheckItem;
+there is no missing requirement to grant a broad dynamodb:* transaction policy.
+[AWS transaction authorization](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis-iam.html)
+supports this scope. Tenant isolation is application-owned within the table;
+compromise of this role could affect the entire selected environment's table.
+There is no claim of per-tenant IAM isolation.
+
+Lambda invocation permission allows only apigateway.amazonaws.com,
+lambda:InvokeFunction on this function, with the same-account, us-east-1,
+same-API execute-api ARN and /*/* stage/method suffix. The suffix is needed for
+the $default proxy integration; it grants no other API/account/region permission.
+SourceArn includes account scope even without a separate SourceAccount field.
+
+Conditional SNS permits only cloudwatch.amazonaws.com sns:Publish to this topic,
+with aws:SourceAccount equal to this account and aws:SourceArn equal to the five
+exact local alarm ARNs. No topic default wildcard principal is present. Budget
+notifications are direct EMAIL subscribers; they do not need a budgets SNS grant.
+
+Negative assertions reject Scan, DynamoDB administration, generic index/table
+wildcards, secret create/update/delete/list, arbitrary logs, CreateLogGroup,
+PutMetricData, SNS publish, billing authority, broad managed policies and
+cross-environment secret/table grants. Fresh unit tests passed. The Lambda role
+has no S3/CDK/CloudFormation/deployer permissions. Future bootstrap/deployer
+trust and execution permissions are separate authorized Phase 4 work.
+
+### G. Secret review
+
+Exactly two independent CloudFormation-generated Secrets Manager resources
+produce 64-character alphanumeric values, with generated physical names.
+Cursor and demo credentials use separate signing resources, validated distinct
+same-account/same-region ARNs, separate formats and scope validation. HMAC
+verification uses constant-time comparison. This is signing, not token encryption.
+
+Values appear in neither source nor CloudFormation nor Lambda environment nor
+Vite assets. Lambda contains ARN references only, resolves SecretString through
+its role, validates response ARN/value shape, and ignores .env. Errors fail
+closed and sanitize internals. Local official-image proof observed exactly two
+cold-start reads and warm reuse; it does not prove AWS IAM/service latency.
+
+Secrets use Delete/Delete in staging and Retain/Retain in production. Replacing
+either secret changes future signing material; retained old resources need an
+explicit ownership/disposal procedure. Warm environments cache old values until
+recycled. Secret administration/rotation is absent from Lambda. F10 remains open.
+The GitHub token is a separate NoEcho deployment parameter used solely by
+App.AccessToken; it is never an application signing key. NoEcho masks ordinary
+parameter displays but is not permission to place values in metadata, outputs,
+shell history or diagnostic logs. Secure token input is a Phase 4 gate.
+
+### H. HTTP/API review
+
+HTTP API uses explicit Lambda proxy payload format 2.0, $default route,
+auto-deploy $default stage and 20-second integration timeout. No JWT authorizer
+blocks future demo/account coexistence; the future verifier remains at the
+server boundary. The Mangum handler accepts the intended HTTP event shape and
+rejects unsupported event/configuration cases.
+
+One App-derived https://main.<AppDefaultDomain> value supplies both gateway and
+Lambda CORS per environment. Allowed methods are GET/POST/PATCH/DELETE/OPTIONS;
+request headers are Accept, Authorization, Content-Type, Idempotency-Key,
+X-Request-ID; exposed headers X-Request-ID and Content-Disposition; credentials
+false. No wildcard origin or local origin enters cloud configuration. Gateway
+handles managed preflight; runtime policy remains aligned. Staging rate/burst
+is 10/20; production 20/40. Detailed route metrics are disabled.
+
+Error responses preserve error.code/message/request_id/details? with generic
+internal-error text. Validation details omit submitted private input; adapter
+exception logging strips raw exceptions and stack traces. The isolated Linux
+probe exercised safe 500/logging, 401, 404 and CORS. Gateway-generated failures
+may use AWS's envelope rather than FastAPI's; frontend accepts a safe generic
+fallback. This remains a live behavior qualification.
+
+X-Request-ID is accepted only for 1–64 safe characters, otherwise generated. It
+is a diagnostic label, never authorization or authoritative AWS invocation
+identity. API access logs contain AWS requestId; Lambda JSON has native invocation
+identity plus sanitized application error fields. The adapter does not inject
+API requestContext.requestId into the ASGI application, and access logs do not
+include an integration request ID. Classification: **PHASE4VERIFY**, not a claim
+of automatic end-to-end joins. Controlled response headers/timestamps/application
+error IDs must make the short staging exercise diagnosable; L15 blocks completion
+if they do not. No raw path logging was enabled to compensate.
+
+### I. Lambda review
+
+One ZIP Lambda per environment: Python 3.14, x86_64,
+hireflux_backend.lambda_handler.handler, memory 1024 MB, timeout 15 seconds,
+default ephemeral storage 512 MB, reserved concurrency 5/10. No VPC, NAT, layer,
+Function URL, provisioned concurrency, tracing, Insights, extension, DLQ or async
+destination. Role/environment/table/secret/log references remain local.
+The actual managed runtime supports Python 3.14/x86_64, not a preview runtime.
+[AWS runtimes](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html)
+
+Environment variables are ENVIRONMENT (staging/production), AUTH_MODE
+(demo/cognito), DYNAMODB_TABLE_NAME (local table reference), CORS_ALLOWED_ORIGINS
+and LAMBDA_CORS_POLICY (same exact App-derived policy), CURSOR_SIGNING_SECRET_ARN
+and DEMO_SESSION_SIGNING_SECRET_ARN (distinct local resources). AWS_REGION is
+provided by Lambda, not explicitly overridden. No key value, AWS credential or
+local endpoint is injected. Configuration-size assertions reserve headroom under
+the 4 KiB service limit; actual resolved values are checked in L11.
+
+Final ZIP SHA-256:
+`a7d89abc928d7e87dc445df03da4d17811d013d3f193aa0e289478995ba7b72e`.
+It supersedes the earlier 950c8d... hash because two runtime inputs changed.
+Two clean builds have identical ZIP bytes, manifest, distributions and file
+inventory: 26,646,194 compressed bytes, 57,541,431 expanded bytes, 3,756 files,
+31 runtime distributions and 71 application source files. These fit the stricter
+40/200 MiB project budgets and AWS's 50 MiB direct-ZIP/250 MiB expanded limits.
+The artifact is uploaded via the future CDK bootstrap asset bucket, not inline.
+[AWS Lambda quotas](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html)
+
+All manifest file hashes, normalized source bytes and lock/project hashes were
+checked; no Windows binaries, tests, development dependencies, .env, credentials,
+repository tree or source maps entered the ZIP. Largest members are uvloop native
+library 15,438,104 bytes; pydantic-core 4,768,720; PyYAML 2,620,168; botocore
+endpoints data 1,251,982. Runtime inclusion reflects the current locked graph;
+removing development-server packages is optional future measured packaging work.
+
+Pinned official Python 3.14 image ran with linux/amd64, network none, read-only
+filesystem/package, unprivileged UID, removed capabilities and bounded tmpfs.
+Observed Python 3.14.8/glibc 2.34 and six native imports, 31 distributions,
+cold/warm health, authentication, CORS, error privacy and large proxy response
+checks pass; network attempts zero. Docker qualification is local, not AWS.
+
+Secrets client timeouts are connect/read 2 seconds and at most two attempts.
+Two serial lookups plus retries can consume cold initialization headroom.
+DynamoDB uses SDK defaults; soft work deadlines do not interrupt a blocked SDK
+call. Default export 5 seconds and erasure 2 seconds are below function/API
+timeouts numerically, not guaranteed completion times. Timeout can leave an
+indeterminate client result after an atomic commit, requiring refresh/retry
+according to endpoint semantics. F06/L11/L18 remain mandatory.
+
+### J. DynamoDB review
+
+Exactly one independent table per environment. Fresh Python export and CDK
+parity match eight string key attributes PK/SK and GSI1PK/SK, GSI2PK/SK,
+GSI3PK/SK; three indexes exactly GSI1/GSI2/GSI3, ALL projection; PAY_PER_REQUEST;
+STANDARD; optional numeric epoch-seconds expires_at TTL. No new index, stream,
+replica, local override, startup table mutation, resource policy or customer KMS.
+SSEEnabled:false selects AWS-owned default encryption, not plaintext storage.
+
+Staging PITR/deletion protection off with Delete/Delete. Production both on with
+Retain/Retain. Retention protects existing physical resources; it does not migrate
+data into a replacement, import it into a new stack, or reconcile restored erasure.
+Normal methods use GetItem/Query/conditional writes/transactions/BatchWriteItem;
+the only intentional scan remains the guarded explicit local reconciliation.
+
+All mutable-resource operations keep expected_version and ownership guards.
+Application status matrix, archive/restore, current-status no-op, applied-date,
+append-only ordinary activity, historical milestones and atomic canonical/
+activity/projection maintenance remain covered. F01 preserves the atomic
+transaction rather than splitting updates into partial batches. Concurrent
+projection changes still conflict safely; pagination is not an unlocked write.
+
+The maximum supported label-sync transaction is 25 interview updates plus
+application/activity/quota/workspace = 29 actions for durable data, 28 for demo.
+Without activity it uses fewer actions. Other transactions are smaller; batch
+erasure remains at most 25 keys per BatchWriteItem, not a 100-action transaction.
+Keys are unique: canonical app, distinct activity, quota, durable workspace and
+distinct interviews. Cross-owner or duplicate-key input is not accepted.
+
+The byte probe uses canonical item mappings and maximum request text fields,
+four-byte UTF-8 characters, both custom preparation items, checklist/question
+limits and conservative map/numeric overhead. It deliberately combines even
+status-dependent fields for an upper estimate. Item upper estimates: application
+29,670 bytes, note 20,480, interview 98,539. The 25-interview transaction plus a
+64 KiB reserve for every other touched item totals **2,529,011 bytes**, below
+4,194,304. Current activity/quota/workspace data fits that reserve. Other metadata,
+refs/counters/settings are far smaller than a content item; no single item
+approaches 409,600 bytes. Stored versions/numbers are counted conservatively.
+The previous 96 setting yielded a conservative 9,525,280 estimate; text values
+alone prove excess, so this was not merely an overly pessimistic upper bound.
+
+AWS limits count full updated items, not just the small Update expressions.
+[TransactWriteItems limits](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TransactWriteItems.html)
+Future increases to content fields/quotas require repeating BOTH action and byte
+analysis. Lowering a quota is not retroactive data migration.
+
+Query's 1 MiB page is evaluated before projection; a small key projection can
+still need continuation. F01 now follows LastEvaluatedKey through every page.
+[Query behavior](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html)
+
+Demo items carry expiry; signed-token expiry is enforced before data access,
+independent of eventual TTL cleanup. Durable items omit TTL. Strong application
+manifests enumerate complete partitions for export/erasure. ACTIVE freezes once
+to DELETING; bounded retryable removal verifies empty partitions before refs
+and ends with a minimal DELETED tombstone. Missing/unproven manifests fail closed.
+Production PITR/history and retained resources are separate privacy surfaces.
+
+Transport checks use the actual Lambda guard, not raw body length alone. A
+4,000,000-byte quote/backslash body becomes 8,000,143 proxy bytes before base64,
+5,333,478 afterward; controls become 24,000,143 then 5,333,478; four-byte Unicode
+is 4,000,143 without base64. All fit the guard's **6,225,920-byte** threshold.
+A 7,000,000-byte oversized body becomes sanitized 413 (299-byte probe envelope).
+Headers and envelope are included. Official-image large JSON tests also pass.
+HTTP API's 10 MB limit is secondary to Lambda's 6 MiB synchronous limit.
+[HTTP API quotas](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-quotas.html)
+Arbitrary worst-case collection contents can still trigger intentional safe 413;
+there is no claim that every maximum workspace fits one synchronous response.
+
+### K. Amplify/frontend review
+
+One static WEB App and main Branch per environment, canonical repository
+https://github.com/xiolest1/HireFlux. No SSR, backend environment, service/compute
+role, preview, auto-branch creation or custom domain. Staging BETA/auto-build true;
+production PRODUCTION/auto-build false. A main push may rebuild staging frontend
+but does not deploy backend infrastructure; review frontend/backend compatibility
+and keep the qualification revision consistent.
+
+App has only static monorepo configuration and deploy-time AccessToken. Branch
+receives public VITE_API_BASE_URL from the local API endpoint,
+VITE_PUBLIC_SITE_URL from App.DefaultDomain plus main, VITE_WORKSPACE_MODE=demo.
+Build uses frontend appRoot, AMPLIFY_MONOREPO_APP_ROOT=frontend, Node 22, npm ci,
+npm run build and dist/**. It contains no Python/CDK/schema/cloud command.
+
+The root customHttp.yml is canonical monorepo header policy. CSP script-src self
+and narrow regional connect-src, existing style inline allowance, HSTS,
+X-Content-Type-Options, frame/referrer/permissions/cross-origin policies remain.
+No duplicate App.CustomHeaders or repository build override was introduced.
+The SPA regex rewrites client routes and excludes the documented asset extensions
+so missing JS/CSS/fonts/images/PDF/etc retain normal asset error behavior.
+Unknown extensionless paths are intentionally eligible SPA routes; live behavior
+must be checked at the real hosting edge, including error responses.
+
+Fresh deployment-style build used visibly synthetic HTTPS API/site endpoints,
+demo mode, no source maps, and verified 39 files with expected public URLs,
+no private configuration/local endpoints/unresolved Vite placeholders. Four
+header and four negative-build fixtures pass, including weakened/missing headers,
+private files, secret-shaped bundles, stale endpoints and source maps. No runtime
+UI change occurred; live hosted routing/header/browser QA remains Phase 4.
+
+CloudFormation creation requires GitHub App installation for this repository and
+secure PAT input; no installation/token action occurred.
+[Amplify GitHub authorization](https://docs.aws.amazon.com/amplify/latest/userguide/setting-up-GitHub-access.html)
+The operator must verify required scopes, repo selection, expiry/revocation and
+replacement/reconnection requirements; never assume NoEcho authorizes logging it.
+
+### L. Environment/account/region isolation
+
+Staging and production have separate table, secret pair, Lambda, role/policy,
+API/CORS, hosting app/branch, logs, alarms, dashboard, budget and optional topic.
+The full intrinsic/DependsOn graph is acyclic; references remain within the
+selected stack. The App is independent of API/Branch; API/Lambda depend on App
+for CORS; Branch depends on App and API. Negative cycle mutations fail.
+
+Both regions are explicitly us-east-1. CSP/API ARNs/bootstrap destinations match;
+no partition/region portability beyond this approved region is claimed. Accounts
+are unbound by default. Real-CLI tests bind staging 111111111111 and production
+222222222222 independently without network or credential discovery. Those IDs
+are test fixtures, not deployed accounts. Different physical resources also
+remain isolated if an operator deliberately chooses the same account; separate
+account governance is Phase 4/production qualification, not proof from synth.
+
+No cross-stack imports/exports/lookups or caller environment selector enters the
+API. Local wrapper rejects profiles/deploy/bootstrap/destroy and strips AWS/CDK
+default bindings. A separately reviewed, authorized deployment invocation is
+required in Phase 4; do not pretend the local synth wrapper can deploy.
+
+### M. CloudFormation lifecycle / replacement review
+
+| Resource/change | Replacement or disruption risk | Consequence | Operator rule |
+| --- | --- | --- | --- |
+| Table logical path/physical name/primary key contract | New physical table or unsupported migration | Staging data deleted; production old table retained but new table empty | Block unexpected replacement; retain/export/import/reconcile deliberately; Retain is not migration |
+| Secret identity/Name or new signing value | New ARN/material or changed value | Existing sessions/cursors invalid; warm environments may still use old values; old production secret retained | Review both signing domains, recycle/cache overlap and retained ownership; never rotate casually |
+| Log identity/name | New history destination | Staging history removed; production old group orphaned and billable | Preserve evidence/access; record new/old group ownership and retention |
+| Lambda identity/FunctionName/runtime/code/configuration | Replacement or cold starts | New endpoint integration target; quotas/secret cold reads; possible rollback incompatibility | Review change set and compatible package/runtime, IAM/invoke/log wiring |
+| Role identity/RoleName/trust/policy | New role or privilege change | IAM propagation/cold-start failures or broadened blast radius | Review every action/resource/trust statement; do not attach admin policies to fix runtime errors |
+| HTTP API identity/protocol/routes/stage | New public API URL or wiring changes | Frontend/CSP/API configuration mismatch, CORS/availability loss | Update through same-stack tokens; validate endpoint and headers before traffic |
+| Amplify App identity/repository/Branch AppId or BranchName | Reconnection/new app or branch | Old URL/build/cache/webhook state; token reauthorization; exact CORS origin changes | Secure token supply, repo authorization and edge/build/CORS qualification; prevent simultaneous confused releases |
+| SNS topic/subscription identity or email/condition | New topic/subscription or resource removal | Delivery gap; fresh email confirmation; old destination may persist until removed | Confirm intended recipient/delivery; blank email intentionally removes notification plumbing |
+| Named alarms/dashboard/budget identity or names | Recreation/conflicts or temporary monitoring gaps | Same-name collision, changed billing scope, lost operational configuration | Inspect provider replacement classification/change set; maintain names/prefixes and verify coverage |
+
+This table identifies dangerous change classes, not a claim that every listed
+property always requires replacement. Provider classification and actual change
+set are mandatory. Production Retain resources may survive stack deletion and
+continue costs outside stack ownership. Bootstrap assets/roles are also separate
+from application-stack disposal. First staging deployment accepts fictional demo
+data only and has no production data to migrate.
+
+### N. Observability review
+
+Two STANDARD log groups per environment: 14-day Delete/Delete staging,
+30-day Retain/Retain production. Lambda JSON application/system WARN suppresses
+Mangum INFO raw-path logging while retaining sanitized errors. Access JSON fields
+are requestId, routeKey, httpMethod, status, responseLength, responseLatency,
+integrationLatency, protocol, integration.status. No raw path, query, body,
+token, IP or user agent. $default routeKey gives little business-route detail.
+Logs protect privacy while limiting diagnostic depth; F05 is explicit.
+
+Five native alarms use 300-second Sum, >=1 threshold, notBreaching missing data.
+Lambda Errors/Throttles and HTTP API 5xx are single local metrics with 1-of-1
+evaluation. DynamoDB ThrottledRequests/SystemErrors sum the exact table plus each
+of six runtime operations: GetItem, PutItem, DeleteItem, Query, BatchWriteItem,
+TransactWriteItems. Throttles evaluate 1-of-1; SystemErrors 2-of-3. Transaction
+authorization actions are not separate emitted SDK operation metrics. Partial
+batch throttles need manual ReadThrottleEvents/WriteThrottleEvents diagnosis.
+Handled FastAPI 500s may not count as Lambda Errors but are covered by API 5xx.
+Routine validation/409 conflicts/4xx, issuance-specific abuse and latency are
+not custom alarmed. No claim of complete business telemetry is made.
+
+One six-graph dashboard contains 14 visible series and 24 underlying native
+metrics, scoped to this environment: API counts/average latency, Lambda counts/
+p95 duration/max concurrency, DDB operation throttles/errors, Query average
+latency and transaction conflicts. No custom metrics, detailed API route metrics,
+X-Ray, Insights, RUM, Synthetics, cross-environment or log-query collector.
+Five alarm resources involve fifteen underlying alarm metrics for cost review.
+Metric publication, log delivery and usable correlation remain live gates.
+
+### O. Cost review
+
+Billable surfaces include Amplify build minutes/storage/request transfer; HTTP API
+requests/transfer; Lambda requests/GB-seconds; DDB transactional and ordinary
+read/write units, table/index storage and production PITR; two secret resources/
+API reads; log ingestion/storage; standard alarms/metric math/dashboard; optional
+SNS; budget features under current pricing; retained/orphaned resources; and
+separate bootstrap S3/ECR/roles/storage if provisioned by authorized bootstrap.
+IAM/integration/route/permission declarations mainly enable those billable paths.
+No fixed monthly total or universal free-tier guarantee is asserted.
+
+Public API traffic, anonymous session/reset issuance, workspace growth, expiry
+backlog, log bursts, repeated main-branch builds, static bandwidth and retained
+resources are independent amplification paths. Per-workspace defaults bound
+100 applications, 100 notes/application, 25 interviews/application,
+500 activities/application, two custom preparation items/interview and text
+lengths. They do not bound how many workspaces an attacker requests.
+
+One local Moto seed with an idempotency key attempted 71 TransactWriteItems,
+2 PutItem, 134 GetItem and 9 Query requests. Transaction actions: 147 Put,
+236 Update, 8 ConditionCheck, 4 Delete; there were 115 distinct Put keys including
+30 apps, 69 activity records, 3 notes and 5 interviews, plus metadata. This counts
+attempted operations, not AWS billed units or exact final storage; transactional
+units and indexes multiply cost. All captured temporary Put items had TTL.
+Same-key retry returned the same credential with one failed reservation transaction
+attempt (2 Put actions) and 2 GetItem reads, without reseeding. A fresh key can
+seed again. Moto's 2.831-second timing is not a cloud throughput estimate.
+
+At 10 requests/second, 864,000 requests/day is a scale illustration, not a hard
+cap or an attainable issuance rate; burst/best-effort behavior and five concurrent
+15-second executions alter throughput. A request can still cause many reads/
+writes. Concurrency bounds execution, not total daily spend; API rejection and
+Amplify bandwidth can also cost money. SDK retries and GET client retry can
+amplify attempts; mutations have no automatic frontend retry. Idempotency is
+endpoint-specific, not an exactly-once gateway guarantee.
+
+Monthly COST/UNBLENDED_COST budgets are USD 10 staging / 30 production with
+AND(Project=HireFlux, Environment=selected), optional actual >80%/>100% email
+notifications and no BudgetsAction. Tags are present on supported resources;
+policy/integration/route/permission/subscription/topic-policy declarations have
+no applicable resource tags. Shared/untaggable/bootstrap charges and tag activation
+lags can escape the filter. Alarm/dashboard/taggable resource tagging does not
+prove every billed line carries those tags. Inspect whole-account costs too.
+Finite retention bounds accumulation, not ingestion charges. Budgets update with
+delay and never stop spending automatically.
+[AWS budget limitations](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html)
+Tag visibility/activation can each take time, so zero filtered spend is not proof
+of zero account spend.
+[Cost-tag activation](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/activating-tags.html)
+
+The initial staging risk is acceptable only for the monitored qualification
+window with authorized stop controls and low-volume intentional tests. Unattended
+public issuance requires resolving F04; adding WAF/CAPTCHA/queues or new services
+is not part of 3G and would require an explicit architecture decision.
+
+### P. Conditional alerting review
+
+OperationalAlertEmail is NoEcho String, default empty, max 254, with a conservative
+email-shaped regex. It is not in Vite/runtime/log metadata/outputs. Blank selects
+22 resources and no topic/subscription/policy/alarm destinations/budget emails.
+Nonempty selects 25, one topic/email subscription/scoped topic policy and the
+five local alarm destinations; budget email delivery is separate. Actual Fn::If
+branches were evaluated for both environments with no dangling references.
+Email regex is shape validation, not proof of mailbox existence. Nonempty
+email does not imply confirmation/delivery. L07/L17 require intended-recipient
+authorization, subscription confirmation and controlled delivery checks.
+
+### Q. Dependencies / supply chain
+
+Locked installs succeeded for frontend and infra. Backend builder exports locked,
+hash-checked Linux binary wheels with uv 0.12.5 and Python 3.14; no source builds,
+host-installed runtime dependency copy or unpinned install fallback. Manifest
+source/lock consistency is a local integrity check, not a signed attestation.
+No dependency or lock changes were made to hide an audit finding.
+
+Fresh pip-audit 2.10.1 reports zero known findings for the 31 runtime packages
+selected on the local host and for the exact 31 distributions in the Linux ZIP.
+The second audit projects names/versions/hash sets from the actual manifest and
+locked graph without host platform markers, so it includes uvloop and excludes
+Windows-only colorama. This advisory query does not execute packages; native
+imports were separately qualified in the pinned Linux image.
+Frontend npm audit reports zero vulnerabilities. Infra npm audit exits 1 for
+one high bundled brace-expansion package; three advisories remain. aws-cdk-lib
+2.272.0 and aws-cdk CLI 2.1144.0 are still the latest registry versions checked
+during this review. npm's fixAvailable flag does not prove a compatible CDK
+bundle update exists. F03 stays open; no audit bypass, suppression, override or
+manual node_modules patch was introduced. Build/image digests are pinned;
+Node 22 and mutable GitHub major actions still need release-policy review.
+
+### R. CI review
+
+quality.yml runs pull_request and push main with contents:read only. No
+id-token:write, AWS secret, deploy role, credential configuration, environment
+deployment or CloudFormation mutation appears. Infrastructure depends on backend
+and real Lambda packaging, downloads named artifacts, runs full unit/offline
+synth/real-CLI/schema parity. Backend matrix is 3.13/3.14; frontend is Node 22.
+
+Workflow inputs are trusted matrix values, not interpolated PR titles/branch
+shell text. Actions use mutable major tags (F08). Artifacts are explicitly scoped
+to named CycloneDX/audit/OpenAPI/schema files and artifacts/lambda, rather than
+.env or the full workspace. Upload retention inherits uninspected repository
+settings (F09). Build artifacts can contain application source by design; they
+must contain no secrets. No remote GitHub Actions run, remote settings audit,
+commit or push occurred. Local Windows/Python 3.14 checks do not substitute for
+the Linux/Python 3.13 remote matrix. L01 is mandatory before AWS mutation.
+
+### S. Security invariants
+
+| Invariant | Result | Local evidence / limitation |
+| --- | --- | --- |
+| Browser never receives DynamoDB credentials. | PASS | Branch VITE values are public URLs/mode only; role credentials stay in Lambda. |
+| Browser never receives AWS credentials. | PASS | No AWS key input or credential response exists; SDK execution-role chain only. |
+| Browser never receives signing secrets. | PASS | Secrets are ARN-only Lambda inputs and absent from Vite/ZIP/source values. |
+| Owner identity is server-derived. | PASS | Verified CurrentIdentity feeds owner-qualified services/repository methods. |
+| No caller-selected owner identity. | PASS | Request extra-field rejection and foreign-resource 404 tests; identity is not accepted in query/body. |
+| No DynamoDB Scan request path. | PASS | Runtime adapter/role action review excludes Scan; guarded local reconciliation remains separate. |
+| Demo credential expiry is independent from TTL cleanup. | PASS | Signed credential expiry checked before access; expiry/TTL tests pass. |
+| Durable data has no TTL. | PASS | Durable identity forbids data expiry; mapping/manifest/guard tests enforce no TTL. |
+| Staging and production have independent resources. | PASS | Full templates/reference graph, conditional evaluation and bound-account tests. |
+| Lambda has no administrative DynamoDB authority. | PASS | Only exact table item actions and Query; no create/delete/update table/index authority. |
+| Lambda has no secret-administration authority. | PASS | Only GetSecretValue on two ARNs; no secret admin/list/rotation. |
+| Lambda has no arbitrary CloudWatch/SNS/Billing authority. | PASS | Only own log-stream writes; no PutMetricData, SNS, Budgets/Billing actions. |
+| Production local auth cannot activate. | PASS | Lambda settings and deployment-marker tests reject local mode/endpoints. |
+| Production is not represented as launch-ready. | PASS | Production cognito is deliberately unavailable; production release deferred. |
+
+All 14 pass as local source/template/runtime invariants. A PASS for a definition
+does not turn the corresponding live service or future production policy into a
+verified deployment.
+
+### T. Cost invariants
+
+| Invariant | Result | Local evidence / limitation |
+| --- | --- | --- |
+| DynamoDB remains PAY_PER_REQUEST. | PASS | Both tables emit PAY_PER_REQUEST. |
+| No provisioned concurrency. | PASS | Reserved 5/10 only; no provisioned config/version/alias. |
+| No NAT/VPC. | PASS | No VPC/NAT/subnets/endpoints in resources or function config. |
+| No custom KMS. | PASS | AWS-owned DDB/default service encryption; no KMS resource/grant. |
+| No paid detailed API route metrics. | PASS | DefaultRouteSettings DetailedMetricsEnabled:false. |
+| No custom CloudWatch metrics. | PASS | Native namespaces only; no custom publisher/PutMetricData. |
+| No X-Ray. | PASS | No tracing config or X-Ray grant. |
+| No Lambda Insights. | PASS | No Insights layer/config. |
+| No RUM. | PASS | No RUM resource/client. |
+| No Synthetics. | PASS | No Synthetics canary or supporting resources. |
+| Finite log retention. | PASS | Both explicit groups 14/30 days. |
+| API throttling configured. | PASS | HTTP API rate/burst 10/20 or 20/40. |
+| Lambda concurrency bounded. | PASS | Lambda reservation 5/10; account quota still L05. |
+| Budget has no automatic destructive action. | PASS | No BudgetsAction/resource/automatic control. |
+| Budget is not described as a hard cap. | PASS | O/AA explain delayed warning and human stop ownership. |
+
+All 15 pass. These are architectural/scaling invariants, not spending ceilings.
+
+### U. Data-lifecycle invariants
+
+| Invariant | Result | Local evidence / limitation |
+| --- | --- | --- |
+| demo records receive expires_at where required | PASS | Temporary identity/data mappings + TTL tests; all captured seed Put items expire. |
+| durable records do not | PASS | Durable identities/mappings/guard tests omit expiry. |
+| workspace deletion remains manifest-driven | PASS | Strong base manifest and partition enumeration; no scan/GSI erasure authority. |
+| production table is retained | PASS | Production DeletionPolicy and UpdateReplacePolicy Retain. |
+| production PITR enabled | PASS | Production PointInTimeRecoveryEnabled:true. |
+| staging table disposable | PASS | Staging PITR/protection off, Delete/Delete. |
+| tombstone behavior preserved | PASS | ACTIVE->DELETING->DELETED; minimal non-TTL tombstone and retry tests. |
+| backup/PITR historical-erasure caveat documented | PASS | J/M/AB explicitly separate live erasure from retained backups/restores. |
+
+All eight pass locally; restore/privacy hardening remains F07.
+
+### V. Hosting invariants
+
+| Invariant | Result | Local evidence / limitation |
+| --- | --- | --- |
+| Amplify is static WEB hosting | PASS | App Platform:WEB; no SSR or compute role. |
+| one App/Branch per environment | PASS | Exactly one App and one main Branch in each template. |
+| staging auto-build behavior intentional | PASS | Staging BETA and EnableAutoBuild:true; trusted main changes can rebuild. |
+| production auto-build disabled | PASS | Production EnableAutoBuild:false and unavailable account auth. |
+| SPA routing correct | PASS | Reviewed SPA rewrite + negative graph/build/header tests; live edge L12. |
+| missing assets do not rewrite to HTML | PASS | Asset-extension exclusions; real hosting 404 behavior remains L12. |
+| frontend origin and API CORS agree | PASS | Same App.DefaultDomain/main token feeds both CORS and Branch URL. |
+| no wildcard CORS | PASS | Exact singleton HTTPS origins and credentials:false. |
+| no server secrets in Vite | PASS | 39-file deployment-style scan/negative fixtures; public VITE values only. |
+| App → API → Branch remains acyclic | PASS | Full dependency traversal and both deliberate cycle mutations. |
+
+All ten pass as local definitions/build tests; real-edge behavior is L12/L13.
+
+### W. Operations invariants
+
+| Invariant | Result | Local evidence / limitation |
+| --- | --- | --- |
+| Lambda log retention finite | PASS | Explicit Lambda group 14/30 days. |
+| API log retention finite | PASS | Explicit HTTP API group 14/30 days. |
+| production log groups retained | PASS | Both production groups Retain/Retain. |
+| access logs privacy-conscious | PASS | Safe field allowlist/negative privacy tests; no raw path/content/IP. |
+| five alarms correctly scoped | PASS | Exactly five native local alarms; six-operation DDB math. |
+| missing data does not alarm during idle periods | PASS | All alarms TreatMissingData:notBreaching. |
+| dashboard environment-local | PASS | Dashboard is region/account/resource local; 14 series/24 inputs. |
+| SNS optional | PASS | HasOperationalAlertEmail condition; no SNS for blank. |
+| alert email deploy-time only | PASS | NoEcho parameter only in subscription/budget subscribers, never runtime/Vite. |
+| budget environment-filtered | PASS | Monthly COST/UNBLENDED_COST with AND Project+Environment. |
+| no automatic shutdown action | PASS | No action/control resource or runtime control permission. |
+
+All eleven pass as local definitions; managed metric/log/notification delivery
+and billing attribution require Phase 4 evidence.
+
+### X. Fresh local validation
+
+| Check | Final result / limits |
+| --- | --- |
+| Starting worktree | Clean main at 67b7843; no unrelated dirty baseline |
+| Frontend/infra install | npm ci from committed locks; no lock changes |
+| Backend Ruff check/format | Pass; 111 files already formatted |
+| Backend Mypy | Pass; 71 source files |
+| Backend full suite | 422 passed, 90.71 seconds; known Starlette/httpx deprecation warning |
+| Focused corrections | Paginated rename failed before fix (409), both cases passed after; config/resource set 36 passed |
+| Frontend lint/typecheck/full tests | Pass; 46 files, 364 tests, 78.87 seconds |
+| Frontend build/verification | Pass; synthetic deployment HTTPS URLs, 39 files, no source maps/private material/local endpoints |
+| Header/build-negative fixtures | 4/4 + 4/4 passed |
+| Infra typecheck/build/unit | Pass; all 119 tests, 13.17 seconds |
+| Real ZIP offline CLI | 4/4 passed, 37.15 seconds; two repeated synths per env, separate synthetic account bindings, rejected profile/mutation/invalid selections, no network attempts |
+| Actual staging/production synth | Pass; each 25 declarations, 3 parameters, 0 outputs; no AWS lookup |
+| Fresh schema export/parity | Pass both environments against Python create_table_request + TTL contract |
+| Full graph/conditions | Acyclic; actual blank/nonempty evaluation 22/25, no dangling refs in either environment |
+| Artifact | Two clean locked builds identical; final SHA/size above; all 3,756 per-file hashes checked |
+| Linux qualification | Pinned official Python 3.14/amd64 image; read-only/native/cold/warm/HTTP/error/secret/transport tests passed; network attempts 0 |
+| Item/transaction/proxy probes | Actual mappings/schema maxima/actual guard; 25 capacity safe; 96 disproven; quote/control/base64/Unicode/413 envelopes measured |
+| Seed amplification | One Moto synthetic seed + same-key retry; no AWS load test |
+| Audits | Host-selected and exact Linux-manifest runtime sets each 31 packages / 0 known findings; frontend 0; infra 1 high vulnerable package / 3 advisories remains open |
+| Secret scan | 436 tracked paths/text files reviewed by private-key/GitHub/AWS marker patterns; no hits or tracked private config; ignored .env not printed; templates/frontend/package separately inspected; not a universal secret-detection guarantee |
+| CI | Static source review only; remote run unexecuted |
+| Documentation/diff | 144 local links/anchors across nine changed Markdown files pass; git diff --check passed; exactly 13 changed files; generated evidence remains ignored |
+
+Fresh actual unbound template SHA-256:
+staging `887a1cfa589f1133d879f7f443182f13b95fd0b749d571b0dc98a18d642bf89d`;
+production `1301f68f1b6593ce90f9282732d80fceeef0c0b4df596daaaa4e9e7b144c3afc`.
+The Lambda asset key is
+`477a5915b0de7c4ab69881a069e3f3e0d845e967e734dcb030e90dfbef0bdcac.zip`;
+CDK custom asset hashing is distinct from the ZIP's SHA-256. Each staged ZIP
+matches the rebuilt bytes. Asset manifest has ZIP/template files, no Docker
+image asset, and same selected account/region bootstrap bucket/publishing-role
+references. It does not prove those bucket/roles exist or are authorized.
+
+Negative coverage deliberately challenges artifact source/hash/lock/prohibited
+members, invalid settings/endpoints/local auth, secret references/read failures,
+IAM/admin/wildcards, TTL/lifecycle/schema drift, CORS, graph cycles, missing or
+weak headers, source maps/private assets/stale public URLs, conditional references,
+metric dimensions and privacy-sensitive access-log fields. Existing ownership,
+rollback, expected_version, cursor scope, milestone and deletion tests passed.
+No test expectation was weakened to obtain these results. Informational CDK
+feature-flag notices and existing frontend jsdom navigation warning are not
+product failures. No meaningful UI/layout change occurred; AWS browser QA is later.
+
+Ignored review evidence is under .tools/phase3g-* and regenerated assemblies under
+infra/cdk.out/{staging,production}; final package/manifest/probe are under
+artifacts/lambda. Those are local evidence, not committed release attestations.
+The checkpoint plus locked scripts/tests and this record allow regeneration.
+
+### Y. Phase 4 live-only qualification matrix
+
+Every row is pending; none was executed in 3G. "Block" means stop the named
+step/completion until corrected, not silently proceed on a local PASS.
+
+| ID | Required qualification | Why local proof is insufficient | How to qualify | Failure rule |
+| --- | --- | --- | --- | --- |
+| L01 | Commit accepted 3G, push main, clean remote quality run and artifacts/retention | No remote run or repo retention setting inspected | Record commit/run IDs, all Linux/matrix jobs, artifact scope/hashes and reasonable actual retention; recheck dependency advisory | Block AWS mutation on failed/missing remote gates |
+| L02 | Correct staging account/us-east-1 and authorized operator/deployer | Templates are intentionally unbound | Authorized identity/account confirmation, explicit staging binding, no production selection | Block bootstrap/deploy on ambiguity |
+| L03 | Existing resources/cost baseline and approved supervised window | No AWS account inventory/billing read | Review existing regional resources, current whole-account spend and acceptable stop threshold | Block mutation without accountable operator/baseline |
+| L04 | CDK bootstrap version/assets and reviewed deployer/trust/execution/log-delivery IAM | Asset references do not create bootstrap or certify permissions | Review default bootstrap broad execution policy, least required trust/actions, asset bucket/roles/SSM and CloudWatch delivery; authorize bootstrap separately | Block deploy; never grant admin to Lambda |
+| L05 | Regional Lambda concurrency quota permits reservation 5 with required unreserved pool | Account quota may be low/already consumed | Inspect actual quotas/reservations and obtain authorization for any increase | Block deploy rather than silently remove reservation |
+| L06 | Amplify GitHub App/repo authorization and secure deploy-time PAT | No GitHub authorization done; input has no default | Selected repo/region App installation, documented scopes/expiry/revoke plan, secure no-history/log input, intended main revision | Block App creation/build on missing/unsafe authorization |
+| L07 | Optional email is authorized/intended or explicitly omitted | Regex cannot verify ownership/recipient | Choose blank (no notifications) or approved mailbox; record choice privately | Continue with blank only if active manual monitoring is accepted |
+| L08 | Cost-allocation tags authorized/activated and propagation understood | Billing state/coverage cannot be synthesized | Activate Project/Environment if authorized, record lag and use whole-account costs meanwhile | Block unattended exposure; supervised qualification may continue with manual account monitoring |
+| L09 | Account-bound staging synthesis/change set has expected inventory/policies | Provider may classify changes or encounter existing resources | Review exact final ZIP/template, parameter scope, 22/25 selected resources, no production/cross-account/retained-data replacement | Block unreviewed changes/replacements |
+| L10 | CloudFormation actually creates expected independent resources | Local references don't certify deployed ARNs/IDs | Record stack events/status, generated table/secrets/function/API/log/hosting/ops IDs and policies | Block qualification on rollback/drift/partial wiring |
+| L11 | Runtime IAM, two signing reads, cold/warm health and acceptable initialization | Local secrets are stubbed; AWS timing/permissions differ | Inspect safe logs, cold/warm invocations, independent real secret ARNs, 401/503 behavior and no secret logging | Block API exposure/completion on read/config/init failure |
+| L12 | Amplify locked build, real URLs, headers/HTTPS/SPA/asset behavior | Edge/build environment is external | Inspect build revision/logs/artifacts; browser refresh protected routes; missing assets; response CSP/security headers including errors; HTTPS | Block serving faulty/private/stale artifacts |
+| L13 | End-to-end demo API/browser, CORS, ownership/conflicts and retry behavior | Managed CORS/event/service behavior remains live-only | Issue one workspace, navigate/mutate/export CSV/reset/exit, verify foreign 404, stale 409, invalid/expired auth, unauthorized origins; no real personal data | Block completion on auth/isolation/correctness/transport failures |
+| L14 | DDB schema/TTL/temp writes and expiry independent of delayed cleanup | Moto isn't AWS TTL scheduler | Inspect actual schema/TTL and fictional item expiry; prove expired credentials deny access; observe eventual cleanup without demanding immediate deletion | Block on wrong schema/TTL/auth; delayed cleanup alone isn't expiry failure |
+| L15 | Private JSON logs and sufficient operator request correlation | Native IDs/delivery aren't modeled completely | Make controlled known X-Request-ID requests/errors; retain response AWS/client IDs and timestamps; locate relevant access/Lambda records without tokens/content | Block completion on privacy leakage or untriageable failures |
+| L16 | Actual metric dimensions/alarm policies/dashboard series | Definitions don't prove publication | Inspect emitted local metrics, math operands, idle behavior and scoped dashboard; diagnose partial batch throttles | Block completion on empty/wrong-scope critical signals |
+| L17 | Optional SNS confirmed delivery and budget email routing | Resource creation isn't confirmed subscription | If enabled, confirm recipient and controlled CloudWatch delivery; verify intended budget subscriber separately | Block alerting claim/completion until delivered; N/A if L07 blank |
+| L18 | Throttles/reservation and safe synchronous latency under bounded tests | Best-effort throttle, SDK retries and account latency are external | Carefully limited authorized requests; observe 429/throttles, five-execution reservation, cold seed/update/export timing; avoid uncontrolled load | Stop traffic if resource/cost/availability bounds are ineffective |
+| L19 | Budget scope/notification visibility plus whole-account spend/backlog | Delayed/tagged billing omits some costs | Inspect budget filters, activated tags, lag/untaggable charges, daily whole-account cost, retained/TTL backlog; record human stop owner | Block unattended availability; stop qualification on unexplained growth |
+| L20 | Complete release/deployment evidence and rollback readiness | No deployed identities/evidence exist yet | Record all IDs/revisions/hashes/conditions/results, outstanding production risks, stop/destroy ownership and retained/bootstrap resources | Do not declare Phase 4 complete until all applicable rows pass |
+
+Bootstrap defaults can include broad CloudFormation execution permissions; that
+is a deployer governance issue, not justification for expanding Lambda's role.
+[CDK bootstrap options](https://docs.aws.amazon.com/cdk/v2/guide/ref-cli-cmd-bootstrap.html)
+Reservation needs actual regional headroom, including AWS's unreserved pool.
+[Lambda concurrency](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html)
+
+### Z. Ordered staging plan
+
+1. Review this local 3G result and the exact diff; accept the two fixes and remaining risks.
+2. Commit the accepted work, push main and obtain a completely clean remote quality run; record artifacts/retention and advisory recheck.
+3. Confirm staging account, us-east-1, authorized operator/deployer, intended revision and no production data.
+4. Inspect existing resources/whole-account cost, select supervised window and authorize stop controls.
+5. Review bootstrap trust/execution/log-delivery permissions, then bootstrap staging only if separately authorized.
+6. Activate/verify cost-allocation tags where authorized; record propagation lag and manual account-cost fallback.
+7. Verify reserved-concurrency headroom; resolve quota failure before deployment.
+8. Prepare least necessary Amplify GitHub repo authorization and secure PAT input; optionally choose the approved alert mailbox.
+9. Build/verify the final locked ZIP, bind account explicitly, synth and inspect the staging change set/asset references/selected resource count.
+10. Authorize and deploy STAGING only using a reviewed deployment invocation, not the synth-only wrapper.
+11. Confirm CloudFormation completion and exact resources/policies; record generated identifiers.
+12. Confirm Amplify build revision/public variables/assets/real HTTPS origin/API wiring and hosted headers/SPA/404 behavior.
+13. Confirm cold/warm secret retrieval, health/auth/CORS and safe failure behavior.
+14. Run a low-volume fictional demo browser/API workflow, ownership/conflict/cache-reset/exit and CSV checks.
+15. Inspect DynamoDB schema/temp item TTL and signed expiry; observe cleanup separately.
+16. Inspect privacy-safe logs and controlled correlation; verify metrics/alarms/dashboard.
+17. Confirm optional SNS/email and budget delivery where configured.
+18. Qualify throttle/concurrency and synchronous timing with bounded authorized traffic.
+19. Inspect filtered budget and whole-account costs/storage/backlog after billing/tag propagation, continuing only under active supervision.
+20. Record all evidence and rollback ownership; declare Phase 4 complete only after applicable live gates pass. Stop before Phase 5.
+
+### AA. Rollback / stop plan
+
+For unexpected traffic/cost/privacy/auth failures, stop the supervised exercise
+immediately. An authorized operator can disable staging auto-build, constrain
+ingress/execution (for example reserved concurrency zero), and/or delete the
+staging stack through reviewed control-plane actions. Zero concurrency still
+permits chargeable rejected API traffic; deleting the API/hosting is the stronger
+stop. Capture only sanitized diagnostic evidence first if that does not prolong
+a serious failure. No automatic budget shutdown exists.
+
+First staging data is disposable fictional demo data; table/secrets/logs Delete
+policies are deliberate. Stack rollback/destroy does not revoke a GitHub token
+by itself, undo GitHub App installation, remove every shared bootstrap asset/role,
+or remove production Retain or other pre-existing orphan resources. Inspect and
+dispose of separately owned remnants only with explicit authorization. Revert
+an incompatible source/configuration release and redeploy known good artifacts
+after review. Do not create a fresh table and call it recovery/migration. Never
+run local reset/reconciliation against cloud or destroy production as a shortcut.
+
+### AB. Production deferrals
+
+Phase 5: real verified Cognito account/session boundary, demo/account coexistence,
+production frontend mode and identity lifecycle. Phase 6: anonymous abuse policy,
+compatible CDK security remediation, reviewed action SHAs/toolchain updates,
+signing-key rotation/cache overlap, backup/restore/erasure privacy reconciliation,
+retained-resource governance and evidence-based retry/timeout/diagnostic tuning.
+Phase 7: separately authorized production release after those gates and independent
+account/operational qualification. Attachments, S3, EventBridge/SES reminders,
+asynchronous exports, WAF and additional compute/services remain outside this
+phase; add them only through explicit approved scope/architecture decisions.
+
+### AC. Final blocker statement
+
+- **Open MUST FIX BEFORE PHASE 4: 0.** Two such findings were corrected and revalidated.
+- **MUST VERIFY DURING PHASE 4: 20 live qualification rows**, represented by four finding groups F05/F06/F09/F12. L17 is N/A only with omitted email; L07 still records that choice. All applicable rows remain pending.
+- **MUST FIX BEFORE PRODUCTION: 6 finding groups** F03/F04/F07/F08/F10/F11.
+- **DEFERRED / ACCEPTED RISK: 1** F13. F03/F04 are only conditionally accepted for the supervised initial staging exercise; they remain production requirements.
+
+The initial deploy is blocked until pre-deployment authorization/identity/CI/
+quota/GitHub/bootstrap/change-set prerequisites pass. Phase 4 completion and
+unattended public exposure are blocked by failed live qualification. A local
+PASS with conditions is not a bypass of either boundary.
+
+### AD. Exact 3G file changes
+
+Runtime: backend/src/hireflux_backend/config.py;
+backend/src/hireflux_backend/infrastructure/dynamodb/repositories.py.
+Tests: backend/tests/unit/test_config.py;
+backend/tests/integration/test_workspace_resources.py.
+Documentation: README.md, ARCHITECTURE.md, infra/README.md,
+docs/architecture.md, docs/deployment-environments.md,
+docs/dynamodb-access-patterns.md, docs/roadmap.md, docs/devlog.md,
+docs/production-account-readiness.md.
+
+No lock, .env.example value, frontend, workflow, CDK implementation or original
+Diagrams artifact changed. .env.example already specifies 25 and matches reality.
+Generated builds, review JSON/logs, ZIP and package manifest are ignored and are
+not part of the source diff. No unrelated baseline edits were present or altered.
+
+### AE. External actions confirmation
+
+No AWS account lookup/STS identity/resource/Billing API call; no bootstrap,
+CloudFormation change set/deploy/destroy, S3 asset upload, service resource mutation,
+GitHub App/PAT authorization, SNS/email confirmation or delivery, cost-tag change,
+budget activation, custom domain, production deployment, real persistent accounts,
+new application AWS service, commit, push or remote GitHub Actions run occurred.
+Public AWS documentation/package-registry advisory/version reads and local
+dependency installs/Docker/Moto tests occurred. No real secret was printed or
+added, and no backend/front-end policy was weakened.
+
+### 3G exit gate: all 86 questions
+
+| # | Exit question | Answer / evidence |
+| --- | --- | --- |
+| 1 | Is the staging CloudFormation template structurally valid? | YES locally; final synth/assertions; provider deployment remains L09/L10. |
+| 2 | Is the production CloudFormation template structurally valid? | YES locally; synth/retention/auth assertions; not launch-ready. |
+| 3 | Are both synths deterministic? | YES, real CLI twice per environment with identical bytes. |
+| 4 | Does every synthesized resource have a justified purpose? | YES, D lists all 25 with purpose/cost/failure. |
+| 5 | Are there any unexpected resource families? | NO; exact accepted 25 declaration types only. |
+| 6 | Are all public surfaces enumerated? | YES, E lists hosting/API/public issuance/health/optional email. |
+| 7 | Is CORS correctly scoped? | YES, exact App-derived origin and aligned layers; L13 live. |
+| 8 | Are security headers still correct? | YES locally; four parsed header fixtures; L12 edge delivery. |
+| 9 | Is browser configuration free of secrets? | YES in inspected 39-file build; VITE contains URLs/mode only. |
+| 10 | Is Amplify repository authorization deploy-time only? | YES, sole parameter ref is App.AccessToken. |
+| 11 | Are CloudFormation parameters correctly classified? | YES, two NoEcho user inputs plus SSM bootstrap version; no real values. |
+| 12 | Are outputs safe? | YES; zero Outputs. |
+| 13 | Is every IAM trust relationship justified? | YES, Lambda service trust and conditional CloudWatch publish only. |
+| 14 | Is every Lambda IAM action justified? | YES, six item actions, Query, GetSecretValue, two scoped log actions. |
+| 15 | Is every IAM Resource scope justified? | YES, table/three indexes/two secrets/own group; F details wildcards. |
+| 16 | Is Lambda invocation permission scoped to the intended API? | YES, intended API/account/region SourceArn with justified stage/method suffix. |
+| 17 | Are signing secrets environment-isolated? | YES, distinct same-stack generated resources and runtime ARN checks. |
+| 18 | Are signing secret values absent from source/template/frontend? | YES in reviewed source/templates/build/package; no values. |
+| 19 | Are secret replacement consequences understood? | YES, G/M/F10 explain invalidation, warm caches and retained old secrets. |
+| 20 | Is Lambda cloud configuration fail-closed? | YES, strict Lambda config and sanitized failures tested. |
+| 21 | Is local auth impossible in AWS mode? | YES, local/auth/deployment marker negative tests. |
+| 22 | Are DynamoDB endpoint overrides impossible in AWS mode? | YES, application and SDK endpoint overrides rejected. |
+| 23 | Does the Lambda artifact exactly match protected inputs? | YES, normalized sources/lock/project/ZIP inventory match new hash. |
+| 24 | Is Lambda package size safely inside current limits? | YES, 26,646,194 compressed / 57,541,431 expanded bytes. |
+| 25 | Is secret retrieval cold-start behavior acceptable? | LOCAL reuse/failure behavior passes; AWS cold latency/IAM MUST VERIFY L11. |
+| 26 | Are externally returned errors sanitized? | YES, error envelope and official-image safe 500/adapter logging tests. |
+| 27 | Is operator diagnostics/correlation adequate? | PHASE4VERIFY L15; client IDs and native IDs are distinct, no automatic bridge. |
+| 28 | Does HTTP API configuration match the FastAPI/Mangum contract? | YES locally, payload 2.0/default proxy/15s function/20s API. |
+| 29 | Are worst-case API responses inside Lambda/API limits with real encoding overhead? | YES via exact envelope measurement, base64 or sanitized 413; not guaranteed success for every maximum collection. |
+| 30 | Do application time budgets fit inside Lambda/API timeouts? | NUMERICALLY yes (5s/2s <15s/20s); SDK calls are not preempted; L11/L18 required. |
+| 31 | Does DynamoDB schema exactly match canonical local schema? | YES, fresh Python export and both parity checks. |
+| 32 | Are table lifecycle policies correct? | YES, staging Delete; production Retain/protection/PITR. |
+| 33 | Is production table replacement risk understood? | YES, retain is not migration; old physical data/ownership requires a plan. |
+| 34 | Can any valid DynamoDB transaction exceed action-count limits? | NO at supported quotas; largest durable transaction 29 actions. |
+| 35 | Can any valid DynamoDB transaction exceed aggregate-size limits? | NO at supported quotas/current content bounds; 2,529,011-byte conservative estimate; unsafe 96 rejected. |
+| 36 | Can any valid content item exceed DynamoDB item-size limits? | NO at current schema maxima; interview estimate 98,539 <409,600. |
+| 37 | Is TTL used only for intended demo data? | YES, optional expires_at belongs only to temporary demo data. |
+| 38 | Is demo expiry enforced independently of TTL? | YES, signed expiry independent from TTL scheduling. |
+| 39 | Are staging and production completely isolated? | YES in complete local resource/ref graph; live IDs L10. |
+| 40 | Are account-bound templates isolated? | YES, explicit separate synthetic account CLI tests; real account identity L02. |
+| 41 | Are region assumptions correct? | YES, approved us-east-1 only; no unsupported portability claim. |
+| 42 | Is the CloudFormation graph acyclic? | YES, full intrinsic/DependsOn graph and cycle negative tests. |
+| 43 | Are dangerous replacement-sensitive resources documented? | YES, M lists stateful/hosting/IAM/API/ops dangerous changes. |
+| 44 | Are cost surfaces enumerated? | YES, O includes data/API/static/logs/secrets/ops/retained/bootstrap. |
+| 45 | Are public cost-amplification paths reasonably bounded for staging? | CONDITIONAL for short supervised staging; no global issuance/spend cap; F04/L18/L19 prohibit unattended acceptance. |
+| 46 | Is CloudWatch footprint proportionate? | YES, two finite logs/five native alarms/six graphs; 15 alarm metrics, no custom collectors. |
+| 47 | Are budgets correctly scoped? | YES locally AND Project+Environment USD10/30; attribution L08/L19. |
+| 48 | Are cost-allocation-tag limitations explicit? | YES, propagation/shared/untaggable/delayed costs and whole-account review. |
+| 49 | Is conditional SNS safe? | YES locally, selected 22/25 and no dangling refs; recipient/delivery L07/L17. |
+| 50 | Are all alarm metric semantics correct? | YES locally, 300s Sum >=1, 1/1 except SystemErrors 2/3, idle notBreaching. |
+| 51 | Do DynamoDB alarms cover actual runtime operations? | YES for six actual operations; partial batch throttles require manual event metrics. |
+| 52 | Is dashboard content correct and environment-local? | YES locally, six graphs/14 series/24 local native inputs; publication L16. |
+| 53 | Are reserved-concurrency implications understood? | YES, reservation limits execution, needs account quota and leaves billing elsewhere. |
+| 54 | Are API throttle implications understood? | YES, best-effort rate/burst not auth/spend ceiling. |
+| 55 | Are failure modes fail-closed where security requires it? | YES, auth/settings/ownership/manifest/secret failures close access; availability can fail. |
+| 56 | Is retry amplification acceptable? | ACCEPTED for supervised staging; GET one retry, mutations none, bounded erase retries; SDK latency L18. |
+| 57 | Are idempotency assumptions preserved? | YES, same-key issuance reuses credential/no reseed; other mutation retries require version/endpoint semantics. |
+| 58 | Is request correlation trustworthy enough? | PHASE4VERIFY L15; sanitized client label is not trusted AWS identity. |
+| 59 | Does the built frontend contain no private configuration? | YES in inspected deployment-style assets/negative fixtures. |
+| 60 | Does the repository contain no real credential? | NO credential found by tracked paths/marker scan and manual runtime/build review; pattern scan is not universal proof. |
+| 61 | Are dependency vulnerabilities accurately assessed? | YES, F03/Q retain the high bundled CDK finding and exposure limits. |
+| 62 | Are lockfiles/reproducible installs intact? | YES, npm ci/locked hash-checked builds; no lock edits. |
+| 63 | Is GitHub Actions least-privilege and deployment-free? | YES, contents:read, no OIDC/AWS/deploy; mutable actions F08. |
+| 64 | Is remote CI still truthfully marked unexecuted? | YES; no remote Actions run claimed or performed. |
+| 65 | Are CDK bootstrap/asset requirements documented? | YES, account/region asset bucket/roles/SSM version and broad-policy review L04. |
+| 66 | Is the asset manifest correct? | YES, staged ZIP hashes and manifest destinations checked; bucket existence unverified. |
+| 67 | Is Phase 4 deployer authorization work clearly defined? | YES, L01-L09 require operator/account/IAM/GitHub/quota/billing decisions. |
+| 68 | Is production truthfully marked non-launch-ready? | YES, production auth unavailable, auto-build off, Phase5/6/7 deferred. |
+| 69 | Is future Cognito coexistence not accidentally blocked by infrastructure? | YES, server auth seam remains; no gateway JWT-only lockout; verifier not implemented. |
+| 70 | Is encryption posture accurately documented? | YES, AWS-owned DDB/default secret/log service encryption, HTTPS; no custom KMS claim. |
+| 71 | Is backup/restore posture accurately documented? | YES, production PITR/retention do not prove restore testing/historical erasure. |
+| 72 | Is staging rollback understood? | YES, AA manual stop/delete and remnant ownership. |
+| 73 | Is first deployment restricted to non-production/demo data? | YES, fictional staging demo only; no production data/account release. |
+| 74 | Have representative negative tests been challenged? | YES, negative fixtures and failing paginated rename reproduction; expectations preserved. |
+| 75 | Are physical names appropriate? | YES, generated stateful names and environment-prefixed operational names; change set L09. |
+| 76 | Are tags correct where supported? | YES on supported resource properties; tag billing coverage limitations remain. |
+| 77 | Does fresh resource count match expectations? | YES, each 25 declared/22 blank/25 email/zero outputs. |
+| 78 | Are all security invariants re-proven? | YES, S proves all 14 locally. |
+| 79 | Are all cost invariants re-proven? | YES, T proves all 15 locally. |
+| 80 | Are all data-lifecycle invariants re-proven? | YES, U proves all eight locally. |
+| 81 | Are all hosting invariants re-proven? | YES, V proves all ten locally. |
+| 82 | Are all operational invariants re-proven? | YES, W proves all eleven locally. |
+| 83 | Is documentation truthful? | YES, current review supersedes historical phase-only snapshots; no deployed claims. |
+| 84 | Are all findings severity-classified? | YES, C assigns severity and timing separately. |
+| 85 | Are all Phase 4 live-only qualifications separated from local defects? | YES, Y has 20 pending qualifications, separate from two fixed local defects. |
+| 86 | Is there any MUST-FIX-BEFORE-PHASE-4 issue? | NO OPEN issue; two pre-4 defects fixed; authorization/live qualifications still required. |
+
+These answers use the final corrected inputs. Conditional/live-only answers are
+explicit instead of substituting template assertions for remote execution.
+
+### AF. Final answer
+
+**Based on the complete synthesized HireFlux AWS system—not the success of
+individual phases—is there any locally demonstrable reason that the first
+staging deployment should NOT proceed once the explicitly identified Phase 4
+authorization/live-qualification prerequisites are satisfied?**
+
+**No remaining locally demonstrated blocker.** The two discovered defects are
+fixed, and the final combined definitions/runtime/builds pass their local gates.
+Proceed only with the explicit supervised Phase 4 qualifications above; retain
+the CDK/anonymous-issuance risks and production deferrals. Nothing is deployed.

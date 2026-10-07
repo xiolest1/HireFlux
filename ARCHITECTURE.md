@@ -356,7 +356,7 @@ and two static Amplify hosting resources, plus twelve operational declarations
 and assembly role/asset references are future deployment contracts, not deployed
 infrastructure. Phase 3B packaging and 3C data definition are implemented locally;
 3D compute/integration and 3E hosting/origin definitions are complete locally;
-3F operational controls are defined locally; 3G final review follows;
+3F operational controls and 3G final review are complete locally;
 actual staging deployment remains Phase 4 and Cognito remains Phase 5. See
 [infra/README.md](infra/README.md) for commands, naming, secret/lifecycle rules,
 and the open bundled dependency audit finding, and
@@ -447,12 +447,23 @@ protect the synchronous limit without lowering/increasing product budgets or
 enabling streaming. Work limits remain export 5s and erasure 2s.
 
 Phase 3F defines explicit logging retention, alarms, concurrency and throttling;
-final qualification is 3G, actual staging deployment 4, Cognito 5 and backup/
+local final review is 3G, actual staging deployment/live qualification 4, Cognito 5 and backup/
 rotation/privacy hardening 6. Production synthesis is not deployability. See
 [ADR 0011](docs/adr/0011-lambda-http-api-security-boundary.md),
 [infra guide](infra/README.md) and [backend guide](backend/README.md).
 
 ## Operational guardrails (Phase 3F, local synthesis only)
+
+The [Phase 3G complete-system review](docs/production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff)
+concludes PASS WITH EXPLICIT PHASE 4 CONDITIONS. It corrected paginated interview
+label collection and caps configurable interview capacity at 25: the previous
+96-action-based bound ignored full-item transaction bytes. Current maximum label
+sync is 29 durable actions and a conservative 2,529,011 bytes. The final rebuilt
+artifact passes full checks. Anonymous issuance remains a cost amplification risk;
+API throttles, reservations and budgets do not cap cumulative spending. Soft
+export/erasure work budgets cannot interrupt an SDK call. Caller diagnostic IDs
+remain distinct from AWS native IDs; live correlation, timing, IAM, billing and
+hosted behavior must qualify in supervised Phase 4. No AWS resource is deployed.
 
 `OperationalLogs` owns separate STANDARD Lambda and HTTP API access log groups.
 Both retain 14 days in staging (Delete/Delete) and 30 days in production

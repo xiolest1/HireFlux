@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 from hireflux_backend.infrastructure.dynamodb.mapping import (
@@ -729,7 +730,22 @@ def test_interview_scheduling_requires_an_active_application_and_quiets_terminal
     assert context["next_action"] == "OPEN_APPLICATION"
 
 
-def test_application_rename_updates_all_interview_projections(client: TestClient) -> None:
+@pytest.mark.parametrize("projection_page_size", [None, 1])
+def test_application_rename_updates_all_interview_projections(
+    client: TestClient,
+    dynamodb_client: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    projection_page_size: int | None,
+) -> None:
+    original_query = dynamodb_client.query
+
+    def paged_projection_query(**arguments: Any) -> Any:
+        # DynamoDB's 1 MiB read boundary applies before projecting the keys.
+        if projection_page_size is not None and "ProjectionExpression" in arguments:
+            arguments["Limit"] = projection_page_size
+        return original_query(**arguments)
+
+    monkeypatch.setattr(dynamodb_client, "query", paged_projection_query)
     application = _create_active_application(client)
     path = f"/api/v1/applications/{application['application_id']}"
     now = datetime.now(UTC).replace(microsecond=0)

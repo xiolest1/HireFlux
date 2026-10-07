@@ -50,9 +50,14 @@ AWS resources and real persistent browser accounts are not deployed.
   access logs, scoped logging IAM, five native alarms, one dashboard, API throttles,
   reserved concurrency, optional operator notifications and AND-tagged budgets.
   See [ADR 0013](adr/0013-operational-guardrails.md). No operational resource is live.
-- **Phase 3G — next, not started:**
-  comprehensive isolation assertions, and template review. All Phase 3 slices
-  stop at local definition/synthesis/tests.
+- **Phase 3G — completed locally:** complete synthesized security/isolation/
+  cost/lifecycle review, two concrete interview pagination/transaction-bound
+  corrections, rebuilt qualified ZIP and fresh full checks. Decision:
+  **PASS WITH EXPLICIT PHASE 4 CONDITIONS**; zero open local pre-4 defects,
+  20 pending live qualification rows and six production finding groups.
+  See [complete handoff](production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff).
+  All Phase 3 slices stop at local definition/synthesis/tests; the advisory and
+  anonymous issuance risk remain open for supervised staging acceptance only.
 - **Phase 4 — deferred:** AWS staging infrastructure and the existing demo running
   end-to-end, with cost/security controls and manual smoke validation.
 - **Phase 5 — deferred:** real Cognito accounts in staging; direct verified Cognito

@@ -9,6 +9,18 @@ scaling limits and advisory cost controls.
 Nothing is deployed. The product still runs
 through Vite, FastAPI, and DynamoDB Local.
 
+Phase 3G's [complete A–AF review](../docs/production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff)
+is complete locally: **PASS WITH EXPLICIT PHASE 4 CONDITIONS**. Two backend
+interview pagination/transaction-capacity defects were fixed; default/max capacity
+is now 25 and the verified ZIP was rebuilt. Fresh full runtime/frontend checks,
+119 infrastructure tests, four offline real-artifact CLI tests, both synths and
+schema parity pass. Inventory remains 25 declarations/22 with blank email and
+zero outputs. Twenty live qualifications remain; no AWS action or remote CI ran.
+The high CDK bundled advisory and anonymous issuance cost risk remain open.
+Initial staging qualification requires active supervision and authorized stop
+controls; production is still deferred. The detailed resource, IAM, replacement,
+cost and all 86 exit-gate answers are in the linked handoff.
+
 ## Install and validate
 
 Use Node.js 22.12 or newer and npm. Commands below run from the repository root;
@@ -584,7 +596,7 @@ Tests pin the full 25-resource logical-ID map in `test/resource-inventory.ts`,
 evaluate the real empty/nonempty CloudFormation conditions, assert least-privilege
 IAM, alarm dimensions/statistics, privacy fields, dashboard scope and environment
 isolation. Existing schema, hosting graph and CORS tests remain active. Actual
-CLI synthesis consumes the unchanged verified ZIP and makes no AWS lookup.
+CLI synthesis consumes the currently verified ZIP and makes no AWS lookup.
 See [ADR 0013](../docs/adr/0013-operational-guardrails.md) and
 [complete handoff](../docs/production-account-readiness.md#45-phase-3f-implementation-and-handoff).
 

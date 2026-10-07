@@ -32,12 +32,19 @@ def test_test_environment_supports_local_auth_without_endpoint() -> None:
         ("account_erasure_max_items_per_request", 1001),
         ("account_erasure_max_seconds_per_request", 0),
         ("account_erasure_max_seconds_per_request", 11),
-        ("max_interviews_per_application", 97),
+        ("max_interviews_per_application", 26),
+        ("max_interviews_per_application", 96),
     ],
 )
 def test_safety_limits_reject_invalid_values(name: str, value: int) -> None:
     with pytest.raises(ValidationError):
         settings(**{name: value})
+
+
+def test_interview_transaction_capacity_preserves_default_and_lower_limits() -> None:
+    assert settings().max_interviews_per_application == 25
+    assert settings(max_interviews_per_application=25).max_interviews_per_application == 25
+    assert settings(max_interviews_per_application=1).max_interviews_per_application == 1
 
 
 def test_local_auth_is_rejected_in_deployed_environment() -> None:

@@ -2,6 +2,16 @@
 
 HireFlux uses three intentionally separate environments. The repository currently implements and validates the local environment; no AWS resources are created automatically.
 
+The [Phase 3G complete synthesized review](production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff)
+concludes PASS WITH EXPLICIT PHASE 4 CONDITIONS. It revalidated both full
+environment graphs and a rebuilt Linux runtime after two interview correctness/
+transaction-bound fixes. AWS staging remains uncreated. Phase 4 must obtain clean
+remote CI and authorized account/bootstrap/GitHub/quota/billing prerequisites,
+then qualify real hosting, IAM, timing, logs, metrics, TTL and costs under active
+supervision. The local synth-only wrapper cannot deploy. Budgets/rate/reserved
+concurrency are not a cumulative cost cap; anonymous issuance remains a risk.
+Production authentication, restore/privacy and signing-key lifecycle stay deferred.
+
 ## Local
 
 - Vite serves the React application at `http://localhost:5173`.

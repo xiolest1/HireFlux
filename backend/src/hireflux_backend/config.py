@@ -54,8 +54,9 @@ class Settings(BaseSettings):
     demo_session_failure_ttl_minutes: int = Field(default=15, ge=1, le=1440)
     max_applications_per_workspace: int = Field(default=100, ge=5, le=500)
     max_notes_per_application: int = Field(default=100, ge=1, le=500)
-    # Label synchronization also writes application/activity/quota/workspace: 96 + 4 = 100.
-    max_interviews_per_application: int = Field(default=25, ge=1, le=96)
+    # Label sync must fit both 100 actions and 4 MiB, including full updated interview items.
+    # At current content limits, 25 interviews plus other items stay below 2.6 MiB.
+    max_interviews_per_application: int = Field(default=25, ge=1, le=25)
     max_activity_per_application: int = Field(default=500, ge=10, le=5_000)
     max_sync_export_records: int = Field(default=5_000, ge=1, le=25_000)
     max_sync_export_bytes: int = Field(default=4_000_000, ge=1_024, le=10_000_000)

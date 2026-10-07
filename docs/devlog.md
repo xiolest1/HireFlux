@@ -1,5 +1,91 @@
 # HireFlux development log
 
+## 2026-10-07 — Final combined AWS readiness review (Phase 3G)
+
+Started on clean main at accepted Phase 3F commit `67b7843`. Reviewed the complete
+staging/production templates, runtime/auth/data paths, artifact, frontend hosting,
+IAM, secrets, lifecycle/replacements, operations, costs, supply chain and quality
+workflow. Decision: **PASS WITH EXPLICIT PHASE 4 CONDITIONS**. Nothing is deployed;
+production remains unavailable for accounts and is not launch-ready.
+
+Found and fixed two concrete defects within 3G's limited correction authority.
+The interview-label key query did not follow LastEvaluatedKey: a legitimate
+continuation page produced a persistent 409 on rename. The existing integration
+assertions now run with ordinary and forced continuation pages; the paginated
+case failed before the fix and both pass afterward, including version changes,
+stale conflict and workspace/nested label agreement. The adapter now collects
+all strongly read keys before the existing atomic guarded transaction.
+
+The prior configurable maximum of 96 interviews bounded only transaction actions
+and could exceed DynamoDB's separate 4 MiB aggregate limit. The supported maximum
+is now 25, keeping the product default unchanged and lower overrides valid.
+Configuration tests reject 26/96 and accept default/25/1. Maximum-field canonical
+mapping analysis gives interview/application/note upper estimates of
+98,539/29,670/20,480 bytes. Twenty-five interviews plus a 64 KiB reserve for all
+other items total 2,529,011 bytes and at most 29 durable actions. The old 96 setting
+could exceed 8.79 MB of text alone. No data was reset or migrated; existing local
+over-capacity overrides/data require deliberate operator handling.
+
+Fresh final checks pass Ruff and format (111 files), Mypy (71 sources), all
+422 backend tests (90.71s), frontend lint/typecheck and 364 tests in 46 files
+(78.87s), deployment-style frontend build/verification (39 files), four header
+fixtures and four build-negative fixtures. Infra locked install/typecheck/build,
+all 119 tests (13.17s), both actual synths, four real-ZIP offline CLI tests
+(37.15s) and fresh Python/CDK schema parity pass. Real CLI repeats both synths
+twice, checks separate synthetic account bindings and rejects profiles/mutations
+without network access. All expected 25 logical IDs remain unchanged; blank/
+nonempty email selects 22/25 without dangling refs, and both full graphs are
+acyclic with zero outputs. Existing warnings/notices are documented rather than
+silenced; no policy/test was weakened.
+
+Rebuilt the locked Python 3.14 x86_64 Lambda twice with identical bytes/manifests:
+SHA-256 `a7d89abc928d7e87dc445df03da4d17811d013d3f193aa0e289478995ba7b72e`,
+26,646,194 compressed bytes, 57,541,431 expanded bytes, 3,756 files, 31 runtime
+distributions and 71 source inputs. It supersedes the historical 950c8d... ZIP.
+The pinned official Linux Lambda image passes six native imports, read-only/
+unprivileged packaging, cold/warm health/auth/CORS/safe-error/large-proxy tests,
+two secret reads then warm reuse and zero network attempts. Actual guard probes
+include quote/backslash/control/Unicode encoding and safe 413; no raw-body-only
+fit assumption remains. All manifest member hashes and staged ZIP bytes match.
+
+Measured one synthetic Moto demo seed, without AWS or load testing: 71 transaction,
+2 PutItem, 134 GetItem and 9 Query attempts. The same idempotency key returns the
+same credential without reseeding. These are attempted requests, not billed units
+or a cloud throughput estimate. Anonymous fresh-key issuance still has no global/
+per-IP cap. Existing quotas/rate/concurrency/TTL/budgets help but do not cap daily
+spend; initial staging must be supervised with a human stop owner and account-wide
+cost review. Caller request IDs also lack an explicit cross-service native-ID
+bridge, and SDK calls can exceed soft work budgets; live diagnostics/timing
+qualification remains required.
+
+Fresh host-runtime and exact Linux-manifest pip-audit checks find zero known
+vulnerabilities (31 packages each; Linux includes uvloop instead of colorama).
+Frontend npm audit is clean. Infra audit remains one high vulnerable bundled
+brace-expansion 5.0.9 package with three advisories. Registry recheck still reports
+CDK library 2.272.0 / CLI 2.1144.0 as latest; no compatible bundle fix is available
+there. The advisory remains open and scoped to tooling; no suppression, override,
+patch or lock change. Scanned 436 tracked paths/text files for private config and
+credential markers without printing real values; none found. This is not a claim
+that regex can detect every possible secret.
+
+The [complete A–AF handoff](production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff)
+records all 25 resources and their failure/cost purpose, full IAM/secret/parameter/
+asset review, replacement/rollback rules, all 58 invariants and all 86 exit-gate
+answers. There are zero open local pre-4 defects (two fixed), twenty pending live
+qualification rows and six production finding groups. CI actions remain mutable
+major tags and artifact retention inherits an uninspected repository policy;
+remote CI was not executed. No AWS account lookup, bootstrap/deploy/upload,
+GitHub authorization, Billing/tag change, SNS confirmation/delivery, custom domain,
+production account, commit or push occurred. Public docs/registry reads, local
+Docker/Moto checks and ignored generated artifacts are the only external/tool work.
+
+Changed exactly four runtime/test files and nine documentation files. No frontend,
+CDK source, workflow, lock, .env.example value or Diagrams artifact changed.
+Updated the current roadmap/status/architecture and access-pattern cap; historical
+phase snapshots remain explicitly historical. Local Markdown links/anchors and
+git diff --check pass. Phase 4 is next only under separate authorization and its
+live gates; Phase 5/6/7 remain deferred.
+
 ## 2026-10-06 — Operational logs, scaling and cost guardrails (Phase 3F)
 
 Started from clean accepted Phase 3E commit 1e0184f. Added focused
@@ -4593,8 +4679,10 @@ reviewed and updated for the new hierarchy.
 
 ## Next recommended work
 
-Phase 1, Phase 2A/2B/2C and Phase 3A/3B/3C/3D/3E/3F are complete locally. Continue
-with Phase 3G's final synthesized infrastructure/security/cost-readiness review;
+Phase 1, Phase 2A/2B/2C and Phase 3A/3B/3C/3D/3E/3F/3G are complete locally.
+Phase 3G concludes PASS WITH EXPLICIT PHASE 4 CONDITIONS: zero open local defects
+before staging, twenty pending live qualifications and six production finding
+groups. Continue with separately authorized, supervised Phase 4 staging work;
 do not implement or deploy later slices implicitly. Phase 3F adds operational
 guards to the complete staging/production browser-to-backend topology, with 25
 declared resources (22 with blank email, 25 with email) and zero outputs per stack,

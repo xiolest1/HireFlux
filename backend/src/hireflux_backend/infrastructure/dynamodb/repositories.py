@@ -796,30 +796,40 @@ class DynamoApplicationRepository:
     def _interview_projection_keys(
         self, owner_user_id: str, application_id: str
     ) -> tuple[dict[str, str | int], ...]:
+        projections: list[dict[str, str | int]] = []
+        exclusive_start_key: dict[str, Any] | None = None
         try:
-            response = self._client.query(
-                TableName=self._table_name,
-                KeyConditionExpression="PK = :partition AND begins_with(SK, :prefix)",
-                ExpressionAttributeValues=serialize_item(
+            while True:
+                arguments: dict[str, Any] = {
+                    "TableName": self._table_name,
+                    "KeyConditionExpression": "PK = :partition AND begins_with(SK, :prefix)",
+                    "ExpressionAttributeValues": serialize_item(
+                        {
+                            ":partition": application_partition(owner_user_id, application_id),
+                            ":prefix": "INTERVIEW#",
+                        }
+                    ),
+                    "ProjectionExpression": "PK, SK, #version",
+                    "ExpressionAttributeNames": {"#version": "version"},
+                    "ConsistentRead": True,
+                }
+                if exclusive_start_key is not None:
+                    arguments["ExclusiveStartKey"] = exclusive_start_key
+                response = self._client.query(**arguments)
+                projections.extend(
                     {
-                        ":partition": application_partition(owner_user_id, application_id),
-                        ":prefix": "INTERVIEW#",
+                        "PK": str(item["PK"]),
+                        "SK": str(item["SK"]),
+                        "version": int(item["version"]),
                     }
-                ),
-                ProjectionExpression="PK, SK, #version",
-                ExpressionAttributeNames={"#version": "version"},
-                ConsistentRead=True,
-            )
+                    for item in (deserialize_item(raw) for raw in response.get("Items", []))
+                )
+                exclusive_start_key = response.get("LastEvaluatedKey")
+                if not exclusive_start_key:
+                    break
         except ClientError as error:
             raise PersistenceError("Unable to read application interview projections.") from error
-        return tuple(
-            {
-                "PK": str(item["PK"]),
-                "SK": str(item["SK"]),
-                "version": int(item["version"]),
-            }
-            for item in (deserialize_item(raw) for raw in response.get("Items", []))
-        )
+        return tuple(projections)
 
     def replace_with_activity(
         self,
