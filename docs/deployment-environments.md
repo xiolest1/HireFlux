@@ -1,5 +1,12 @@
 # Environment and deployment plan
 
+The current [Phase 4C deployment contract](phase4c-deployment-contract.md)
+qualifies the downloaded Linux artifact and offline inputs while awaiting owner
+GitHub installation/access review. Initial staging uses blank OperationalAlertEmail,
+22 selected resources and active manual CloudWatch/Bills monitoring. Project and
+Environment cost keys are unavailable; post-4D activation needs separate approval.
+No application deployment, real PAT or production change is authorized here.
+
 HireFlux uses three intentionally separate environments. The repository currently implements and validates the local environment; no AWS resources are created automatically.
 
 The [Phase 3G complete synthesized review](production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff)

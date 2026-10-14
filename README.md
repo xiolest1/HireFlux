@@ -297,3 +297,7 @@ Application resources remain absent; see the
 [current checkpoint](docs/production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint).
 Only bootstrap infrastructure is deployed; the CDK advisory, anonymous-demo cost risk and
 production deferrals remain open.
+Phase 4C's [deployment preparation](docs/phase4c-deployment-contract.md) verifies
+the downloaded Linux artifact, current toolkit and offline templates, selects
+blank notification email and records cost-tag activation prerequisites. Owner
+GitHub access/authorization remains pending; no application deployment is authorized.

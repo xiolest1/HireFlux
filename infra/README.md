@@ -53,6 +53,13 @@ Initial staging qualification requires active supervision and authorized stop
 controls; production is still deferred. The detailed resource, IAM, replacement,
 cost and all 86 exit-gate answers are in the linked handoff.
 
+Phase 4C [deployment preparation](../docs/phase4c-deployment-contract.md) freshly
+verifies both offline synths and the identical account-bound staging template,
+three parameters, 25 declarations/22 blank-email selections and qualified Linux
+asset. No source or wrapper change. Actual GitHub installation/permission review
+is pending; cost keys are unavailable until tagged resources propagate. Do not
+pass a PAT through CLI arguments or infer deployment approval from this record.
+
 ## Install and validate
 
 Use Node.js 22.12 or newer and npm. Commands below run from the repository root;

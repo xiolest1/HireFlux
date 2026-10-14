@@ -409,6 +409,12 @@ protection after separate explicit administrative-risk approval. It does not
 isolate labs or reduce operator privilege; HireFlux resources remain absent. See the
 [current checkpoint](docs/production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint).
 
+Phase 4C's [deployment-input contract](docs/phase4c-deployment-contract.md)
+preserves the same topology and qualified Linux bytes. Blank email omits SNS;
+cost tags are not yet available for activation. Regional repository access and
+the secure operator procedure remain release gates. Preparation creates no
+application resources and does not authorize Phase 4D or production.
+
 The existing factory now has independent local ASGI and Lambda entry points.
 Lambda uses `hireflux_backend.lambda_handler.handler`, one cold-start app/SDK
 client, Mangum with lifespan off, and environment-only validated configuration.

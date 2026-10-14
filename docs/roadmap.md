@@ -75,8 +75,13 @@ and real persistent browser accounts remain undeployed.
   Linux artifact and account-bound synth are preserved. See the
   [current checkpoint](production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint),
   with original blocked evidence retained in sections 48–50.
-- **Phase 4C–4H — deferred:** deployment inputs/GitHub authorization/billing
-  preparation; first staging deployment; live backend; hosted browser E2E;
+- **Phase 4C — preparation reviewed; awaiting owner authorization:** current
+  source/account/toolkit and independently downloaded Linux artifact qualified;
+  blank email selected, tags unavailable with post-4D activation planned subject
+  to separate owner approval. Regional GitHub installation/access and safe operator
+  inputs must be fully qualified before a pass. See the
+  [deployment contract](phase4c-deployment-contract.md). No application deployed.
+- **Phase 4D–4H — deferred:** first staging deployment; live backend; hosted browser E2E;
   operations/scaling/cost; final staging evidence freeze. The inherited
   qualification rows remain subject to the current 4B gate statuses; production
   is still deferred.

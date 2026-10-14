@@ -5362,3 +5362,45 @@ artifact inputs for 4D. No 4C action here. 4D first deployment →4E live backen
 →4F hosted browser →4G operations/scaling/cost →4H final evidence/rollback remains
 unchanged. Existing high CDK advisory, anonymous issuance, timing/diagnostic gates
 and F03/F04/F07/F08/F10/F11 production findings remain open. Stop at Phase 4B.
+
+## 52. Phase 4C deployment inputs and cost attribution
+
+**2026-10-14 — AWAITING OWNER AUTHORIZATION.** The separately requested Phase 4C
+preparation continues from final 4B revision `96ce9fcafd1baabacfaea5662a1d439874c9426d`.
+Its exact run 38598527632 has all five jobs green. The actual final 4B artifact
+11910763095 was independently downloaded: outer digest matches, inner Linux ZIP
+is byte-identical to canonical SHA `4fb0923cd4fb0e817c0a6b9ceb724218c6cbb4cfab0462fd6ccceec1ce8b75d3`,
+manifest/member/source/input/native/size checks pass. No asset was published.
+Fresh isolated staging/production and actual account-bound staging synth pass with
+zero network attempts; bound template bytes match accepted 4B. Existing 119 infra
+tests and eight hosting fixtures pass; no implementation/dependency/wrapper change.
+
+Read-only native temporary identity/profile/us-east-1, toolkit CREATE_COMPLETE,
+11 completed resources, protection and version 32 are confirmed; Original template
+matches 4B. App stack and Amplify apps remain absent, concurrency 1,000/1,000,
+functions zero. No AWS mutation. PAID/ACTIVE/zero account-plan credits remains
+distinct from owner-reported promotional Billing evidence; no fresh bill claim.
+
+The [deployment contract](phase4c-deployment-contract.md) defines actual parameters,
+PAT/App scope, secret-flow requirements, selected resource/dependency/build/browser
+contracts, tag matrix/gaps, the exact monthly USD10 AND-tagged budget and a twenty-step
+supervised 4D checklist. Blank email selects 22 of 25 declarations, no SNS or email
+delivery, with five alarms/dashboard intact. Nineteen declarations/eighteen selected
+resources have explicit project tags. Cost-key read succeeds with no available keys;
+separate post-resource activation approval, propagation and 4G billing review remain.
+Whole-account manual monitoring and USD2 review/USD5 first-week stop proposal persist.
+
+L06 operator transfer is implemented and tested offline: fourteen synthetic groups
+and independent review verify hidden input/pipe/native parameters and failure/
+existing-state/TLS/retry guards. Real PAT/live preparation remain uninvoked;
+trusted-host and pinned-API limitations are documented. Regional GitHub App access/
+owner consent remains an immediate gate; installation verification awaits owner inspection. Owner
+GitHub sign-in is confirmed, but its session is unavailable to the connected browser.
+Real PAT generation is deliberately deferred to a separately authorized 4D window.
+L07 blank choice is qualified; L08 has a specific deferred activation/coverage plan;
+L17 email delivery is N/A. L09 is locally qualified, with actual assets/change set
+pending; L10–L16/L18–L20 remain live deployment/testing/evidence gates. No app build,
+deployment, GitHub authorization, production/lab, account-plan or Billing mutation.
+Known advisory/issuance/production risks remain. Final reviewed documentation receives
+its own exact-revision five-job CI; actual delivery IDs are recorded in ignored
+`.tools/phase4c/handoff.md`. Stop at preparation; no Phase 4D action is authorized.

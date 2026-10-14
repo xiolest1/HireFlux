@@ -1,5 +1,45 @@
 # HireFlux development log
 
+## 2026-10-14 — Deployment inputs, artifact and cost readiness reviewed (Phase 4C)
+
+Continued from final Phase 4B source `96ce9fc` and independently verified its
+exact five-job green CI. Downloaded artifact 11910763095: outer digest, canonical
+Linux inner bytes, adjacent manifest and all 3,756 member hashes/CRCs match.
+No rebuild, Windows substitution or AWS upload. Fresh isolated staging/production
+synths pass with zero network attempts; actual account-bound staging template is
+byte-identical to accepted 4B. Existing 119 infra and eight frontend hosting
+fixtures pass. Runtime/infra/dependencies/workflow/wrapper remain unchanged.
+
+Read-only AWS confirms original native temporary identity/us-east-1, protected
+CREATE_COMPLETE CDKToolkit with 11 resources/version 32, absent application and
+Amplify apps, and 1,000 total/unreserved concurrency. API PAID/ACTIVE/zero
+account-plan credits remains separate from private owner Billing evidence.
+Project/Environment cost-allocation key lookup succeeded with an empty list;
+no activation or Cost Explorer change. Documented post-4D appearance, separate
+two-key activation approval, propagation, service coverage gaps and 4G review.
+
+Verified actual three parameters, sole NoEcho PAT consumer, acyclic App/backend/
+Branch wiring, monorepo build and exact USD10 Project AND Environment budget.
+Blank OperationalAlertEmail selects 22 of 25 declarations, retains five alarms
+and dashboard, omits SNS/subscribers and delivers no email. Whole-account manual
+monitoring and proposed USD2 review/USD5 first-week stop remain required. Tags
+materialize on 19 declarations/18 blank-selected resources; bootstrap is outside
+the app filter. Hosted inputs/artifacts and actual billing remain live checks.
+
+Regional GitHub App/PAT scope and credential-transfer review are documented in
+the [Phase 4C deployment contract](phase4c-deployment-contract.md). The owner
+confirmed GitHub sign-in in a session unavailable to the connected browser;
+actual installation/access confirmation and separate authorization remain pending.
+Real PAT creation is intentionally deferred to supervised 4D.
+The implemented future owner-entry bridge passes fourteen synthetic native-CDK
+transport/entry/failure/retry/mutation-guard groups and independent review. It
+uses hidden input and an anonymous pipe, not token CLI arguments/files; real mode
+was never invoked. Documented limits include trusted-host memory, lower-level
+pinned exports and seven idempotent native transport attempts, not helper retries.
+Disposition: **AWAITING OWNER AUTHORIZATION**. No AWS or GitHub authorization mutation, app build/
+deployment, production or unrelated lab change. Final documentation checkpoint
+receives its own exact-revision CI; actual delivery evidence remains local.
+
 ## 2026-10-14 — Standard bootstrap verified; qualified architecture preserved (Phase 4B)
 
 Continued the existing recovery after the owner's AWS Support update. Temporary
