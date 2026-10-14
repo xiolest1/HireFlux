@@ -1,0 +1,35 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutDashboard",
+        "cloudwatch:GetDashboard",
+        "cloudwatch:DeleteDashboards",
+        "cloudwatch:TagResource",
+        "cloudwatch:ListTagsForResource"
+      ],
+      "Resource": "arn:aws:cloudwatch::${ACCOUNT_ID}:dashboard/hireflux-staging-operations"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "budgets:ModifyBudget",
+        "budgets:ViewBudget",
+        "budgets:TagResource",
+        "budgets:ListTagsForResource"
+      ],
+      "Resource": "arn:aws:budgets::${ACCOUNT_ID}:budget/hireflux-staging-monthly-cost"
+    },
+    {
+      "Effect": "Deny",
+      "Action": [
+        "budgets:CreateBudgetAction",
+        "budgets:ExecuteBudgetAction",
+        "aws-portal:ModifyBilling"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

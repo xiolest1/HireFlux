@@ -1,0 +1,25 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:GenerateDataKey"
+      ],
+      "Resource": "${S3_AWS_MANAGED_KEY_ARN}",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "s3.us-east-1.amazonaws.com",
+          "kms:CallerAccount": "${ACCOUNT_ID}"
+        },
+        "StringLike": {
+          "kms:EncryptionContext:aws:s3:arn": [
+            "arn:aws:s3:::cdk-hfstage01-assets-${ACCOUNT_ID}-us-east-1",
+            "arn:aws:s3:::cdk-hfstage01-assets-${ACCOUNT_ID}-us-east-1/*"
+          ]
+        }
+      }
+    }
+  ]
+}

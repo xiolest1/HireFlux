@@ -1,0 +1,50 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sns:CreateTopic",
+      "Resource": "arn:aws:sns:us-east-1:${ACCOUNT_ID}:hireflux-staging-operational-alerts",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "HireFlux",
+          "aws:RequestTag/Environment": "staging",
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "sns:GetTopicAttributes",
+        "sns:ListTagsForResource",
+        "sns:ListSubscriptionsByTopic",
+        "sns:GetDataProtectionPolicy",
+        "sns:SetTopicAttributes",
+        "sns:TagResource",
+        "sns:DeleteTopic",
+        "sns:GetSubscriptionAttributes",
+        "sns:SetSubscriptionAttributes",
+        "sns:Unsubscribe"
+      ],
+      "Resource": "arn:aws:sns:us-east-1:${ACCOUNT_ID}:hireflux-staging-operational-alerts",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "sns:Subscribe",
+      "Resource": "arn:aws:sns:us-east-1:${ACCOUNT_ID}:hireflux-staging-operational-alerts",
+      "Condition": {
+        "StringEquals": {
+          "sns:Protocol": "email",
+          "sns:Endpoint": "${APPROVED_ALERT_EMAIL}",
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    }
+  ]
+}

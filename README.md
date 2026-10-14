@@ -270,7 +270,7 @@ hosting, branch-level public API configuration, exact App-domain-token CORS,
 and the verified backend. Phase 3F adds finite JSON logs, five native
 alarms, a dashboard, API throttles, reserved concurrency and a tag-scoped budget.
 Each environment declares 25 resources: 22 without an alert email, 25 with one.
-Nothing is deployed and no frontend domain exists yet. Production auto-build
+Application resources are not deployed and no frontend domain exists yet. Production auto-build
 is disabled and authentication remains unavailable until Phase 5.
 See [ADR 0013](docs/adr/0013-operational-guardrails.md),
 [frontend build guide](frontend/README.md),
@@ -287,9 +287,13 @@ quality jobs green and fresh local gates. The downloaded Linux Lambda ZIP has
 identical file contents to the post-3G Windows build; a controlled compression
 experiment explains their different ZIP hashes. See the
 [Phase 4A evidence and remaining conditions](docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
-Phase 4B's authorized read-only account/bootstrap preflight is **blocked** by
-shared-account deployment permissions, insufficient Lambda concurrency and an
-unconfirmed Billing baseline. No bootstrap or application deployment occurred.
-See the [Phase 4B record](docs/production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap).
-Nothing has been deployed; the CDK advisory, anonymous-demo cost risk and
+Phase 4B's [initial blocked preflight](docs/production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap)
+and subsequent recovery remain preserved. On 2026-10-14, actual total/unreserved
+Lambda concurrency is 1,000/1,000, temporary identity/authentication is verified,
+and the owner accepts the personal-lab/Billing baseline. The reviewed standard
+CDKToolkit is now **CREATE_COMPLETE**, with 11 verified resources, SSM version 32
+and termination protection after separate explicit administrative-risk approval.
+Application resources remain absent; see the
+[current checkpoint](docs/production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint).
+Only bootstrap infrastructure is deployed; the CDK advisory, anonymous-demo cost risk and
 production deferrals remain open.

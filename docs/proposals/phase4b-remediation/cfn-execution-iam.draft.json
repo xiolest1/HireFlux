@@ -1,0 +1,45 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateRole",
+      "Resource": "arn:aws:iam::${ACCOUNT_ID}:role/hireflux/staging/runtime",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "HireFlux",
+          "aws:RequestTag/Environment": "staging",
+          "iam:PermissionsBoundary": "arn:aws:iam::${ACCOUNT_ID}:policy/hireflux/staging/RuntimeBoundary"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:DeleteRole",
+        "iam:TagRole"
+      ],
+      "Resource": "arn:aws:iam::${ACCOUNT_ID}:role/hireflux/staging/runtime"
+    },
+    {
+      "Effect": "Deny",
+      "Action": [
+        "iam:*RolePermissionsBoundary",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:AttachRolePolicy",
+        "iam:CreatePolicy*",
+        "iam:SetDefaultPolicyVersion",
+        "iam:DeletePolicy*",
+        "iam:CreateUser",
+        "iam:CreateAccessKey"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

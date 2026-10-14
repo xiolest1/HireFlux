@@ -1,0 +1,58 @@
+[
+  {
+    "name": "cfn-execution-core",
+    "nonWhitespaceCharacters": 4651
+  },
+  {
+    "name": "cfn-execution-iam",
+    "nonWhitespaceCharacters": 852
+  },
+  {
+    "name": "cfn-execution-operations",
+    "nonWhitespaceCharacters": 630
+  },
+  {
+    "name": "cfn-execution-boundary",
+    "nonWhitespaceCharacters": 6021
+  },
+  {
+    "name": "runtime-boundary",
+    "nonWhitespaceCharacters": 2188
+  },
+  {
+    "name": "deployment-role",
+    "nonWhitespaceCharacters": 2115
+  },
+  {
+    "name": "file-publishing-role",
+    "nonWhitespaceCharacters": 782
+  },
+  {
+    "name": "image-publishing-role",
+    "nonWhitespaceCharacters": 583
+  },
+  {
+    "name": "resource-shell-creation",
+    "nonWhitespaceCharacters": 552
+  },
+  {
+    "name": "optional-sns-review",
+    "nonWhitespaceCharacters": 1002
+  },
+  {
+    "name": "optional-asset-kms",
+    "nonWhitespaceCharacters": 430
+  },
+  {
+    "name": "operator-role-trust",
+    "nonWhitespaceCharacters": 131
+  },
+  {
+    "name": "cfn-role-trust",
+    "nonWhitespaceCharacters": 138
+  },
+  {
+    "name": "runtime-role-trust",
+    "nonWhitespaceCharacters": 130
+  }
+]

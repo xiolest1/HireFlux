@@ -6,7 +6,7 @@ its Lambda, IAM, signing secrets and HTTP API request path. Phase 3E adds indepe
 static Amplify apps/branches and exact token-derived frontend/API wiring.
 Phase 3F wraps that topology in explicit logs, focused alarms, dashboard,
 scaling limits and advisory cost controls.
-Nothing is deployed. The product still runs
+Only standard CDKToolkit bootstrap infrastructure is deployed. The product still runs
 through Vite, FastAPI, and DynamoDB Local.
 
 Phase 3G's [complete A–AF review](../docs/production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff)
@@ -18,15 +18,37 @@ schema parity pass. Inventory remains 25 declarations/22 with blank email and
 zero outputs. That review left twenty qualification rows pending and ran no
 remote CI. Phase 4A subsequently qualified the accepted GitHub checkpoint and
 all five quality jobs, downloaded the actual artifacts and verified approximately
-90-day retention. L01 is satisfied; nineteen inherited AWS/release qualifications
-remain. See the [Phase 4A record](../docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
+90-day retention. At that checkpoint L01 was satisfied and nineteen inherited
+AWS/release qualifications remained. See the [Phase 4A record](../docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
 The high CDK bundled advisory and anonymous issuance cost risk remain open.
-Phase 4B's [read-only AWS preflight](../docs/production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap)
-is blocked by shared-account deployment permissions, insufficient Lambda
+Phase 4B's initial [read-only AWS preflight](../docs/production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap)
+was blocked by shared-account deployment permissions, insufficient Lambda
 concurrency and an unconfirmed Billing baseline. Its account-bound offline synth
-preserves this topology and uses the qualified Linux CI ZIP. CDKToolkit remains
-absent; the reviewed standard bootstrap was not executed. The local wrapper
+preserves this topology and uses the qualified Linux CI ZIP. CDKToolkit was absent
+at that initial assessment; bootstrap was not executed. The local wrapper
 still rejects bootstrap/deploy/destroy and profiles.
+The subsequent [shared-account remediation assessment](../docs/production-account-readiness.md#49-phase-4b-shared-account-remediation-design-and-plan-discrepancy)
+recorded **BLOCK PENDING AWS DECISION**: measured PAID/ACTIVE plan differed from the
+owner's Free assumption, and Billing verification is pending. Local permission
+drafts and quota/fallback designs require review/requalification; they have not
+changed this stack, credential profiles, quotas, IAM or bootstrap resources at
+that assessment. The [2026-10-11 recovery](../docs/production-account-readiness.md#50-phase-4b-recovery-temporary-login-and-quota-request)
+qualified owner-completed temporary browser login and accepted the owner's basic
+Billing review. AWS rejected the authorized 150 request; a separately authorized
+1,001 request is **CASE_OPENED**, with actual concurrency still 10/10. Decision:
+**PHASE 4B — QUOTA REQUEST PENDING**. Standard bootstrap still needs fresh
+headroom qualification and separate explicit administrative-privilege approval;
+it has not run. The fourteen custom-policy drafts remain inactive alternatives.
+The [2026-10-14 checkpoint](../docs/production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint)
+now confirms applied total/unreserved concurrency 1,000/1,000 and original request
+CASE_CLOSED. L05 passes; temporary authentication, expected lab changes and the
+owner-reviewed baseline are qualified. The owner separately approved the broad
+administrative model and one corrected invocation from the repository root,
+which avoids loading infra's configured app without its required context. The
+initial invocation failed before resources existed; no automatic retry occurred.
+CDKToolkit is now **CREATE_COMPLETE**, with 11 verified resources, version 32 and
+termination protection. S3/ECR assets are empty; labs are preserved; app remains
+absent. AWS 4B exits pass; final documentation CI requires independent qualification.
 Initial staging qualification requires active supervision and authorized stop
 controls; production is still deferred. The detailed resource, IAM, replacement,
 cost and all 86 exit-gate answers are in the linked handoff.

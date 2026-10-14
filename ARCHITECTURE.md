@@ -12,8 +12,9 @@ React/Vite browser client -> FastAPI REST API -> DynamoDB Local
 The public landing page requires no account. Starting the demo creates a unique
 24-hour workspace, seeds a realistic fictional application dataset, and returns a signed bearer
 token. Protected pages provide Home/dashboard, applications, interviews,
-analytics, and settings. No AWS resource is required or currently provisioned
-for this local milestone.
+analytics, and settings. This local milestone requires no AWS runtime resource.
+Phase 4B has provisioned only standard CDKToolkit bootstrap infrastructure;
+the staging application below remains undeployed.
 
 The planned staging shape is:
 
@@ -387,7 +388,7 @@ and the table schema remain unchanged.
 Production PITR historical retention is separate from Phase 2C live-table erasure.
 Phase 6 must define backup retention, restore procedures, deletion-tombstone
 handling after restore and privacy/erasure reconciliation. No claim extends live
-erasure to all historical copies. Nothing is deployed. See
+erasure to all historical copies. Application resources remain undeployed. See
 [ADR 0010](docs/adr/0010-dynamodb-cloud-lifecycle.md) and [infra guide](infra/README.md).
 
 ## Backend artifact boundary (Phase 3B)
@@ -399,11 +400,14 @@ experiment reproduces the remote ZIP hash exactly. Artifact identity includes
 the compression toolchain, so retain the chosen ZIP with its own manifest.
 The [Phase 4A record](docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification)
 closes source/CI condition L01 and carries nineteen AWS/release qualifications.
-Phase 4B completed read-only preflight and is blocked: the confirmed target is
-shared and needs a reviewed deployment-permission design, Lambda concurrency
-cannot admit the planned reservation, and the Billing baseline is unconfirmed.
-No bootstrap or HireFlux resource was created. See the
-[Phase 4B record](docs/production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap).
+Phase 4B's [initial blocked preflight](docs/production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap)
+is preserved as history. The 2026-10-14 recovery verifies actual Lambda
+total/unreserved concurrency of 1,000/1,000, temporary non-root identity and the
+owner-accepted personal-lab/Billing baseline. The reviewed standard CDKToolkit
+is now **CREATE_COMPLETE**, with 11 verified resources, version 32 and termination
+protection after separate explicit administrative-risk approval. It does not
+isolate labs or reduce operator privilege; HireFlux resources remain absent. See the
+[current checkpoint](docs/production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint).
 
 The existing factory now has independent local ASGI and Lambda entry points.
 Lambda uses `hireflux_backend.lambda_handler.handler`, one cold-start app/SDK

@@ -1,0 +1,443 @@
+{
+  "timestamp": "2026-10-08T05:18:13.431Z",
+  "syntheticResources": true,
+  "awsMutations": false,
+  "results": [
+    {
+      "label": "Create bounded runtime role",
+      "action": "iam:CreateRole",
+      "expected": "allowed",
+      "actual": "allowed",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": true
+    },
+    {
+      "label": "Reject missing role boundary",
+      "action": "iam:CreateRole",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "aws:RequestedRegion",
+        "iam:PermissionsBoundary",
+        "cloudwatch:AlarmActions",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Reject wrong role boundary",
+      "action": "iam:CreateRole",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "aws:RequestedRegion",
+        "cloudwatch:AlarmActions",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Reject foreign role creation",
+      "action": "iam:CreateRole",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "aws:RequestedRegion",
+        "cloudwatch:AlarmActions",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Current generated unbounded role fails draft",
+      "action": "iam:CreateRole",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "aws:RequestedRegion",
+        "iam:PermissionsBoundary",
+        "cloudwatch:AlarmActions",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Allow inline policy on bounded role",
+      "action": "iam:PutRolePolicy",
+      "expected": "allowed",
+      "actual": "allowed",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": true
+    },
+    {
+      "label": "Reject changing boundary policy version",
+      "action": "iam:CreatePolicyVersion",
+      "expected": "explicitDeny",
+      "actual": "explicitDeny",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Reject removing runtime boundary",
+      "action": "iam:DeleteRolePermissionsBoundary",
+      "expected": "explicitDeny",
+      "actual": "explicitDeny",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Reject trust-policy changes",
+      "action": "iam:UpdateAssumeRolePolicy",
+      "expected": "explicitDeny",
+      "actual": "explicitDeny",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Pass only runtime role to Lambda",
+      "action": "iam:PassRole",
+      "expected": "allowed",
+      "actual": "allowed",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": true
+    },
+    {
+      "label": "Reject passing runtime role to EC2",
+      "action": "iam:PassRole",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "aws:RequestedRegion",
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "cloudwatch:AlarmActions",
+        "aws:RequestTag/Project",
+        "lambda:Principal"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Reject passing personal lab role",
+      "action": "iam:PassRole",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "aws:RequestedRegion",
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "cloudwatch:AlarmActions",
+        "aws:RequestTag/Project",
+        "lambda:Principal"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Create tagged named staging table",
+      "action": "dynamodb:CreateTable",
+      "expected": "allowed",
+      "actual": "allowed",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": true
+    },
+    {
+      "label": "Reject untagged staging table creation",
+      "action": "dynamodb:CreateTable",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "cloudwatch:AlarmActions",
+        "aws:RequestTag/Project",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Reject deleting personal lab table",
+      "action": "dynamodb:DeleteTable",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "cloudwatch:AlarmActions",
+        "aws:RequestTag/Project",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Reject other-region staging table",
+      "action": "dynamodb:DeleteTable",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "cloudwatch:AlarmActions",
+        "aws:RequestTag/Project",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Allow bound HTTP API route edit",
+      "action": "apigateway:PATCH",
+      "expected": "allowed",
+      "actual": "allowed",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": true
+    },
+    {
+      "label": "Reject foreign HTTP API deletion",
+      "action": "apigateway:DELETE",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "cloudwatch:AlarmActions",
+        "aws:RequestTag/Project",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Reject foreign Amplify deletion",
+      "action": "amplify:DeleteApp",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "cloudwatch:AlarmActions",
+        "aws:RequestTag/Project",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Allow only staging budget edit",
+      "action": "budgets:ModifyBudget",
+      "expected": "allowed",
+      "actual": "allowed",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": true
+    },
+    {
+      "label": "Reject personal lab budget edit",
+      "action": "budgets:ModifyBudget",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "cloudwatch:AlarmActions",
+        "aws:RequestTag/Project",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Reject account log-policy mutation",
+      "action": "logs:PutResourcePolicy",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "cloudwatch:AlarmActions",
+        "aws:RequestTag/Project",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Add invocation permission only for API Gateway",
+      "action": "lambda:AddPermission",
+      "expected": "allowed",
+      "actual": "allowed",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": true
+    },
+    {
+      "label": "Reject public invocation principal",
+      "action": "lambda:AddPermission",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "cloudwatch:AlarmActions",
+        "aws:RequestTag/Project",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Allow alarm with no actions",
+      "action": "cloudwatch:PutMetricAlarm",
+      "expected": "allowed",
+      "actual": "allowed",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": true
+    },
+    {
+      "label": "Reject unrelated alarm action",
+      "action": "cloudwatch:PutMetricAlarm",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "aws:RequestedRegion",
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "aws:RequestTag/Project",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Boundary caps hypothetical admin identity",
+      "action": "dynamodb:DeleteTable",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "iam:PermissionsBoundary",
+        "aws:RequestTag/Environment",
+        "cloudwatch:AlarmActions",
+        "aws:RequestTag/Project",
+        "lambda:Principal",
+        "iam:PassedToService"
+      ],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Runtime can read owned table under admin inline policy",
+      "action": "dynamodb:GetItem",
+      "expected": "allowed",
+      "actual": "allowed",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": true
+    },
+    {
+      "label": "Runtime cannot read foreign table under admin inline policy",
+      "action": "dynamodb:GetItem",
+      "expected": "explicitDeny",
+      "actual": "explicitDeny",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Runtime cannot scan owned table",
+      "action": "dynamodb:Scan",
+      "expected": "explicitDeny",
+      "actual": "explicitDeny",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Runtime cannot grant IAM permissions",
+      "action": "iam:PassRole",
+      "expected": "explicitDeny",
+      "actual": "explicitDeny",
+      "match": true,
+      "missingContext": [],
+      "boundaryAllowed": false
+    },
+    {
+      "label": "Publish exact qualified ZIP only",
+      "action": "s3:PutObject",
+      "expected": "allowed",
+      "actual": "allowed",
+      "match": true,
+      "missingContext": []
+    },
+    {
+      "label": "Reject publishing into personal lab bucket",
+      "action": "s3:PutObject",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "s3:prefix"
+      ]
+    },
+    {
+      "label": "Deployment creates only staging stack with designated role",
+      "action": "cloudformation:CreateStack",
+      "expected": "allowed",
+      "actual": "allowed",
+      "match": true,
+      "missingContext": []
+    },
+    {
+      "label": "Deployment rejects foreign stack",
+      "action": "cloudformation:CreateStack",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": [
+        "iam:PassedToService"
+      ]
+    },
+    {
+      "label": "SNS subscription cleanup scoped to owned topic",
+      "action": "sns:Unsubscribe",
+      "expected": "allowed",
+      "actual": "implicitDeny",
+      "match": false,
+      "missingContext": []
+    },
+    {
+      "label": "SNS rejects personal lab subscription cleanup",
+      "action": "sns:Unsubscribe",
+      "expected": "implicitDeny",
+      "actual": "implicitDeny",
+      "match": true,
+      "missingContext": []
+    }
+  ]
+}

@@ -5,7 +5,8 @@
 The accepted production-account phase sequence below supersedes the ordering of
 the earlier product milestone descriptions. Those milestones remain scope
 references. The local demo and Phase 2A backend foundation are implemented;
-AWS resources and real persistent browser accounts are not deployed.
+Only standard CDKToolkit bootstrap resources are deployed; the AWS application
+and real persistent browser accounts remain undeployed.
 
 - **Phase 1 — completed:** architecture/readiness audit.
 - **Phase 2A — completed:** provider-neutral durable principal/data lifetime,
@@ -64,18 +65,21 @@ AWS resources and real persistent browser accounts are not deployed.
   ZIP hash discrepancy is fully explained with identical extracted files and
   a controlled reconstruction of the exact remote hash. See the
   [Phase 4A handoff](production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
-- **Phase 4B — blocked after authorized read-only preflight:** the intended
-  staging account is confirmed as shared. A separate deployment-permission
-  design is required before standard AdministratorAccess bootstrap. Actual
-  Lambda concurrency cannot admit reservation 5, and Cost Explorer access is
-  denied without a confirmed manual Billing baseline. Account-bound offline
-  synth and the exact qualified Linux artifact pass. CDKToolkit and the app
-  stack remain absent; no AWS resource mutation occurred. See the
-  [Phase 4B record](production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap).
+- **Phase 4B — bootstrap verified:** actual Lambda concurrency
+  is now 1,000 total/unreserved, sufficient for reservation 5. Temporary
+  non-root login and the owner-accepted personal-lab/Billing baseline are
+  verified. Standard CDKToolkit's broad administrative authority was separately
+  approved; CREATE_COMPLETE, 11 resources, version 32 and termination protection
+  are verified. The app stack remains absent; no new quota request or application
+  deployment occurred. Final documentation revision needs its own CI. Qualified source,
+  Linux artifact and account-bound synth are preserved. See the
+  [current checkpoint](production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint),
+  with original blocked evidence retained in sections 48–50.
 - **Phase 4C–4H — deferred:** deployment inputs/GitHub authorization/billing
   preparation; first staging deployment; live backend; hosted browser E2E;
-  operations/scaling/cost; final staging evidence freeze. Nineteen inherited
-  qualification rows remain after 4A closes L01; production is still deferred.
+  operations/scaling/cost; final staging evidence freeze. The inherited
+  qualification rows remain subject to the current 4B gate statuses; production
+  is still deferred.
 - **Phase 5 — deferred:** real Cognito accounts in staging; direct verified Cognito
   `sub` ownership remains the approved direction.
 - **Phase 6 — deferred:** production hardening and release qualification.

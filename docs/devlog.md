@@ -1,5 +1,155 @@
 # HireFlux development log
 
+## 2026-10-14 — Standard bootstrap verified; qualified architecture preserved (Phase 4B)
+
+Continued the existing recovery after the owner's AWS Support update. Temporary
+`hireflux-operator` login had expired; browser reauthentication succeeded without
+changing other profiles or the shared credentials file. Fresh CLI STS and native
+pinned-CDK validation match the original non-root identity in explicit us-east-1,
+with native login credentials and no static fallback. No authentication secrets
+were saved in evidence.
+
+Live Lambda settings and Service Quotas now report **1,000 total /1,000 unreserved**,
+with zero functions. The original desired-1,001 request is **CASE_CLOSED**;
+Support's reported approved 1,000 is independently applied. **L05 passes** for
+the unchanged reservation of 5. No new quota request or reservation change.
+
+The relevant inventory changed from the October 11 snapshot: a normal Service
+Quotas service-linked role appeared with the authorized request, a later NAT
+service role was added, two lab Lambda log groups remain, and a CloudTrail
+source condition changed. No regional NAT gateway or Lambda function is present.
+The owner confirmed expected lab changes and continued acceptance of the last
+manual Billing baseline/personal-lab context. API plan remains PAID/ACTIVE with
+USD 0 account-plan credits and no expiration field; owner promotional-credit
+evidence remains distinct and private. No lab or Billing mutation occurred.
+
+Before bootstrap, default toolkit names and export were absent, with no HireFlux collisions.
+The current standard bootstrap template still selects 11 resources at version 32,
+with the default qualifier, AdministratorAccess execution, same-account role
+delegation, no external trust/customer key and explicit no-import behavior.
+Operator simulation allows 27 reviewed actions but does not prove live creation.
+The owner separately approved the exact administrative model and supervision/
+stop/recovery duties. The first invocation from infra exited before a toolkit
+existed. Offline analysis proved the pinned CLI loads the configured app without
+required environment context even for an explicit AWS target. Inspected resources
+and labs were unchanged; no automatic retry. The owner explicitly approved one
+corrected attempt from the neutral repository root, with identical pinned flags,
+template and privileges. No source or wrapper change.
+
+Corrected execution succeeded: **CDKToolkit CREATE_COMPLETE**, termination
+protection, exact 11 resources, semantically identical template and approval
+parameters. Five trusts/managed-policy sets and four inline policies match; S3
+private/TLS/public-block/versioning/AWS-managed KMS/lifecycle/empty assets, ECR
+immutability/AES256/service policy/lifecycle/empty images and SSM **32** all pass.
+Direct AWS status verified completion despite a local progress-output encoding
+issue. Only expected toolkit additions; inspected labs unchanged and application
+resources absent. All fourteen drafts remain inactive. Broad bootstrap authority
+and existing operator AdministratorAccess are explicitly accepted, not isolation.
+
+Accepted implementation HEAD is `0ef61b75e60def13db78bde17cbbb70d36981b08`;
+all five accepted CI jobs are green and the artifact remains available. Full
+Linux ZIP verification and fresh credential-isolated account-bound synth pass
+without rebuilding/uploading the qualified artifact or changing implementation.
+The [current recovery record](production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint)
+supersedes the prior pending-quota summary while preserving historical findings.
+AWS Phase 4B exit conditions are satisfied; the reviewed documentation revision
+receives its own exact-SHA CI qualification before final handoff. No app
+deployment/upload, Phase 4C, production, account-plan, Organizations or new-account
+action. Owner retains Billing follow-up and future separately authorized recovery.
+
+## 2026-10-11 — Temporary login qualified; Lambda quota request pending (Phase 4B)
+
+Continued recovery of the same blocked Phase 4B. The owner completed the approved
+browser login/MFA using a new temporary `hireflux-operator` profile. CLI STS
+matches the original non-root identity, every AWS call explicitly selects
+us-east-1, and credential-source metadata reports native login. The existing
+profile and shared credentials file were preserved. Pinned CDK also resolved
+the profile and performed live read-only STS validation without exporting or
+logging credentials.
+
+Fresh GetAccountPlanState remains **PAID / ACTIVE**, with USD 0 account-plan
+credits and no expiration field. The owner's separately reported promotional
+credits, remaining benefit window and month-to-date Billing review satisfy the
+basic baseline condition; financial details remain local. Cost Explorer was not
+enabled or retried. Metadata still shows unrelated labs, no HireFlux collisions
+or default bootstrap resources, and no external/federated trust among inspected
+roles. The owner confirmed only personal labs and no important shared workloads.
+
+The authorized Lambda request for 150 failed with IllegalArgumentException:
+AWS requires a requested value greater than its default 1,000, despite this
+account's applied quota of 10. The audit record confirms that rejection and no
+request was created. After a separate direct owner approval, exactly one new
+request for **1,001** was accepted. Its bounded follow-up is **CASE_OPENED**;
+the normal AWS support case exists, but actual total/unreserved concurrency
+remains **10/10**, below the required 105. Exact request/case IDs remain ignored
+in `.tools/phase4b-recovery/handoff.md`; no duplicate or automatic retry occurred.
+
+Reviewed standard version-32 CDKToolkit: 11 selected resources, same-account
+role delegation, broad AdministratorAccess execution, no external trust or
+customer-managed KMS key. Explicitly disabling existing-resource import avoids
+the pinned CLI's default adoption behavior. Bootstrap remains unapproved and
+unexecuted; the fourteen policy drafts remain inactive alternatives. Toolkit
+storage/persistence and preliminary later staging costs are documented in the
+[recovery record](production-account-readiness.md#50-phase-4b-recovery-temporary-login-and-quota-request).
+
+HEAD and fresh GitHub main remain `0ef61b75e60def13db78bde17cbbb70d36981b08`,
+with all five accepted CI jobs green. Full existing artifact verification and
+credential-isolated account-bound staging synth preserve the exact Linux ZIP
+and accepted template; no rebuild or upload. Documentation/status only changed;
+no application, infra implementation, dependency, workflow or wrapper change.
+Decision: **PHASE 4B — QUOTA REQUEST PENDING**. No bootstrap, app deployment,
+Amplify authorization, production, account-plan, Organizations or account creation.
+Phase 4C remains blocked.
+
+## 2026-10-08 — Shared-account remediation design; Billing decision pending (Phase 4B)
+
+Continued the blocked preflight under read-only/local-only authorization. Fresh
+GetAccountPlanState returned **PAID / ACTIVE**, contradicting the owner's Free-
+plan assumption. The owner explicitly requested preservation of the measured
+result and continued mutation blocking while manually checking Billing. Private
+credit/identity/usage receipts remain ignored. No upgrade or account change.
+
+All fourteen requested service families returned metadata successfully, and
+nineteen CloudFormation type schemas were read. These reads do not prove create
+eligibility. The service review distinguishes documented both-plan catalog
+support, pricing/credit offers, successful account reads and untested exact
+creation features. No limited-signup list was treated as standalone entitlement.
+Lambda remains total/unreserved **10/10**; its account-level quota is adjustable,
+with no request history returned. A separately authorized request for total 150
+is a conditional path; AWS approval is not established. A no-reservation staging
+fallback is analyzed only as a proposal requiring renewed 3F/3G/4A qualification.
+
+CLI 2.36.47, existing console login/MFA metadata and two allowed sign-in action
+simulations support a browser-login plan. Pinned CDK contains native login-
+session support. No authentication/profile/credential action occurred. Browser
+login would retain the current administrator's authority; it is not privilege
+separation by itself.
+
+Added fourteen [local review policy drafts](proposals/phase4b-remediation/README.md)
+for execution, boundaries, deployment, assets, generated-ID shells, optional SNS/
+KMS and trust. Read-only custom-policy simulation evaluated 37 fixtures: 36
+matched, while an owned-topic SNS cleanup positive returned deny and remains
+open. Drafts intentionally do not permit account log-policy mutation or unknown
+API/App destructive scope. Current generated role/names and default bootstrap
+authority cannot use them unchanged; the 6,021-character boundary also requires
+size review for any extension. No policy was installed, no source design was
+implemented and no check was weakened.
+
+Fresh GitHub main still matches **0ef61b75e60def13db78bde17cbbb70d36981b08**;
+accepted run 37647631455 retains all five successful jobs. Linux artifact
+11495790358 remains available and current member/input/source checks preserve
+SHA `4fb0923cd4fb0e817c0a6b9ceb724218c6cbb4cfab0462fd6ccceec1ce8b75d3`.
+No ZIP rebuild, Windows substitution or AWS upload. The thirteen-field handoff
+and private receipts are saved locally under ignored `.tools/phase4b-remediation`;
+the [canonical remediation record](production-account-readiness.md#49-phase-4b-shared-account-remediation-design-and-plan-discrepancy)
+captures the decision without private resource identifiers.
+
+Decision: **BLOCK PENDING AWS DECISION**. All three blockers have conditional
+paths but remain open. Billing review is next; Cost Explorer activation, quota,
+IAM, bootstrap, deployment and production actions remain separately unauthorized.
+Only documentation/proposal artifacts changed; no runtime/infra source, lock,
+workflow, .env.example or Diagrams change, and no commit/push during assessment.
+
 ## 2026-10-07 — Read-only AWS preflight; bootstrap blocked (Phase 4B)
 
 Entered at clean, source-qualified main

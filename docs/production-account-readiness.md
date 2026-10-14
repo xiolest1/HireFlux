@@ -4955,3 +4955,410 @@ the exact qualified source is available, but account cost, deployment privilege,
 Lambda headroom and modern bootstrap have not all been safely qualified.
 
 Phase 4C and deployment stay blocked. Stop at Phase 4B.
+
+## 49. Phase 4B shared-account remediation design and plan discrepancy
+
+**2026-10-08 — BLOCK PENDING AWS DECISION.** The owner requires one existing
+standalone shared account, us-east-1, no new account, no Organizations/Control
+Tower and no plan upgrade. Read-only GetAccountPlanState returned **PAID / ACTIVE**,
+contradicting the owner's Free-plan assumption. The owner expressly asked to
+preserve that evidence and keep AWS mutations blocked while manually verifying
+Billing. Credit/expiration/identity and usage receipts are retained privately;
+do not reinterpret a denied cost query or successful service list as zero spend
+or permission to deploy. No plan/account/authentication change occurred.
+
+The exact thirteen-field local handoff is at ignored
+`.tools/phase4b-remediation/handoff.md`. The review includes all fourteen required
+service families plus bootstrap KMS, actual read accessibility versus unverified
+creation entitlement, browser-login prerequisites, quota request/fallback,
+manual Billing baseline, separate approvals and renewed qualification requirements.
+The AWS service catalog labels S3/DynamoDB available on both plans; pricing/credit
+offers and limited-signup lists do not guarantee the exact standalone Free-plan
+feature set. Successful account metadata reads establish only read access.
+
+### Permission design remains conditional
+
+Fourteen sanitized [policy/trust review drafts](proposals/phase4b-remediation/README.md)
+are local documentation artifacts. They propose a HireFlux-only bootstrap
+qualifier, exact routine operator trust, separate deployment/publishing roles,
+customer execution policies, immutable execution/runtime boundaries, named
+resources, creation tags and exact API/App-ID binding. They do not apply to the
+qualified generated names/unbounded runtime role unchanged. The standard
+bootstrap's execution default, deployment wildcard grants and same-account trust
+are not accepted merely by proposing a narrower execution policy.
+
+Thirty-seven action/resource fixtures were evaluated through the read-only IAM
+engine; **36 matched** expectations. An SNS cleanup positive returned deny and
+is explicitly unresolved. Supplied contexts and synthetic resources do not prove
+provider calls, trust/resource-policy/session evaluation, entitlement or deployment.
+The default boundary flag affects only the execution role, not all bootstrap/app
+roles. Account-wide log-policy writes, generated-ID stabilization/tagging, classic
+Budget/GitHub provider dependencies, AWS-managed S3 KMS and boundary size need
+further review. No draft is installed or accepted as deploy-ready. Blank email
+remains the existing qualified omission branch, with manual monitoring required.
+
+### Quota, authentication and Billing paths
+
+Lambda total/unreserved concurrency remains **10/10**, with zero functions.
+L-B99A9384 returns Adjustable=true and account-level adjustability; request history
+is empty. A future approved request for total 150 is plausible, not submitted or
+guaranteed. Fresh unreserved >=105 is still required for reserved=5. The measured
+Paid account does not establish eligibility for a hypothetical Free-account request.
+If unavailable, a staging-only reservation omission needs explicit acceptance of
+shared-pool contention, costs, throttles and tested stop behavior, followed by
+3F/3G/4A requalification. Current source still reserves 5; production is unchanged.
+
+AWS CLI 2.36.47, console login/MFA metadata, effective sign-in action simulations
+and static pinned-CDK login-session support establish a preparation path. The new
+operator profile is absent and no login was initiated. Temporary credentials do
+not reduce the current user's administrator authority; profile creation/MFA login
+needs its own authorization and future routine-role restrictions need IAM review.
+
+Read-only Bills/Credits/Free Tier verification is the next owner action. Review
+whole-account gross/net charges, credits/expirations and existing lab regions;
+usage offer records are not an exhaustive bill. Do not enable Cost Explorer as
+part of that review: first use can enable it and anomaly-detection configuration.
+No billing preference, access switch, tag activation or budget setup was changed.
+
+### Preserved qualification and stopping point
+
+Local HEAD and fresh GitHub main remain
+`0ef61b75e60def13db78bde17cbbb70d36981b08`; accepted run
+[37647631455](https://github.com/xiolest1/HireFlux/actions/runs/37647631455)
+retains five successful jobs. Artifact 11495790358 is unexpired through
+2027-01-05T15:53:26Z. Current artifact verification passes and preserves exact
+inner Linux SHA
+`4fb0923cd4fb0e817c0a6b9ceb724218c6cbb4cfab0462fd6ccceec1ce8b75d3`.
+No rebuild, Windows substitute, app source/infra/lock/workflow change, asset upload,
+commit or push occurred in this assessment. These new documentation drafts do
+not create a new qualified source SHA or close live release gates.
+
+All three original blockers have conditional paths and **remain open**. The plan
+discrepancy is an additional owner/AWS decision gate. No finding establishes that
+a verified Free plan is incapable of staging, because this account measured Paid.
+L03/L04 remain partial/blocked, L05 still fails the original reservation condition
+and L06–L20 remain outstanding. Read-only analysis is complete; any IAM/quota/
+resource/bootstrap/deployment action needs separate concrete authorization.
+Stop at Phase 4B; production remains undeployed.
+
+## 50. Phase 4B recovery: temporary login and quota request
+
+**2026-10-11 — PHASE 4B — QUOTA REQUEST PENDING.** This continues the blocked
+4B assessment; it does not begin 4C or authorize application deployment. The
+owner now confirms a personally controlled learning/development account, no
+other people or important workloads relying on it, and completed basic Billing
+review. Promotional credits, benefit window and month-to-date charges are
+owner-reported evidence retained locally. Fresh GetAccountPlanState remains
+**PAID / ACTIVE**, with **USD 0 account-plan credits** and no expiration field.
+Those API fields do not describe every promotional credit. The basic baseline
+condition is accepted; credits are not a hard spending cap, eligible categories
+and exact expiration remain subject to Billing, and Cost Explorer was neither
+enabled nor retried.
+
+### Temporary authentication and relevant account metadata
+
+The owner personally completed browser login/MFA for the expressly approved
+new `hireflux-operator` profile using installed AWS CLI **2.36.47**. Original
+profile and shared credentials file were preserved. Fresh STS matches the
+original exact non-root IAM user/account; us-east-1 is explicitly supplied on
+every AWS operation. The new profile contains a native `login_session`, no
+static credential entry or fallback, and CLI source metadata reports `login`.
+Pinned CDK's native SdkProvider successfully resolves it and performs live
+read-only STS validation without assumed-role fallback. No authentication
+secrets, cache contents, authorization codes or credential exports are saved
+in repository evidence.
+
+Fresh metadata confirms the unrelated stack, two buckets and one log group
+remain, alongside two IAM users and six roles. No external/federated trust was
+found among inspected roles. This is a targeted regional inventory plus global
+S3/IAM metadata, not an exhaustive all-region audit. Names alone did not establish
+resource importance; the owner's direct personal-lab confirmation supplies
+that context. The operator still has AdministratorAccess with no boundary;
+temporary credentials do not reduce that authority. CDKToolkit, its default
+bucket/repository/five roles/version parameter, and hireflux-staging are absent.
+No HireFlux collisions were found in inspected services. No unrelated object,
+secret value or workload contents were read.
+
+### Quota authorization, rejection and pending request
+
+Lambda's actual total/unreserved concurrency is still **10/10**, with zero
+functions; the account-level adjustable quota is **L-B99A9384**. Exact request
+history was empty before each authorized attempt. The first owner-authorized
+request for **150** failed with **IllegalArgumentException** and created no
+request or support case. Read-only CloudTrail evidence identifies the reason:
+the requested value must exceed AWS's **default 1,000**, despite this account's
+applied value being 10. This is an API validation rejection, not a denied or
+pending quota approval.
+
+After reviewing the larger ceiling, the owner separately authorized exactly
+one new request for **1,001** in us-east-1. AWS accepted it; bounded follow-up
+returns **CASE_OPENED**, with a normal support case. Exact request/case IDs,
+timestamps and API receipts are ignored under `.tools/phase4b-recovery/` and
+the complete 26-field handoff is `.tools/phase4b-recovery/handoff.md`. No duplicate,
+automatic request retry, separate IAM/service-linked-role creation command or
+unexpected additional permission dependency occurred. Support-case creation
+was within the expressly authorized standard workflow.
+
+**CASE_OPENED remains pending AWS review.** Neither an accepted request nor a
+case establishes approval or an applied increase. L05 requires fresh actual
+**UnreservedConcurrentExecutions >=105** for the preserved reservation of 5.
+No reservation or application source was changed. Stop before bootstrap while
+this condition remains unmet; do not submit another request automatically.
+
+### Reviewed standard bootstrap; approval remains separate
+
+Standard CDKToolkit with default qualifier **hnb659fds** is the proportionate
+recommendation for the owner-confirmed personal lab account. Pinned CLI
+**2.1144.0** / library **2.272.0** render bootstrap version **32**, SHA
+`ed382e6eaab4bfddfe9b4fdb5a81fed0dfb7cc1dc6118fb11c41a0381377e89f`.
+Current installed and reviewed templates are semantically identical. Without
+external trust, a customer-managed KMS key or an example boundary, 11 of 14
+declarations are selected: S3 bucket/policy, ECR repository, five IAM roles,
+two standalone IAM policies and the SSM version parameter.
+
+Publishing/deployment/lookup roles delegate to effectively authorized same-
+account principals, without an owner-only or MFA trust condition; execution
+trusts CloudFormation. The execution role's AdministratorAccess and broad
+deployment-role CloudFormation authority can affect unrelated labs. Naming,
+tags and separate staging/production stacks do not create account isolation
+or reduce the operator's existing administrative privilege. All fourteen
+[restricted-policy drafts](proposals/phase4b-remediation/README.md) remain
+unapproved, inactive alternatives with their historical gaps preserved.
+
+The reviewed future direct pinned invocation includes explicit default
+qualifier/stack, no customer key, AdministratorAccess, termination protection,
+no lookups/notices and **--no-import-existing-resources**. The last flag avoids
+the pinned CLI's default adoption of existing resources. No external trust,
+GitHub OIDC, force, custom template, role override or production flags are
+proposed. The local safety wrapper remains unchanged and blocks mutation.
+Termination protection reduces accidental stack deletion; administrative roles
+can alter it. Failed bootstrap would require event review and a separate recovery
+decision, without blind retries/deletion. Retained assets can survive rollback.
+
+No bootstrap approval was sought or obtained while quota headroom remains
+insufficient, and no bootstrap ran. Once actual headroom passes, refresh identity,
+resources/collisions, template, source/artifact, Billing baseline and supervision
+before presenting the exact mutation for separate explicit owner acceptance.
+
+### Toolkit cost/persistence and later staging estimate
+
+An empty CDKToolkit with no application assets and no customer key is expected
+to have approximately **USD 0 incremental idle usage cost**: standard IAM,
+native CloudFormation and standard SSM have no separate usage charge, and empty
+S3/ECR stores no bytes. Existing account-wide paid auditing/configuration could
+add incidental charges. It does not create a spending cap. See
+[IAM](https://aws.amazon.com/iam/faqs/),
+[CloudFormation](https://aws.amazon.com/cloudformation/pricing/) and
+[SSM](https://aws.amazon.com/systems-manager/pricing/).
+
+Future S3 storage/requests, KMS usage and ECR images can be billed. Indicative
+us-east-1 rates before allowances/credits: S3 Standard **USD 0.023/GB-month**,
+PUT/LIST **0.005/1,000**, GET **0.0004/1,000**; symmetric KMS requests
+**0.03/10,000** with no monthly AWS-managed-key fee; ECR **0.10/GB-month**.
+The bucket uses **SSE-KMS**, versioning and Retain, with noncurrent expiry after
+30 days and incomplete multipart abort after one day; current assets persist.
+ECR expires only untagged images after 365 days; tagged images persist and a
+nonempty repository can prevent deletion. Toolkit outlives the application and
+credit window. Sources: [regional S3 pricing](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/current/us-east-1/index.json),
+[KMS](https://aws.amazon.com/kms/pricing/), [ECR](https://aws.amazon.com/ecr/pricing/).
+
+**Later application costs are separate.** A stated-use illustration is roughly
+**USD 7.3/month gross**, before free allowances, credits, tax and exceptional
+usage: full-month dashboard, five alarms evaluating 15 metrics, two secrets;
+1 GB ingested/0.5 GB-month stored logs; 10,000 requests averaging 500 ms at
+1 GB Lambda memory and 1 GB API egress; 100,000 billable DynamoDB read units and
+100,000 write units plus 0.1 GB storage; 100 Amplify build minutes, 1 GB served
+and 0.1 GB hosted. These are assumptions, not a forecast or measured bill.
+Sources: [CloudWatch](https://aws.amazon.com/cloudwatch/pricing/),
+[Secrets Manager](https://aws.amazon.com/secrets-manager/pricing/),
+[Lambda](https://aws.amazon.com/lambda/pricing/),
+[HTTP API](https://aws.amazon.com/api-gateway/pricing/),
+[DynamoDB](https://aws.amazon.com/dynamodb/pricing/),
+[Amplify](https://aws.amazon.com/amplify/pricing/).
+
+For later 4D–4G propose **USD 5 gross incremental first-week validation**, review
+at USD 2, and stop tests at USD 5, unexpected approximately USD 1/day growth,
+uncontrolled demo issuance, sustained errors/throttling, build loops or abnormal
+logs. Use short supervised sessions, bounded clients, whole-account Billing
+checks and a named owner for the separately reviewed emergency-stop procedure.
+Billing is delayed; these are human thresholds. Existing Phase 3F USD 10 monthly
+AND-tagged staging budget remains unchanged, advisory and not account-wide.
+Credits may exclude categories and are not permission to spend their balance.
+Anonymous issuance/load/cost qualification remains open.
+
+### Preserved source/artifact, gates and next action
+
+Initial/final HEAD and fresh GitHub main are
+`0ef61b75e60def13db78bde17cbbb70d36981b08`; accepted
+[run 37647631455](https://github.com/xiolest1/HireFlux/actions/runs/37647631455)
+retains all five successful jobs. Artifact 11495790358 remains unexpired through
+2027-01-05T15:53:26Z. Full current member/input/source verification preserves
+Linux SHA `4fb0923cd4fb0e817c0a6b9ceb724218c6cbb4cfab0462fd6ccceec1ce8b75d3`.
+Credential-isolated account-bound synth exactly matches the accepted template:
+25 declarations, 22 selected with blank email, three parameters and zero outputs.
+The copied CDK ZIP hash also matches; asset key remains
+`ee374ad8661035832c785da52fc5ad600c40f8989129b3d62ddd6b18bcf68202.zip`.
+No ZIP rebuild, Windows substitution, application upload or source/dependency/
+workflow/safety-wrapper change occurred. Documentation/status edits do not
+create a new deployment revision. No commit/push or product-suite rebuild.
+
+- **L02:** identity/region/temporary operator authentication qualified; deployment
+  authority acceptance remains under L04.
+- **L03:** targeted lab context and owner-reviewed basic Billing baseline accepted;
+  future supervised deployment/test window, thresholds and stop ownership remain.
+- **L04:** standard template/trust/cost reviewed; explicit admin acceptance,
+  actual bootstrap/assets/IAM/log delivery qualification remain outstanding.
+- **L05:** pending AWS decision; actual 10 unreserved fails the required 105.
+- **L06–L20:** remain outstanding, including Amplify authorization, optional
+  notifications, cost tags, assets/change set, deployed wiring/IAM, hosted/browser
+  behavior, TTL/logs/metrics/delivery, bounded load/cost and rollback evidence.
+
+The owner can follow the existing support case and explain the supervised
+staging use case. A later authorized read-only continuation must verify actual
+headroom before bootstrap approval; no further request is needed now. No app
+resources, Amplify/PAT authorization, budget/tag/alert setup, production resource,
+plan upgrade, Organizations or new account occurred. Production findings
+F03/F04/F07/F08/F10/F11 and the existing high bundled CDK advisory remain open.
+**Phase 4B is incomplete; 4C remains blocked. Stop at Phase 4B.**
+
+## 51. Phase 4B applied quota and bootstrap approval checkpoint
+
+**2026-10-14 — AWS BOOTSTRAP VERIFIED; PHASE 4B EXIT CONDITIONS SATISFIED.**
+The owner separately approved the standard administrative model and one corrected
+bootstrap attempt. CDKToolkit is CREATE_COMPLETE in the verified personal
+development account/us-east-1, with termination protection and exactly eleven
+expected resources. The HireFlux application remains absent; Phase 4C has not
+begun. Sections 48–50 preserve the original blocked and pending-quota findings.
+Final handoff also requires actual CI qualification of the reviewed documentation
+revision; a successful baseline run is not a claim about a later revision.
+
+### Applied quota, temporary authentication and owner baseline
+
+Live Lambda GetAccountSettings and Service Quotas report **1,000 total /1,000
+unreserved**, zero functions. Original desired-1,001 request is **CASE_CLOSED**;
+Support reported approval of 1,000 and the live value independently confirms it.
+L05 passes the required >=105 before the unchanged reservation of 5. No new quota
+request or reservation change. Exact request/case/identity receipts remain ignored.
+
+Expired native temporary login was renewed without changing other profiles or
+the shared credentials file. Fresh CLI STS and pinned-CDK native live validation
+match the original non-root identity, with explicit us-east-1 and login credential
+source, no static fallback. No credentials, codes, cache contents or raw auth
+output are saved in project evidence.
+
+The owner confirmed expected changes since October 11: Service Quotas' role
+created with the authorized request, a later NAT service role, two retained lab
+Lambda log groups and a CloudTrail source-condition update. No regional NAT
+gateway or Lambda function exists. Personal-lab-only context and the last manual
+Billing baseline remain accepted. No unrelated contents were read. Inventory is
+targeted regional metadata plus global S3/IAM, not an exhaustive all-region audit
+or fresh bill. API **PAID /ACTIVE**, **USD 0 account-plan credits**, no expiration
+remains distinct from private owner-reported promotional balance/runway and
+month-to-date Billing evidence. Credits are not a cap; no Billing/plan change.
+
+### Approval, invocation failure and controlled correction
+
+The exact eleven-resource mutation, same-account trust, AdministratorAccess,
+cost/persistence and supervision/stop/recovery duties were presented. The owner
+explicitly approved and accepted administrative risk. The first authorized CLI
+invocation from infra exited 1; toolkit, exact resource names and application
+remained absent, and all inspected lab metadata was unchanged. Read-only stack/
+event inspection found no stack. Offline analysis proved a command defect:
+this pinned CLI synthesizes any configured app even with an explicit AWS target;
+infra's app requires environment context that the bootstrap invocation lacked.
+Original CLI error output was not retained, so this is a proven invocation defect
+and supported explanation, not recovered stderr evidence. No automatic retry.
+
+The owner then explicitly authorized **one corrected attempt**. It runs the
+same pinned CLI/flags from the repository root, where local/global cdk.json and
+CDK_APP/CDK_BUILD/CDK_PLUGIN are absent. No source, wrapper, template, privilege
+or architectural change. The corrected CLI exited 0 and CloudFormation completed.
+A local console-progress decoding issue did not affect AWS execution; actual
+status/resource completion was verified directly through CloudFormation APIs.
+No force, automatic cancellation/deletion or further retry.
+
+The established reviewed procedure now uses this neutral working directory:
+
+```text
+node infra/node_modules/aws-cdk/bin/cdk bootstrap aws://<verified-account>/us-east-1 --profile hireflux-operator --qualifier hnb659fds --toolkit-stack-name CDKToolkit --no-bootstrap-customer-key --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess --termination-protection --no-import-existing-resources --no-lookups --no-notices
+```
+
+This records the completed operation, not authorization to rerun it. The local
+mutation-blocking wrapper is unchanged. No external trust, GitHub OIDC, custom
+boundary, customer-managed key, existing-resource adoption or production flags.
+All fourteen restricted-policy drafts remain inactive historical alternatives.
+
+### Actual deployed verification and preservation
+
+Pinned CLI **2.1144.0** / library **2.272.0**, standard template **32**, rendered
+SHA `ed382e6eaab4bfddfe9b4fdb5a81fed0dfb7cc1dc6118fb11c41a0381377e89f`.
+Deployed Original template is semantically identical; selected conditions and
+parameters match the approval. CREATE_COMPLETE with termination protection;
+exactly S3 bucket/policy, ECR repository, five IAM roles, two inline-policy
+resources and one SSM version parameter. No unexpected logical IDs or resources.
+
+Five role trusts, paths, managed-policy sets and all four actual inline-policy
+documents match resolved template policy semantics. Execution trusts
+CloudFormation with AdministratorAccess; deploy/file/image/lookup delegate to
+authorized same-account principals without owner-only/MFA conditions. Deployment
+has broad CloudFormation authority. This can affect labs and is not least privilege
+or separate-account isolation. Operator AdministratorAccess/no boundary unchanged.
+
+S3 is in us-east-1, owner-only ACL, all four public blocks, nonpublic TLS-deny
+policy, enabled versioning and SSE-KMS with AWS-managed key semantics. Deployed
+template Retain and actual lifecycle match: noncurrent expiry 30 days, multipart
+abort one day. No current objects, versions, delete markers or multipart uploads.
+ECR is immutable/AES256, with exact same-account Lambda/EMR service policy,
+untagged expiry 365 days and zero images. SSM String version **32** exceeds
+application minimum **6**; outputs agree with actual resources, including the
+deprecated AWS_MANAGED_KEY value rather than a customer key ARN.
+
+Only expected additions were found: one toolkit stack/bucket/repository and five
+roles. All inspected pre-bootstrap lab metadata is unchanged. App stack, Lambda,
+DynamoDB, HTTP API, Secrets Manager, Amplify, budgets, alarms/dashboard and SNS
+remain absent. No application asset was uploaded; no app/production deployment,
+Amplify/PAT authorization, cost-tag activation, alert/budget setup, account-plan,
+Organizations or new-account action occurred.
+
+### Costs, qualified source and remaining phases
+
+Empty toolkit incremental idle usage is approximately **USD 0**, excluding
+existing paid account-wide auditing/configuration. Future assets/requests/KMS
+may be billed. Current S3 objects and tagged ECR images persist; retained assets
+can survive stack recovery, and toolkit outlives credits. Administrators can
+disable termination protection. Owner supervised the operation and owns stop/
+recovery; any later recovery mutation needs separate approval. Review whole-account
+Bills after bootstrap and next day; no extra Billing service is enabled. Later
+4D–4G testing proposal remains USD 5 first week, review USD 2, stop USD 5 or
+unexplained approximately USD 1/day growth/uncontrolled issuance/errors/build/log
+growth. Existing USD 10 AND-tagged staging budget remains unchanged/advisory.
+Sources: [CloudFormation](https://aws.amazon.com/cloudformation/pricing/),
+[SSM](https://aws.amazon.com/systems-manager/pricing/),
+[regional S3 pricing](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/current/us-east-1/index.json),
+[KMS](https://aws.amazon.com/kms/pricing/), [ECR](https://aws.amazon.com/ecr/pricing/).
+
+Accepted implementation baseline remains
+`0ef61b75e60def13db78bde17cbbb70d36981b08`; freshly verified
+[run 37647631455](https://github.com/xiolest1/HireFlux/actions/runs/37647631455)
+has all five jobs green and unexpired artifact 11495790358 through
+2027-01-05T15:53:26Z. Full member/input/source/native/size verification preserves
+Linux SHA `4fb0923cd4fb0e817c0a6b9ceb724218c6cbb4cfab0462fd6ccceec1ce8b75d3`.
+Fresh isolated account-bound synth exactly matches accepted preflight: 25
+declarations, 22 selected blank-email, three parameters, zero app outputs;
+copied ZIP/asset identity matches. No runtime/infra/dependency/workflow/wrapper/
+production change or local ZIP rebuild/replacement. Documentation-only changes
+receive normal review and their own exact-revision remote CI qualification;
+the complete local handoff records actual final HEAD/run rather than a guessed
+future SHA. Private receipts/handoff remain `.tools/phase4b-final-recovery/`.
+
+L02 identity/temporary operator, L03 bootstrap baseline/supervision, L04 approved
+and verified toolkit/trust/policies/storage/version/protection, and L05 headroom
+are qualified for Phase 4B. Actual app asset publication and log delivery remain
+later deployment/runtime checks. L06–L20 carry forward. Phase 4C separately
+qualifies Amplify/repository authorization and secure NoEcho/no-default credential
+handling, notification-email authorization/blank manual monitoring, cost-tag
+activation/propagation/scope gaps/whole-account monitoring, and qualified source/
+artifact inputs for 4D. No 4C action here. 4D first deployment →4E live backend
+→4F hosted browser →4G operations/scaling/cost →4H final evidence/rollback remains
+unchanged. Existing high CDK advisory, anonymous issuance, timing/diagnostic gates
+and F03/F04/F07/F08/F10/F11 production findings remain open. Stop at Phase 4B.

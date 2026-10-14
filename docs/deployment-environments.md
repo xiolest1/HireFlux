@@ -8,10 +8,14 @@ environment graphs and a rebuilt Linux runtime after two interview correctness/
 transaction-bound fixes. AWS staging remains uncreated. Phase 4A has verified
 the accepted GitHub source, five green quality jobs, actual artifacts and fresh
 local gates; see the [remote qualification record](production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
-Phase 4B performed authorized read-only checks in a user-confirmed shared staging
-account, but bootstrap remains blocked by its deployment-permission boundary,
-Lambda concurrency and unconfirmed Billing baseline. No CDKToolkit or HireFlux
-stack was created; see the [preflight record](production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap).
+Phase 4B's [initial blocked preflight](production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap)
+is preserved. The 2026-10-14 recovery verifies actual Lambda total/unreserved
+concurrency of 1,000/1,000 and temporary non-root login. The owner accepts the
+personal-lab context and last manual Billing baseline. Standard CDKToolkit is
+**CREATE_COMPLETE** with 11 verified resources, version 32 and termination
+protection after separate approval of broad administrative execution authority.
+Only toolkit infrastructure was created; HireFlux stack remains absent. See the
+[current checkpoint](production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint).
 Phase 4B must resolve these gates before later slices obtain GitHub/billing inputs,
 then qualify real hosting, IAM, timing, logs, metrics, TTL and costs under active
 supervision. The local synth-only wrapper cannot deploy. Budgets/rate/reserved

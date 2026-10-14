@@ -1,0 +1,82 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:ConditionCheckItem"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/hireflux-staging-workspaces"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "dynamodb:Query",
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/hireflux-staging-workspaces",
+        "arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/hireflux-staging-workspaces/index/GSI1",
+        "arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/hireflux-staging-workspaces/index/GSI2",
+        "arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/hireflux-staging-workspaces/index/GSI3"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": [
+        "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:hireflux/staging/cursor-signing-??????",
+        "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:hireflux/staging/demo-signing-??????"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:us-east-1:${ACCOUNT_ID}:log-group:/hireflux/staging/backend:log-stream:*"
+    },
+    {
+      "Effect": "Deny",
+      "NotAction": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:Query",
+        "secretsmanager:GetSecretValue",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Deny",
+      "Action": "dynamodb:*",
+      "NotResource": [
+        "arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/hireflux-staging-workspaces",
+        "arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/hireflux-staging-workspaces/index/GSI1",
+        "arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/hireflux-staging-workspaces/index/GSI2",
+        "arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/hireflux-staging-workspaces/index/GSI3"
+      ]
+    },
+    {
+      "Effect": "Deny",
+      "Action": "secretsmanager:*",
+      "NotResource": [
+        "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:hireflux/staging/cursor-signing-??????",
+        "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:hireflux/staging/demo-signing-??????"
+      ]
+    },
+    {
+      "Effect": "Deny",
+      "Action": "logs:*",
+      "NotResource": "arn:aws:logs:us-east-1:${ACCOUNT_ID}:log-group:/hireflux/staging/backend:log-stream:*"
+    }
+  ]
+}

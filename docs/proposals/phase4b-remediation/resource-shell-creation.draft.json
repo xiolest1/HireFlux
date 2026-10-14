@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "apigateway:POST",
+      "Resource": "arn:aws:apigateway:us-east-1::/apis",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "HireFlux",
+          "aws:RequestTag/Environment": "staging",
+          "apigateway:Request/ApiName": "hireflux-staging-api",
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "amplify:CreateApp",
+        "amplify:TagResource"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "HireFlux",
+          "aws:RequestTag/Environment": "staging",
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    }
+  ]
+}
