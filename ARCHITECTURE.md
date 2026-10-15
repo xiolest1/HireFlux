@@ -410,9 +410,11 @@ isolate labs or reduce operator privilege; HireFlux resources remain absent. See
 [current checkpoint](docs/production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint).
 
 Phase 4C's [deployment-input contract](docs/phase4c-deployment-contract.md)
-preserves the same topology and qualified Linux bytes. Blank email omits SNS;
-cost tags are not yet available for activation. Regional repository access and
-the secure operator procedure remain release gates. Preparation creates no
+preserves the same topology and qualified Linux bytes. The regional GitHub App
+is installed with owner consent and verified for HireFlux only; the secure owner
+input procedure is implemented and tested offline. Blank email omits SNS; cost
+keys are not yet available for activation. PAT acquisition and authorized tag
+activation/coverage remain timed deployment conditions. Preparation creates no
 application resources and does not authorize Phase 4D or production.
 
 The existing factory now has independent local ASGI and Lambda entry points.

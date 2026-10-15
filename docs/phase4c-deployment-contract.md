@@ -2,12 +2,38 @@
 
 ## Current disposition
 
-**AWAITING OWNER AUTHORIZATION.** Phase 4C prepares the first supervised staging
-deployment; it does not authorize it. Regional GitHub App installation/access
-has not yet been verified. The owner confirmed GitHub sign-in, but that session
-is not available to the connected in-app browser. Owner inspection of the actual
-installation and permission screen is requested. Do not create an Amplify app to
-authorize its repository. No real PAT has been created by this task.
+**PASS WITH DOCUMENTED PHASE 4D CONDITIONS — READY FOR SUPERVISED 4D.**
+On 2026-10-15 the owner explicitly approved the regional GitHub App installation,
+completed GitHub's Confirm access check, and its saved settings were verified:
+AWS Amplify (us-east-1), xiolest1, Only select repositories, exactly HireFlux.
+The approved permissions are write access to amplify.yml, read code/metadata,
+and read/write checks, pull requests and repository hooks. GitHub also notes
+read-only access to public repositories. No broader private/writable repository
+selection was granted. Installation does not prove a live Amplify clone/build.
+
+The owner renewed the expired native AWS login; CLI and pinned-CDK live checks
+match the intended non-root account/us-east-1. Other profiles and the shared
+credentials file are preserved. The protected toolkit remains healthy at version
+32/11 resources; application stack and Amplify apps remain absent, with 1,000
+unreserved concurrency. No AWS application asset/resource or real PAT was created.
+
+The remaining conditions have specific owners and stop criteria:
+
+- **Owner, immediately before separately authorized 4D:** review classic PAT hook
+  exposure and finite expiry, create it personally, and use the reviewed hidden-entry
+  bridge. Revalidate source/helper hashes and preflight first; stop on unsafe entry,
+  wrong scope/identity/assembly, provider failure or unexpected existing resources.
+- **Owner/operator, after normal 4D tagged resources:** wait for Project/Environment
+  keys, request separate activation approval, allow propagation, then prove coverage
+  in 4G. Stop attribution/operational acceptance on missing or incorrect coverage;
+  use whole-account manual Bills review meanwhile, without enabling Cost Explorer.
+- **Owner, before 4D:** refresh Bills/lab baseline and explicitly accept the supervised
+  window, USD2 review/USD5 first-week gross stop envelope, bounded idempotent transport
+  retries and the exact asset/change-set/execution/build actions. Completing 4C
+  authorizes none of those deployment or emergency-recovery mutations.
+
+The initial 2026-10-14 preparation checkpoint awaited GitHub authorization; that
+gate is now closed. No real PAT has been created, and Phase 4D has not begun.
 
 This record supplements [readiness section 52](production-account-readiness.md#52-phase-4c-deployment-inputs-and-cost-attribution)
 and preserves the [verified Phase 4B record](production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint).
@@ -42,15 +68,24 @@ ignored locally under `.tools/phase4c/`; no credential is audit evidence.
   Size: 26,642,450 compressed /57,541,431 expanded bytes, 3,756 members,
   31 distributions and 71 application sources. Nothing was rebuilt or uploaded.
 
+The reviewed preparation checkpoint `7d1e81e22ce13d51723321f9717c9cecbf7fe1e3`
+subsequently passed all five jobs in
+[run 38656976715](https://github.com/xiolest1/HireFlux/actions/runs/38656976715).
+Actual artifact 11936704057 was independently downloaded: outer SHA
+`96c722204c569a5e0ee787e555d5e02925b7c726c71cbab9f732e3cef996b862`, expiry
+2027-01-12T23:55:14Z. Its inner ZIP and manifest byte-equal the verified prior
+archive. The completion documentation receives its own exact-revision CI; the
+local final handoff records actual final HEAD/run/artifact rather than a future SHA.
+
 ## Repository authorization and sensitive input
 
 AWS documents the regional App installation and separate PAT flow for
 [CloudFormation/CLI/SDK](https://docs.aws.amazon.com/amplify/latest/userguide/setting-up-GitHub-access.html).
 Use [AWS Amplify us-east-1](https://github.com/apps/aws-amplify-us-east-1/installations/new)
 under xiolest1; inspect an existing installation before adding one. The selected
-repository set should contain only HireFlux. Actual requested permissions and any
-existing broader access must be reviewed with the owner. Installation or permission
-expansion requires separate explicit approval. Stop before any AWS app creation,
+repository set contains only HireFlux. The actual requested permissions above were
+reviewed and explicitly approved by the owner; saved installation scope is verified.
+Any later expansion requires separate explicit approval. Stop before any AWS app creation,
 Save and deploy, webhook creation or build. Installation alone does not prove clone,
 webhook delivery or a successful build.
 
@@ -92,10 +127,13 @@ and CloudFormation architecture. After separate deployment authorization:
 2. Publish only reviewed secret-free assembly assets using the pinned CLI's
    publish-assets command. This version marks that command experimental and
    requires its explicit unstable feature flag; it is not a new stable interface.
+   The reviewed publisher wrapper discards raw CLI input/output and disables
+   telemetry, emitting fixed status only.
    No PAT is present for asset publishing or synthesis. No new dependency is added.
 3. In the owner's interactive terminal, the reviewed Python entry bridge rejects
    non-TTY/echo fallback, optimization, debug/crash, endpoint, proxy and TLS/CA
-   overrides before masked getpass input. It sends an anonymous stdin pipe to a
+   overrides and persistent AWS profile/default endpoint/credential overrides
+   before masked getpass input. It sends an anonymous stdin pipe to a
    Node child; the PAT is an in-memory parameters object, never a CLI argument,
    environment value, temporary file or assembly context.
 4. The pinned exported Deployments.prepareStack API resolves the same native
@@ -111,7 +149,10 @@ and CloudFormation architecture. After separate deployment authorization:
    AWS_MAX_ATTEMPTS alone does not override that hardcoded policy.
 6. Review the resulting unexecuted change set and expected 22 selected resources;
    execution is a separate secret-free pinned execute-change-set operation after
-   review and approval. No token is reintroduced through CLI parameters.
+   review and approval. The executor wrapper discards raw CLI streams, checks the
+   exact original template, role, paginated expected Adds and review-only stack
+   state, and accepts masked NoEcho values without treating them as plaintext proof.
+   No token is reintroduced through CLI parameters.
 
 Synthetic native-path tests are necessary evidence, not a live create/clone test.
 The operator bridge's future real mode must never run during 4C. Hidden entry does
@@ -290,8 +331,9 @@ manual stop decisions, not real-time financial controls or guarantees.
 
 ## Inherited qualification rows
 
-- L06: operator transfer implemented and qualified offline; actual regional App
-  access/owner consent pending. Real PAT deliberately deferred to supervised 4D.
+- L06: regional App installed with explicit consent and saved HireFlux-only scope
+  verified; operator transfer implemented/qualified offline. Preparation is complete;
+  owner real PAT creation and live provider use remain supervised 4D conditions.
   No waiver for exposure and no live clone/build claim.
 - L07: blank email selected by owner request; manual monitoring required in 4D.
 - L08: keys unavailable; separately approved post-4D activation/propagation and 4G
@@ -304,8 +346,11 @@ manual stop decisions, not real-time financial controls or guarantees.
 - L18–L20: bounded load/throttle/reservation/latency, live cost/backlog and completed
   staging acceptance/evidence/stop/recovery qualifications pending.
 
-No AWS mutation, GitHub App authorization, real PAT generation, application upload/
-deployment/build or lab/production mutation occurred in this preparation checkpoint.
+Only the separately approved regional GitHub App installation/authorization and
+normal repository documentation checkpoints changed external configuration.
+Native AWS temporary authentication was renewed with owner interaction. No AWS
+resource/Billing mutation, real PAT generation, application upload/deployment/build
+or lab/production mutation occurred.
 Normal reviewed repository documentation commit/push and read-only CI verification
 are recorded separately in the final local handoff.
 The known bundled CDK advisory, anonymous issuance cost risk and deferred production

@@ -1,5 +1,52 @@
 # HireFlux development log
 
+## 2026-10-15 — Regional GitHub authorization verified; Phase 4C complete with conditions
+
+Completed the paused preparation after the owner signed in to the connected
+browser. AWS Amplify (us-east-1) was absent from installed Apps. Prepared exactly
+Only select repositories → HireFlux and presented the actual permissions: write
+amplify.yml, read code/metadata, read/write checks, pull requests and repository
+hooks. The owner explicitly authorized that installation and completed GitHub's
+Confirm access check. Saved installation settings verify the same three permission
+groups and one selected repository, xiolest1/HireFlux. No other writable/private
+repository selection, PAT creation, AWS app creation or build was performed.
+GitHub's public-repository read-only caveat is recorded; installation does not
+prove live Amplify clone, webhook delivery or build success.
+
+The expired AWS session was renewed through owner browser authentication for
+the same temporary hireflux-operator profile. Other profiles/shared credentials
+were preserved. Fresh CLI and pinned-CDK live validation match the intended non-root
+account/us-east-1, without static fallback or role assumption. Toolkit remains
+protected CREATE_COMPLETE, 11 resources, version 32; Original template matches 4B.
+Staging stack/Amplify apps remain absent, total/unreserved concurrency 1,000/1,000.
+Cost-key lookup still succeeds with no Project/Environment keys; no activation,
+Cost Explorer, plan, quota, IAM or application mutation occurred.
+
+The future owner bridge passes fourteen grouped synthetic checks and independent
+review, including native parameter serialization, same-token bounded retries,
+existing-stack/no-import/mutation denial, TLS/CA/profile endpoint/credential guards,
+NoEcho masking, paginated model-shaped change sets and raw publisher/executor
+output suppression. No real token entry or live deployment mode was invoked.
+Its limits and exact proposed 4D procedure remain explicit; no token in argv,
+environment, context, files, logs or hosted artifacts is an accepted shortcut.
+
+Preparation revision 7d1e81e passed all five exact-SHA jobs in run 38656976715.
+Downloaded artifact 11936704057 matches its reported outer digest; inner ZIP and
+manifest byte-equal the separately downloaded 4B artifact and canonical Linux
+package. No runtime/infra/dependency/workflow/local-only-wrapper change or repack.
+The completion documentation receives its own exact-revision CI before handoff.
+
+Verdict: **PASS WITH DOCUMENTED PHASE 4D CONDITIONS — READY FOR SUPERVISED 4D**.
+Owner creates the finite-expiry scoped PAT only in the separately authorized 4D
+window, using the qualified bridge. After normal tagged resources appear, owner
+separately approves two-key activation, waits for propagation and verifies billing
+coverage in 4G. Blank email/manual monitoring, USD2 review/USD5 first-week gross
+stop proposal and fresh Bills/lab baseline remain deployment-window duties.
+The [deployment contract](phase4c-deployment-contract.md) includes the twenty-step
+checklist; ignored local handoff records all 32 required evidence fields and actual
+final HEAD/run/artifact. No application asset upload/deployment, production or lab
+mutation; Phase 4D still requires separate explicit authorization.
+
 ## 2026-10-14 — Deployment inputs, artifact and cost readiness reviewed (Phase 4C)
 
 Continued from final Phase 4B source `96ce9fc` and independently verified its

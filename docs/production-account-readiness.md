@@ -5365,6 +5365,47 @@ and F03/F04/F07/F08/F10/F11 production findings remain open. Stop at Phase 4B.
 
 ## 52. Phase 4C deployment inputs and cost attribution
 
+**Current disposition, 2026-10-15: PASS WITH DOCUMENTED PHASE 4D CONDITIONS — READY FOR SUPERVISED 4D.**
+The owner explicitly authorized AWS Amplify (us-east-1) installation after reviewing
+its actual permissions and HireFlux-only selection, then completed Confirm access.
+Saved GitHub settings verify Only select repositories, exactly xiolest1/HireFlux,
+write amplify.yml, read code/metadata and read/write checks/PRs/repository hooks.
+GitHub also notes read-only access to public repositories. No broader private or
+writable repository selection, real PAT, AWS app, asset upload or build was created.
+Installation is not live clone/build/webhook proof.
+
+Owner-renewed native temporary AWS login preserves other profiles/credentials.
+Fresh CLI/pinned-CDK STS checks match the original non-root identity/us-east-1,
+with no static fallback/role assumption. Protected toolkit remains CREATE_COMPLETE,
+11 completed resources, SSM32/min6, Original template unchanged; staging stack and
+Amplify apps absent, Lambda 1,000 total/unreserved and functions zero. Cost-key read
+still returns an empty list. No resource/Billing/plan/quota/IAM/production/lab change.
+
+The guarded future operator procedure passes fourteen synthetic groups and an
+independent model/security review: hidden entry/pipe/native parameters, exact
+identity/assembly checks, profile and TLS/CA/endpoint/debug rejection, create-only
+facade, masked NoEcho and paginated change-set review, and raw CLI stream suppression.
+Real token/live modes remain uninvoked. Version-specific interfaces, seven bounded
+same-token transport attempts, host-memory and path-specific persistence limits
+are documented in the [deployment contract](phase4c-deployment-contract.md).
+
+Preparation checkpoint 7d1e81e has all five jobs green in run 38656976715; actual
+artifact 11936704057 was downloaded and its ZIP/manifest byte-equal the independently
+verified 4B artifact/canonical Linux bytes. Completion documentation receives its
+own final exact-revision CI, recorded with actual IDs in the ignored local handoff.
+No implementation/dependency/workflow/local wrapper change or package repack.
+
+L06 preparation is qualified; owner-created finite-expiry PAT and actual provider
+use are timed 4D actions. L07 blank email is selected, L17 email delivery N/A.
+L08 requires owner-approved activation after keys appear (up to 24 hours), further
+activation propagation (up to 24 hours), and 4G actual coverage; no dummy resources
+or Cost Explorer activation. L09 remains locally qualified/live change set pending;
+L10–L16/L18–L20 remain live commissioning/evidence gates. Owner must separately
+authorize supervised 4D assets/change-set/execution/build, accept gross spend/stop
+controls and refresh Bills/lab baseline. No unsafe credential/access risk is waived.
+
+### Initial 2026-10-14 checkpoint (history)
+
 **2026-10-14 — AWAITING OWNER AUTHORIZATION.** The separately requested Phase 4C
 preparation continues from final 4B revision `96ce9fcafd1baabacfaea5662a1d439874c9426d`.
 Its exact run 38598527632 has all five jobs green. The actual final 4B artifact

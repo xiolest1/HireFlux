@@ -56,9 +56,13 @@ cost and all 86 exit-gate answers are in the linked handoff.
 Phase 4C [deployment preparation](../docs/phase4c-deployment-contract.md) freshly
 verifies both offline synths and the identical account-bound staging template,
 three parameters, 25 declarations/22 blank-email selections and qualified Linux
-asset. No source or wrapper change. Actual GitHub installation/permission review
-is pending; cost keys are unavailable until tagged resources propagate. Do not
-pass a PAT through CLI arguments or infer deployment approval from this record.
+asset. No source or local-only wrapper change. The regional GitHub App is installed
+with explicit owner approval and verified HireFlux-only scope. A separate owner
+input bridge is implemented/tested offline, using masked entry/anonymous pipe/
+native parameters and raw-output suppression; no live mode or real PAT was used.
+Cost keys remain unavailable until tagged resources propagate. Real PAT creation,
+assets/change-set/execution/build approval and later tag activation remain timed
+4D/4G steps. Do not pass a PAT through CLI arguments or infer deployment approval.
 
 ## Install and validate
 

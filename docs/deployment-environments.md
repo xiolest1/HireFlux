@@ -1,8 +1,9 @@
 # Environment and deployment plan
 
 The current [Phase 4C deployment contract](phase4c-deployment-contract.md)
-qualifies the downloaded Linux artifact and offline inputs while awaiting owner
-GitHub installation/access review. Initial staging uses blank OperationalAlertEmail,
+qualifies the downloaded Linux artifact, offline inputs and owner-approved regional
+GitHub App installation for HireFlux only. Secure token delivery passes offline
+tests; the owner creates the real PAT in the supervised 4D window. Initial staging uses blank OperationalAlertEmail,
 22 selected resources and active manual CloudWatch/Bills monitoring. Project and
 Environment cost keys are unavailable; post-4D activation needs separate approval.
 No application deployment, real PAT or production change is authorized here.

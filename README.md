@@ -297,7 +297,9 @@ Application resources remain absent; see the
 [current checkpoint](docs/production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint).
 Only bootstrap infrastructure is deployed; the CDK advisory, anonymous-demo cost risk and
 production deferrals remain open.
-Phase 4C's [deployment preparation](docs/phase4c-deployment-contract.md) verifies
-the downloaded Linux artifact, current toolkit and offline templates, selects
-blank notification email and records cost-tag activation prerequisites. Owner
-GitHub access/authorization remains pending; no application deployment is authorized.
+Phase 4C's [deployment preparation](docs/phase4c-deployment-contract.md) is complete
+with documented supervised 4D conditions. The owner-approved regional GitHub App
+is verified for HireFlux only; hidden token delivery is tested offline, blank
+notification email is selected, and the Linux artifact/toolkit/templates are qualified.
+Real PAT creation and separately approved cost-tag activation remain timed 4D/4G
+actions. No application deployment is authorized or performed here.
