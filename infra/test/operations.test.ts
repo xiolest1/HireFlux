@@ -25,6 +25,19 @@ const ref = (id: string) => ({ Ref: id });
 const arn = (id: string) => ({ 'Fn::GetAtt': [id, 'Arn'] });
 const ABSENT = Symbol('AWS::NoValue');
 
+// Budgets service contract, not CloudFormation's unrestricted string[] schema:
+// https://docs.aws.amazon.com/aws-cost-management/latest/APIReference/API_budgets_Budget.html
+const budgetServiceMetrics = new Set([
+  'BlendedCost', 'UnblendedCost', 'AmortizedCost', 'NetUnblendedCost',
+  'NetAmortizedCost', 'UsageQuantity', 'NormalizedUsageAmount', 'Hours',
+]);
+
+function assertBudgetMetricContract(metrics: unknown): void {
+  assert.ok(Array.isArray(metrics));
+  assert.equal(metrics.length, 1, 'Select exactly one Budgets aggregation metric.');
+  assert.ok(budgetServiceMetrics.has(metrics[0]), 'Metric must use the case-sensitive Budgets service enum.');
+}
+
 // Evaluate the actual parameter-driven conditions, not a second hand-written alert policy.
 function resolveTemplate(template: any, email: string): any {
   function resolve(value: any): any {
@@ -199,7 +212,7 @@ for (const environment of ['staging', 'production'] as const) {
   test(`${environment} monthly budget is exact project AND environment cost scope, without enforcement`, () => {
     assert.deepEqual(resources[ids.budget].Properties.Budget, {
       BudgetName: `hireflux-${environment}-monthly-cost`, BudgetType: 'COST', TimeUnit: 'MONTHLY',
-      BudgetLimit: { Amount: config.operations.monthlyBudgetUsd, Unit: 'USD' }, Metrics: ['UNBLENDED_COST'],
+      BudgetLimit: { Amount: config.operations.monthlyBudgetUsd, Unit: 'USD' }, Metrics: ['UnblendedCost'],
       FilterExpression: { And: [
         { Tags: { Key: 'Project', Values: ['HireFlux'], MatchOptions: ['EQUALS'] } },
         { Tags: { Key: 'Environment', Values: [environment], MatchOptions: ['EQUALS'] } },
@@ -208,6 +221,12 @@ for (const environment of ['staging', 'production'] as const) {
     // Tag activation/propagation is a documented deployment gate, not a synth lookup.
     assert.equal(resources[ids.budget].Properties.Budget.CostFilters, undefined);
     assert.doesNotMatch(JSON.stringify(resources), /BudgetsAction|AWS\/Billing|ce:|budgets:|ReservedConcurrentExecutions":0/);
+  });
+
+  test(`${environment} rendered budget uses the Budgets service metric contract with either email selection`, () => {
+    for (const email of ['', 'operator@example.invalid']) {
+      assertBudgetMetricContract(resolveTemplate(template, email)[ids.budget].Properties.Budget.Metrics);
+    }
   });
 
   test(`${environment} dashboard has six native metric graphs scoped to local function, API and table`, () => {
@@ -268,6 +287,12 @@ for (const environment of ['staging', 'production'] as const) {
     assert.doesNotMatch(p.DashboardBody, /logsInsights|queryString|AWS\/Billing|SIGNING|secret|OperationalAlertEmail|AmplifyGitHubAccessToken/);
   });
 }
+
+test('Budgets metric contract rejects the provider-invalid spelling and unsupported cardinality', () => {
+  for (const metrics of [['UNBLENDED_COST'], ['unblendedcost'], [], ['UnblendedCost', 'BlendedCost'], 'UnblendedCost']) {
+    assert.throws(() => assertBudgetMetricContract(metrics));
+  }
+});
 
 test('access-log privacy validator rejects raw paths, personal and request content', () => {
   const template = Template.fromStack(new HireFluxStack(new App(), 'Privacy', loadEnvironmentConfig('staging'), fixtureArtifact)).toJSON();

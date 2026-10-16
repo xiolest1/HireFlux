@@ -121,7 +121,7 @@ export class OperationalGuardrails extends Construct {
     this.budget = new CfnBudget(this, 'MonthlyCostBudget', {
       budget: {
         budgetName: explicitResourceName(config, 'monthly-cost'), budgetType: 'COST', timeUnit: 'MONTHLY',
-        budgetLimit: { amount: config.operations.monthlyBudgetUsd, unit: 'USD' }, metrics: ['UNBLENDED_COST'],
+        budgetLimit: { amount: config.operations.monthlyBudgetUsd, unit: 'USD' }, metrics: ['UnblendedCost'],
         filterExpression: { and: [
           { tags: { key: 'Project', values: ['HireFlux'], matchOptions: ['EQUALS'] } },
           { tags: { key: 'Environment', values: [config.environmentName], matchOptions: ['EQUALS'] } },

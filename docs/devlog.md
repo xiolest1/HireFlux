@@ -1,5 +1,114 @@
 # HireFlux development log
 
+## 2026-10-16 — Provider recovery authorized; minimal budget correction qualified
+
+Corrected only the Budgets metric to `UnblendedCost` and added a rendered
+service-contract regression. Both environments and account-bound staging have
+only that semantic change: IAM, conditions, tags, lifecycle and 22-resource
+selection remain intact. Infra typecheck/122 tests/four real-artifact CLI tests,
+schema parity and isolated synths passed. Corrected bound template SHA256 is
+`106222638171615bfdedaa1e99f612381c6dfcc4c105ac22aec05a1f359aa21d`.
+Canonical ZIP and manifest remain byte-identical locally.
+
+Read-only GitHub metadata confirms HireFlux-only regional App authorization and
+one finite classic token with only `admin:repo_hook`, marked Never used. The
+owner can privately retrieve it. Prior 401 cause remains unresolved. A separate
+hidden-input GitHub validator passed offline qualification; actual validation
+and AWS acceptance are pending. No scope expansion or token replacement.
+
+The owner authorized guarded ordinary deletion of only the failed stack, a fresh
+reviewed CREATE attempt and initial build after all source/CI/security/cost gates.
+No new mutation has occurred at this source checkpoint. Prior failures remain
+preserved; Phase 4E remains deferred. See the
+[provider recovery checkpoint](phase4d-provider-recovery-outcome.md).
+
+
+## 2026-10-16 — Authorized executor recovery ran; provider failures rolled staging back
+
+The owner authorized only `--require-approval never` on the existing secret-free
+executor and one corrected use of the original change set. Removing those two
+arguments reproduces the original helper hash; corrected SHA256 is
+`847a728c57c075c020b42128f93e9a6e7bb0d633d86c05ca49e82035e96c838b`.
+All fourteen existing groups and focused native non-TTY/approval/rollback/destroy
+regressions passed. Hidden input, publisher, bridge/core, template/IAM/failure
+policy and runtime remained unchanged. No new PAT, artifact rebuild or upload.
+
+After owner AWS login renewal, fresh checks passed exact source `8f2e39b`, all
+five CI jobs, original change-set/stack IDs, 22 Adds, roles/parameters/template,
+blank email, zero resources and exact S3 versions/full-body hashes. Forty-one of
+42 current configuration comparisons matched; the owner confirmed three new
+personal-lab log groups and accepted the Billing baseline. The complete scoped
+write-event metadata window was consistent with those labs/sign-in.
+
+The single corrected invocation ran 05:30:48–05:33:58 UTC / 01:30:48–01:33:58 EDT.
+It reached real provisioning, proving the CLI correction, but AWS Budgets rejected
+the qualified `UNBLENDED_COST` metric (service accepts `UnblendedCost`) and Amplify
+repository setup returned GitHub `401 Bad credentials`. The existing source/test
+both repeat the invalid budget spelling. Token validity/cause was not inferred;
+no token value was inspected, requested again or retrieved.
+
+AWS-managed rollback reached ROLLBACK_COMPLETE; all eight attempted rows are
+DELETE_COMPLETE. Final service reads confirm zero functions/apps/tables/secrets
+(including planned deletion), staging alarms/dashboard/budget; no hosting/build.
+Toolkit remains protected CREATE_COMPLETE/11/version32, concurrency1000/1000,
+and the same two asset versions remain. The original change set is now absent;
+failed stack metadata still has a masked PAT parameter. No manual deletion,
+cleanup, retry, source fix, permission expansion or automatic credential action.
+
+Verdict: **BLOCK — DEPLOYMENT INCOMPLETE OR UNSAFE**. The attempt is consumed.
+Budget source/enum regression, fresh infra/source/CI/template qualification,
+credential diagnosis and failed-stack lifecycle each need a reviewed separate
+recovery decision before further mutation. See the
+[actual recovery outcome](phase4d-recovery-outcome.md). Documentation remains
+local/unpushed; no app verification or Phase 4E–4H work has started.
+
+## 2026-10-15 — Phase 4D assets and CREATE review passed; execution blocked
+
+The owner consolidated authorization for the qualified supervised deployment and
+accepted the refreshed Bills/Credits/lab baseline and manual gross-spend controls.
+Focused allowance/pricing review recommended retaining the existing monitoring:
+likely USD0.50/month incremental CloudWatch alarms with shared allowance available,
+USD1.50 without it; low-volume logs and the qualifying dashboard can fit published
+allowances. No monitoring redesign or AWS Billing setting change was made.
+
+Frozen source `8f2e39b` and all five exact-source jobs in CI run `38686294308`
+remain qualified. One publisher invocation uploaded the canonical Linux ZIP and
+secret-free template to the existing private toolkit bucket. Independent complete
+readback verified both digests, sizes, version IDs, AWS-managed KMS encryption and
+public blocking; later listing confirms exactly the same two versions. No repack,
+dependency/source change or repeated upload occurred.
+
+Corrected an owner-terminal shell launch before any helper invocation: Windows
+PowerShell's Restricted policy blocked the launcher; installed PowerShell 7 ran
+the same script without changing policy. The owner personally entered the PAT
+through hidden input. Actual preparation ran once and returned review-only
+success. Independent reviews verified exact template/role/parameters/tags and
+22 expected Add actions, no replacements/imports/removals, with no SNS selection.
+Actual change-set STANDARD/DisableRollback=false metadata and the executor's
+omitted override were recorded under accepted normal AWS rollback behavior.
+
+The single executor invocation at 15:15:26–15:15:41 UTC returned exit 1. Direct
+subsequent reads show REVIEW_IN_PROGRESS, zero application resources and the same
+CREATE_COMPLETE/AVAILABLE change set. Offline native reproduction proves a local
+executor incompatibility: actual empty placeholder template yields a broadening
+security diff, while default CDK approval cannot complete with all streams
+redirected to DEVNULL. Original CLI stderr was intentionally discarded, so its
+exact live error text is not claimed. No retry, helper patch, cleanup or deletion.
+
+Verdict: **BLOCK — DEPLOYMENT INCOMPLETE OR UNSAFE**. Proposed-only recovery adds
+`--require-approval never` to the independently reviewed secret-free executor,
+then requalifies the helper/native approval path before separately authorized
+one-attempt execution. No Lambda/Amplify/build/domain or live app monitoring
+exists. Toolkit remains protected CREATE_COMPLETE/11 resources, quota1000/1000;
+production/labs and GitHub repository access were not changed. Pattern screening
+found no PAT; unnecessary AWS login-session tag identifiers were removed from one
+ignored local receipt without changing AWS. See the
+[actual outcome and recovery boundary](phase4d-deployment-outcome.md).
+
+Documentation is updated locally only, after the blocked stopping point. No
+commit/push or new build was triggered; source HEAD remains frozen. Phases 4E–4H,
+actual cost-tag activation and inherited production findings remain outstanding.
+
 ## 2026-10-15 — Regional GitHub authorization verified; Phase 4C complete with conditions
 
 Completed the paused preparation after the owner signed in to the connected

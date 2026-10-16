@@ -1,5 +1,9 @@
 # HireFlux architecture
 
+Current October 16 provider remediation is authorized and locally qualified;
+new CI, credential and AWS deployment gates remain pending. See the
+[provider recovery checkpoint](docs/phase4d-provider-recovery-outcome.md).
+
 ## Purpose and current state
 
 HireFlux is a modular-monolith job application tracker designed as a realistic,
@@ -14,7 +18,10 @@ The public landing page requires no account. Starting the demo creates a unique
 token. Protected pages provide Home/dashboard, applications, interviews,
 analytics, and settings. This local milestone requires no AWS runtime resource.
 Phase 4B has provisioned only standard CDKToolkit bootstrap infrastructure;
-the staging application below remains undeployed.
+the staging application below remains undeployed. Phase 4D's first actual
+provisioning attempt ended in AWS-managed rollback after budget validation and
+repository authentication failures; no application resources survived. See the
+[current recovery outcome](docs/phase4d-recovery-outcome.md).
 
 The planned staging shape is:
 

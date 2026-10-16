@@ -1,5 +1,9 @@
 # HireFlux
 
+Current October 16 provider remediation is authorized and locally qualified;
+new CI, credential and AWS deployment gates remain pending. See the
+[provider recovery checkpoint](docs/phase4d-provider-recovery-outcome.md).
+
 ## A clearer way to manage a job search
 
 HireFlux is a candidate-focused job application tracker for turning a scattered search into a structured, actionable workflow.
@@ -301,5 +305,14 @@ Phase 4C's [deployment preparation](docs/phase4c-deployment-contract.md) is comp
 with documented supervised 4D conditions. The owner-approved regional GitHub App
 is verified for HireFlux only; hidden token delivery is tested offline, blank
 notification email is selected, and the Linux artifact/toolkit/templates are qualified.
-Real PAT creation and separately approved cost-tag activation remain timed 4D/4G
-actions. No application deployment is authorized or performed here.
+Phase 4D received consolidated owner authorization: the two private artifacts
+were published and verified, the owner completed hidden PAT entry, and the CREATE
+change set passed review for exactly 22 additions. An initial CLI failure was
+followed by one explicitly authorized and requalified executor correction. That
+attempt reached provisioning, but budget metric validation and Amplify GitHub
+authentication failed. AWS completed rollback; no application resources remain
+and the original change set is absent. See the
+[current blocked recovery outcome](docs/phase4d-recovery-outcome.md), with the
+[earlier CLI stop](docs/phase4d-deployment-outcome.md) preserved. The later provider recovery is documented separately.
+No hosted frontend/API exists yet; Phases 4E–4H and separately approved cost-tag
+activation remain pending. Historical failed-deployment evidence is preserved.

@@ -1,12 +1,18 @@
 # Roadmap
 
+Current October 16 provider remediation is authorized and locally qualified;
+new CI, credential and AWS deployment gates remain pending. See the
+[provider recovery checkpoint](phase4d-provider-recovery-outcome.md).
+
 ## Current execution order
 
 The accepted production-account phase sequence below supersedes the ordering of
 the earlier product milestone descriptions. Those milestones remain scope
 references. The local demo and Phase 2A backend foundation are implemented;
-Only standard CDKToolkit bootstrap resources are deployed; the AWS application
-and real persistent browser accounts remain undeployed.
+Standard CDKToolkit bootstrap resources and two verified private asset objects
+exist; the staging record is ROLLBACK_COMPLETE after the first provisioning
+attempt. No application resources survived. AWS application hosting and real
+persistent browser accounts remain undeployed.
 
 - **Phase 1 — completed:** architecture/readiness audit.
 - **Phase 2A — completed:** provider-neutral durable principal/data lifetime,
@@ -82,10 +88,18 @@ and real persistent browser accounts remain undeployed.
   is timed to 4D, with post-resource tag activation subject to separate approval
   and 4G coverage review. See the
   [deployment contract](phase4c-deployment-contract.md). No application deployed.
-- **Phase 4D–4H — deferred:** first staging deployment; live backend; hosted browser E2E;
-  operations/scaling/cost; final staging evidence freeze. The inherited
-  qualification rows remain subject to the current 4B gate statuses; production
-  is still deferred.
+- **Phase 4D — blocked after AWS-managed rollback:** original asset publication,
+  secure CREATE and 22-Add review passed. The owner-authorized, locally requalified
+  executor correction reached actual provisioning once. Budget metric validation
+  and Amplify GitHub401 failures caused ROLLBACK_COMPLETE; eight attempted rows
+  show DELETE_COMPLETE and no application service resources remain. The change
+  set is now absent. Further source/credential/failed-stack recovery needs separate
+  review and authorization. See the [current outcome](phase4d-recovery-outcome.md),
+  preserving the [earlier CLI stop](phase4d-deployment-outcome.md).
+- **Phase 4E–4H — deferred:** live backend; hosted browser E2E;
+  operations/scaling/cost; final staging evidence freeze. L09 is partly satisfied
+  by assets/change-set review; deployed/live gates remain open. Production is
+  still deferred.
 - **Phase 5 — deferred:** real Cognito accounts in staging; direct verified Cognito
   `sub` ownership remains the approved direction.
 - **Phase 6 — deferred:** production hardening and release qualification.

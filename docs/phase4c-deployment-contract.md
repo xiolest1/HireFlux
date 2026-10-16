@@ -1,5 +1,17 @@
 # Phase 4C deployment preparation and Phase 4D contract
 
+Current October 16 provider remediation is authorized and locally qualified;
+new CI, credential and AWS deployment gates remain pending. See the
+[provider recovery checkpoint](phase4d-provider-recovery-outcome.md).
+
+This is the historical accepted Phase 4C contract. Phase 4D has since published
+the two verified assets and prepared the exact 22-Add change set. After the
+initial CLI stop, the owner authorized a narrow executor correction and one
+attempt that reached provisioning but ended in AWS-managed rollback. The
+[current Phase 4D outcome](phase4d-recovery-outcome.md) supersedes historical
+statements below that 4D/PAT entry has not begun. Only the expressly authorized
+two executor arguments changed; no further source/token/cleanup recovery occurred.
+
 ## Current disposition
 
 **PASS WITH DOCUMENTED PHASE 4D CONDITIONS — READY FOR SUPERVISED 4D.**

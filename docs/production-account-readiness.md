@@ -1,6 +1,23 @@
 # Production account readiness — Phase 1
 
+Current October 16 provider remediation is authorized and locally qualified;
+new CI, credential and AWS deployment gates remain pending. See the
+[provider recovery checkpoint](phase4d-provider-recovery-outcome.md).
+
 Date: 2026-10-05. Status: architecture proposal for review, not an accepted implementation ADR.
+
+**Current Phase 4D update (2026-10-16): BLOCK — DEPLOYMENT INCOMPLETE OR UNSAFE.**
+Assets/secure CREATE/22-Add review passed. The owner-authorized two-argument
+executor correction was locally requalified and its single corrected attempt
+reached provisioning. Budgets rejected the template metric enum and Amplify
+returned GitHub401; AWS rollback reached ROLLBACK_COMPLETE, all eight attempted
+rows DELETE_COMPLETE, with no app resources remaining. Original change set is
+absent; Toolkit and the two published versions are intact. No further retry,
+source/token correction or cleanup occurred. See the
+[current outcome and recovery boundary](phase4d-recovery-outcome.md), preserving
+the [earlier CLI stop](phase4d-deployment-outcome.md).
+Earlier phase records below are preserved historical checkpoints; no Phase 4E or
+hosted application readiness is claimed.
 
 **Current Phase 3G update (2026-10-07): PASS WITH EXPLICIT PHASE 4 CONDITIONS.**
 The complete synthesized/runtime system was reviewed and freshly revalidated.
