@@ -1,8 +1,9 @@
 # HireFlux
 
-Current October 16 provider remediation is authorized and locally qualified;
-new CI, credential and AWS deployment gates remain pending. See the
-[provider recovery checkpoint](docs/phase4d-provider-recovery-outcome.md).
+The [latest recorded AWS checkpoint (October 19)](docs/phase4d-provider-recovery-outcome.md#october-19-staging-deployment-and-initial-build)
+records completed staging infrastructure and an initial build, with public HTTPS
+readiness still blocked. This dated record does not certify live state or authorize
+new operations.
 
 ## A clearer way to manage a job search
 
@@ -98,14 +99,14 @@ React + TypeScript + Vite -> FastAPI -> DynamoDB Local
 - **Backend:** FastAPI with explicit route, application-service, repository-protocol, and DynamoDB-adapter boundaries.
 - **Data model:** owner-scoped applications, notes, interviews, activities, settings, analytics counters, and schedule projections.
 - **Security model:** signed temporary demo identities, server-owned authorization and metrics, explicit CORS, optimistic concurrency, and no stored passwords.
-- **Current runtime:** local development with DynamoDB Local. Planned AWS staging is documented separately and is not provisioned by this repository.
+- **Local runtime:** development with DynamoDB Local. AWS staging progress and remaining readiness gates are tracked by the checkpoint above.
 
 Phase 2A also provides a durable local backend workspace: a server-configured
 non-demo identity explicitly bootstraps an empty workspace whose records omit
 demo TTL. Phase 2B adds a shared browser session boundary and a development-only
 durable local adapter. Phase 2C adds strong inventory, atomic deletion/write
-guards, resumable live-workspace erasure, and bounded export. Cognito and AWS
-deployment remain later phases. See the [current roadmap](docs/roadmap.md#current-execution-order).
+guards, resumable live-workspace erasure, and bounded export. Cognito remains a
+later phase. See the [current roadmap](docs/roadmap.md#current-execution-order).
 
 The canonical architecture and current-versus-target boundary are documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -125,14 +126,14 @@ npm --prefix infra run synth:production
 ```
 
 Phase 3E adds independent static Amplify app/branch definitions and token-derived
-frontend/API wiring. Hosting is not deployed; AWS deployment remains Phase 4.
+frontend/API wiring. These are source definitions; deployment status follows the checkpoint above.
 The infra guide records the current open CDK bundled dependency advisory.
 
 Phase 3B now supplies the [backend Lambda ZIP build and validation](backend/README.md):
 Python 3.14, Linux x86_64, locked production wheels, deterministic packaging,
 and isolated cold/warm HTTP API v2 tests. The handler is
 `hireflux_backend.lambda_handler.handler`. Phase 3D verifies and binds the rebuilt
-ZIP to the defined Lambda resource; nothing is deployed. See
+ZIP to the defined Lambda resource. See
 [ADR 0009](docs/adr/0009-lambda-runtime-and-deterministic-packaging.md)
 and [Phase 3B evidence](docs/production-account-readiness.md#41-phase-3b-implementation-and-handoff).
 
@@ -263,18 +264,21 @@ table. See [ADR 0007](docs/adr/0007-durable-workspace-manifest-and-erasure.md).
 
 The local candidate demo is the active browser experience. The durable local
 backend identity/bootstrap foundation and general frontend session boundary are
-complete, including the Phase 2C local data-safety foundation. AWS staging, real Cognito accounts, private attachments,
+complete, including the Phase 2C local data-safety foundation. Real Cognito accounts, private attachments,
 reminders, email delivery, and large asynchronous exports remain future phases
 rather than hidden dependencies of the current app.
 
 ## Phase 3G infrastructure review status
+
+This section records local qualification history, not a live AWS inventory.
+Deployment progress and remaining gates follow the dated checkpoint above.
 
 The full browser-to-backend topology is defined locally: static Amplify WEB
 hosting, branch-level public API configuration, exact App-domain-token CORS,
 and the verified backend. Phase 3F adds finite JSON logs, five native
 alarms, a dashboard, API throttles, reserved concurrency and a tag-scoped budget.
 Each environment declares 25 resources: 22 without an alert email, 25 with one.
-Application resources are not deployed and no frontend domain exists yet. Production auto-build
+At that review, application resources were not deployed and no frontend domain existed. Production auto-build
 is disabled and authentication remains unavailable until Phase 5.
 See [ADR 0013](docs/adr/0013-operational-guardrails.md),
 [frontend build guide](frontend/README.md),
@@ -291,28 +295,13 @@ quality jobs green and fresh local gates. The downloaded Linux Lambda ZIP has
 identical file contents to the post-3G Windows build; a controlled compression
 experiment explains their different ZIP hashes. See the
 [Phase 4A evidence and remaining conditions](docs/production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
-Phase 4B's [initial blocked preflight](docs/production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap)
-and subsequent recovery remain preserved. On 2026-10-14, actual total/unreserved
-Lambda concurrency is 1,000/1,000, temporary identity/authentication is verified,
-and the owner accepts the personal-lab/Billing baseline. The reviewed standard
-CDKToolkit is now **CREATE_COMPLETE**, with 11 verified resources, SSM version 32
-and termination protection after separate explicit administrative-risk approval.
-Application resources remain absent; see the
-[current checkpoint](docs/production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint).
-Only bootstrap infrastructure is deployed; the CDK advisory, anonymous-demo cost risk and
-production deferrals remain open.
-Phase 4C's [deployment preparation](docs/phase4c-deployment-contract.md) is complete
-with documented supervised 4D conditions. The owner-approved regional GitHub App
-is verified for HireFlux only; hidden token delivery is tested offline, blank
-notification email is selected, and the Linux artifact/toolkit/templates are qualified.
-Phase 4D received consolidated owner authorization: the two private artifacts
-were published and verified, the owner completed hidden PAT entry, and the CREATE
-change set passed review for exactly 22 additions. An initial CLI failure was
-followed by one explicitly authorized and requalified executor correction. That
-attempt reached provisioning, but budget metric validation and Amplify GitHub
-authentication failed. AWS completed rollback; no application resources remain
-and the original change set is absent. See the
-[current blocked recovery outcome](docs/phase4d-recovery-outcome.md), with the
-[earlier CLI stop](docs/phase4d-deployment-outcome.md) preserved. The later provider recovery is documented separately.
-No hosted frontend/API exists yet; Phases 4E–4H and separately approved cost-tag
-activation remain pending. Historical failed-deployment evidence is preserved.
+Phase 4B's [blocked preflight](docs/production-account-readiness.md#48-phase-4b-read-only-aws-preflight-and-blocked-bootstrap)
+and [bootstrap checkpoint](docs/production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint),
+the [Phase 4C deployment contract](docs/phase4c-deployment-contract.md),
+[October 15 CLI stop](docs/phase4d-deployment-outcome.md),
+[October 16 rollback](docs/phase4d-recovery-outcome.md), and
+[October 18 handoff](docs/phase4d-provider-recovery-handoff.md) remain historical
+evidence. Their inventories and unused-attempt instructions describe those
+checkpoints; continuation follows the latest recorded checkpoint above. Public
+application readiness, later live qualification, and cost-tag acceptance must not
+be inferred from infrastructure or build completion.

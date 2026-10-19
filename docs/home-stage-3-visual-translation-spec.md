@@ -1,6 +1,8 @@
 # Home Stage 3 — visual translation specification
 
-**Status:** proposed visual design contract for review, 2026-09-23. This specifies how the accepted Home information model should be perceived and navigated; it does not implement UI, change product policy, or assert measured candidate outcomes. The authoritative inputs are the accepted [Stage 2 information architecture](home-stage-2-cognitive-information-architecture.md) and its [Stage 1 evidence boundary](home-stage-1-cognition-information-audit.md). This document, not a mockup or canvas, is the Stage 3 source of truth.
+**Original status:** proposed visual design contract for review, 2026-09-23. This specifies how the accepted Home information model should be perceived and navigated; it does not implement UI, change product policy, or assert measured candidate outcomes. The semantic inputs are the accepted [Stage 2 information architecture](home-stage-2-cognitive-information-architecture.md) and its [Stage 1 evidence boundary](home-stage-1-cognition-information-audit.md). This records the original Stage 3 proposal, not exclusive authority over current Home.
+
+**Authority:** later [composition research](home-stage-3-visual-composition-research.md#12-exact-proposed-revision-to-the-stage-3-visual-specification) proposes replacing visual decisions here but does not record acceptance of that revision. The [implementation contract](home-implementation-contract.md) and [current Home description](dashboard-and-analytics.md#workspace-home) describe implemented behavior. Observations, measurements and implementation handoffs below belong to this proposal's original review context; they neither freeze the current layout nor direct new implementation.
 
 ## 1. Visual design thesis
 

@@ -1,18 +1,19 @@
 # Roadmap
 
-Current October 16 provider remediation is authorized and locally qualified;
-new CI, credential and AWS deployment gates remain pending. See the
-[provider recovery checkpoint](phase4d-provider-recovery-outcome.md).
+For the latest recorded AWS disposition and remaining gates, use the
+[October 19 provider-recovery checkpoint](phase4d-provider-recovery-outcome.md#october-19-staging-deployment-and-initial-build).
+It is dated operational evidence, not fresh live-state verification or permission
+for another deployment, build, or recovery action.
 
 ## Current execution order
 
 The accepted production-account phase sequence below supersedes the ordering of
 the earlier product milestone descriptions. Those milestones remain scope
-references. The local demo and Phase 2A backend foundation are implemented;
-Standard CDKToolkit bootstrap resources and two verified private asset objects
-exist; the staging record is ROLLBACK_COMPLETE after the first provisioning
-attempt. No application resources survived. AWS application hosting and real
-persistent browser accounts remain undeployed.
+references. The local demo and Phase 2A backend foundation are implemented.
+Completed phase entries describe their exit checkpoints, including then-absent
+resources, not today's AWS inventory. The provider-recovery checkpoint above
+records subsequent deployment progress. Real persistent browser accounts remain
+deferred.
 
 - **Phase 1 — completed:** architecture/readiness audit.
 - **Phase 2A — completed:** provider-neutral durable principal/data lifetime,
@@ -71,15 +72,11 @@ persistent browser accounts remain undeployed.
   ZIP hash discrepancy is fully explained with identical extracted files and
   a controlled reconstruction of the exact remote hash. See the
   [Phase 4A handoff](production-account-readiness.md#47-phase-4a-source-control-and-remote-ci-qualification).
-- **Phase 4B — bootstrap verified:** actual Lambda concurrency
-  is now 1,000 total/unreserved, sufficient for reservation 5. Temporary
-  non-root login and the owner-accepted personal-lab/Billing baseline are
-  verified. Standard CDKToolkit's broad administrative authority was separately
-  approved; CREATE_COMPLETE, 11 resources, version 32 and termination protection
-  are verified. The app stack remains absent; no new quota request or application
-  deployment occurred. Final documentation revision needs its own CI. Qualified source,
-  Linux artifact and account-bound synth are preserved. See the
-  [current checkpoint](production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint),
+- **Phase 4B — bootstrap verified (historical):** Lambda headroom, temporary
+  non-root identity and the accepted personal-lab/Billing baseline were verified.
+  Standard CDKToolkit's broad administrative authority was separately approved;
+  its resources, version and termination protection were verified before application
+  deployment. See the [Phase 4B checkpoint](production-account-readiness.md#51-phase-4b-applied-quota-and-bootstrap-approval-checkpoint),
   with original blocked evidence retained in sections 48–50.
 - **Phase 4C — complete with documented supervised 4D conditions:** source/account/
   toolkit and independently downloaded Linux artifacts qualified; regional GitHub App
@@ -87,18 +84,16 @@ persistent browser accounts remain undeployed.
   secure operator bridge tested offline. Blank email selected; real PAT creation
   is timed to 4D, with post-resource tag activation subject to separate approval
   and 4G coverage review. See the
-  [deployment contract](phase4c-deployment-contract.md). No application deployed.
-- **Phase 4D — blocked after AWS-managed rollback:** original asset publication,
-  secure CREATE and 22-Add review passed. The owner-authorized, locally requalified
-  executor correction reached actual provisioning once. Budget metric validation
-  and Amplify GitHub401 failures caused ROLLBACK_COMPLETE; eight attempted rows
-  show DELETE_COMPLETE and no application service resources remain. The change
-  set is now absent. Further source/credential/failed-stack recovery needs separate
-  review and authorization. See the [current outcome](phase4d-recovery-outcome.md),
-  preserving the [earlier CLI stop](phase4d-deployment-outcome.md).
+  [deployment contract](phase4c-deployment-contract.md).
+- **Phase 4D — public HTTPS readiness blocked:** follow the provider-recovery
+  checkpoint above for recorded infrastructure/build results and the resume boundary.
+  The [October 15 CLI stop](phase4d-deployment-outcome.md),
+  [October 16 rollback](phase4d-recovery-outcome.md) and
+  [October 18 handoff](phase4d-provider-recovery-handoff.md) remain historical
+  evidence, not unused operational authorization.
 - **Phase 4E–4H — deferred:** live backend; hosted browser E2E;
   operations/scaling/cost; final staging evidence freeze. L09 is partly satisfied
-  by assets/change-set review; deployed/live gates remain open. Production is
+  by assets/change-set review; remaining live acceptance gates stay open. Production is
   still deferred.
 - **Phase 5 — deferred:** real Cognito accounts in staging; direct verified Cognito
   `sub` ownership remains the approved direction.

@@ -1,6 +1,8 @@
 # Home Stage 2 — cognitive and information architecture
 
-**Status:** proposed Stage 2 architecture for review, 2026-09-23. This defines candidate-facing meaning and sequence, not visual design, components, an API, a scoring algorithm, or implementation work. The accepted [Stage 1 audit](home-stage-1-cognition-information-audit.md) is the evidence foundation; its unobserved candidate behaviors remain hypotheses.
+**Original status:** proposed Stage 2 architecture for review, 2026-09-23. This defines candidate-facing meaning and sequence, not visual design, components, an API, a scoring algorithm, or implementation work. The accepted [Stage 1 audit](home-stage-1-cognition-information-audit.md) is the evidence foundation; its unobserved candidate behaviors remain hypotheses.
+
+**Authority:** the later [Stage 3 specification](home-stage-3-visual-translation-spec.md) and [composition research](home-stage-3-visual-composition-research.md) explicitly treat Stage 1/2 as accepted semantic inputs. The [Home implementation contract](home-implementation-contract.md) records current behavior and evidence limits. The review/handoff language below preserves this document's original context; its visual non-decisions do not constitute an accepted layout or a new implementation instruction.
 
 ## Architectural decision
 

@@ -6,13 +6,19 @@ system, dependency boundaries, authentication and authorization flow, DynamoDB
 model, read/write flows, planned AWS staging architecture, service-selection
 rationale, security posture, and deferred services.
 
+For deployment/recovery status, use the dated checkpoint linked below. Earlier
+operational summaries in architecture and readiness documents are historical
+snapshots, not fresh AWS inventory or permission to repeat operations.
+
 Detailed supporting contracts remain in this directory:
 
 - [DynamoDB access patterns](dynamodb-access-patterns.md)
 - [Domain model](domain-model.md)
 - [Application status transitions](status-transitions.md)
 - [Dashboard and analytics](dashboard-and-analytics.md)
+- [Home implementation contract](home-implementation-contract.md) — current semantics and links through the earlier design/research chain.
 - [Deployment environments](deployment-environments.md)
+- [Latest recorded AWS checkpoint — October 19](phase4d-provider-recovery-outcome.md#october-19-staging-deployment-and-initial-build)
 - [Roadmap](roadmap.md)
 - [Production account readiness and Phase 2/3A–3G handoffs](production-account-readiness.md)
 - [Final combined AWS review and Phase 4 conditions](production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff)

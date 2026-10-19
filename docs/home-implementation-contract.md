@@ -1,6 +1,6 @@
 # Home implementation contract (2026-09-23)
 
-The accepted Stage 1–3 documents remain unchanged. The production Home implementation uses one candidate-facing decision band. Dashboard actions are server-generated recorded commitments or review cues; a small Home-specific presentation model distinguishes available work, waiting, incomplete evidence, no known candidate action, and no recorded opportunities. Analytics remains reporting-period interpretation, not another operational next-action owner.
+This is the current implementation contract for Home's semantics, source bounds and evidence limits; the [Home description](dashboard-and-analytics.md#workspace-home) records its current presentation. It does not establish permanent visual-design acceptance. The current Home implementation uses one candidate-facing decision band. Dashboard actions are server-generated recorded commitments or review cues; a small Home-specific presentation model distinguishes available work, waiting, incomplete evidence, no known candidate action, and no recorded opportunities. Analytics remains reporting-period interpretation, not another operational next-action owner.
 
 ## Semantic corrections and scope
 
@@ -15,4 +15,4 @@ The accepted Stage 1–3 documents remain unchanged. The production Home impleme
 
 Home can only judge recorded information. It cannot know unrecorded obligations, opportunity preference, external conversations, employer intent, or what changed since a previous visit. A failed operational refresh with a cached snapshot is partial evidence, not an all-clear. The Applications workspace is consulted only when Dashboard surfaces no action; a failed ownership check is also partial. Analytics can fail independently and does not replace the operational answer. Date-based status can age while a long-lived page stays open; there is no midnight refresh timer in this implementation.
 
-The Stage 1–3 documents describe the design decision and evidence ceiling; this note records the bounded contract and intentional cross-surface distinctions of its implementation.
+Design background is the [Stage 1 audit](home-stage-1-cognition-information-audit.md), [Stage 2 semantic architecture](home-stage-2-cognitive-information-architecture.md), [original Stage 3 visual proposal](home-stage-3-visual-translation-spec.md), and [later composition research](home-stage-3-visual-composition-research.md). Later Stage 3 documents explicitly treat Stage 1/2 as accepted semantic inputs. The repository does not record an explicit acceptance of the research's proposed Stage 3 replacement or a final visual composition; implemented similarities do not resolve that question. This note records the bounded implementation contract and intentional cross-surface distinctions.

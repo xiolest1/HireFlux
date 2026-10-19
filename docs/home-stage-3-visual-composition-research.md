@@ -2,6 +2,8 @@
 
 **Status:** research recommendation for review, 2026-09-24. Stage 1 and Stage 2 remain accepted. The [first Stage 3 visual specification](home-stage-3-visual-translation-spec.md) and current Home are evidence from the first implementation, not the governing composition for this research. This document changes no product policy or production UI. Its low-fidelity proofs and burden estimates are design comparisons, not candidate-test results.
 
+**Authority:** “current Home” observations below describe the September 24 inspection, not today's implementation. “Select Hybrid,” “Tradeoffs accepted,” and the proposed specification revision express this research's recommendation, not a recorded owner acceptance or supersession decision. Current implemented semantics and presentation are documented in the [Home implementation contract](home-implementation-contract.md) and [Home description](dashboard-and-analytics.md#workspace-home); similarity to this proposal does not establish acceptance of the whole design.
+
 ## 1. Current rendered Home: where the burden sits
 
 Inspection used the current frontend at 1280 × 900, 768 × 1024, and 390 × 844 with the repository's deterministic browser API fixture. The fixture supplies a fictional demo session and responses without writing to the backend. Dark-mode full-page captures were kept outside the repository; the existing light 1280px visual reference was also inspected. The example has 8 active/16 total recorded opportunities, one overdue saved check-back, and one scheduled interview. These measurements describe that example, not every Home state or a human eye-tracking result.

@@ -8,8 +8,14 @@ in a nested `AGENTS.md` may add to or override them for that subtree.
 HireFlux is a portfolio-grade job application tracker. The implemented local
 system is a React/Vite single-page application, a FastAPI modular monolith, and
 DynamoDB Local. A visitor launches an isolated, signed 24-hour demo workspace
-seeded with fictional data. AWS staging is the next milestone; do not describe
-planned AWS resources as already deployed.
+seeded with fictional data. Durable local workspaces also support explicit
+bootstrap, strong inventory, guarded erasure, and bounded export; real persistent
+account authentication remains deferred.
+
+The [latest recorded AWS checkpoint](docs/phase4d-provider-recovery-outcome.md#october-19-staging-deployment-and-initial-build)
+records staging infrastructure and initial-build completion, with public HTTPS
+readiness blocked. It is dated evidence, not fresh live-state verification.
+Historical approvals and results are not standing authorization for AWS actions.
 
 - `frontend/`: React, TypeScript, Vite, React Router, TanStack Query, Zod, and
   Tailwind CSS.
@@ -23,6 +29,11 @@ planned AWS resources as already deployed.
   requests diagram changes.
 - `ARCHITECTURE.md`: canonical system overview and current-versus-target
   architecture boundary.
+
+Use the [documentation index](docs/architecture.md) to select task-relevant domain,
+status-transition, Home, and ADR contracts. For Home, start with the current
+implementation contract linked there; visual research is not an accepted final
+design. Deployment status follows the dated checkpoint above, not older summaries.
 
 ## Architecture boundaries
 
@@ -74,8 +85,12 @@ planned AWS resources as already deployed.
   In particular, `REJECTED -> INTERVIEW` is forbidden,
   `INTERVIEW -> OFFER` is allowed, and `REJECTED -> OFFER` is an intentional
   correction path.
-- Archive rather than permanently delete applications. Restore only to the
-  exact `archived_from_status` value.
+- In ordinary application operations, archive rather than permanently delete.
+  Restore only to the exact `archived_from_status` value.
+- Full durable-workspace erasure is a separate service workflow; preserve its
+  verified ownership, manifest, lifecycle, and atomic write-guard prerequisites in
+  [ADR 0007](docs/adr/0007-durable-workspace-manifest-and-erasure.md).
+  Demo expiry/TTL is not durable erasure, and no destructive account UI exists.
 - Repeating the current status is an idempotent no-op with no version or
   activity change.
 - Require `applied_date` after a record leaves `DRAFT`; an archived former draft
@@ -123,9 +138,10 @@ planned AWS resources as already deployed.
   migration/reset consequence.
 - Do not create or mutate tables during application startup. Schema operations
   remain explicit operator commands.
-- Do not turn planned Cognito, S3, EventBridge, SES, CDK, or CI/CD work into a
+- Do not turn Cognito, S3, EventBridge, SES, CDK, or CI/CD into a
   hidden dependency of the local demo.
-- Do not permanently delete applications or ordinary activity history.
+- Do not permanently delete applications or activity history through ordinary
+  operations; full-workspace erasure is limited to the guarded workflow above.
 - Do not edit generated `dist/`, `node_modules/`, virtual environments, caches,
   or unrelated dirty-worktree changes.
 - Do not rewrite or remove `Diagrams/` because code and diagrams differ; update
@@ -156,7 +172,30 @@ Never point reset or reconciliation scripts at a deployed table.
 ## Testing expectations
 
 Run targeted tests while iterating. Before handing off a completed change, run
-all checks affected by that change; for a cross-stack change, run the full set:
+all checks affected by that change; for a cross-stack change, run the full
+backend/frontend set below plus any affected specialized gates.
+
+The [quality workflow](.github/workflows/quality.yml) defines CI-enforced gates.
+Select additional verification by the changed surface:
+
+- Infrastructure/CDK or physical DynamoDB schema changes: follow the
+  [infra guide](infra/README.md) for typechecking, unit tests, both environment
+  synths, real-artifact verification, and schema parity. Data/access-pattern
+  changes also require the relevant backend tests below.
+- Lambda runtime/packaging changes: follow the [backend guide](backend/README.md)
+  for reproducible ZIP builds and isolated runtime validation. Real synth requires
+  and verifies an existing ZIP/manifest; it does not build them.
+- Static hosting, build configuration, or header changes: follow the
+  [frontend guide](frontend/README.md) for hosting tests and deployment-style build
+  verification; include infra gates when CDK definitions change.
+- Security/dependency changes: include affected authorization/privacy tests and
+  relevant CI audit, dependency, SBOM, and API-contract gates; see the
+  [supply-chain guide](docs/supply-chain.md) for supporting procedures.
+
+Ordinary frontend changes use the frontend checks and browser QA below without
+unrelated infra qualification. Documentation-only changes need diff, link, and
+source-evidence checks; application builds/tests need a specific behavioral reason.
+Local verification does not authorize deployment or other AWS operations.
 
 ```bat
 backend\.venv\Scripts\python.exe -m ruff check backend
