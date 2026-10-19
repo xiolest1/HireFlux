@@ -177,7 +177,12 @@ is changed by infrastructure. There is no extra index, stream or replica.
 and TTL constant. The explicit `infra` schema-parity command compares both
 synthesized templates, with key/index/projection/type/TTL drift tests and CI.
 See [infra commands](../infra/README.md#dynamodb-definition-and-schema-parity-phase-3c).
-Normal synth remains standalone and never calls Python or builds/reads the ZIP.
+Normal CLI synth does not invoke Python or build the Lambda ZIP. It requires the
+existing `artifacts/lambda/hireflux-backend-lambda.zip` and adjacent manifest,
+reading and verifying their contents against current source and packaging inputs
+before binding the asset. The explicit schema-parity command also uses this
+verified-artifact path; infrastructure unit tests inject a fixture instead. See
+[artifact binding](../infra/README.md#backend-api-definition-and-artifact-binding-phase-3d).
 
 Each local cloud template contains one table with generated physical naming and
 the stable WorkspaceTable identity; no table is deployed. Staging uses PITR off,

@@ -1,5 +1,37 @@
 # HireFlux development log
 
+## 2026-10-19 — Staging infrastructure and initial build succeeded; HTTPS readiness stopped
+
+Resumed the October 18 provider handoff after a fresh owner-controlled temporary
+AWS login and refreshed cost/lab/supervision acceptance. Exact STS/profile/region,
+qualified main `6396f89`, five CI jobs, official artifact, bootstrap/IAM, labs,
+Lambda headroom and all three published asset versions passed fresh checks.
+Independently reviewed the already-prepared 22-Add change set and executed it
+once. CloudFormation and all 22 resources reached CREATE_COMPLETE with no failed
+events. Forty configuration checks, five alarms, six dashboard widgets, USD10
+budget and 18 actual resource-tag proofs passed. Bootstrap and published versions
+were unchanged after deployment. AWS automatically created its standard API
+Gateway service-linked role; its exact trust/managed policy was reviewed, resolving
+the scoped inventory difference without a manual IAM change.
+
+Corrected only separate ignored read-only verifier candidates for Amplify physical
+ARNs, case-insensitive CORS header names and log ARN representations; frozen
+originals and all API/security guards remained intact. Four positive/28 negative
+offline cases passed. No deployable source, dependency or architecture changed.
+
+One approved initial Amplify StartJob request created job 1. The launcher returned
+STOP on a zero-padded job-ARN comparison; independent reads proved BUILD/DEPLOY/
+VERIFY SUCCEED for the qualified revision. Its 39-file artifact passed verification
+under managed Node 22.23.3. No second request was made. The bounded public HTTPS
+reader then returned STOP; its exact failing assertion remains to be isolated.
+Infrastructure/build success is not a complete Phase 4D readiness pass. No backend
+invocation, demo/browser E2E, Phase 4E, further mutation or teardown followed.
+
+See the [current outcome and precise resume boundary](phase4d-provider-recovery-outcome.md#october-19-staging-deployment-and-initial-build).
+Source HEAD remains unchanged; these documentation updates are local and unpushed
+to avoid triggering an unnecessary automatic build. Existing manual cost controls
+remain in force; actual incremental spend and billing-tag coverage are unverified.
+
 ## 2026-10-16 — Provider recovery authorized; minimal budget correction qualified
 
 Corrected only the Budgets metric to `UnblendedCost` and added a rendered

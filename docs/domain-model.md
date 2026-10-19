@@ -31,12 +31,13 @@ from server configuration or a future trusted profile source.
 ## Durable workspace readiness
 
 `DurableWorkspace` contains `owner_user_id`, `identity_kind`, `bootstrap_version`
-(currently 1), `state` (`PROVISIONING` or `ACTIVE`), `created_at`, and `updated_at`.
-It has no TTL field. Normal bootstrap atomically creates `ACTIVE` metadata plus
-profile and default settings; `PROVISIONING` supports safe incomplete-record
-recovery. Existing records are preserved with conditional checks. Counters remain
-lazy and an absent counter represents zero. This lifecycle does not implement
-account deletion states, manifests, write guards, or erasure.
+(currently 1), `state` (`PROVISIONING`, `ACTIVE`, `DELETING`, or `DELETED`),
+`created_at`, `updated_at`, and optional `application_manifest_version`,
+`deletion_started_at`, and `deletion_completed_at`. It has no TTL field. Normal
+bootstrap atomically creates `ACTIVE` metadata plus profile and default settings;
+`PROVISIONING` supports safe incomplete-record recovery. Existing records are
+preserved with conditional checks. Counters remain lazy and an absent counter
+represents zero.
 
 `POST /api/v1/me/bootstrap` accepts no authoritative client fields and always
 initializes the authenticated durable owner. It returns readiness/version,
@@ -49,6 +50,28 @@ writes. Missing settings in an already active workspace return a conflict becaus
 preferences cannot safely be reconstructed; missing profiles can be recovered
 from the trusted source. Defaults are UTC, 7 follow-up days, ACTIVE application
 view, 30d dashboard range, SYSTEM theme, and settings version 1.
+
+Durable application creation atomically adds a minimal owner-scoped manifest
+reference, retained through archive/restore and child changes. Fresh empty durable
+workspaces have `application_manifest_version=1`; older LOCAL workspaces require
+explicit verified local backfill before full JSON export or erasure. Ordinary
+durable mutations condition-check ACTIVE state, owner provenance, bootstrap
+version, and absence of TTL in the same transaction as their resource changes.
+Demos retain signed expiry and TTL without durable manifest references or guards,
+and cannot use durable erasure.
+
+The implemented local erasure API conditionally freezes `ACTIVE` to `DELETING`,
+blocking ordinary access, exports, bootstrap, and writes that passed earlier
+preflight. Bounded retries use strongly consistent manifest and canonical queries
+to erase application partitions and owner data, including activity; this is
+separate from ordinary application archival. Unfinished work stays `DELETING` and
+resumes from remaining server-owned references/items. Strong verification precedes
+terminal `DELETED`, leaving only a minimal non-TTL lifecycle tombstone that
+bootstrap cannot resurrect. There is no destructive account UI; provider identity
+deletion/revocation and historical backup erasure are outside this live-table
+contract. Tombstone retention remains provisional. See
+[ADR 0007](adr/0007-durable-workspace-manifest-and-erasure.md) for prerequisites,
+safety guarantees, and future hosted-account boundaries.
 
 ## Application
 
