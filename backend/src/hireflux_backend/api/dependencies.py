@@ -1,10 +1,11 @@
+import re
 from typing import Annotated
 
-from fastapi import Depends, Header, Request
+from fastapi import Depends, Request
 
 from hireflux_backend.application.demo_sessions import DemoSessionService
 from hireflux_backend.application.errors import (
-    AuthenticationUnavailableError,
+    AuthenticationRequiredError,
     DemoSessionRequiredError,
 )
 from hireflux_backend.application.opportunity_workspace import OpportunityWorkspaceService
@@ -14,9 +15,10 @@ from hireflux_backend.application.workspace_bootstrap import WorkspaceBootstrapS
 from hireflux_backend.application.workspace_export import WorkspaceExportService
 from hireflux_backend.application.workspace_safety import WorkspaceErasureService
 from hireflux_backend.auth.demo import identity_from_claims
-from hireflux_backend.auth.local import identity_from_settings
+from hireflux_backend.auth.local import identity_from_settings, profile_attributes_from_settings
+from hireflux_backend.auth.principal import VerifiedPrincipal
 from hireflux_backend.config import AuthMode, Settings
-from hireflux_backend.domain.models import CurrentIdentity
+from hireflux_backend.domain.models import CurrentIdentity, IdentityKind, TrustedProfileAttributes
 
 
 def get_settings(request: Request) -> Settings:
@@ -26,19 +28,49 @@ def get_settings(request: Request) -> Settings:
 def get_current_identity(
     request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
-    authorization: Annotated[str | None, Header()] = None,
 ) -> CurrentIdentity:
-    if settings.auth_mode is AuthMode.LOCAL:
+    capabilities = settings.enabled_auth_capabilities
+    if capabilities == (AuthMode.LOCAL,):
         return identity_from_settings(settings)
-    if settings.auth_mode is AuthMode.DEMO:
-        if authorization is None:
-            raise DemoSessionRequiredError("Start a demo workspace to continue.")
-        scheme, separator, token = authorization.partition(" ")
-        if scheme.lower() != "bearer" or not separator or not token.strip() or len(token) > 2_048:
+    required = (
+        DemoSessionRequiredError
+        if capabilities == (AuthMode.DEMO,)
+        else AuthenticationRequiredError
+    )
+    values = request.headers.getlist("authorization")
+    if len(values) != 1 or len(values[0].encode("utf-8")) > 8192:
+        raise required("A valid session is required.")
+    match = re.fullmatch(r"(?i:Bearer) ([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)", values[0])
+    if match is None:
+        raise required("A valid session is required.")
+    token = match[1]
+    segments = token.count(".") + 1
+    if segments == 2 and AuthMode.DEMO in capabilities:
+        if len(token) > 2048:
             raise DemoSessionRequiredError("A valid demo session is required.")
-        claims = request.app.state.demo_session_codec.verify(token.strip())
-        return identity_from_claims(claims)
-    raise AuthenticationUnavailableError("Cognito authentication is not configured yet.")
+        return identity_from_claims(request.app.state.demo_session_codec.verify(token))
+    if segments == 3 and AuthMode.COGNITO in capabilities:
+        context = request.scope.get("aws.context")
+        remaining = context.get_remaining_time_in_millis() / 1000 if context is not None else None
+        principal: VerifiedPrincipal = request.app.state.cognito_authentication.authenticate(
+            token, remaining_seconds=remaining
+        )
+        request.state.verified_principal = principal
+        return principal.identity
+    raise required("A valid session is required.")
+
+
+def get_trusted_profile(
+    request: Request,
+    identity: Annotated[CurrentIdentity, Depends(get_current_identity)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> TrustedProfileAttributes | None:
+    if identity.kind is IdentityKind.LOCAL:
+        return profile_attributes_from_settings(settings)
+    if identity.kind is IdentityKind.PERSISTENT:
+        principal: VerifiedPrincipal = request.state.verified_principal
+        return principal.profile
+    return None
 
 
 def get_user_service(request: Request) -> UserService:
@@ -93,6 +125,7 @@ OpportunityWorkspaceServiceDependency = Annotated[
 ]
 DemoSessionServiceDependency = Annotated[DemoSessionService, Depends(get_demo_session_service)]
 SettingsDependency = Annotated[Settings, Depends(get_settings)]
+TrustedProfileDependency = Annotated[TrustedProfileAttributes | None, Depends(get_trusted_profile)]
 WorkspaceResourceServiceDependency = Annotated[
     WorkspaceResourceService, Depends(get_workspace_resource_service)
 ]

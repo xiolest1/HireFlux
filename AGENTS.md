@@ -12,9 +12,10 @@ seeded with fictional data. Durable local workspaces also support explicit
 bootstrap, strong inventory, guarded erasure, and bounded export; real persistent
 account authentication remains deferred.
 
-The [latest recorded AWS checkpoint](docs/phase4d-provider-recovery-outcome.md#october-19-staging-deployment-and-initial-build)
-records staging infrastructure and initial-build completion, with public HTTPS
-readiness blocked. It is dated evidence, not fresh live-state verification.
+The [latest recorded AWS checkpoint](docs/phase4h-staging-acceptance.md)
+records qualified acceptance of deployed staging after bounded Phase 4D–4G
+checks. Additional tests remain paused; only owner-supervised fictional-demo
+evaluation is accepted. It is dated evidence, not fresh live-state verification.
 Historical approvals and results are not standing authorization for AWS actions.
 
 - `frontend/`: React, TypeScript, Vite, React Router, TanStack Query, Zod, and

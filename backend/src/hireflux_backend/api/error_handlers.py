@@ -7,6 +7,9 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from hireflux_backend.application.errors import (
+    AccountManagementUnavailableError,
+    AccountNotVerifiedError,
+    AuthenticationRequiredError,
     AuthenticationUnavailableError,
     ConflictError,
     DemoProvisioningInProgressError,
@@ -16,6 +19,7 @@ from hireflux_backend.application.errors import (
     InvalidCursorError,
     NotFoundError,
     PersistenceError,
+    SessionExpiredError,
     ValidationError,
     WorkspaceBootstrapConflictError,
     WorkspaceBootstrapRequiredError,
@@ -41,6 +45,10 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(InvalidCursorError, invalid_cursor_handler)
     app.add_exception_handler(PersistenceError, persistence_handler)
     app.add_exception_handler(AuthenticationUnavailableError, authentication_handler)
+    app.add_exception_handler(AuthenticationRequiredError, account_authentication_handler)
+    app.add_exception_handler(SessionExpiredError, account_authentication_handler)
+    app.add_exception_handler(AccountNotVerifiedError, account_not_verified_handler)
+    app.add_exception_handler(AccountManagementUnavailableError, account_management_handler)
     app.add_exception_handler(ForbiddenError, forbidden_handler)
     app.add_exception_handler(DemoSessionRequiredError, demo_session_required_handler)
     app.add_exception_handler(DemoSessionExpiredError, demo_session_expired_handler)
@@ -132,7 +140,32 @@ async def authentication_handler(request: Request, error: Exception) -> JSONResp
         request,
         503,
         "AUTHENTICATION_UNAVAILABLE",
-        "Authentication is not configured for this environment.",
+        "Authentication is temporarily unavailable. Please try again.",
+    )
+
+
+async def account_authentication_handler(request: Request, error: Exception) -> JSONResponse:
+    expired = isinstance(error, SessionExpiredError)
+    response = _response(
+        request,
+        401,
+        "SESSION_EXPIRED" if expired else "AUTHENTICATION_REQUIRED",
+        "This account session has expired." if expired else "A valid account session is required.",
+    )
+    response.headers["WWW-Authenticate"] = "Bearer"
+    return response
+
+
+async def account_not_verified_handler(request: Request, error: Exception) -> JSONResponse:
+    return _response(request, 403, "ACCOUNT_NOT_VERIFIED", "A verified account is required.")
+
+
+async def account_management_handler(request: Request, error: Exception) -> JSONResponse:
+    return _response(
+        request,
+        403,
+        "ACCOUNT_MANAGEMENT_UNAVAILABLE",
+        "Account management is currently unavailable.",
     )
 
 

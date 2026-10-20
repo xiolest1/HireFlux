@@ -11,6 +11,7 @@ from hireflux_backend.api.error_handlers import register_exception_handlers
 from hireflux_backend.api.export_schemas import export_record_size
 from hireflux_backend.api.routes import (
     applications,
+    auth,
     demo_sessions,
     health,
     insights,
@@ -30,8 +31,10 @@ from hireflux_backend.application.services import ApplicationService, UserServic
 from hireflux_backend.application.workspace_bootstrap import WorkspaceBootstrapService
 from hireflux_backend.application.workspace_export import WorkspaceExportService
 from hireflux_backend.application.workspace_safety import WorkspaceErasureService
+from hireflux_backend.auth.cognito import CognitoVerifier
 from hireflux_backend.auth.demo import DemoSessionCodec
-from hireflux_backend.config import Settings, get_settings
+from hireflux_backend.auth.principal import CognitoAuthentication
+from hireflux_backend.config import AuthMode, Settings, get_settings
 from hireflux_backend.cors_policy import CorsPolicy
 from hireflux_backend.infrastructure.dynamodb.client import build_dynamodb_client
 from hireflux_backend.infrastructure.dynamodb.cursor import CursorCodec
@@ -60,6 +63,7 @@ def create_app(
     *,
     dynamodb_client: Any | None = None,
     cors_policy: CorsPolicy | None = None,
+    cognito_authentication: CognitoAuthentication | None = None,
 ) -> FastAPI:
     configured = settings or get_settings()
     client = dynamodb_client or build_dynamodb_client(configured)
@@ -74,6 +78,11 @@ def create_app(
         openapi_url="/openapi.json" if configured.expose_api_docs else None,
     )
     app.state.settings = configured
+    app.state.cognito_authentication = (
+        cognito_authentication or CognitoVerifier(configured)
+        if AuthMode.COGNITO in configured.enabled_auth_capabilities
+        else None
+    )
     app.state.workspace_bootstrap_service = WorkspaceBootstrapService(
         DynamoWorkspaceBootstrapRepository(client, configured.dynamodb_table_name)
     )
@@ -181,6 +190,7 @@ def create_app(
 
     register_exception_handlers(app)
     app.include_router(health.router)
+    app.include_router(auth.router)
     app.include_router(demo_sessions.router)
     app.include_router(me.router)
     app.include_router(applications.router)

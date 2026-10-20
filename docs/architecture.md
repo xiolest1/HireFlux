@@ -3,7 +3,7 @@
 The canonical end-to-end architecture overview is
 [ARCHITECTURE.md](../ARCHITECTURE.md). It documents the implemented local
 system, dependency boundaries, authentication and authorization flow, DynamoDB
-model, read/write flows, planned AWS staging architecture, service-selection
+model, read/write flows, AWS staging architecture, service-selection
 rationale, security posture, and deferred services.
 
 For deployment/recovery status, use the dated checkpoint linked below. Earlier
@@ -12,13 +12,17 @@ snapshots, not fresh AWS inventory or permission to repeat operations.
 
 Detailed supporting contracts remain in this directory:
 
+- [Locally implemented backend Cognito foundation — Phase 5B](phase5b-backend-cognito-handoff.md)
+- [Accepted Phase 5A implementation contract](phase5a-cognito-implementation-contract.md)
+
 - [DynamoDB access patterns](dynamodb-access-patterns.md)
 - [Domain model](domain-model.md)
 - [Application status transitions](status-transitions.md)
 - [Dashboard and analytics](dashboard-and-analytics.md)
 - [Home implementation contract](home-implementation-contract.md) — current semantics and links through the earlier design/research chain.
 - [Deployment environments](deployment-environments.md)
-- [Latest recorded AWS checkpoint — October 19](phase4d-provider-recovery-outcome.md#october-19-staging-deployment-and-initial-build)
+- [Final staging acceptance — October 20, with explicit qualifications](phase4h-staging-acceptance.md)
+- [Sanitized staging evidence index and local preservation limits](phase4h-evidence-index.json)
 - [Roadmap](roadmap.md)
 - [Production account readiness and Phase 2/3A–3G handoffs](production-account-readiness.md)
 - [Final combined AWS review and Phase 4 conditions](production-account-readiness.md#46-phase-3g-final-synthesized-review-and-handoff)

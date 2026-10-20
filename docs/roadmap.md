@@ -1,7 +1,12 @@
 # Roadmap
 
-For the latest recorded AWS disposition and remaining gates, use the
-[October 19 provider-recovery checkpoint](phase4d-provider-recovery-outcome.md#october-19-staging-deployment-and-initial-build).
+For the final recorded AWS staging disposition and remaining qualifications, use
+the [October 20 Phase 4H acceptance and evidence freeze](phase4h-staging-acceptance.md)
+and [sanitized evidence index](phase4h-evidence-index.json), together with the
+[Phase 4G financial update](phase4g-operations-reliability-cost-verification.md),
+the [Phase 4F browser qualifications](phase4f-hosted-browser-verification.md),
+the [Phase 4E live backend qualifications](phase4e-live-backend-verification.md)
+and historical [provider-recovery checkpoint](phase4d-provider-recovery-outcome.md#october-19-staging-deployment-and-initial-build).
 It is dated operational evidence, not fresh live-state verification or permission
 for another deployment, build, or recovery action.
 
@@ -85,18 +90,50 @@ deferred.
   is timed to 4D, with post-resource tag activation subject to separate approval
   and 4G coverage review. See the
   [deployment contract](phase4c-deployment-contract.md).
-- **Phase 4D — public HTTPS readiness blocked:** follow the provider-recovery
-  checkpoint above for recorded infrastructure/build results and the resume boundary.
+- **Phase 4D — completed:** staging infrastructure, initial build and bounded
+  public HTTPS readiness passed; the separate verifier's root-bootstrap path
+  assumption was resolved without changing the deployed app. See the
+  [dated resolution](phase4d-provider-recovery-outcome.md#october-19--https-verifier-resolved-bounded-phase-4e-completed).
   The [October 15 CLI stop](phase4d-deployment-outcome.md),
   [October 16 rollback](phase4d-recovery-outcome.md) and
   [October 18 handoff](phase4d-provider-recovery-handoff.md) remain historical
   evidence, not unused operational authorization.
-- **Phase 4E–4H — deferred:** live backend; hosted browser E2E;
-  operations/scaling/cost; final staging evidence freeze. L09 is partly satisfied
-  by assets/change-set review; remaining live acceptance gates stay open. Production is
-  still deferred.
-- **Phase 5 — deferred:** real Cognito accounts in staging; direct verified Cognito
-  `sub` ownership remains the approved direction.
+- **Phase 4E — passed with explicit qualifications:** bounded real backend
+  contracts, isolation, persistence, item TTL samples and API diagnostics passed.
+  Natural signed expiry, physical TTL cleanup, live secret-failure behavior and
+  Lambda warning/error delivery remain unverified. See the
+  [live backend handoff](phase4e-live-backend-verification.md).
+- **Phase 4F — passed with explicit qualifications:** hosted browser workflows,
+  responsive views, session exit and existing artifact/entry-byte verification
+  passed. An unrelated preference save marks the unchanged automatic zone manual;
+  live UI conflict display and exhaustive browser network coverage remain
+  unverified. See the [browser handoff](phase4f-hosted-browser-verification.md)
+  for the owner acceptance/repair boundary and 4G entry conditions.
+- **Phase 4G — passed with explicit qualifications; cash-funded baseline accepted; billable tests paused:** unchanged
+  resources, existing metrics, logs and low-cost projections verified without
+  additional API traffic. Root Bills now shows $1.77 applied credits / $0.00
+  estimated payable; approximately $1.77 gross at displayed precision, versus
+  Billing Home $1.78. Root Credits shows $118.07 estimated remaining but both
+  grants are marked Expired on October 6, with inconsistent category/history
+  displays. No usable coverage is established. The owner explicitly accepted
+  cash funding without a promotional offset and retained the test pause. No additional
+  billable test traffic is authorized without explicit resume. The owner accepted
+  the operational qualifications for the final staging decision.
+  See the [operations/cost handoff](phase4g-operations-reliability-cost-verification.md).
+- **Phase 4H — complete with explicit qualifications:** L01–L20 reconciled and
+  source/artifact/evidence identities frozen for limited owner-supervised private
+  fictional-demo evaluation. Unperformed expiry, cleanup, fault and browser paths
+  remain unverified; L17 is N/A with blank email. The test pause remains active;
+  no invitations, unattended use, maintenance release or Phase 5 starts implicitly.
+  See the [final acceptance](phase4h-staging-acceptance.md). Broader/production
+  safeguards and the original Phase 5–7 gates remain deferred.
+- **Phase 5A — complete:** accepted Cognito architecture/implementation contract.
+- **Phase 5B — complete locally with explicit qualifications:** additive backend
+  authentication, trusted JWT/provider admission and empty persistent accounts;
+  [implementation/results](phase5b-backend-cognito-handoff.md). No cloud release.
+- **Phase 5C — not authorized:** frontend OAuth and persistent-account experience.
+- **Phase 5D — not authorized:** account safety, Cognito CDK and offline release qualification.
+- **Phase 5E — not authorized:** controlled staging update and live verification.
 - **Phase 6 — deferred:** production hardening and release qualification.
 - **Phase 7 — deferred:** production deployment after the preceding gates.
 
@@ -142,7 +179,7 @@ implement this account authentication capability.
 
 Dependencies: stable identity port and deployed-environment configuration design.
 
-This milestone is needed only if HireFlux expands beyond the temporary demo workspace. Acceptance criteria: signup, verification, login, reset flows; server-side JWT signature/issuer/audience/token-use/expiry validation; Cognito `sub` profile linking; role claims; and proof that local auth cannot start in deployed environments.
+This milestone is needed only if HireFlux expands beyond the temporary demo workspace. Acceptance criteria: signup, verification, login and reset flows; server-side access-token signature/issuer/client/scopes/token-use/expiry verification and trusted admission; direct Cognito `sub` ownership; STANDARD_USER only with no group/custom-role grants; and proof that local auth cannot start in deployed environments. Phase 5A–5E above defines its approved implementation sequence.
 
 ## Milestone 4 - private attachments
 

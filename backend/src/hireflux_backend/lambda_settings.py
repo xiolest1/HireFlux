@@ -85,8 +85,8 @@ def get_lambda_settings(*, secrets_client: Any | None = None) -> Settings:
         )
     environment = os.environ["ENVIRONMENT"]
     auth_mode = os.environ["AUTH_MODE"]
-    if (environment, auth_mode) not in {("staging", "demo"), ("production", "cognito")}:
-        raise RuntimeError("Lambda requires staging/demo or production/cognito configuration.")
+    if environment not in {"staging", "production"} or auth_mode not in {"demo", "cognito"}:
+        raise RuntimeError("Invalid Lambda environment/authentication pairing.")
     get_lambda_cors_policy()
     region = os.environ["AWS_REGION"]
     cursor_reference, demo_reference = _secret_references(region)

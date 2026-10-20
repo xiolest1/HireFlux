@@ -5,6 +5,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
+from cognito_fixtures import COGNITO_CONFIG
 from conftest import test_settings as build_test_settings
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -136,6 +137,7 @@ def test_api_documentation_exposure_follows_environment_configuration(
         build_test_settings(
             environment="production",
             auth_mode="cognito",
+            **COGNITO_CONFIG,
             cursor_signing_key="production-cursor-signing-key-at-least-32-bytes",
         ),
         dynamodb_client=dynamodb_client,

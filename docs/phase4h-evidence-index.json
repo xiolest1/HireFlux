@@ -1,0 +1,1523 @@
+{
+  "schema_version": 1,
+  "phase": "4H",
+  "frozen_at_utc": "2026-10-20T05:45:31.527338+00:00",
+  "local_date": "2026-10-20",
+  "time_zone": "America/New_York",
+  "disposition": "PASS WITH EXPLICIT QUALIFICATIONS — supervised staging accepted under documented restrictions",
+  "scope": "Limited owner-supervised private fictional-demo evaluation; evidence decision only",
+  "tests_remain_paused": true,
+  "unattended_or_broader_release_authorized": false,
+  "phase5_started": false,
+  "verification_boundary": {
+    "phase4h": "Offline local source/artifact/hash/document checks only",
+    "infrastructure_and_hosting_last_observed_local_date": "2026-10-19",
+    "financial_observations_local_date": "2026-10-20",
+    "aws_or_github_api_reads": 0,
+    "application_requests": 0,
+    "credential_operations": 0,
+    "builds_deployments_or_mutations": 0,
+    "fresh_remote_state_claimed": false
+  },
+  "identities": {
+    "masked_account": "********9465",
+    "region": "us-east-1",
+    "operator_profile": "hireflux-operator",
+    "stack": "hireflux-staging",
+    "stack_last_verified_status": "CREATE_COMPLETE",
+    "expected_stack_resources": 22,
+    "qualified_backend_revision": "6396f89e8a5eccc7f21b5f699833dd85a1e48409",
+    "lambda_zip_sha256": "4fb0923cd4fb0e817c0a6b9ceb724218c6cbb4cfab0462fd6ccceec1ce8b75d3",
+    "bound_template_sha256": "106222638171615bfdedaa1e99f612381c6dfcc4c105ac22aec05a1f359aa21d",
+    "ci_run_id": "38930507231",
+    "ci_run_attempt": 1,
+    "ci_artifact_id": "12059180559",
+    "ci_artifact_recorded_expiry_utc": "2027-01-14T16:15:29Z",
+    "official_ci_outer_archive_sha256": "f71d9095669b8afbde4f5469e44b233c7210260fe72d479b5b3670c2f46af9bc",
+    "amplify_app_id": "d31vp0nq9fzl6q",
+    "branch": "main",
+    "amplify_last_verified_job": "2",
+    "hosted_revision": "d3a8fb1a9b959d4dddbc6d1c32e3eac459b0f945",
+    "hosted_artifact_archive_sha256": "4867b5bf5fab0badc3c61730a0b3d6675ff02a1922fc6b1bda3ef5c4d43c0e71",
+    "hosted_archive_verification": "Preserved receipt-backed full verification; archive removed after prior verification; not downloaded in 4H",
+    "local_head": "2146fc3870f027c3d6d8f06720c46bb0b29b51a2",
+    "source_tree_ids": {
+      "6396f89e8a5eccc7f21b5f699833dd85a1e48409": {
+        "backend": "f679ae830a033de5a535f97049f77eae8d6e720e",
+        "frontend": "2817708809e54c8e2c4b7e64349594bd6bed98b7",
+        "infra": "678376a6eb381185d0de80253956285f5ffe1ce8"
+      },
+      "d3a8fb1a9b959d4dddbc6d1c32e3eac459b0f945": {
+        "backend": "f679ae830a033de5a535f97049f77eae8d6e720e",
+        "frontend": "2817708809e54c8e2c4b7e64349594bd6bed98b7",
+        "infra": "678376a6eb381185d0de80253956285f5ffe1ce8"
+      },
+      "2146fc3870f027c3d6d8f06720c46bb0b29b51a2": {
+        "backend": "f679ae830a033de5a535f97049f77eae8d6e720e",
+        "frontend": "2817708809e54c8e2c4b7e64349594bd6bed98b7",
+        "infra": "678376a6eb381185d0de80253956285f5ffe1ce8"
+      }
+    },
+    "hosted_origin": "https://main.d31vp0nq9fzl6q.amplifyapp.com",
+    "api_origin": "https://0z0fpmukik.execute-api.us-east-1.amazonaws.com"
+  },
+  "financial_boundary": {
+    "accepted_funding": "Cash-funded with USD0 assumed usable promotional coverage",
+    "bills_estimated_payable_usd": 0,
+    "bills_credits_applied_usd": 1.77,
+    "bills_gross_derived_at_display_precision_usd": 1.77,
+    "billing_home_month_to_date_usd": 1.78,
+    "whole_account_forecast_usd": 4.94,
+    "credits_estimated_remaining_display_usd": 118.07,
+    "both_grant_detail_statuses": "Expired 2026-10-06",
+    "credit_discrepancy_resolved": false,
+    "project_allocation": "UNVERIFIED; billing allocation tags last observed inactive",
+    "gross_monthly_model_usd": {
+      "idle_plus_small_storage": [
+        1.3,
+        2.3
+      ],
+      "maintenance": [
+        1.6,
+        2.6
+      ],
+      "limited_testers": [
+        3.2,
+        4.2
+      ]
+    },
+    "manual_controls_not_caps": {
+      "incremental_review_usd": 2,
+      "first_week_testing_stop_usd": 5,
+      "unexplained_daily_growth_investigate_usd": 1,
+      "monthly_above_review_usd": 10
+    }
+  },
+  "coverage": [
+    {
+      "id": "L01",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "exact CI/source/artifact scope and recorded 90-day artifact lifetime established. Finding F03 remains open; no permanent remote archive or fresh repository retention-policy audit claimed. [D01, D02, H01]",
+      "evidence_ids": [
+        "D01",
+        "D02",
+        "D03",
+        "H01"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Permanent archive and fresh repository retention-policy inspection"
+        }
+      ]
+    },
+    {
+      "id": "L02",
+      "status": "PASS",
+      "assessment": "dated non-root identity, staging account and region matched the reviewed target. No current-session validity claim. [D04, E01, F02]",
+      "evidence_ids": [
+        "D04",
+        "E01",
+        "F02"
+      ],
+      "unverified_elements": []
+    },
+    {
+      "id": "L03",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "lab context, supervised windows and current cash-funded financial acceptance recorded. Exact project spending delta remains UNVERIFIED. [D04, G01–G03]",
+      "evidence_ids": [
+        "D04",
+        "G01",
+        "G02",
+        "G03"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Precise HireFlux incremental gross cost"
+        }
+      ]
+    },
+    {
+      "id": "L04",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "toolkit version 32, 11 resources, termination protection, five role baselines, published assets and scoped runtime IAM verified under the approved broad deployer model. Lambda warning/error delivery remains UNVERIFIED under L15. [D04, D07–D10]",
+      "evidence_ids": [
+        "D04",
+        "D07",
+        "D08",
+        "D09",
+        "D10"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Lambda warning/error-log delivery (L15)"
+        }
+      ]
+    },
+    {
+      "id": "L05",
+      "status": "PASS",
+      "assessment": "actual total/unreserved concurrency was 1,000/1,000 before the deployment reserved five; required headroom passed. Reservation five was verified afterward. This is dated headroom, not a new quota request. [D04, D07]",
+      "evidence_ids": [
+        "D04",
+        "D07"
+      ],
+      "unverified_elements": []
+    },
+    {
+      "id": "L06",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "HireFlux-only regional GitHub App, private credential transfer and successful provider/build use recorded. Present PAT state and expiration effects are UNVERIFIED. [D01, D11, D14, F01]",
+      "evidence_ids": [
+        "D01",
+        "D11",
+        "D14",
+        "F01"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Present PAT state and integration behavior after expiry"
+        }
+      ]
+    },
+    {
+      "id": "L07",
+      "status": "PASS",
+      "assessment": "blank optional email and active manual monitoring accepted; no recipient inferred. [D05, D08, G01]",
+      "evidence_ids": [
+        "D05",
+        "D08",
+        "G01"
+      ],
+      "unverified_elements": []
+    },
+    {
+      "id": "L08",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "resource tags verified, billing allocation keys last observed Inactive. Manual whole-account review is the accepted supervised alternative; effective project attribution remains UNVERIFIED and unattended use is blocked. [D08, G01–G04]",
+      "evidence_ids": [
+        "D08",
+        "G01",
+        "G02",
+        "G03",
+        "G04",
+        "G07"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Effective activated cost allocation and complete project attribution"
+        }
+      ]
+    },
+    {
+      "id": "L09",
+      "status": "PASS",
+      "assessment": "exact corrected template/ZIP, 22 additions, approved role, masked parameters, blank email and normal rollback reviewed. [D02, D05, H01]",
+      "evidence_ids": [
+        "D02",
+        "D05",
+        "H01"
+      ],
+      "unverified_elements": []
+    },
+    {
+      "id": "L10",
+      "status": "PASS",
+      "assessment": "all expected resources CREATE_COMPLETE, no failed events, 40 configuration checks and later unchanged baseline reads. [D06–D08, F02, G04]",
+      "evidence_ids": [
+        "D06",
+        "D07",
+        "D08",
+        "F02",
+        "G04"
+      ],
+      "unverified_elements": []
+    },
+    {
+      "id": "L11",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "actual role/secret metadata, signing, successful health and bad-token 401 passed. Forced cold-versus-warm timing and live invalid/unavailable-secret 503 behavior remain UNVERIFIED. [D07, E01–E03]",
+      "evidence_ids": [
+        "D07",
+        "E01",
+        "E02",
+        "E03"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Forced cold/warm classification"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Live invalid/unavailable-secret 503 behavior"
+        }
+      ]
+    },
+    {
+      "id": "L12",
+      "status": "PASS",
+      "assessment": "actual successful build/revision, complete artifact inspection, bounded TLS/headers/assets/SPA/404/CORS and browser refresh passed. This is neither every file fetched independently from the edge nor every browser. [D11–D13, F01–F03, G09]",
+      "evidence_ids": [
+        "D11",
+        "D12",
+        "D13",
+        "F01",
+        "F02",
+        "F03",
+        "G09"
+      ],
+      "unverified_elements": []
+    },
+    {
+      "id": "L13",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "bounded backend/browser workflows, ownership, API 409 and CORS passed. UI 409 recovery, natural expired-session behavior, retry faults, CSV download and executed reset remain UNVERIFIED. [E01–E05, F01–F05]",
+      "evidence_ids": [
+        "E01",
+        "E02",
+        "E03",
+        "E04",
+        "E05",
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "UI 409 recovery"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Natural signed expiry"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Retry faults"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "CSV download"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Executed reset"
+        }
+      ]
+    },
+    {
+      "id": "L14",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "live schema/TTL configuration and temporary item expiry samples passed. Natural signed expiry rejection and physical TTL deletion remain UNVERIFIED; delayed cleanup is not authorization. [E04, E05, G04]",
+      "evidence_ids": [
+        "E04",
+        "E05",
+        "G04"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Natural signed expiry rejection"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Physical DynamoDB TTL deletion"
+        }
+      ]
+    },
+    {
+      "id": "L15",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "API JSON delivery and all 72 controlled request correlations established across bounded reads, with no observed credential/content leak. Lambda WARN/error delivery and a complete native cross-service ID bridge remain UNVERIFIED. [E05, G05, F05]",
+      "evidence_ids": [
+        "E05",
+        "E06",
+        "G05",
+        "F05"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Lambda warning/error-log delivery"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Complete native cross-service request-ID bridge"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Exhaustive log audit"
+        }
+      ]
+    },
+    {
+      "id": "L16",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "exact dimensions/math/policies, dashboard and positive native request/duration/capacity series verified. Fault-series publication and alarm delivery remain UNVERIFIED; OK with missing-data policy is not failure-path proof. [D08, G04, G05]",
+      "evidence_ids": [
+        "D08",
+        "G04",
+        "G05"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Forced failure-series publication"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Alarm delivery"
+        }
+      ]
+    },
+    {
+      "id": "L17",
+      "status": "NOT APPLICABLE",
+      "assessment": "email omitted; no SNS subscription or budget-email delivery claim. [D08, G04]",
+      "evidence_ids": [
+        "D08",
+        "G04"
+      ],
+      "unverified_elements": []
+    },
+    {
+      "id": "L18",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "configured reservation/throttles and bounded synchronous behavior were acceptable in the sample. Forced 429, overload, scaling, retries and recovery remain UNVERIFIED. [D07, E02, G05]",
+      "evidence_ids": [
+        "D07",
+        "E02",
+        "G05"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Forced 429/overload"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Scaling"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Retry and recovery fault paths"
+        }
+      ]
+    },
+    {
+      "id": "L19",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "budget filters, retained assets/backlog, account Billing and human cash/stop ownership recorded. Tags inactive, recipients absent, billing delayed and physical cleanup UNVERIFIED. [G01–G08]",
+      "evidence_ids": [
+        "G01",
+        "G02",
+        "G03",
+        "G04",
+        "G05",
+        "G06",
+        "G07",
+        "G08"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Exact project cost"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Physical TTL cleanup"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Complete billed usage after lag"
+        }
+      ]
+    },
+    {
+      "id": "L20",
+      "status": "PASS WITH QUALIFICATIONS",
+      "assessment": "this handoff and index freeze identities, results, risks and owner stop/recovery responsibilities. No shutdown/recovery drill or permanent off-machine archive was performed. [H01–H03, this document]",
+      "evidence_ids": [
+        "H01",
+        "H02",
+        "H03"
+      ],
+      "unverified_elements": [
+        {
+          "status": "UNVERIFIED",
+          "element": "Executed shutdown/recovery drill"
+        },
+        {
+          "status": "UNVERIFIED",
+          "element": "Permanent off-machine evidence archive"
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "D01",
+      "path": ".tools/phase4d-provider-recovery/source-ci-revalidation-20261019.json",
+      "sha256": "72ca0a9eab39e10d8764a0885f23e12cd00417159564518cd50dab50ab9076ae",
+      "bytes": 1248,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Qualified CI revision, five jobs, run/artifact identities and recorded expiry",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D02",
+      "path": ".tools/phase4d-provider-recovery/ci/artifact-verification.json",
+      "sha256": "753806b5579d80842cc6386fdfcbaa99c2f9cd24e52342c82590986bfdfb7e1c",
+      "bytes": 1061,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Official downloaded Linux artifact and canonical inner ZIP integrity",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D03",
+      "path": ".tools/phase4d-provider-recovery/source-review/qualification-summary.json",
+      "sha256": "7d848374a72e79f2740044073f0ddeb8b7b25778a58fbde456e755d80040409f",
+      "bytes": 1316,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Minimal provider budget correction and successful offline source qualification",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D04",
+      "path": ".tools/phase4d-provider-recovery/date-lapse-20261019T151406568293Z/summary.json",
+      "sha256": "c440461d7627a9a10d82b96e1d10e6c4dcdc345d534b353e8aa816f4a607b8e3",
+      "bytes": 2542,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Dated staging identity, labs, bootstrap, roles and actual concurrency headroom",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D05",
+      "path": ".tools/phase4d-provider-recovery/change-set-review/review-summary.json",
+      "sha256": "2578e8311627cadd1cdfc422524d99f680eb9483a68327cc3a9d8901a31e9acc",
+      "bytes": 3794,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Reviewed corrected template, 22 additions, approved execution role and parameters",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D06",
+      "path": ".tools/phase4d-provider-recovery/change-set-review/events-summary.json",
+      "sha256": "e89300b94b850faaaa92e86b4532909c7726e5c4bae8bb03a4504f3525f78a12",
+      "bytes": 144,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "All 22 expected resources completed without failed events",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D07",
+      "path": ".tools/phase4d-provider-recovery/postdeployment/summary.json",
+      "sha256": "2b68b71461a6edeeb296736e806c21e50109379dbd9500ca3755fa46e11736a8",
+      "bytes": 2586,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Forty actual runtime, infrastructure and security configuration checks",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D08",
+      "path": ".tools/phase4d-provider-recovery/postdeployment-observability/summary.json",
+      "sha256": "414179c228365909daaacbd3e5650af6c967405df0fba04118d914dd4077e41c",
+      "bytes": 1230,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Exact operational resources, budget scope, blank email and policies",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D09",
+      "path": ".tools/phase4d-provider-recovery/bootstrap-iam-20261019T152317882711Z/summary.json",
+      "sha256": "81c11e3d2338209c91a0d774153db14df67393bea99c6a091d624bd5eb1aeca1",
+      "bytes": 1344,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Protected toolkit and approved role/trust baselines",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D10",
+      "path": ".tools/phase4d-provider-recovery/asset-postdeployment-20261019/asset-integrity-summary.json",
+      "sha256": "7a440ad2b3208ddd75a40e25e58c485a457149a956859b753c260ee3844fbf16",
+      "bytes": 1857,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Previously published asset integrity",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D11",
+      "path": ".tools/phase4d-provider-recovery/amplify-build/job-1-20261019T155731494639Z.json",
+      "sha256": "bed224668335cc1527f37c74387ac4fd3cc59f7621e8d76e54d2f15c2a2a7f55",
+      "bytes": 2254,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Initial job 1 success and initial artifact, distinct from latest job 2",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D12",
+      "path": ".tools/phase4d-provider-recovery/https-readiness-diagnosis-20261019.json",
+      "sha256": "6083497a4504f6afb008605d56e63bdb349a0f59dfd4f935d2674b4386605100",
+      "bytes": 1888,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Bounded HTTPS readiness PASS after checker correction",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D13",
+      "path": ".tools/phase4d-provider-recovery/https-verifier-correction-proof-20261019.json",
+      "sha256": "f48455247128607dd4e04985b5555b4d841e4bc864c8f850ff97aa02bc8eb030",
+      "bytes": 1093,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Verifier-only correction validated locally without deployed application repair",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D14",
+      "path": ".tools/phase4d-provider-recovery/resume-owner-github-baseline-20261018.json",
+      "sha256": "b39f1a3316926ea09f194b2a4406c9a77bd64847a79933f985e3b4515ec27505",
+      "bytes": 1131,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-18",
+      "supports": "Historical HireFlux-only App and original/replacement PAT metadata; no present-validity claim",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "D15",
+      "path": ".tools/phase4d-provider-recovery/https-readiness-stop-20261019.json",
+      "sha256": "14c3f422b4947fcd568def88ec17763f66eebbce288d3901d10429f839e8d5fd",
+      "bytes": 442,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-16 through 2026-10-19",
+      "supports": "Historical HTTPS STOP retained, superseded by D12 and D13",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "E01",
+      "path": ".tools/phase4e/final-disposition.json",
+      "sha256": "eeb08f778907b0d60e856645f183103451666094e91421691cf5f0fbc2f40abd",
+      "bytes": 4097,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Accepted bounded backend outcome and 20-entry evidence manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "E02",
+      "path": ".tools/phase4e/continuation/backend-summary.json",
+      "sha256": "afc720d616dca9f1b357b8a595f1db097d67b43d1c43722e22e501e0d0eead3f",
+      "bytes": 11083,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Controlled continuation requests, status results and 263 passing assertions",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "E03",
+      "path": ".tools/phase4e/health.json",
+      "sha256": "841ef72cdc42673dd1a2dbbe77fd46e53425a36c82a74c473fe56702f9f3ec92",
+      "bytes": 986,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Two successful health observations, not forced cold/warm proof",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "E04",
+      "path": ".tools/phase4e/continuation/dynamodb-observations.json",
+      "sha256": "42fde75db948d4500082f449b3764fb0218fc25a840ee73ccbf412826c06b289",
+      "bytes": 562,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Strong projected temporary-item TTL and persistence samples",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "E05",
+      "path": ".tools/phase4e/final-readonly-observations.json",
+      "sha256": "2443aee159d488a7e0d13604b13adfdf00f0edf278bbf59609a58d6b7d0832f8",
+      "bytes": 9591,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Final controlled API correlation and unchanged runtime observations",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "E06",
+      "path": ".tools/phase4e/initial-readonly-observations/diagnostics.json",
+      "sha256": "2f23dc946a48ea930a59470a740a4b13091c78799416177e9a328b510e616844",
+      "bytes": 5394,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Initial controlled API request correlation; bounded pagination",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "E07",
+      "path": ".tools/phase4e/edit-activity-diagnosis.json",
+      "sha256": "dd55330edba747142cbba78bea45053f5655c8464368a8ba941104243a13fe85",
+      "bytes": 643,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Test assertion defect distinguished from correct ordinary-edit activity contract",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "E08",
+      "path": ".tools/phase4e/harness-correction.json",
+      "sha256": "a1fb281b5be312a15fa2968e24f55ba37c6b8683e3d35d09f4394d58531ae5d3",
+      "bytes": 1027,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Local qualification of corrected bounded backend runner",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "F01",
+      "path": ".tools/phase4f/final-disposition.json",
+      "sha256": "eda3b2f8a51b768d1bdb03fe99e2d2ddbe66c198e53a997ea1efeb19fc92380a",
+      "bytes": 4142,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Accepted bounded hosted-browser outcome and 19-entry manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "F02",
+      "path": ".tools/phase4f/metadata-baseline.json",
+      "sha256": "a9cb337324b40f70fbf247ca25b42894853da71ffeb016482b93c2df50953267",
+      "bytes": 3271,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Dated stack, source and latest job 2 identity",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "F03",
+      "path": ".tools/phase4f/hosted-verification.json",
+      "sha256": "1fc00d984a297469e6e89101396af2a46566241d80820dadcfe6d6b5aa05d0fc",
+      "bytes": 8977,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Complete job 2 artifact verification and selected served-byte hashes",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "F04",
+      "path": ".tools/phase4f/browser-observations.json",
+      "sha256": "7fb00a3b19fd608136a4adeb419016cbd90df07dfb0d575d75c0d6a90fed9946",
+      "bytes": 6661,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Actual browser workflows, responsive/focus samples and coverage limits",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "F05",
+      "path": ".tools/phase4f/operational-observations.json",
+      "sha256": "da6e0539bbf95ee4093c7decb1d77668806307415953fb9904ece4cd5e207e5b",
+      "bytes": 34941,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Bounded API observations during browser testing; not an exhaustive HAR",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "F06",
+      "path": ".tools/phase4f/settings-finding.json",
+      "sha256": "ecc0d9cf6b602bda4733b61f253192adaa6d81ff3c7f6542d2c6f59f3133ed9c",
+      "bytes": 1721,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Accepted low-priority Settings auto-detection defect, unrepaired",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "F07",
+      "path": ".tools/phase4f/preflight-reader-correction.json",
+      "sha256": "11743eb7531914d9c0ec7c1f65be65cd1aa1c2c775fca8bcfaf0c26e92a7748a",
+      "bytes": 484,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Read-only metadata reader correction, not an app repair",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "F08",
+      "path": ".tools/phase4f/cors-reader-correction.json",
+      "sha256": "a7299b36fec8fd291d609042521570360abd75f4568bdc213aac82f142c2bc74",
+      "bytes": 861,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "CORS header-name case correction, not an app repair",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G01",
+      "path": ".tools/phase4g/root-final-disposition.json",
+      "sha256": "859ae4eed658fa6adc22a88429d27294b1d910719f0d61462e4f832f3dd20331",
+      "bytes": 4322,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-20",
+      "supports": "Latest qualified cash-funded decision superseding historical financial BLOCK",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G02",
+      "path": ".tools/phase4g/root-financial-reverification.json",
+      "sha256": "47b519f9eb86b22fe4934128c4d575c9e4acd76b597c3708ea4d4a1a5e169ab0",
+      "bytes": 5896,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-20",
+      "supports": "Necessary root Bills/Credits aggregates and unresolved expiry/history discrepancy",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G03",
+      "path": ".tools/phase4g/root-financial-acceptance.json",
+      "sha256": "eb480ecb309e07a3206002c01dbaa6b6e8b4cdf682d053c4471601cab62cdefb",
+      "bytes": 1514,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-20",
+      "supports": "Explicit cash funding with no assumed usable promotional coverage; tests paused",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G04",
+      "path": ".tools/phase4g/configuration-continued.json",
+      "sha256": "06af71e1a40d1cd21fe631d6cd53c31cee1d2a27c5e859143536284cee088888",
+      "bytes": 110668,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Actual resource, alarm, dashboard and operational configuration",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G05",
+      "path": ".tools/phase4g/metrics.json",
+      "sha256": "69ed4475979654a23ffda5979ad29dabfd7bfb56d6e44c90c868536943e00650",
+      "bytes": 156288,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20 UTC",
+      "supports": "Existing low-volume native metric observations; no forced faults or load",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G06",
+      "path": ".tools/phase4g/retained-and-hosting.json",
+      "sha256": "fc129cfa327ee8a79744343e1071ca482ef059f86cfa0e842d50b3026b56ce65",
+      "bytes": 12995,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Retained/bootstrap asset storage, hosting and build metadata",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G07",
+      "path": ".tools/phase4g/billing.json",
+      "sha256": "6bd747e96a9254d91f017aa9e5272a46239a0529a8a4fc54310daab2f4ad0861",
+      "bytes": 18713,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Dated account-plan, shared allowance and inactive allocation-tag observations",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G08",
+      "path": ".tools/phase4g/aggregate.json",
+      "sha256": "1dc90eefc165bc13151c18bd158f3103a64597fea575ad0c79af8df01099c429",
+      "bytes": 9358,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Existing metrics/cost aggregation and original financial limits",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G09",
+      "path": ".tools/phase4g/static-entry.json",
+      "sha256": "99d237ab8954aea3efaf4e802b5fe91c57a9a9670fad004551584901945c4f7a",
+      "bytes": 1322,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Four existing static entry resources returned exact accepted bytes",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G10",
+      "path": ".tools/phase4g/hosting-log-sample.json",
+      "sha256": "044a57447dfb51410aa2e077a5b4f9f1030b2d4e7bcf46ef3b088276ceaf327c",
+      "bytes": 2639,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Sanitized status/category counts and evidence of public probes",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G11",
+      "path": ".tools/phase4g/hosting-usage.json",
+      "sha256": "dd7702855168d5f853ccb250c038bc620815fc03afc3f5f4dcd28bf459ace30c",
+      "bytes": 9408,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Native hosting request/transfer counts",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G12",
+      "path": ".tools/phase4g/final-disposition.json",
+      "sha256": "39334f9d703aa46b0489110062644c0cbcf8702e7434c69deee83fafb9a05460",
+      "bytes": 3739,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Historical financial BLOCK manifest preserved; superseded by G01",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "G13",
+      "path": ".tools/phase4g/owner-financial-hold-manifest.json",
+      "sha256": "d03ff3fa4a8c99d67dca4a70c08ba94cd09862d0786e9536f77b265e7e6d4dc3",
+      "bytes": 1249,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19",
+      "supports": "Historical owner hold preserved; cash acceptance did not unpause tests",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "H01",
+      "path": ".tools/phase4h/source-evidence-check.json",
+      "sha256": "f6b03561811d9db13b8243df30a36fcf4c09b2c130b5ce86781378d8572d1584",
+      "bytes": 11221,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-20",
+      "supports": "Offline source trees, local artifacts, 55 prior manifest entries and ledger reconciliation",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "H02",
+      "path": ".tools/phase4h/check-frozen-inputs.py",
+      "sha256": "1841ea62cc4335684aed88addaf70e30ddc59ac623ffc7d03409dff04003405e",
+      "bytes": 6674,
+      "kind": "offline_checker_source",
+      "observation_period": "2026-10-20",
+      "supports": "Offline checker source for H01; output is exclusive-create and must not be overwritten",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "H03",
+      "path": "docs/phase4h-staging-acceptance.md",
+      "sha256": "da094254456adb0c514e3eaa05490013388eebe06325311764df25a1c606cfda",
+      "bytes": 23652,
+      "kind": "acceptance_document",
+      "observation_period": "2026-10-20",
+      "supports": "Final acceptance, coverage, risk register, financial and stop ownership",
+      "depends_on_ignored_local_files": false,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "P01",
+      "path": "docs/production-account-readiness.md",
+      "sha256": "05109765b9298d1eb19d447d08fac563acd1413e98fc9e6b3d03c9b068c5997e",
+      "bytes": 379225,
+      "kind": "contract_or_handoff",
+      "observation_period": "Dated history through 2026-10-20",
+      "supports": "Source contract or dated phase handoff; H03 is the latest acceptance decision",
+      "depends_on_ignored_local_files": false,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "P02",
+      "path": "docs/phase4d-provider-recovery-outcome.md",
+      "sha256": "d7b922a862310d9acdb806ce232494da936d6e16afc763fa11dd164ae74e7ee1",
+      "bytes": 19462,
+      "kind": "contract_or_handoff",
+      "observation_period": "Dated history through 2026-10-20",
+      "supports": "Source contract or dated phase handoff; H03 is the latest acceptance decision",
+      "depends_on_ignored_local_files": false,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "P03",
+      "path": "docs/phase4e-live-backend-verification.md",
+      "sha256": "43c7f8daa6d727eebfdd901261cd614191271c3c192d0d400415a4592e470c1e",
+      "bytes": 17492,
+      "kind": "contract_or_handoff",
+      "observation_period": "Dated history through 2026-10-20",
+      "supports": "Source contract or dated phase handoff; H03 is the latest acceptance decision",
+      "depends_on_ignored_local_files": false,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "P04",
+      "path": "docs/phase4f-hosted-browser-verification.md",
+      "sha256": "96d2223d317cc3de9e1629b670394be733b883726517bbca2d76c814d0468f6d",
+      "bytes": 20596,
+      "kind": "contract_or_handoff",
+      "observation_period": "Dated history through 2026-10-20",
+      "supports": "Source contract or dated phase handoff; H03 is the latest acceptance decision",
+      "depends_on_ignored_local_files": false,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "P05",
+      "path": "docs/phase4g-operations-reliability-cost-verification.md",
+      "sha256": "eb9f002ccd33a50b2511bc4f218aa4021c8f90d583375fd767f9804a376046e8",
+      "bytes": 46462,
+      "kind": "contract_or_handoff",
+      "observation_period": "Dated history through 2026-10-20",
+      "supports": "Source contract or dated phase handoff; H03 is the latest acceptance decision",
+      "depends_on_ignored_local_files": false,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "A01",
+      "path": "infra/cdk.out/phase4d-provider-recovery-bound-staging/HireFlux-staging.template.json",
+      "sha256": "106222638171615bfdedaa1e99f612381c6dfcc4c105ac22aec05a1f359aa21d",
+      "bytes": 42914,
+      "kind": "local_artifact",
+      "observation_period": "Preserved 2026-10-19 inputs, offline rehashed 2026-10-20",
+      "supports": "Exact corrected bound template; raw template remains private local evidence",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "A02",
+      "path": "infra/cdk.out/phase4d-provider-recovery-bound-staging/asset.ee374ad8661035832c785da52fc5ad600c40f8989129b3d62ddd6b18bcf68202.zip",
+      "sha256": "4fb0923cd4fb0e817c0a6b9ceb724218c6cbb4cfab0462fd6ccceec1ce8b75d3",
+      "bytes": 26642450,
+      "kind": "local_artifact",
+      "observation_period": "Preserved 2026-10-19 inputs, offline rehashed 2026-10-20",
+      "supports": "Actual on-disk canonical Linux Lambda ZIP",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "A03",
+      "path": ".tools/phase4d-provider-recovery/ci/lambda-artifact-12059180559.zip",
+      "sha256": "f71d9095669b8afbde4f5469e44b233c7210260fe72d479b5b3670c2f46af9bc",
+      "bytes": 26173830,
+      "kind": "local_artifact",
+      "observation_period": "Preserved 2026-10-19 inputs, offline rehashed 2026-10-20",
+      "supports": "Actual on-disk outer official CI archive; inner ZIP verified without extraction",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S01",
+      "path": ".tools/phase4e/baseline/summary.json",
+      "sha256": "7aa94fb7f42ddf922b20980f3e271525245dab838c6155fea7376047050408c8",
+      "bytes": 2586,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S02",
+      "path": ".tools/phase4e/source-baseline.json",
+      "sha256": "726b83594bcc29b94d8db99a5ff7ef7e2f8fc30a649144605947fff2badb0b06",
+      "bytes": 306,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S03",
+      "path": ".tools/phase4e/stack-source-check.json",
+      "sha256": "56712c92b05c25d4e352fabd4bf0d3ed7f8a5ba8ee28c3ba0efaf4990c498104",
+      "bytes": 270,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S04",
+      "path": ".tools/phase4e/http-journal.json",
+      "sha256": "f46e55ed573b6c472a6119691283557177d175c06a5185103dbc3299c8380183",
+      "bytes": 6829,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S05",
+      "path": ".tools/phase4e/backend-summary.json",
+      "sha256": "bcda9b2bc7e811246515452928fba587afe333eb26ff735915531452b2b678ae",
+      "bytes": 5636,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S06",
+      "path": ".tools/phase4e/api-run-once.json",
+      "sha256": "8d23e5fb3ead38c325b43edee0cf13a14f98bb43b1b09ed81164a3d9c3bc2364",
+      "bytes": 202,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S07",
+      "path": ".tools/phase4e/initial-readonly-observations/dynamodb-observations.json",
+      "sha256": "e633acba6bf7c875e9655b72c57da86ad80a988f0bce5787f7a8430e07474ff8",
+      "bytes": 705,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S08",
+      "path": ".tools/phase4e/continuation-authorization.json",
+      "sha256": "a2a057b306ccd4974f0ee5c6dc541e8f4328a34c8e3299a8c73b5e059d4d53ca",
+      "bytes": 725,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S09",
+      "path": ".tools/phase4e/continuation/api-run-once.json",
+      "sha256": "42a491b013d091763687080d4de17a21d440dfa2d787dd52ed50e9885e109872",
+      "bytes": 202,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S10",
+      "path": ".tools/phase4e/continuation/http-journal.json",
+      "sha256": "ce7b807af7a518ea35127a288805abfcdb2ac7c53da4bdc934498396dea833c0",
+      "bytes": 14628,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S11",
+      "path": ".tools/phase4e/continuation/diagnostics.json",
+      "sha256": "3cfcf6243d3c335e7b604a68f7ad8a94312d2a8ffdfe76b0f7bee15ab11b24f0",
+      "bytes": 1364,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S12",
+      "path": ".tools/phase4e/continuation/test-data-inventory.json",
+      "sha256": "bafadaa939ece20c93028af6cdd11fe4e4de14b96f306f729092601e0c8e91e5",
+      "bytes": 599,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S13",
+      "path": ".tools/phase4e/test-data-inventory.json",
+      "sha256": "192bfd75198e74fd0c705c17abe583c60fd95cedfa075900565c681ebe5bd448",
+      "bytes": 689,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S14",
+      "path": ".tools/phase4f/billing-window.json",
+      "sha256": "624622dba83cc5c4b151f841ecc7e7809f917a2a0c8e8c0c2af6aab1007b317f",
+      "bytes": 488,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S15",
+      "path": ".tools/phase4f/artifact-verification.json",
+      "sha256": "2369d63ba46f7bd1524691eecda2efb0ba4c8fcc673eae9c7a4ded7695f20f41",
+      "bytes": 5031,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S16",
+      "path": ".tools/phase4f/browser-issuance-once.json",
+      "sha256": "507a969f76d9521e9ad219beab48bdc4693b60f86b485673b9c3ac786e269df7",
+      "bytes": 448,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S17",
+      "path": ".tools/phase4f/browser-console.json",
+      "sha256": "c10738eab2bd52f2b312228ffdcadd82d004846e41b12980514161613d7e9caa",
+      "bytes": 94,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S18",
+      "path": ".tools/phase4f/test-data-inventory.json",
+      "sha256": "83e72e2f2985ceaa7420b08407ffbe7d6bdb0c6004e9c1ed9545de2c335791aa",
+      "bytes": 637,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S19",
+      "path": ".tools/phase4f/static-scope-correction.json",
+      "sha256": "45f9985ee38fa889f14c45bbf5fe4977fca1e4855570de01b60eb2971b2f6873",
+      "bytes": 626,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S20",
+      "path": ".tools/phase4f/public-request-journal-initial-stop.json",
+      "sha256": "737347cbd72069df7aacc4681d20e84466c13e4775561c12e4e7997af190fb33",
+      "bytes": 2398,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S21",
+      "path": ".tools/phase4f/screenshots/application-archived-desktop.png",
+      "sha256": "4ab6f783b856ae26a7bc9f9c164ac2145e4ba105e5619ddcde65bc9cbea5a773",
+      "bytes": 89172,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S22",
+      "path": ".tools/phase4f/screenshots/home-desktop.png",
+      "sha256": "291ae9811e2645e0b2803fd18178ebfe8718a284d854d8dc2c805fde5e993be4",
+      "bytes": 84828,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S23",
+      "path": ".tools/phase4f/screenshots/home-mobile.png",
+      "sha256": "67bf05cd38e7d1288d1d84b48d0356f4691761696989b244ff441b66d077b500",
+      "bytes": 41804,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S24",
+      "path": ".tools/phase4f/screenshots/interview-mobile.png",
+      "sha256": "f7c058463f8a0c0709208d449af0a1e96ec097751f4b361b7da2edfbda534e70",
+      "bytes": 35444,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S25",
+      "path": ".tools/phase4f/screenshots/interviews-tablet.png",
+      "sha256": "200ca4971bf08344eaeb8a1ed9fd8d74f5a60518193cf614209e0c4ba6c6541f",
+      "bytes": 68690,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S26",
+      "path": ".tools/phase4g/billing-console-observations.json",
+      "sha256": "f1ddaa97cc4aca7f8a118aee2203640be34d44fe563673ac705fdf2c3c8c83af",
+      "bytes": 1191,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S27",
+      "path": ".tools/phase4g/check-documentation.py",
+      "sha256": "607164ecdc2a89a2b7b8234d73af25aedabec13edde570a8e38778d529aa690b",
+      "bytes": 2594,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S28",
+      "path": ".tools/phase4g/configuration.json",
+      "sha256": "34257251fbd9b6433433dc296ba8f04630d0ff803d57f9a5d11090d67a02ea6e",
+      "bytes": 79084,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S29",
+      "path": ".tools/phase4g/documentation-check.json",
+      "sha256": "24f1e080f681a401e6dd0093dae9a55f4db2be05398964376ac07842d6f4831b",
+      "bytes": 638,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S30",
+      "path": ".tools/phase4g/hosting-log-sample.py",
+      "sha256": "8734e412be1bac57401d40003a70b677dcc8d1e18b07246154e5821fe510de18",
+      "bytes": 3926,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S31",
+      "path": ".tools/phase4g/operations-readonly.py",
+      "sha256": "4b3c4746bad27f4894165c591b04bf56fafe78a679864923673186a0406108bc",
+      "bytes": 19252,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S32",
+      "path": ".tools/phase4g/static-entry-readonly.py",
+      "sha256": "df73fa7318b6c9592d1acd464d0dea115ed5a28ac07e971b84f796c9117d1c84",
+      "bytes": 2036,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    },
+    {
+      "id": "S33",
+      "path": ".tools/phase4g/summarize-offline.py",
+      "sha256": "7bbb4fc14dee963d03808da7838984fae9b2029e3f0e9e8afbddb0a0e9b0dcc8",
+      "bytes": 5916,
+      "kind": "preserved_receipt",
+      "observation_period": "2026-10-19 through 2026-10-20",
+      "supports": "Supplemental preserved input from an accepted 4E/4F/4G or root-review manifest",
+      "depends_on_ignored_local_files": true,
+      "raw_file_publication_authorized": false
+    }
+  ],
+  "consumed_ledgers_preserved": [
+    {
+      "path": ".tools/phase4d/execution-attempt.json",
+      "sha256": "9942a160c824a529bbfa3d2063d53e93a3ea65d1314c613712cd66140abb00e0",
+      "bytes": 648,
+      "preserve_without_reset": true,
+      "depends_on_ignored_local_files": true
+    },
+    {
+      "path": ".tools/phase4d-recovery/execution-attempt.json",
+      "sha256": "3c9dcc4f4cc04e3c9f42d49df51b5d9b48e90c6328d7c45506d8841c2d831d0a",
+      "bytes": 775,
+      "preserve_without_reset": true,
+      "depends_on_ignored_local_files": true
+    },
+    {
+      "path": ".tools/phase4d-provider-recovery/publication-attempt.json",
+      "sha256": "59eead9b0dd51a5ac10c05f0f4a665022d8458406c5a5702bf578ed46fb786ba",
+      "bytes": 458,
+      "preserve_without_reset": true,
+      "depends_on_ignored_local_files": true
+    },
+    {
+      "path": ".tools/phase4d-provider-recovery/preparation-attempt.json",
+      "sha256": "ad016aaf7de7b53adccdde78d0d05cb9c98bbc37cc18757ec5a68c262ab66f80",
+      "bytes": 696,
+      "preserve_without_reset": true,
+      "depends_on_ignored_local_files": true
+    },
+    {
+      "path": ".tools/phase4d-provider-recovery/preparation-fresh-token-attempt.json",
+      "sha256": "5eb34e80e70af4dd8c85e93c3c32af7b993a068f4292fd874e1e6cb92b765965",
+      "bytes": 702,
+      "preserve_without_reset": true,
+      "depends_on_ignored_local_files": true
+    },
+    {
+      "path": ".tools/phase4d-provider-recovery/execution-attempt.json",
+      "sha256": "2c5cc50bf2b31007004995cb6ed45464a981b43be833380bf9c84c97a144a241",
+      "bytes": 792,
+      "preserve_without_reset": true,
+      "depends_on_ignored_local_files": true
+    },
+    {
+      "path": ".tools/phase4d-provider-recovery/amplify-initial-build/one-attempt.json",
+      "sha256": "2fa971f62ca5e112e13c73494eaded5401860d8b237211dd2c95fee0c38b4e62",
+      "bytes": 517,
+      "preserve_without_reset": true,
+      "depends_on_ignored_local_files": true
+    },
+    {
+      "path": ".tools/phase4e/api-run-once.json",
+      "sha256": "8d23e5fb3ead38c325b43edee0cf13a14f98bb43b1b09ed81164a3d9c3bc2364",
+      "bytes": 202,
+      "preserve_without_reset": true,
+      "depends_on_ignored_local_files": true
+    },
+    {
+      "path": ".tools/phase4e/continuation/api-run-once.json",
+      "sha256": "42a491b013d091763687080d4de17a21d440dfa2d787dd52ed50e9885e109872",
+      "bytes": 202,
+      "preserve_without_reset": true,
+      "depends_on_ignored_local_files": true
+    },
+    {
+      "path": ".tools/phase4f/browser-issuance-once.json",
+      "sha256": "507a969f76d9521e9ad219beab48bdc4693b60f86b485673b9c3ac786e269df7",
+      "bytes": 448,
+      "preserve_without_reset": true,
+      "depends_on_ignored_local_files": true
+    }
+  ],
+  "prior_manifest_entry_counts_verified": {
+    "phase4e": 20,
+    "phase4f": 19,
+    "phase4g": 16
+  },
+  "preservation_limits": [
+    "This index exports paths, hashes, sizes and sanitized claims only, not raw receipt contents.",
+    "Ignored .tools and infra/cdk.out files depend on this local machine; another checkout will not contain them automatically.",
+    "Index references do not authorize raw Billing, AWS metadata, screenshot, credential-helper or log publication.",
+    "Hashes detect changed bytes; they do not authenticate the provider or prove no later remote drift.",
+    "The latest hosted artifact is receipt-backed, not a retained downloadable archive here.",
+    "CI artifact metadata describes finite historical retention, not permanent availability.",
+    "No external evidence copy, commit or push was performed; archival/publication requires privacy and auto-build-impact review.",
+    "This index deliberately excludes its own digest and the later validation receipt to avoid circular hashes."
+  ]
+}

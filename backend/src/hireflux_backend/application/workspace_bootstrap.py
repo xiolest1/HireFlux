@@ -11,7 +11,12 @@ from hireflux_backend.application.errors import (
     WorkspaceDeletedError,
     WorkspaceDeletingError,
 )
-from hireflux_backend.domain.models import CurrentIdentity, TrustedProfileAttributes, UserProfile
+from hireflux_backend.domain.models import (
+    CurrentIdentity,
+    IdentityKind,
+    TrustedProfileAttributes,
+    UserProfile,
+)
 from hireflux_backend.domain.workspace import (
     APPLICATION_MANIFEST_VERSION,
     BOOTSTRAP_VERSION,
@@ -93,6 +98,12 @@ class WorkspaceBootstrapService:
             snapshot = self._repository.read(identity.user_id)
             self._validate(identity, snapshot)
             workspace = snapshot.workspace
+            if (
+                identity.kind is IdentityKind.PERSISTENT
+                and workspace is None
+                and snapshot.has_owner_data
+            ):
+                raise WorkspaceBootstrapConflictError("Existing data has no persistent provenance.")
             if workspace is not None and workspace.state is DurableWorkspaceState.ACTIVE:
                 if snapshot.settings is None:
                     # A previously active workspace may have lost customized preferences.
@@ -100,9 +111,16 @@ class WorkspaceBootstrapService:
                         "Existing workspace settings are missing; operator recovery is required."
                     )
                 if snapshot.profile is not None:
-                    return BootstrapResult(workspace, snapshot.profile, snapshot.settings)
+                    profile = snapshot.profile
+                    if identity.kind is IdentityKind.PERSISTENT:
+                        profile = replace(profile, name=attributes.name, email=attributes.email)
+                    result = BootstrapResult(workspace, profile, snapshot.settings)
+                    if profile == snapshot.profile or self._repository.commit(snapshot, result):
+                        return result
+                    continue
             if (
-                workspace is None or workspace.state is DurableWorkspaceState.PROVISIONING
+                identity.kind is IdentityKind.LOCAL
+                and (workspace is None or workspace.state is DurableWorkspaceState.PROVISIONING)
             ) and not self._repository.legacy_data_is_durable(identity.user_id):
                 raise WorkspaceBootstrapConflictError("Existing workspace data is temporary.")
             now = self._clock().astimezone(UTC)

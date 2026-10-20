@@ -1,6 +1,11 @@
 # Phase 4D provider remediation — 2026-10-16
 
-**Current October 19 disposition: infrastructure and initial build verified;
+Latest decision: [October 20 Phase 4H qualified staging acceptance](phase4h-staging-acceptance.md).
+The HTTPS verifier was subsequently corrected and Phase 4E–4G completed with
+documented qualifications. Additional tests remain paused. Earlier checkpoints
+below preserve their original evidence and authorization boundaries.
+
+**Historical October 19 pre-diagnosis disposition: infrastructure and initial build verified;
 Phase 4D public HTTPS readiness remains blocked.** The already-prepared change
 set was executed once, all 22 resources completed, and Amplify job 1 succeeded
 for the qualified revision. Its artifact passed verification. The bounded HTTPS
@@ -237,3 +242,54 @@ and DynamoDB-access-pattern documents during the session; they were not made or
 altered by this deployment continuation. Do not reset or include them casually.
 The working-tree whitespace check passed. The cached check reports the existing
 staged handoff's trailing blank line; the Git index was not changed to repair it.
+
+## October 19 — HTTPS verifier resolved; bounded Phase 4E completed
+
+This later dated checkpoint supersedes the HTTPS-blocked resume boundary above.
+The exact assertion required every JavaScript path to start with `/assets/`;
+the already-qualified frontend intentionally serves `/theme-bootstrap.js` at the
+root. A separate read-only verifier candidate permitted that exact script and
+verified its qualified Git bytes while retaining all other guards. Three positive
+and 11 negative local cases plus a digest-tamper rejection passed. Seven bounded
+public requests then proved verified DNS/TLS, root/assets, security headers,
+SPA fallback, missing-asset 404 and API CORS OPTIONS. The existing
+`phase4d-readiness-resolution-20261019.json` recorded Phase 4D PASS at
+16:08:44 UTC. No application repair, build or deployment was needed.
+
+The owner subsequently authorized Phase 4E live backend checks. The completed
+outcome is **PASS WITH EXPLICIT QUALIFICATIONS for bounded supervised staging**;
+see the [full Phase 4E handoff](phase4e-live-backend-verification.md) for observed
+contracts, original harness error, one approved additional workspace, test-data
+inventory, diagnostics, unverified expiry/Lambda-delivery boundaries and exact
+Phase 4F conditions. The original STOP and consumed deployment/build ledgers remain
+intact. Phase 4F has not started.
+
+Lambda remains qualified `6396f89`. An external documentation-only push advanced
+main to `d3a8fb1` with identical application/infra Git trees and automatically
+triggered successful Amplify job 2. No build or redeployment was requested by the
+backend verification. These later dated facts supersede the earlier handoff's
+unchanged-HEAD/unpushed description without rewriting that historical evidence.
+
+The later [Phase 4F browser handoff](phase4f-hosted-browser-verification.md)
+records bounded hosted browser PASS WITH EXPLICIT QUALIFICATIONS, one nonblocking
+Settings defect, current source/artifact evidence and exact Phase 4G entry
+conditions. It supersedes the future-phase status in earlier dated entries;
+historical approval and attempt boundaries remain unchanged.
+
+The subsequent [Phase 4G operations/cost handoff](phase4g-operations-reliability-cost-verification.md)
+confirms unchanged deployed resources and accepted served bytes using existing
+metrics, with zero additional API requests. Final cost/funding acceptance is
+blocked on Bills visibility and a credit-balance discrepancy; the original Phase
+4H evidence freeze has not started. No deployment/build ledger was reset.
+The owner subsequently confirmed the financial baseline remains UNVERIFIED and
+paused additional billable 4G tests pending existing-owner-access reconciliation;
+the environment itself remains deployed and can continue incurring charges.
+On October 20, a narrow root Billing review resolved Bills access and found
+$1.77 applied credits / $0.00 estimated payable, but two visible grants are marked
+expired despite a $118.07 estimated balance. Funding acceptance remains blocked
+pending an explicit reconciled-credit or cash-funded decision; tests remain
+paused, root was signed out, and no deployment/4H action occurred.
+The owner subsequently accepted a cash-funded baseline with no assumed usable
+promotional credit and kept tests paused. This supersedes the financial acceptance
+BLOCK: 4G is PASS WITH EXPLICIT QUALIFICATIONS; the credit discrepancy remains
+documented, and 4H still requires its own explicit instruction.

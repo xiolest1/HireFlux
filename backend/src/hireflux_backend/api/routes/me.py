@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime
 from time import monotonic
 
@@ -8,7 +9,7 @@ from hireflux_backend.api.deletion_schemas import DeletionResponse
 from hireflux_backend.api.dependencies import (
     AuthenticatedIdentityDependency,
     IdentityDependency,
-    SettingsDependency,
+    TrustedProfileDependency,
     UserServiceDependency,
     WorkspaceBootstrapServiceDependency,
     WorkspaceErasureServiceDependency,
@@ -16,8 +17,8 @@ from hireflux_backend.api.dependencies import (
 )
 from hireflux_backend.api.export_schemas import WorkspaceExportResponse
 from hireflux_backend.api.schemas import UserResponse
-from hireflux_backend.application.errors import ForbiddenError
-from hireflux_backend.auth.local import profile_attributes_from_settings
+from hireflux_backend.application.errors import AccountManagementUnavailableError, ForbiddenError
+from hireflux_backend.domain.models import IdentityKind
 
 router = APIRouter(prefix="/api/v1", tags=["profile"])
 
@@ -40,6 +41,8 @@ def erase_workspace(
     response: Response,
     body: BootstrapRequest | None = None,
 ) -> DeletionResponse:
+    if identity.kind is IdentityKind.PERSISTENT:
+        raise AccountManagementUnavailableError("Account management is currently unavailable.")
     result = service.delete(identity)
     response.status_code = 200 if result.workspace.state.value == "DELETED" else 202
     response.headers["Cache-Control"] = "no-store"
@@ -50,21 +53,27 @@ def erase_workspace(
 def bootstrap_workspace(
     identity: AuthenticatedIdentityDependency,
     service: WorkspaceBootstrapServiceDependency,
-    settings: SettingsDependency,
+    attributes: TrustedProfileDependency,
     response: Response,
     body: BootstrapRequest | None = None,
 ) -> BootstrapResponse:
     if identity.is_demo:
         raise ForbiddenError("Demo workspaces cannot be initialized as durable workspaces.")
     response.headers["Cache-Control"] = "no-store"
-    return BootstrapResponse.from_domain(
-        service.bootstrap(identity, profile_attributes_from_settings(settings))
-    )
+    assert attributes is not None
+    return BootstrapResponse.from_domain(service.bootstrap(identity, attributes))
 
 
 @router.get("/me", response_model=UserResponse)
-def get_me(identity: IdentityDependency, service: UserServiceDependency) -> UserResponse:
-    return UserResponse.from_domain(service.get_profile(identity))
+def get_me(
+    identity: IdentityDependency,
+    service: UserServiceDependency,
+    attributes: TrustedProfileDependency,
+) -> UserResponse:
+    profile = service.get_profile(identity)
+    if identity.kind is IdentityKind.PERSISTENT and attributes is not None:
+        profile = replace(profile, name=attributes.name, email=attributes.email)
+    return UserResponse.from_domain(profile)
 
 
 @router.get("/me/export", response_model=WorkspaceExportResponse)

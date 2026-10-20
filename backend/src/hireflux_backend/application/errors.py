@@ -30,6 +30,22 @@ class AuthenticationUnavailableError(HireFluxError):
     pass
 
 
+class AuthenticationRequiredError(HireFluxError):
+    pass
+
+
+class SessionExpiredError(AuthenticationRequiredError):
+    pass
+
+
+class AccountNotVerifiedError(HireFluxError):
+    pass
+
+
+class AccountManagementUnavailableError(HireFluxError):
+    pass
+
+
 class ForbiddenError(HireFluxError):
     pass
 

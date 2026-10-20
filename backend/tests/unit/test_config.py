@@ -1,4 +1,5 @@
 import pytest
+from cognito_fixtures import COGNITO_CONFIG
 from pydantic import ValidationError
 
 from hireflux_backend.config import Settings
@@ -119,13 +120,20 @@ def test_demo_auth_requires_capacity_for_seed() -> None:
 
 def test_api_docs_default_to_local_only_and_allow_explicit_override() -> None:
     assert settings().expose_api_docs is True
-    assert settings(environment="staging", auth_mode="cognito").expose_api_docs is False
-    assert settings(environment="production", auth_mode="cognito").expose_api_docs is False
+    assert (
+        settings(environment="staging", auth_mode="cognito", **COGNITO_CONFIG).expose_api_docs
+        is False
+    )
+    assert (
+        settings(environment="production", auth_mode="cognito", **COGNITO_CONFIG).expose_api_docs
+        is False
+    )
     assert (
         settings(
             environment="production",
             auth_mode="cognito",
             api_docs_enabled=True,
+            **COGNITO_CONFIG,
         ).expose_api_docs
         is True
     )

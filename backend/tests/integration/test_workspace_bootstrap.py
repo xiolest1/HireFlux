@@ -91,7 +91,11 @@ def test_every_ordinary_route_requires_bootstrap_before_any_side_effect(
         for route_path, operations in app.openapi()["paths"].items():
             if not route_path.startswith("/api/v1/"):
                 continue
-            if route_path in {"/api/v1/me/bootstrap", "/api/v1/demo-sessions"}:
+            if route_path in {
+                "/api/v1/me/bootstrap",
+                "/api/v1/demo-sessions",
+                "/api/v1/auth/config",
+            }:
                 continue
             path = re.sub(r"\{[^}]+\}", OWNER, route_path)
             for method in operations:

@@ -1,5 +1,270 @@
 # HireFlux development log
 
+## 2026-10-20 — Phase 5B backend Cognito foundation completed locally
+
+**PASS WITH EXPLICIT QUALIFICATIONS.** Implemented additive AUTH_CAPABILITIES with
+legacy demo/guarded LOCAL compatibility; pinned RS256/issuer/client/access/scope/
+time verification; bounded single-flight JWKS and token-hashed userInfo admission
+caches; trusted opaque-subject ownership and STANDARD_USER only. One FastAPI
+boundary rejects ambiguous bearer headers and never falls back between providers.
+Provider outages leave demo requests independent. Public no-store auth-config has
+no database/provider work and exposes no local identity or secrets.
+
+Reused durable bootstrap/manifest/guards: first PERSISTENT bootstrap is empty and
+atomic; no TTL; LOCAL alone may adopt legacy data. Explicit bootstrap synchronizes
+changed trusted name/email conditionally while preserving settings/timestamps;
+ordinary profile reads do not write. Persistent deletion/retry is blocked with
+ACCOUNT_MANAGEMENT_UNAVAILABLE pending 5D. No provider-admin/IAM/infra/frontend work.
+
+Pinned PyJWT[crypto] 2.15.1 and cryptography 50.0.2; preserved other versions. Ruff,
+format, mypy, lock and **603 backend tests pass**. Production audit: zero known
+vulnerabilities; existing dev-only Werkzeug 3.1.8 advisory remains qualified.
+Two clean candidate ZIP builds match; isolated Python 3.14.8 AL2023/native RS256,
+synthetic admission and Lambda runtime probes pass with zero network attempts.
+Candidate compressed size 30.20 MiB exceeds the soft 30-MiB warning, below hard
+limits; final release ZIP remains a 5D gate. Existing TestClient warning retained.
+
+Preserved all 88 frozen evidence entries, ten consumed ledgers, 59 prior receipt
+entries, accepted 5A contract, original canonical ZIP and bound template. Current
+status updates live in the [complete 5B handoff](phase5b-backend-cognito-handoff.md),
+architecture/domain/roadmap documentation and fake `.env.example`; indexed historical
+readiness/evidence stays unchanged. Existing dirty work is preserved. All work is
+uncommitted; no AWS/GitHub account calls, hosted traffic, credentials, push, remote
+CI, Amplify build or deployment. Staging testing remains paused and cash-funded.
+**5C–5E require separate authorization. Stop at 5B.**
+
+## 2026-10-20 — Phase 5A accepted planning contract
+
+Completed the [Cognito implementation contract](phase5a-cognito-implementation-contract.md)
+with PASS — implementation-ready planning. Reconciled the existing source and
+4H boundary, selected additive backend capabilities, direct safe opaque Cognito
+subjects, bounded JWT/userInfo admission, existing frontend session ownership,
+PKCE/refresh/logout, deferred destructive orchestration, four proposed Cognito
+resources and a backend-first release preserving Amplify properties. This was
+planning only, with no source/dependency/cloud operation; later owner authorization
+allowed 5B above. The accepted original contract remains unchanged.
+
+## 2026-10-20 — Phase 4H final qualified staging acceptance and evidence freeze
+
+Completed the original staging qualification sequence with **PASS WITH EXPLICIT
+QUALIFICATIONS — supervised staging accepted under documented restrictions**.
+Reconciled all L01–L20 rows against accepted 4D–4G evidence, including blank-email
+L17 N/A and explicitly unverified expiry, TTL deletion, secret failures, Lambda
+log delivery, browser conflict/retry/export/reset, overload and recovery paths.
+The owner accepted the existing Settings defect and cash-funded baseline;
+unattended/broader use remains outside this decision. Additional tests stay paused.
+
+Offline checks reconfirmed local HEAD 2146fc3, hosted revision d3a8fb1 and qualified
+backend 6396f89 have identical backend/frontend/infra trees; the on-disk canonical
+Linux ZIP and corrected bound template match accepted hashes. Verified all 55
+entries in the prior 4E/4F/4G manifests, root financial evidence and consumed-ledger
+hashes without altering them. The latest hosting archive remains receipt-backed,
+not newly downloaded. No fresh remote or AWS state is implied.
+
+Created the [final handoff](phase4h-staging-acceptance.md) and
+[sanitized evidence index](phase4h-evidence-index.json), covering dated identities,
+qualified functionality, outstanding risks, cash costs, manual review/stop
+ownership, destructive teardown consequences, local-only evidence and PAT expiry
+follow-up (October 22/23 historical metadata). Updated stale status pointers;
+original phase records and Phase 5–7 order remain intact.
+
+This phase used local documentation/hash checks only: no AWS/GitHub reads, hosted
+traffic, tests, demo issuance, authentication, root access, credential operations,
+resource change, build, deploy, commit or push. Evidence archival/publication and
+any resumed supervised evaluation or maintenance require a separate concrete
+owner-approved scope. No application or infrastructure source changed.
+
+## 2026-10-20 — Root Billing access restored; funding decision remains required
+
+Under the owner's narrow read-only authorization, the owner personally signed
+in as root; verified account ending 9465 and reviewed October Bills/Credits only.
+Bills is Pending with $0.00 estimated payable/tax and $1.77 applied credits,
+implying about $1.77 pre-credit at displayed precision. Billing Home separately
+shows $1.78 month-to-date and a $4.94 forecast; preserved the small discrepancy
+instead of claiming exact gross precision or a final invoice. Expanded EC2
+$1.61 (NAT/compute/EBS) and VPC $0.16 (IPv4/endpoint) are outside HireFlux's accepted
+architecture and consistent with personal labs. Their continued live existence
+was not checked. Shared service costs remain unallocated with inactive tags.
+
+Root Credits exposes $119.99 nominal / $118.07 estimated remaining, unlike the
+prior IAM zero view. However both $100 and $20 grant detail pages say Expired,
+October 6, 2026. The section header still calls them Active credits (2), the
+inactive tab has no rows, and application history is incomplete. No usable
+promotional coverage or five-month runway is established. Root visibility solves
+the permission problem; it does not resolve contradictory eligibility/history.
+
+The visible bill remains behind new HireFlux usage (36 billed-view Lambda
+requests versus 268 prior operational invocations; new hosting/API/table and
+alarm/secret-storage lines absent). Thus it neither validates nor contradicts
+the original monthly projections: $1.30–$2.30 idle, $1.60–$2.60 maintenance,
+$3.20–$4.20 limited testing, before credits/tax. Standing costs and public/auto-build
+exposure continue during the test pause. The filtered $10 budget still lacks
+effective attribution/notifications based on the preserved October 19 evidence.
+
+The owner then explicitly selected **"Accept cash-funded baseline; keep tests
+paused."** Current outcome is **PASS WITH EXPLICIT QUALIFICATIONS for cash-funded
+supervised staging**, assuming no usable promotional credit. This supersedes the
+financial acceptance BLOCK through an explicit funding decision; credit eligibility,
+history, delayed billing and prior technical limits remain qualifications. Recommend
+keeping the accepted architecture/monitoring unchanged with manual cost supervision.
+No test resumption or 4H start is implicit. See the
+[updated Phase 4G handoff](phase4g-operations-reliability-cost-verification.md).
+
+The owner signed out; observed the public AWS page's Sign in control and closed
+the review tab. No root secrets/session data were requested or retained, no root
+CLI/access key was created, and hireflux-operator was unchanged. No new application
+requests, tests, resource/Billing/IAM changes, build, deploy, export, commit or push
+occurred. Prior evidence/attempt ledgers remain preserved; local document and cost
+view checks apply to this update.
+
+## 2026-10-19 — Owner confirmed unverified financial baseline; billable 4G tests paused
+
+The owner confirmed that Credits displays zero active/remaining/estimated credits
+but the existing identity still cannot access Bills. October gross charges,
+credits applied, the earlier ~$110 balance and any promotional expiry remain
+**UNVERIFIED**. At the owner's explicit request, paused additional billable Phase
+4G test activity until reconciliation through existing authorized owner access.
+The unused 30-request allowance does not override this hold; no automatic resume
+or Phase 4H start is authorized.
+
+Used existing evidence only to identify continuing exposure: two secrets about
+$0.80/month; 15 standard alarm-metric units $1.50/month list or expected $0.50
+with ten qualifying shared free units; expected free qualifying dashboard; about
+$0.0006/month retained S3 assets; small hosted/log/table storage; and possible
+public traffic and future auto-build usage. The modeled standing baseline remains
+about $1.30–$2.30 gross/month plus small storage/external usage, with no assumed
+credit offset. Pausing tests does not shut down hosting or eliminate charges.
+
+Updated the [Phase 4G handoff](phase4g-operations-reliability-cost-verification.md),
+roadmap and local cost view. Preserved original receipts/final disposition and
+recorded a separate owner-hold receipt/manifest. This follow-up made no AWS or
+hosted requests, tests, deployments, pushes, IAM/Billing changes or resource
+mutations. Only local documentation/evidence and TypeScript checks were run.
+
+## 2026-10-19 — Phase 4G operations verified; cost/funding acceptance blocked
+
+Under explicit 4G authorization and acceptance of the 4F limitations, revalidated
+the temporary non-root identity, unchanged 22-resource CREATE_COMPLETE stack,
+qualified Lambda settings/code, exact alarm/dashboard definitions, source trees
+and successful Amplify job 2. Four sequential static GETs returned 200 with exact
+accepted entry-file hashes. No backend API request, workspace, load test, build,
+deployment, GitHub push, PAT, secret-value read or AWS setting change occurred.
+
+Existing CloudWatch data showed 268 API requests/invocations, zero API 5xx and
+Lambda errors/throttles, peak concurrency 4 of 5, API mean/max latency
+151.87/5,771 ms and 268 API-log events. Table and three GSIs consumed 944 read /
+5,234 write units. Sparse DynamoDB error/throttle series had no datapoints;
+Lambda WARN/error delivery remains unverified. Amplify recorded 626 requests,
+2,144,779 bytes and 298 4xx. A bounded existing-log sample included unrelated
+technology/configuration probes; no entry-asset regression or 5xx was demonstrated.
+
+Cost evidence exposed two important limits: Project/Environment billing tags are
+Inactive, so the filtered $10 budget's $0 actual is not spend proof; Bills denies
+this identity access, while Credits displays zero active/estimated remaining,
+conflicting with the earlier ~$110 owner report. PAID/ACTIVE with $0 account-plan
+credit remains the actual API result. A current owner-access gross/credit/baseline
+check is pending. No Cost Explorer enablement, tag activation or permission change
+was made. Current shared usage shows ample but delayed Lambda/log/KMS allowances.
+
+Modeled gross monthly costs are about $1.30–$2.30 pure idle, $1.60–$2.60 mostly
+idle with maintenance, and $3.20–$4.20 for 10–20 limited testers; plan $3–$5.
+These are projections before credits/tax, not measured charges. Keep existing
+logging/monitoring: 15 standard alarm-metric units cost $1.50 list or about $0.50
+with ten qualifying shared free units, and the one dashboard qualifies for the
+published allowance. No material cost problem justifies redesign. Retained S3
+versions, secrets, logs, auto-build risks, manual thresholds and separately
+authorized stop/deletion consequences are documented.
+
+Disposition: **BLOCK on final cost/funding acceptance; technical operations passed
+with explicit qualifications**. Natural expiry, physical TTL deletion, secret
+failure, Lambda diagnostics, browser 409/network limits and the accepted Settings
+defect remain accurately qualified. The original 4G/4H roadmap is preserved;
+4H has not started. See the [complete Phase 4G handoff](phase4g-operations-reliability-cost-verification.md).
+All 19 prior 4F evidence hashes remain unchanged. The redaction-aware local reader
+correction and negative cases passed; no application source was changed.
+
+## 2026-10-19 — Phase 4F hosted browser E2E passed with explicit qualifications
+
+With fresh owner Bills/Credits/lab/supervision acceptance, verified unchanged
+staging/Lambda and successful Amplify job 2 at `d3a8fb1`. Its existing 39-file
+artifact passed the complete verifier; four actual hosted entry files matched
+exact bytes, with correct HTTPS, security headers, SPA fallback, missing-asset 404
+and allowed/rejected CORS. Local `2146fc3` is an unpushed documentation-only commit
+with identical application/infra trees; backend remains qualified `6396f89`.
+
+Used one newly authorized fictional workspace through the real hosted in-app
+browser. Verified landing/deep-link guards, disabled preparation state, Home,
+filters/search/empty states, visible sorting, 20-to-30-item unique pagination,
+create/edit/applied transition/follow-up/next-step, note and interview workflows,
+analytics/Search Health, Settings persistence, reload/history, responsive views,
+keyboard/dialog focus, safe 404 recovery, reset cancellation and final exit.
+Desktop 1280×900, tablet 768×1024 and mobile 390×844 had no page-wide horizontal
+overflow in checked views. The extra application is archived, interview canceled,
+note retained; the displayed workspace expiry is October 20 at 1:14 PM New York.
+Final protected re-entry stayed anonymous. No token was copied or second workspace
+issued; viewport overrides were reset and screenshots/evidence saved locally.
+
+Found one nonblocking application defect: saving only default follow-up days
+7→8 marks the unchanged automatic time zone manual. The value remains New York.
+Source confirms the complete draft includes unchanged `time_zone`, and its update
+hook treats that field as manual intent. Proposed a separately authorized partial
+frontend update and focused regression/build/hosted requalification; no repair
+was implemented. Reader projection/status assumptions, native date-input fill
+behavior and one heading locator were corrected as tooling issues, with prior
+stops preserved. No source, infrastructure, IAM, secret or deployment changed.
+
+The bounded API log sample returned 191 events including 92 preflights, no 5xx
+and no privacy findings; available console samples had no warnings/errors.
+Pagination and missing browser network instrumentation limit attribution. Live
+UI 409 handling, full cross-engine/accessibility coverage and all four inherited
+Phase 4E limits remain unverified. Actual charges/credits were not measured;
+manual thresholds and production findings remain open. No build, redeploy,
+ledger reset, token creation, export, commit or push was performed.
+
+Disposition: **PASS WITH EXPLICIT QUALIFICATIONS for supervised staging**.
+See the [complete Phase 4F handoff and Phase 4G entry conditions](phase4f-hosted-browser-verification.md).
+Phase 4G has not started; the original 4G/4H roadmap is unchanged.
+
+## 2026-10-19 — Public HTTPS resolved; Phase 4E live backend passed with qualifications
+
+Completed the bounded Phase 4D HTTPS diagnosis without changing the deployed
+application: the old verifier incorrectly required the qualified root
+`/theme-bootstrap.js` script to live under `/assets/`. A separate corrected reader
+checked its exact qualified bytes; local positive/negative cases and seven live
+HTTPS requests passed. Original STOP evidence and consumed deployment/build
+ledgers remain preserved. This supersedes the HTTPS-blocked status in the earlier
+October 19 entry below.
+
+Under explicit Phase 4E authorization, refreshed the exact temporary non-root
+identity, 22-resource inventory, all 40 configuration checks, matching live template
+and healthy runtime. Seventy API requests plus two health requests verified real
+authentication/isolation, signed issuance/cursors, idempotency, validation,
+application/status/follow-up/note/interview behavior, optimistic conflicts,
+archive/restore and required activity. Five strong projected DynamoDB queries
+sampled 65 records with correct TTLs. Bounded API access logs correlated all 72
+controlled requests without observed credentials or private test content.
+
+The first test runner stopped on an invented ordinary-edit activity expectation;
+source and strong persistence evidence confirmed correct application behavior.
+Preserved that run and ledger, qualified a separate 48-request/256-assertion local
+sequence with no AWS calls, then used exactly one additional owner-approved
+fictional workspace. Its 48 live requests/263 assertions passed. The focused
+Lambda/session/cursor suite passed 53 tests. Three total seeded workspaces expire
+October 20; the original extra DRAFT remains, while the continuation's extra
+application is archived, interview canceled and note API-deleted.
+
+Disposition: **PASS WITH EXPLICIT QUALIFICATIONS for bounded supervised staging**.
+Natural signed expiry, physical TTL deletion, live secret-unavailability failure
+and Lambda log delivery at WARN remain unverified. No signing value was retrieved
+by the operator; no application source, infrastructure, IAM, secret or monitoring change,
+redeploy, requested rebuild, ledger reset, commit or push occurred in Phase 4E.
+
+Lambda remains qualified `6396f89`; the separately observed docs-only main commit
+`d3a8fb1` has identical backend/frontend/infra trees and automatically triggered
+successful Amplify job 2. Actual billed spend/credits were not measured; accepted
+manual thresholds and production findings remain open. Phase 4F has not started.
+See the [complete Phase 4E result, limits and entry conditions](phase4e-live-backend-verification.md).
+
 ## 2026-10-19 — Staging infrastructure and initial build succeeded; HTTPS readiness stopped
 
 Resumed the October 18 provider handoff after a fresh owner-controlled temporary

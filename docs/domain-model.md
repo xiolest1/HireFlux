@@ -1,6 +1,6 @@
 # Domain model
 
-This file is the durable contract for HireFlux domain vocabulary. API JSON uses `snake_case`; IDs are UUID strings; timestamps are timezone-aware UTC ISO 8601 values; date-only fields use `YYYY-MM-DD`.
+This file is the durable contract for HireFlux domain vocabulary. API JSON uses `snake_case`; generated resource/demo IDs and LOCAL owners are UUID strings. PERSISTENT owners preserve a verified Cognito `sub` as a bounded safe opaque string, without UUID normalization. Timestamps are timezone-aware UTC ISO 8601 values; date-only fields use `YYYY-MM-DD`.
 
 ## Shared ownership rules
 
@@ -8,12 +8,14 @@ Every application belongs to exactly one user. Every note, interview, attachment
 
 The local demo bounds resource growth per application: 100 notes, 25 interviews, and 500 activity entries by default. Notes, interviews, and activity list endpoints return bounded pages with signed cursors; quota counters are server-owned and updated atomically with the corresponding write.
 
-`STANDARD_USER` and `ADMIN` are the only server-side roles. Clients cannot mutate a role. The current candidate demo exposes only the standard owner-scoped workspace and has no role selector; `ADMIN` remains reserved for a future separately guarded service. In AWS, a verified Cognito group/custom claim is authoritative and the DynamoDB profile value is only a projection.
+`STANDARD_USER` and `ADMIN` are the only server-side role vocabulary. Clients cannot mutate a role. Phase 5B admits Cognito users only as `STANDARD_USER`; groups, custom claims and stored profile roles grant no administrative authority. `ADMIN` remains reserved for a future separately guarded service. The deployed demo remains unchanged.
 
 ## User
 
 - `user_id`: generated UUID for demos; fixed configured UUID for local durable workspaces.
-  Direct verified Cognito `sub` is the approved future ownership direction, not implemented authentication.
+  Phase 5B implements direct verified Cognito `sub` ownership locally: maximum 128
+  characters, no controls, whitespace or `#` key delimiter; preserve case and value.
+  Real Cognito/AWS admission remains unverified until separately authorized 5E.
 - `name`, `email`, `role`.
 - `created_at`: profile initialization instant. The deprecated nullable API field
   `last_login_at` is always null; HireFlux does not observe actual login events.
@@ -23,10 +25,12 @@ Future Cognito owns passwords, verification, resets, MFA options, sessions, and 
 
 The verified principal (`CurrentIdentity`) has `user_id`, `role`, `kind`, and
 `data_expires_at`; it does not require name/email or contain token expiry.
-`DEMO` requires a positive data expiry. `LOCAL` and future `PERSISTENT` prohibit
+`DEMO` requires a positive data expiry. `LOCAL` and `PERSISTENT` prohibit
 workspace expiry. `is_demo` is derived from kind, so contradictory flags cannot
 be constructed. `TrustedProfileAttributes` supplies name/email independently
-from server configuration or a future trusted profile source.
+from guarded LOCAL configuration or verified server-side Cognito userInfo admission.
+Provider expiry/authentication metadata belongs to `VerifiedPrincipal`, outside
+domain identity/data lifetime. No email-based ownership/linking is implemented.
 
 ## Durable workspace readiness
 
@@ -50,6 +54,13 @@ writes. Missing settings in an already active workspace return a conflict becaus
 preferences cannot safely be reconstructed; missing profiles can be recovered
 from the trusted source. Defaults are UTC, 7 follow-up days, ACTIVE application
 view, 30d dashboard range, SYSTEM theme, and settings version 1.
+
+Only LOCAL can adopt unmarked legacy data. PERSISTENT bootstrap requires an empty
+owner or compatible persistent readiness provenance. Explicit bootstrap conditionally
+synchronizes changed trusted name/email under the ACTIVE/no-TTL transaction guard;
+ordinary `/me` overlays current admitted attributes without a write. Settings and
+creation timestamps survive replay. Persistent DELETE `/me` and deletion retry
+return `403 ACCOUNT_MANAGEMENT_UNAVAILABLE` until the separate Phase 5D safety work.
 
 Durable application creation atomically adds a minimal owner-scoped manifest
 reference, retained through archive/restore and child changes. Fresh empty durable

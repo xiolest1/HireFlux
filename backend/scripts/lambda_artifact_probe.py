@@ -12,6 +12,7 @@ import os
 import platform
 import socket
 import sys
+import time
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -159,10 +160,75 @@ def main() -> None:
         "uvloop.loop",
         "watchfiles._rust_notify",
         "websockets.speedups",
+        "cryptography.hazmat.bindings._rust",
+        "_cffi_backend",
     )
     for name in native_modules:
         module = importlib.import_module(name)
         assert Path(module.__file__).is_relative_to(PACKAGE)
+    # Exercise actual RS256/native OpenSSL from the isolated candidate ZIP.
+    # Provider responses are synthetic and no live provider endpoint is contacted.
+    import jwt
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    from hireflux_backend.auth.cognito import CognitoVerifier
+    from hireflux_backend.auth.provider import ProviderResponse
+    from hireflux_backend.config import Settings
+
+    auth_settings = Settings(
+        _env_file=None,
+        environment="staging",
+        auth_mode="demo",
+        auth_capabilities="demo,cognito",
+        cursor_signing_key="C" * 64,
+        demo_session_signing_key="D" * 64,
+        cognito_user_pool_id="us-east-1_TESTONLY",
+        cognito_app_client_id="testonlypublicclient",
+        cognito_domain="https://hireflux-test-only.auth.us-east-1.amazoncognito.com",
+    )
+    rsa_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    jwk = {
+        **jwt.algorithms.RSAAlgorithm.to_jwk(rsa_key.public_key(), as_dict=True),
+        "kid": "probe-key",
+    }
+    now = int(time.time())
+    signed_token = jwt.encode(
+        {
+            "iss": auth_settings.cognito_issuer,
+            "client_id": auth_settings.cognito_app_client_id,
+            "token_use": "access",
+            "sub": "Probe-Opaque-Subject",
+            "username": "probe-user",
+            "iat": now,
+            "auth_time": now,
+            "exp": now + 3600,
+            "scope": "openid email profile",
+        },
+        rsa_key,
+        algorithm="RS256",
+        headers={"kid": "probe-key"},
+    )
+
+    class SyntheticProvider:
+        def get(self, url: str, **kwargs: Any) -> ProviderResponse:
+            if url.endswith("jwks.json"):
+                return ProviderResponse(200, json.dumps({"keys": [jwk]}).encode())
+            return ProviderResponse(
+                200,
+                json.dumps(
+                    {
+                        "sub": "Probe-Opaque-Subject",
+                        "email": "probe@example.com",
+                        "email_verified": "true",
+                    }
+                ).encode(),
+            )
+
+    principal = CognitoVerifier(auth_settings, transport=SyntheticProvider()).authenticate(
+        signed_token
+    )
+    assert principal.identity.user_id == "Probe-Opaque-Subject"
+    assert principal.identity.data_expires_at is None
     factory = importlib.import_module("hireflux_backend.app_factory")
     assert not hasattr(factory, "app") and "hireflux_backend.main" not in sys.modules
     import boto3
@@ -314,7 +380,9 @@ def main() -> None:
         if origin and "site-packages" in origin:
             raise AssertionError(f"Runtime-provided package fallback: {name}")
     distributions = list(importlib.metadata.distributions(path=[str(PACKAGE)]))
-    assert len(distributions) == 31
+    assert len(distributions) == 35
+    assert importlib.metadata.version("PyJWT") == "2.15.1"
+    assert importlib.metadata.version("cryptography") == "50.0.2"
     assert importlib.metadata.version("boto3") == "1.43.53"
     assert importlib.metadata.version("botocore") == "1.43.78"
     assert not NETWORK_ATTEMPTS, NETWORK_ATTEMPTS
@@ -327,6 +395,7 @@ def main() -> None:
                 "isolated_import": True,
                 "read_only_package": True,
                 "native_modules": list(native_modules),
+                "synthetic_cognito_rs256_admission": True,
                 "runtime_distributions": len(distributions),
                 "cold_health": cold["statusCode"],
                 "warm_health": warm["statusCode"],

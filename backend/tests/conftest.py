@@ -1,9 +1,11 @@
 import os
+import socket
 from collections.abc import Iterator
 from typing import Any
 
 import boto3
 import pytest
+from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from moto import mock_aws
 
@@ -16,11 +18,39 @@ os.environ["AWS_SECRET_ACCESS_KEY"] = "LOCALTESTSECRETKEY"
 os.environ.pop("AWS_LAMBDA_FUNCTION_NAME", None)
 os.environ.pop("AWS_EXECUTION_ENV", None)
 
+from cognito_fixtures import COGNITO_CONFIG, Harness
+
 from hireflux_backend.config import Settings
 from hireflux_backend.infrastructure.dynamodb.table_schema import (
     create_table_request,
 )
 from hireflux_backend.main import create_app
+
+
+@pytest.fixture(scope="session")
+def cognito_key() -> rsa.RSAPrivateKey:
+    return rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+
+@pytest.fixture
+def cognito_harness(monkeypatch: pytest.MonkeyPatch, cognito_key: rsa.RSAPrivateKey) -> Harness:
+    def forbidden_network(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("Real provider/network access is forbidden in Cognito tests.")
+
+    monkeypatch.setattr("socket.getaddrinfo", forbidden_network)
+    original_connect = socket.socket.connect
+
+    def local_socketpair_only(sock: socket.socket, address: Any) -> Any:
+        # Windows asyncio implements socketpair using an ephemeral loopback pair.
+        if isinstance(address, tuple) and address[0] in {"127.0.0.1", "::1"}:
+            return original_connect(sock, address)
+        return forbidden_network(sock, address)
+
+    monkeypatch.setattr("socket.socket.connect", local_socketpair_only)
+    return Harness(
+        test_settings(auth_mode="demo", auth_capabilities="demo,cognito", **COGNITO_CONFIG),
+        cognito_key,
+    )
 
 
 def test_settings(**overrides: Any) -> Settings:

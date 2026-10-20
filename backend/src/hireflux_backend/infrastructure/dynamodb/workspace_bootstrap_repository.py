@@ -202,7 +202,29 @@ class DynamoWorkspaceBootstrapRepository:
                     }
                 )
             else:
-                transactions.append({"ConditionCheck": self._existing_condition(item)})
+                if previous is prior.profile and prior.profile != proposed.profile:
+                    condition = self._existing_condition(profile_to_item(prior.profile))
+                    condition["ExpressionAttributeNames"].update(
+                        {"#name": "name", "#email": "email"}
+                    )
+                    condition["ExpressionAttributeValues"].update(
+                        serialize_item(
+                            {
+                                ":name": proposed.profile.name,
+                                ":email": proposed.profile.email,
+                            }
+                        )
+                    )
+                    transactions.append(
+                        {
+                            "Update": {
+                                **condition,
+                                "UpdateExpression": "SET #name = :name, #email = :email",
+                            }
+                        }
+                    )
+                else:
+                    transactions.append({"ConditionCheck": self._existing_condition(item)})
         workspace_item = workspace_to_item(proposed.workspace)
         put: dict[str, Any] = {
             "TableName": self._table_name,

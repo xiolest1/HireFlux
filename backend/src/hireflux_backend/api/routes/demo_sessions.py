@@ -20,7 +20,7 @@ def create_demo_session(
     service: DemoSessionServiceDependency,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> DemoSessionResponse:
-    if settings.auth_mode is not AuthMode.DEMO:
+    if AuthMode.DEMO not in settings.enabled_auth_capabilities:
         raise AuthenticationUnavailableError(
             "Temporary demo sessions are not enabled in this environment."
         )

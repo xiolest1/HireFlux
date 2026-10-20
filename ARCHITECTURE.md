@@ -1,8 +1,16 @@
 # HireFlux architecture
 
-Current October 16 provider remediation is authorized and locally qualified;
-new CI, credential and AWS deployment gates remain pending. See the
-[provider recovery checkpoint](docs/phase4d-provider-recovery-outcome.md).
+**Local source checkpoint — Phase 5B:** the backend now supports additive demo and
+Cognito authentication, pinned RS256/JWKS plus userInfo admission, and empty
+persistent bootstrap. See the [5B implementation handoff](docs/phase5b-backend-cognito-handoff.md).
+This code is not deployed. The staging shape/evidence below remains the accepted
+demo baseline; frontend OAuth, provider deletion and Cognito infrastructure are
+still future 5C–5E work.
+
+The [October 20 Phase 4H acceptance](docs/phase4h-staging-acceptance.md) records
+deployed AWS staging accepted with explicit qualifications for supervised
+fictional-demo evaluation. Additional tests remain paused. This dated evidence
+does not authorize invitations, unattended use or production operations.
 
 ## Purpose and current state
 
@@ -17,13 +25,13 @@ The public landing page requires no account. Starting the demo creates a unique
 24-hour workspace, seeds a realistic fictional application dataset, and returns a signed bearer
 token. Protected pages provide Home/dashboard, applications, interviews,
 analytics, and settings. This local milestone requires no AWS runtime resource.
-Phase 4B has provisioned only standard CDKToolkit bootstrap infrastructure;
-the staging application below remains undeployed. Phase 4D's first actual
-provisioning attempt ended in AWS-managed rollback after budget validation and
-repository authentication failures; no application resources survived. See the
-[current recovery outcome](docs/phase4d-recovery-outcome.md).
+Phase 4D subsequently deployed the AWS staging application: 22 expected resources
+reached CREATE_COMPLETE, and bounded HTTPS/backend/browser/operations checks
+completed through Phase 4G. Earlier failed attempts and rollback records remain
+historical; exact identities, limitations and the accepted cash-funded baseline
+are frozen in the [Phase 4H handoff](docs/phase4h-staging-acceptance.md).
 
-The planned staging shape is:
+The deployed staging shape is:
 
 ```text
 Amplify Hosting -> API Gateway HTTP API -> Lambda/FastAPI/Mangum -> DynamoDB
@@ -153,29 +161,38 @@ It now owns durable data and requires explicit `POST /api/v1/me/bootstrap` befor
 ordinary workspace operations. The body is absent or `{}`; ownership, profile
 attributes, roles, and lifetime come from the server. Bootstrap creates an empty
 workspace, profile, and UTC settings atomically, with no seed data or eager counters.
-A future Cognito adapter can replace token
-verification for persistent accounts without changing service or repository
-ownership contracts.
+Phase 5B adds Cognito access-token verification/admission for persistent accounts
+locally, reusing the same service and repository ownership contracts.
 
 `CurrentIdentity` contains only the verified owner, role, identity kind, and
 `data_expires_at`. Demo identities require a data expiry; `LOCAL` and the
-provider-neutral future `PERSISTENT` kind prohibit it. Credential expiration
+provider-neutral `PERSISTENT` kind prohibit it. Credential expiration
 remains outside that data-lifetime contract. Trusted display name and email are
-separate bootstrap attributes. No Cognito verifier or production account session
-is implemented. Auth modes remain exclusive; the current SPA still runs demos.
+separate bootstrap attributes. Explicit `AUTH_CAPABILITIES` enables demo+Cognito
+independently at one FastAPI boundary; absent capabilities preserves the legacy
+mode singleton. JWT verification pins issuer/client/RS256/access use/scopes/time;
+bounded server userInfo admission supplies verified subject/email and optional
+name. Only STANDARD_USER is admitted. Provider outages affect Cognito requests
+once cached evidence expires, without disabling demos. The current deployed SPA
+still runs demos; browser account sessions remain Phase 5C.
 
 Durable readiness is centrally checked before all ordinary owner routes, including
 `GET /me`, settings, insights, pipeline, resource writes, and exports. Missing or
 incomplete initialization returns `409 WORKSPACE_BOOTSTRAP_REQUIRED`; incompatible
 ownership/type/lifetime returns `409 WORKSPACE_BOOTSTRAP_CONFLICT`. Verified demo
 identities bypass this durable check because their tokens are issued only after
-demo provisioning. Health, demo creation, and authenticated bootstrap are exempt.
+demo provisioning. Health, public auth configuration, demo creation and
+authenticated bootstrap are exempt.
 
 `GET /me` only reads an established profile. The legacy demo display name is
 normalized only for a demo identity without writing on reads. The nullable,
 deprecated `last_login_at` response field is always null: profile creation and
 ordinary requests are not observed login events. Legacy stored timestamps are
-preserved during adoption but are not treated as login evidence.
+preserved during adoption but are not treated as login evidence. PERSISTENT `/me`
+can overlay current admitted name/email without a write; explicit bootstrap
+conditionally synchronizes that projection while preserving settings/timestamps.
+Only LOCAL may adopt unmarked legacy owner data. Persistent erasure routes return
+403 until the separate Phase 5D recent-authentication/provider-finalization work.
 
 Demo authorization ends at token expiry. Every temporary DynamoDB item also has
 an `expires_at` TTL value, but TTL cleanup is asynchronous and is not used as an
@@ -361,11 +378,11 @@ Both templates now contain the DynamoDB table, ten backend request-path resource
 and two static Amplify hosting resources, plus twelve operational declarations
 (three conditional on an alert email), with zero outputs. Each template declares
 25 resources; the blank-email configuration selects 22. Default CDK bootstrap parameters/rules
-and assembly role/asset references are future deployment contracts, not deployed
-infrastructure. Phase 3B packaging and 3C data definition are implemented locally;
+and assembly role/asset references were local deployment contracts at this Phase 3
+checkpoint. Phase 3B packaging and 3C data definition were implemented locally;
 3D compute/integration and 3E hosting/origin definitions are complete locally;
 3F operational controls and 3G final review are complete locally;
-actual staging deployment remains Phase 4 and Cognito remains Phase 5. See
+staging was subsequently deployed in Phase 4; Cognito remains Phase 5. See
 [infra/README.md](infra/README.md) for commands, naming, secret/lifecycle rules,
 and the open bundled dependency audit finding, and
 [ADR 0008](docs/adr/0008-aws-cdk-environment-foundation.md).
@@ -395,7 +412,8 @@ and the table schema remain unchanged.
 Production PITR historical retention is separate from Phase 2C live-table erasure.
 Phase 6 must define backup retention, restore procedures, deletion-tombstone
 handling after restore and privacy/erasure reconciliation. No claim extends live
-erasure to all historical copies. Application resources remain undeployed. See
+erasure to all historical copies. Staging deployment is recorded in Phase 4H;
+production remains undeployed. See
 [ADR 0010](docs/adr/0010-dynamodb-cloud-lifecycle.md) and [infra guide](infra/README.md).
 
 ## Backend artifact boundary (Phase 3B)
@@ -449,10 +467,12 @@ x86_64 ZIP Lambda -> its own DynamoDB table. `BackendApi` exposes the function,
 API and endpoint tokens directly for Phase 3E. No CloudFormation outputs, lookup,
 Function URL, VPC, authorizer, application S3 bucket or deployment is added.
 
-Staging uses `AUTH_MODE=demo`; production uses `AUTH_MODE=cognito` and retains
-the existing 503 authentication-unavailable behavior for protected/demo routes.
-Health is liveness, not production readiness. Phase 5 must evolve exclusive auth
-modes to support demo and persistent accounts together and revisit preflight.
+The unchanged Phase 3D infrastructure definition supplies staging `AUTH_MODE=demo`
+and production `AUTH_MODE=cognito`. The historical deployed bundle retains its
+original behavior. New Phase 5B source requires valid Cognito configuration at
+startup when enabled; 5D must inject it before a future release. No production
+readiness is claimed. Health is liveness. Additive staging capabilities are local
+source support until separate 5E deployment authorization.
 
 One explicit role trusts only Lambda, with scoped CreateLogStream/PutLogEvents
 permissions for its explicit log group,
@@ -522,22 +542,24 @@ user errors are not alarms. No custom metrics, log queries or collectors exist.
 
 An optional NoEcho deployment email conditions the SNS topic/subscription/policy,
 five alarm actions and direct budget emails. Empty input creates no SNS resource;
-confirmation and delivery tests remain Phase 4. Monthly USD 10/30 COST budgets
-use Project=HireFlux AND Environment=<environment>, UNBLENDED_COST and actual
+confirmation and delivery apply only when a recipient is selected. Monthly USD 10/30 COST budgets
+use Project=HireFlux AND Environment=<environment>, `UnblendedCost` and optional
 80%/100% notifications. Tags need billing activation and attribution validation.
 Budgets are delayed advisory controls, can miss shared/untaggable costs, and do
 not stop spending. No BudgetsAction exists. See [ADR 0013](docs/adr/0013-operational-guardrails.md)
 and [infra operational contract](infra/README.md#operational-guardrails-phase-3f).
-AWS deployment, notification delivery and billing activation have not occurred.
+Staging deployment subsequently completed. Email is omitted, notification delivery
+is N/A, and billing allocation activation remains unperformed in the last evidence.
 
-## AWS staging target and service choices
+## AWS staging architecture and service choices
 
 Phase 3E locally defines static WEB Amplify App/Branch resources for each
 environment. App uses a NoEcho/no-default GitHub deployment input only for
 repository connection, plus the static frontend monorepo root. Branch uses
 same-stack API endpoint and frontend URL tokens at Vite build time. Both source
-main; staging BETA auto-builds, production PRODUCTION does not. No App/domain is
-live, and production's demo frontend adapter does not implement Cognito.
+main; staging BETA auto-builds, production PRODUCTION does not. Staging hosting is
+deployed; production remains deferred and its demo frontend adapter does not
+implement Cognito.
 
 Configured branch + App.DefaultDomain → exact backend CORS; API endpoint →
 Branch variables. App contains no API reference and backend contains no Branch
@@ -579,8 +601,9 @@ flowchart LR
 - **Secrets Manager** generates the cursor and demo-session signing keys. They are read once at Lambda cold start and must not be
   embedded in frontend assets, source, or deployment output.
 
-The staging stack should be expressed in TypeScript CDK, deployed manually and
-smoke-tested first, then automated with GitHub Actions OIDC. Budgets are alerts,
+The staging stack is expressed in TypeScript CDK and was deployed manually with
+bounded verification. Automated deployment with GitHub Actions OIDC remains
+deferred. Budgets are advisory controls,
 not hard spending caps, so throttling, constrained concurrency, short retention,
 and least-privilege IAM are required controls.
 

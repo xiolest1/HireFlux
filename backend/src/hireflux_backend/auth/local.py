@@ -4,10 +4,8 @@ from hireflux_backend.domain.models import CurrentIdentity, IdentityKind, Truste
 
 
 def identity_from_settings(settings: Settings) -> CurrentIdentity:
-    if settings.auth_mode is not AuthMode.LOCAL:
-        raise AuthenticationUnavailableError(
-            "Cognito authentication is not available in Milestone 1."
-        )
+    if settings.enabled_auth_capabilities != (AuthMode.LOCAL,):
+        raise AuthenticationUnavailableError("Local authentication is unavailable.")
     return CurrentIdentity(
         user_id=str(settings.local_user_id),
         role=settings.local_user_role,

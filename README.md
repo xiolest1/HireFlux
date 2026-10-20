@@ -1,9 +1,17 @@
 # HireFlux
 
-The [latest recorded AWS checkpoint (October 19)](docs/phase4d-provider-recovery-outcome.md#october-19-staging-deployment-and-initial-build)
-records completed staging infrastructure and an initial build, with public HTTPS
-readiness still blocked. This dated record does not certify live state or authorize
-new operations.
+The [Phase 5B backend handoff](docs/phase5b-backend-cognito-handoff.md) records
+locally implemented Cognito verification and durable accounts. The deployed staging
+demo remains unchanged; browser OAuth, account safety/CDK and deployment still
+require separate 5C, 5D and 5E authorization.
+
+The [latest recorded AWS checkpoint (October 20)](docs/phase4h-staging-acceptance.md)
+accepts deployed staging **with explicit qualifications for owner-supervised
+fictional-demo evaluation** after bounded infrastructure, HTTPS, backend, browser
+and operations checks. Additional tests remain paused. This dated decision does
+not authorize invitations, unattended use or new operations. See the
+[evidence index](docs/phase4h-evidence-index.json) for source/artifact identities
+and local preservation limits.
 
 ## A clearer way to manage a job search
 

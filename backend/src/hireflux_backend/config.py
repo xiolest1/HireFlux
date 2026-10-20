@@ -1,4 +1,5 @@
 import os
+import re
 from enum import StrEnum
 from functools import lru_cache
 from ipaddress import ip_address
@@ -46,6 +47,11 @@ class Settings(BaseSettings):
 
     environment: Environment
     auth_mode: AuthMode
+    auth_capabilities: str | None = None
+    cognito_user_pool_id: str | None = None
+    cognito_app_client_id: str | None = None
+    cognito_domain: str | None = None
+    persistent_account_management_enabled: bool = False
     cursor_signing_key: SecretStr
     demo_session_signing_key: SecretStr = SecretStr(
         "local-only-demo-session-signing-key-change-before-deployment"
@@ -96,6 +102,20 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_security_boundaries(self) -> "Settings":
+        if self.auth_capabilities is not None:
+            parts = self.auth_capabilities.split(",")
+            try:
+                capabilities = [AuthMode(part.strip()) for part in parts]
+            except ValueError:
+                raise ValueError(
+                    "AUTH_CAPABILITIES contains an empty or unknown capability."
+                ) from None
+            if len(set(capabilities)) != len(capabilities):
+                raise ValueError("AUTH_CAPABILITIES contains duplicate capabilities.")
+            if AuthMode.LOCAL in capabilities and len(capabilities) != 1:
+                raise ValueError("LOCAL cannot be combined with another capability.")
+            if self.auth_mode not in capabilities:
+                raise ValueError("AUTH_MODE must belong to AUTH_CAPABILITIES.")
         local_environments = {Environment.LOCAL, Environment.TEST}
         if self.auth_mode is AuthMode.LOCAL and self.environment not in local_environments:
             raise ValueError("AUTH_MODE=local is forbidden outside local/test environments.")
@@ -124,7 +144,7 @@ class Settings(BaseSettings):
         if self.environment not in local_environments and signing_key.startswith("local-only-"):
             raise ValueError("The local cursor signing key is forbidden in deployed environments.")
 
-        if self.auth_mode is AuthMode.DEMO:
+        if AuthMode.DEMO in self.enabled_auth_capabilities:
             if self.max_applications_per_workspace < 30:
                 raise ValueError(
                     "Demo authentication requires capacity for the 30-application seed."
@@ -138,7 +158,43 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "The local demo-session signing key is forbidden in deployed environments."
                 )
+        if self.environment is Environment.PRODUCTION and self.enabled_auth_capabilities != (
+            AuthMode.COGNITO,
+        ):
+            raise ValueError("Production requires Cognito-only authentication.")
+        if AuthMode.COGNITO in self.enabled_auth_capabilities:
+            if self.aws_region != "us-east-1":
+                raise ValueError("Cognito currently requires the reviewed us-east-1 region.")
+            if not self.cognito_user_pool_id or not re.fullmatch(
+                r"us-east-1_[A-Za-z0-9]{1,55}", self.cognito_user_pool_id
+            ):
+                raise ValueError("A matching COGNITO_USER_POOL_ID is required.")
+            if not self.cognito_app_client_id or not re.fullmatch(
+                r"[A-Za-z0-9]{1,128}", self.cognito_app_client_id
+            ):
+                raise ValueError("A valid COGNITO_APP_CLIENT_ID is required.")
+            if not self.cognito_domain or not re.fullmatch(
+                r"https://[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
+                r"\.auth\.us-east-1\.amazoncognito\.com",
+                self.cognito_domain,
+            ):
+                raise ValueError("An exact HTTPS Cognito prefix-domain origin is required.")
+        if self.persistent_account_management_enabled:
+            raise ValueError("Persistent account management is unavailable until Phase 5D.")
         return self
+
+    @property
+    def enabled_auth_capabilities(self) -> tuple[AuthMode, ...]:
+        if self.auth_capabilities is None:
+            return (self.auth_mode,)
+        enabled = {AuthMode(part.strip()) for part in self.auth_capabilities.split(",")}
+        return tuple(mode for mode in AuthMode if mode in enabled)
+
+    @property
+    def cognito_issuer(self) -> str:
+        if AuthMode.COGNITO not in self.enabled_auth_capabilities:
+            raise ValueError("Cognito capability is disabled.")
+        return f"https://cognito-idp.{self.aws_region}.amazonaws.com/{self.cognito_user_pool_id}"
 
     @property
     def cors_origins(self) -> tuple[str, ...]:

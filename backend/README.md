@@ -1,5 +1,34 @@
 # Backend Lambda packaging (Phase 3B)
 
+## Current local backend — Phase 5B
+
+Backend Cognito verification/admission and persistent bootstrap are implemented
+locally. The accepted AWS demo deployment and historical ZIP remain unchanged.
+See the [complete 5B handoff](../docs/phase5b-backend-cognito-handoff.md) for the
+configuration/API contract, qualification results and remaining 5C–5E boundaries.
+No real provider authentication is claimed from synthetic tests.
+
+`AUTH_MODE` remains required. Absent `AUTH_CAPABILITIES` preserves its singleton;
+explicit capabilities support `local`, `demo`, `cognito`, or `demo,cognito` with
+the legacy anchor included. LOCAL is isolated to guarded local/test operation;
+production requires Cognito only. Cognito requires validated pool/client/prefix
+domain configuration in us-east-1. Missing configuration fails startup; valid
+configuration constructs providers without network access. Staging may retain
+`AUTH_MODE=demo` with `AUTH_CAPABILITIES=demo,cognito` in a later approved release.
+
+Public `GET /api/v1/auth/config` returns validated public capabilities/trust metadata,
+no-store, with no database/provider work. Cognito admission verifies RS256 then
+server-side userInfo. Only verified subjects own persistent data, always as
+STANDARD_USER. A token's expiry never becomes a durable TTL. Persistent deletion
+remains 403 until 5D; LOCAL development erasure remains available.
+
+The new production graph has **35 distributions**, adding PyJWT 2.15.1 and its
+cryptography 50.0.2/cffi/pycparser runtime dependencies. The older accepted Phase 4
+ZIP has 31 and is historical evidence. New candidate builds must use a **separate
+output path** until 5D release qualification; never overwrite the accepted ZIP
+or manifest during 5B. The runtime probe now checks the 35-package graph, eight
+native modules and real RS256 plus synthetic admission with networking blocked.
+
 The local ASGI entry point remains `hireflux_backend.main:app`. Lambda uses
 `hireflux_backend.lambda_handler.handler`, which calls the same `create_app`
 factory once per execution environment and retains the app/SDK client for warm
@@ -29,9 +58,9 @@ be explicitly nonempty: `ENVIRONMENT`, `AUTH_MODE`, runtime-provided `AWS_REGION
 Phase 3D supplies staging `AUTH_MODE=demo`, production `AUTH_MODE=cognito`, and
 stack-local table/secret references and CORS configuration. Secrets Manager
 generates raw 64-character alphanumeric signing keys; Lambda resolves both via
-GetSecretValue before composing the app. Production protected/demo routes remain
-503 until Cognito verification exists; health can initialize. No production
-readiness or deployment is claimed. Existing Settings
+GetSecretValue before composing the app. Production now requires validated Cognito
+settings before health can initialize; demo issuance remains disabled there.
+No production readiness or deployment is claimed. Existing Settings
 validation rejects local authentication, custom DynamoDB endpoints, weak/local
 signing keys, wildcard CORS and invalid values. SDK environment overrides
 `AWS_ENDPOINT_URL` and `AWS_ENDPOINT_URL_DYNAMODB` are also rejected.
@@ -82,7 +111,7 @@ artifacts/lambda/hireflux-backend-lambda.zip
 artifacts/lambda/hireflux-backend-lambda.manifest.json
 ```
 
-The ZIP root contains `hireflux_backend/` and the 31 production distributions,
+The new candidate ZIP root contains `hireflux_backend/` and 35 production distributions,
 including their `.dist-info`, native `.so` libraries, botocore service data,
 certificate-related runtime assets and timezone data. There is no enclosing
 `backend/`, `src/`, or `python/` directory. The complete locked boto3 1.43.53 /
@@ -145,8 +174,9 @@ and preflight, missing route, unauthenticated route, generic safe 500/logging,
 and unsupported event rejection. A separate temporary ASGI transport probe
 checks POST path/method, repeated encoded query values, base64 input, cookies,
 text CSV and Content-Disposition output, without adding product routes.
-All six native dependencies load from the ZIP: pydantic-core, httptools,
-PyYAML, uvloop, watchfiles and websockets. Config failure cases include local
+Eight native modules load from the new candidate ZIP: pydantic-core, httptools,
+PyYAML, uvloop, watchfiles, websockets, cryptography and cffi. Real RS256 signing/
+verification and synthetic Cognito admission are exercised. Config failure cases include local
 auth under Lambda, endpoints, missing required values, short keys and wildcard
 CORS. Network/DNS hooks record even attempted access; the result is zero.
 No DynamoDB table or AWS credentials are needed for health and these fixtures.

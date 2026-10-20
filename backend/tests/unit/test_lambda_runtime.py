@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+from cognito_fixtures import COGNITO_CONFIG
 
 from hireflux_backend.lambda_settings import REQUIRED_VARIABLES, get_lambda_settings
 
@@ -259,7 +260,9 @@ def test_unexpected_secret_arn_and_binary_fail() -> None:
 
 
 @pytest.mark.usefixtures("lambda_environment")
-def test_production_auth_remains_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_production_fails_closed_without_provider_and_denies_untrusted_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from fastapi.testclient import TestClient
 
     from hireflux_backend.app_factory import create_app
@@ -267,6 +270,10 @@ def test_production_auth_remains_unavailable(monkeypatch: pytest.MonkeyPatch) ->
 
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("AUTH_MODE", "cognito")
+    with pytest.raises(RuntimeError, match="Invalid Lambda configuration"):
+        get_lambda_settings()
+    for key, value in COGNITO_CONFIG.items():
+        monkeypatch.setenv(key.upper(), value)
     app = create_app(
         get_lambda_settings(), dynamodb_client=object(), cors_policy=get_lambda_cors_policy()
     )
@@ -274,9 +281,30 @@ def test_production_auth_remains_unavailable(monkeypatch: pytest.MonkeyPatch) ->
         assert client.get("/health").status_code == 200
         assert (
             client.get("/api/v1/me", headers={"Authorization": "Bearer untrusted"}).status_code
-            == 503
+            == 401
         )
         assert client.post("/api/v1/demo-sessions").status_code == 503
+
+
+@pytest.mark.usefixtures("lambda_environment")
+def test_lambda_additive_capabilities_preserve_legacy_demo_anchor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from hireflux_backend.config import AuthMode
+
+    legacy = get_lambda_settings()
+    assert legacy.enabled_auth_capabilities == (AuthMode.DEMO,)
+    monkeypatch.setenv("AUTH_CAPABILITIES", "demo,cognito")
+    with pytest.raises(RuntimeError, match="Invalid Lambda configuration"):
+        get_lambda_settings()
+    for name, value in COGNITO_CONFIG.items():
+        monkeypatch.setenv(name.upper(), value)
+    combined = get_lambda_settings()
+    assert combined.auth_mode is AuthMode.DEMO
+    assert combined.enabled_auth_capabilities == (AuthMode.DEMO, AuthMode.COGNITO)
+    monkeypatch.setenv("AUTH_CAPABILITIES", "local,demo,cognito")
+    with pytest.raises(RuntimeError, match="Invalid Lambda configuration"):
+        get_lambda_settings()
 
 
 @pytest.mark.usefixtures("lambda_environment")
