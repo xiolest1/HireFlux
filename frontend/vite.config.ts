@@ -2,7 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { configDefaults, defineConfig } from "vitest/config";
 import { loadEnv } from "vite";
-import { createSecurityHeaders } from "./src/securityHeaders";
+import { createSecurityHeaders, hostingAuthEnvironment } from "./src/securityHeaders";
 
 function localSecurityHeaders(
   mode: string,
@@ -19,6 +19,9 @@ function localSecurityHeaders(
   return createSecurityHeaders([apiOrigin, "http://127.0.0.1:8000"], {
     allowInlineScripts: options.allowInlineScripts,
     includeTransportSecurity: false,
+    // Local development/preview qualifies the staging fixture; this is not an
+    // authorization to contact Cognito. Production hosting is separately rendered.
+    cognitoEnvironment: hostingAuthEnvironment(env.VITE_PUBLIC_SITE_URL || "http://localhost:5173"),
   });
 }
 

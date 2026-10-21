@@ -55,7 +55,9 @@ for (const environment of ['staging', 'production'] as const) {
     const variables = properties.Environment.Variables;
     assert.deepEqual(Object.keys(variables).sort(), ['ENVIRONMENT', 'AUTH_MODE', 'DYNAMODB_TABLE_NAME',
       'CORS_ALLOWED_ORIGINS', 'CURSOR_SIGNING_SECRET_ARN', 'DEMO_SESSION_SIGNING_SECRET_ARN', 'LAMBDA_CORS_POLICY',
-      'MAX_SYNC_EXPORT_BYTES', 'MAX_SYNC_EXPORT_WORK_SECONDS', 'ACCOUNT_ERASURE_MAX_SECONDS_PER_REQUEST'].sort());
+      'MAX_SYNC_EXPORT_BYTES', 'MAX_SYNC_EXPORT_WORK_SECONDS', 'ACCOUNT_ERASURE_MAX_SECONDS_PER_REQUEST',
+      'AUTH_CAPABILITIES', 'COGNITO_USER_POOL_ID', 'COGNITO_APP_CLIENT_ID', 'COGNITO_DOMAIN',
+      'COGNITO_SELF_REGISTRATION_ENABLED', 'PERSISTENT_ACCOUNT_MANAGEMENT_ENABLED'].sort());
     assert.equal(variables.ENVIRONMENT, environment);
     assert.equal(variables.AUTH_MODE, environment === 'staging' ? 'demo' : 'cognito');
     assert.deepEqual(variables.DYNAMODB_TABLE_NAME, ref(ids.table));
@@ -64,7 +66,8 @@ for (const environment of ['staging', 'production'] as const) {
     // Resolve token values conservatively: 768 bytes/secret ARN and 255/table name.
     const bytes = Object.entries(variables).reduce((sum, [key, value]) => sum + Buffer.byteLength(key) +
       (typeof value === 'string' ? Buffer.byteLength(value) : key === 'DYNAMODB_TABLE_NAME' ? 255 :
-        key === 'CORS_ALLOWED_ORIGINS' ? 268 : 768), 0);
+        key === 'CORS_ALLOWED_ORIGINS' ? 268 : key === 'COGNITO_USER_POOL_ID' ? 70 :
+        key === 'COGNITO_APP_CLIENT_ID' ? 128 : key === 'COGNITO_DOMAIN' ? 120 : 768), 0);
     assert.ok(bytes < 3072, `Environment exceeds headroom budget: ${bytes}`);
     assert.equal(variables.MAX_SYNC_EXPORT_BYTES, '4000000');
     assert.ok(Number(variables.MAX_SYNC_EXPORT_BYTES) < 6 * 1024 * 1024);
@@ -88,6 +91,7 @@ for (const environment of ['staging', 'production'] as const) {
         ...['GSI1', 'GSI2', 'GSI3'].map((index) => ({ 'Fn::Join': ['', [getAtt(ids.table), `/index/${index}`]] }))] },
       { Effect: 'Allow', Action: 'secretsmanager:GetSecretValue', Resource: [ref(ids.cursor), ref(ids.demo)] },
       { Effect: 'Allow', Action: ['logs:CreateLogStream', 'logs:PutLogEvents'], Resource: getAtt('OperationalLogsBackendFunctionLogs44D131F8') },
+      { Effect: 'Allow', Action: 'cognito-idp:AdminDeleteUser', Resource: getAtt('CognitoAuthUserPoolAF093846') },
     ]);
     const text = JSON.stringify(policy.PolicyDocument);
     for (const forbidden of ['dynamodb:Scan', 'dynamodb:*', 'dynamodb:CreateTable', 'dynamodb:DeleteTable',

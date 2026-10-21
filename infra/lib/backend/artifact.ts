@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 
 export interface BackendArtifact { readonly path: string; readonly sha256: string; }
@@ -74,10 +74,14 @@ function sources(root: string, prefix = ''): Map<string, Buffer> {
   return result;
 }
 
-export function verifyBackendArtifact(repositoryRoot = resolve(__dirname, '../../../..')): BackendArtifact {
-  const path = join(repositoryRoot, 'artifacts/lambda/hireflux-backend-lambda.zip');
+export function verifyBackendArtifact(repositoryRoot = resolve(__dirname, '../../../..'), candidate?: string): BackendArtifact {
+  const path = candidate === undefined ? join(repositoryRoot, 'artifacts/lambda/hireflux-backend-lambda.zip') : resolve(repositoryRoot, candidate);
   const manifestPath = path.replace(/\.zip$/, '.manifest.json');
   try {
+    if (candidate !== undefined) {
+      const within = relative(join(repositoryRoot, '.tools'), realpathSync(path));
+      assert.ok(within && !within.startsWith('..') && !isAbsolute(within) && path.endsWith('.zip'), 'Release candidate must be a local .tools ZIP.');
+    }
     assert.ok(existsSync(path) && existsSync(manifestPath), 'ZIP and adjacent manifest are required.');
     assert.ok(!lstatSync(path).isSymbolicLink() && !lstatSync(manifestPath).isSymbolicLink(), 'Artifact symlinks are forbidden.');
     assert.ok(lstatSync(path).size <= COMPRESSED_LIMIT, 'Compressed artifact exceeds budget.');

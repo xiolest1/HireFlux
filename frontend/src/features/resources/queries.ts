@@ -57,8 +57,14 @@ export function useUpdateSettings() {
   const { state } = useWorkspaceSession();
   return useWorkspaceMutation({
     mutationFn: (request: UpdateSettingsRequest) => updateSettings(request),
-    onSuccess: (settings, request) => {
-      if (state.status === "ready" && state.capabilities.temporary && request.time_zone !== undefined) markManualTimeZonePreference();
+    onMutate: () => ({ timeZone: client.getQueryData<Settings>(resourceKeys.settings)?.time_zone }),
+    onSuccess: (settings, request, previous) => {
+      if (
+        state.status === "ready" && state.capabilities.temporary &&
+        previous?.timeZone !== undefined && request.time_zone !== undefined &&
+        request.time_zone !== previous.timeZone && settings.time_zone === request.time_zone &&
+        settings.version > request.expected_version
+      ) markManualTimeZonePreference();
       client.setQueryData(resourceKeys.settings, settings);
     },
   });

@@ -1,5 +1,29 @@
 # HireFlux infrastructure
 
+Current local source: [Phase 5D](../docs/phase5d-account-lifecycle-handoff.md) adds
+exactly four protected/closed-registration Cognito resources per environment.
+Offline comparison against the frozen staging template permits only existing
+Lambda code/environment and exact-pool AdminDeleteUser policy modifications.
+Inventory is 29 declarations / 26 with blank email; all old logical IDs and
+Amplify/table/secrets/monitoring/bootstrap properties remain stable. Historical
+phase narratives below describe their original checkpoints. The deployed demo
+remains the [qualified 4H checkpoint](../docs/phase4h-staging-acceptance.md), not
+the locally synthesized Cognito release. No 5E deployment is authorized.
+
+To qualify a separate current ZIP without overwriting historical artifacts,
+the local wrapper accepts `-c backendArtifact=.tools/phase5d/hireflux-backend-candidate.zip`.
+The verifier requires a ZIP under the repository's `.tools`, matching manifest,
+current source/lock, target, file hashes and budgets. Default canonical behavior
+is unchanged. CLI/parity tests can explicitly use the same candidate through
+`HIREFLUX_QUALIFIED_BACKEND_ARTIFACT`; this is not an AWS credential or executor.
+Pure helpers in `lib/release/update-contract.ts` prepare inert UPDATE/previous-
+parameter fixtures and reject unapproved changes/replacements; they never call AWS.
+Both PATs remain deleted. A live Amplify change or credential requirement is STOP.
+The [5D.1 security addendum](../docs/phase5d1-cdk-security-remediation.md) upgrades
+aws-cdk-lib to 2.273.0 with bundled brace-expansion 5.0.12; CLI stays 2.1144.0.
+The full infra audit is clean and fresh templates/assets exactly match 5D.
+Earlier advisory findings below remain historical checkpoints.
+
 Phase 3A provides a standalone TypeScript AWS CDK v2 package, a shared environment
 stack, and local validation. Phase 3C defines one DynamoDB table per environment; Phase 3D now defines
 its Lambda, IAM, signing secrets and HTTP API request path. Phase 3E adds independent

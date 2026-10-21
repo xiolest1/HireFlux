@@ -3,8 +3,10 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
+from hireflux_backend.application.account_lifecycle import AccountLifecycleService, require_recent
 from hireflux_backend.application.demo_sessions import DemoSessionService
 from hireflux_backend.application.errors import (
+    AccountManagementUnavailableError,
     AuthenticationRequiredError,
     DemoSessionRequiredError,
 )
@@ -73,6 +75,42 @@ def get_trusted_profile(
     return None
 
 
+def get_sensitive_principal(
+    request: Request,
+    identity: Annotated[CurrentIdentity, Depends(get_current_identity)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> VerifiedPrincipal | None:
+    if identity.kind is not IdentityKind.PERSISTENT:
+        return None
+    if request.method != "GET" and not settings.persistent_account_management_enabled:
+        raise AccountManagementUnavailableError("Account management is currently unavailable.")
+    previous: VerifiedPrincipal = request.state.verified_principal
+    context = request.scope.get("aws.context")
+    remaining = context.get_remaining_time_in_millis() / 1000 if context is not None else None
+    # get_current_identity has already rejected ambiguous headers. Fresh admission
+    # deliberately bypasses the ordinary token-hashed userInfo cache.
+    principal: VerifiedPrincipal = request.app.state.cognito_authentication.authenticate(
+        request.headers["authorization"][7:], fresh=True, remaining_seconds=remaining
+    )
+    if (
+        principal.identity != previous.identity
+        or principal.issuer != previous.issuer
+        or principal.client_id != previous.client_id
+    ):
+        raise AuthenticationRequiredError("The account identity could not be confirmed.")
+    require_recent(
+        principal,
+        settings.cognito_issuer,
+        str(settings.cognito_app_client_id),
+        request.app.state.account_clock(),
+    )
+    return principal
+
+
+def get_account_lifecycle_service(request: Request) -> AccountLifecycleService | None:
+    return request.app.state.account_lifecycle_service
+
+
 def get_user_service(request: Request) -> UserService:
     return request.app.state.user_service
 
@@ -134,4 +172,8 @@ WorkspaceExportServiceDependency = Annotated[
 ]
 WorkspaceErasureServiceDependency = Annotated[
     WorkspaceErasureService, Depends(get_workspace_erasure_service)
+]
+SensitivePrincipalDependency = Annotated[VerifiedPrincipal | None, Depends(get_sensitive_principal)]
+AccountLifecycleServiceDependency = Annotated[
+    AccountLifecycleService | None, Depends(get_account_lifecycle_service)
 ]

@@ -17,6 +17,7 @@ class PublicCognitoConfiguration(BaseModel):
     client_id: str
     domain: str
     scopes: tuple[str, ...]
+    self_registration_enabled: bool = False
 
 
 class PublicAuthConfiguration(BaseModel):
@@ -24,7 +25,7 @@ class PublicAuthConfiguration(BaseModel):
     environment: Environment
     capabilities: list[Literal["demo", "cognito"]]
     account_data_policy: Literal["local_development", "disposable_staging", "production"]
-    account_management_enabled: Literal[False] = False
+    account_management_enabled: bool = False
     cognito: PublicCognitoConfiguration | None = None
 
 
@@ -45,6 +46,7 @@ def authentication_configuration(
             client_id=settings.cognito_app_client_id,
             domain=settings.cognito_domain,
             scopes=REQUIRED_SCOPES,
+            self_registration_enabled=settings.cognito_self_registration_enabled,
         )
     return PublicAuthConfiguration(
         environment=settings.environment,
@@ -57,4 +59,5 @@ def authentication_configuration(
             else "local_development"
         ),
         cognito=cognito,
+        account_management_enabled=settings.persistent_account_management_enabled,
     )

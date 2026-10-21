@@ -1,11 +1,19 @@
 # HireFlux architecture
 
-**Local source checkpoint — Phase 5B:** the backend now supports additive demo and
-Cognito authentication, pinned RS256/JWKS plus userInfo admission, and empty
-persistent bootstrap. See the [5B implementation handoff](docs/phase5b-backend-cognito-handoff.md).
-This code is not deployed. The staging shape/evidence below remains the accepted
-demo baseline; frontend OAuth, provider deletion and Cognito infrastructure are
-still future 5C–5E work.
+**Local source checkpoint — Phase 5D:** additive demo/Cognito authentication and
+code/PKCE sessions now include recent-authenticated full JSON export and confirmed
+account deletion. The existing bounded erasure engine strongly verifies DELETED
+before one exact-pool provider deletion; ambiguous results require independent
+operator reconciliation. Minimal non-TTL tombstone progress prevents blind retries.
+The single browser controller binds one-use sensitive intents to the same subject,
+OAuth transaction and identity fences. Four offline-defined Cognito resources use
+closed registration and protected/retained pools; only Lambda code/config and its
+pool-scoped AdminDeleteUser permission change among existing resources. See the
+[5D handoff](docs/phase5d-account-lifecycle-handoff.md) and
+[operator procedure](docs/account-finalization-operations.md). Qualification is local
+with fake providers and isolated Linux runtime checks. This code is not deployed;
+live integration requires separate Phase 5E authorization. The staging shape and
+historical phase descriptions below remain the accepted demo baseline.
 
 The [October 20 Phase 4H acceptance](docs/phase4h-staging-acceptance.md) records
 deployed AWS staging accepted with explicit qualifications for supervised
@@ -174,7 +182,7 @@ mode singleton. JWT verification pins issuer/client/RS256/access use/scopes/time
 bounded server userInfo admission supplies verified subject/email and optional
 name. Only STANDARD_USER is admitted. Provider outages affect Cognito requests
 once cached evidence expires, without disabling demos. The current deployed SPA
-still runs demos; browser account sessions remain Phase 5C.
+still runs demos; browser account sessions are implemented locally in Phase 5C.
 
 Durable readiness is centrally checked before all ordinary owner routes, including
 `GET /me`, settings, insights, pipeline, resource writes, and exports. Missing or
@@ -277,14 +285,18 @@ safe lifecycle status. Strong reference/application queries discover whole owned
 partitions without Scan/GSI authority. Batch retries are bounded; refs disappear
 only after confirmed empty partitions. Owner data is cleared before a minimal
 non-TTL DELETED tombstone remains. Remaining keys are resumable progress; there is
-no background worker or provider identity deletion. Existing reads that passed
+no background worker. Phase 5D adds persistent provider identity deletion only
+after strong terminal erasure, recent authentication and typed confirmation;
+ambiguous finalization requires operator reconciliation. This addition is local
+source, not deployed Cognito. Existing reads that passed
 preflight can finish; commit-time conditions guarantee mutation exclusion.
 
 Full JSON exports require the complete manifest, strongly read canonical records,
 and enforce incremental record/public UTF-8 byte/elapsed-work budgets plus an
 exact final response check. This is not a transactional snapshot. Tombstone
-retention, historical backup erasure, recent-auth policy, and provider finalization
-remain production hardening/authentication work. See
+retention and historical backup erasure remain production hardening work;
+recent-auth policy and safe provider finalization are now locally implemented
+under the [5D contract](docs/phase5d-account-lifecycle-handoff.md). See
 [ADR 0007](docs/adr/0007-durable-workspace-manifest-and-erasure.md).
 
 Full key shapes and query contracts are documented in

@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     cognito_app_client_id: str | None = None
     cognito_domain: str | None = None
     persistent_account_management_enabled: bool = False
+    cognito_self_registration_enabled: bool = False
     cursor_signing_key: SecretStr
     demo_session_signing_key: SecretStr = SecretStr(
         "local-only-demo-session-signing-key-change-before-deployment"
@@ -179,8 +180,10 @@ class Settings(BaseSettings):
                 self.cognito_domain,
             ):
                 raise ValueError("An exact HTTPS Cognito prefix-domain origin is required.")
-        if self.persistent_account_management_enabled:
-            raise ValueError("Persistent account management is unavailable until Phase 5D.")
+        if (
+            self.persistent_account_management_enabled or self.cognito_self_registration_enabled
+        ) and AuthMode.COGNITO not in self.enabled_auth_capabilities:
+            raise ValueError("Account management and registration require Cognito capability.")
         return self
 
     @property

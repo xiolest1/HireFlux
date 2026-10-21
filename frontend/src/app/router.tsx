@@ -16,6 +16,9 @@ const ApplicationEditPage = lazy(() => import("../pages/ApplicationEditPage").th
 const InterviewsPage = lazy(() => import("../pages/InterviewsPage").then((module) => ({ default: module.InterviewsPage })));
 const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage").then((module) => ({ default: module.AnalyticsPage })));
 const SettingsPage = lazy(() => import("../pages/SettingsPage").then((module) => ({ default: module.SettingsPage })));
+const AuthCallbackPage = lazy(() => import("../pages/AuthCallbackPage").then((module) => ({ default: module.AuthCallbackPage })));
+const AuthSignedOutPage = lazy(() => import("../pages/AuthSignedOutPage").then((module) => ({ default: module.AuthSignedOutPage })));
+const AccountManagementPage = lazy(() => import("../pages/AccountManagementPage").then((module) => ({ default: module.AccountManagementPage })));
 
 function suspendedPage(page: ReactNode, label: string) {
   return <Suspense fallback={<LoadingState label={label} />}>{page}</Suspense>;
@@ -26,6 +29,9 @@ function titledPage(title: string, page: ReactNode) {
 }
 
 export const appRoutes: RouteObject[] = [
+  { path: "/account", element: titledPage("Account management", suspendedPage(<AccountManagementPage />, "Loading account management…")), errorElement: <RouteErrorPage /> },
+  { path: "/auth/callback", element: titledPage("Account sign-in", suspendedPage(<AuthCallbackPage />, "Loading account sign-in…")), errorElement: <RouteErrorPage /> },
+  { path: "/auth/signed-out", element: titledPage("Signed out", suspendedPage(<AuthSignedOutPage />, "Loading sign-out status…")), errorElement: <RouteErrorPage /> },
   {
     path: "/",
     element: titledPage("Demo workspace", suspendedPage(<LandingPage />, "Loading demo workspace…")),

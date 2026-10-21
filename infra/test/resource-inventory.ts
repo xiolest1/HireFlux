@@ -25,5 +25,9 @@ export const REVIEWED_RESOURCES = Object.freeze({
   OperationsDynamoDBSystemErrorsB63796D3: 'AWS::CloudWatch::Alarm',
   OperationsOperationalDashboard098A469E: 'AWS::CloudWatch::Dashboard',
   OperationsMonthlyCostBudgetFC194922: 'AWS::Budgets::Budget',
+  CognitoAuthUserPoolAF093846: 'AWS::Cognito::UserPool',
+  CognitoAuthPublicClient5A05A7D7: 'AWS::Cognito::UserPoolClient',
+  CognitoAuthDomain0075BD90: 'AWS::Cognito::UserPoolDomain',
+  CognitoAuthManagedLoginBranding8935A739: 'AWS::Cognito::ManagedLoginBranding',
 });
-export const REVIEWED_RESOURCE_COUNT = 25;
+export const REVIEWED_RESOURCE_COUNT = 29;

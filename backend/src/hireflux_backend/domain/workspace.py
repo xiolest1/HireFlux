@@ -21,6 +21,12 @@ class DurableWorkspaceState(StrEnum):
     DELETED = "DELETED"
 
 
+class ProviderFinalizationState(StrEnum):
+    PENDING = "PENDING"
+    COMPLETE = "COMPLETE"
+    REVIEW_REQUIRED = "REVIEW_REQUIRED"
+
+
 @dataclass(frozen=True, slots=True)
 class DurableWorkspace:
     owner_user_id: str
@@ -32,6 +38,8 @@ class DurableWorkspace:
     application_manifest_version: int | None = None
     deletion_started_at: datetime | None = None
     deletion_completed_at: datetime | None = None
+    provider_finalization: ProviderFinalizationState | None = None
+    provider_finalized_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)

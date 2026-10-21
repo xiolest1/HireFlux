@@ -131,8 +131,17 @@ deferred.
 - **Phase 5B — complete locally with explicit qualifications:** additive backend
   authentication, trusted JWT/provider admission and empty persistent accounts;
   [implementation/results](phase5b-backend-cognito-handoff.md). No cloud release.
-- **Phase 5C — not authorized:** frontend OAuth and persistent-account experience.
-- **Phase 5D — not authorized:** account safety, Cognito CDK and offline release qualification.
+- **Phase 5C — complete locally with explicit qualifications:** frontend OAuth,
+  isolated persistent-account sessions, rotation/logout and Settings correction;
+  [implementation/results](phase5c-frontend-cognito-handoff.md). Fake providers only;
+  no cloud release or real account verification.
+- **Phase 5D — complete locally with explicit qualifications:** recent-authenticated
+  JSON export and confirmed erasure, safe provider finalization/reconciliation,
+  restricted account UI, four closed-registration Cognito resources and qualified
+  release artifacts. [Implementation/results and bounded 5E proposal](phase5d-account-lifecycle-handoff.md).
+  No cloud deployment or real provider verification. The [5D.1 maintenance addendum](phase5d1-cdk-security-remediation.md)
+  resolves the CDK dependency qualification with zero resource/template changes;
+  all other 5D qualifications and the separate 5E authorization gate remain.
 - **Phase 5E — not authorized:** controlled staging update and live verification.
 - **Phase 6 — deferred:** production hardening and release qualification.
 - **Phase 7 — deferred:** production deployment after the preceding gates.

@@ -27,7 +27,14 @@ def headers(h: Harness, **claims: Any) -> dict[str, str]:
 
 def app_client(h: Harness, db: Any, **settings: Any) -> TestClient:
     config = h.settings if not settings else build_settings(**settings)
-    return TestClient(create_app(config, dynamodb_client=db, cognito_authentication=h.verifier))
+    return TestClient(
+        create_app(
+            config,
+            dynamodb_client=db,
+            cognito_authentication=h.verifier,
+            account_clock=lambda: h.clock.now,
+        )
+    )
 
 
 def items(db: Any, partition: str) -> list[dict[str, Any]]:
@@ -62,6 +69,7 @@ def test_public_config_has_no_provider_database_identity_or_secret_work(
             "client_id": COGNITO_CONFIG["cognito_app_client_id"],
             "domain": COGNITO_CONFIG["cognito_domain"],
             "scopes": ["openid", "email", "profile"],
+            "self_registration_enabled": False,
         },
     }
     db.assert_not_called()
@@ -165,7 +173,7 @@ def test_owner_isolation_lifetime_and_persistent_deletion_gate(
     cognito_harness: Harness, dynamodb_client: Any
 ) -> None:
     h = cognito_harness
-    a, b = headers(h), headers(h, sub="Other-subject")
+    a, b = headers(h, username="CaseSensitive-Opaque-Subject"), headers(h, sub="Other-subject")
     with app_client(h, dynamodb_client) as client:
         for auth in (a, b):
             assert client.post(API + "/me/bootstrap", headers=auth).status_code == 200
@@ -296,7 +304,9 @@ def test_concurrent_bootstrap_converges(cognito_harness: Harness, dynamodb_clien
             results = list(
                 pool.map(lambda _: client.post(API + "/me/bootstrap", headers=auth), range(4))
             )
-        assert all(result.status_code == 200 for result in results)
+        assert all(result.status_code == 200 for result in results), [
+            (result.status_code, result.json()) for result in results
+        ]
         assert all(result.json() == results[0].json() for result in results)
     assert len(items(dynamodb_client, user_partition("CaseSensitive-Opaque-Subject"))) == 3
 

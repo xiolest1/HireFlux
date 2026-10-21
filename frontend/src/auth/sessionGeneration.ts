@@ -11,7 +11,14 @@ export interface SessionScope {
   readonly authorization: string | null;
   isCurrent(): boolean;
   assertCurrent(): void;
-  unauthorized(reason: "expired" | "invalidated"): void;
+  credential(): Promise<CredentialLease>;
+  unauthorized(reason: "expired" | "invalidated", revision?: number): void;
+}
+
+export interface CredentialLease { readonly authorization: string | null; readonly revision: number }
+export interface CredentialSource {
+  lease(scope: SessionScope): Promise<CredentialLease>;
+  revision(): number;
 }
 
 let generation = 0;
@@ -20,6 +27,7 @@ let current: SessionScope;
 export function newSessionScope(
   authorization: string | null = null,
   onUnauthorized: (reason: "expired" | "invalidated") => void = () => {},
+  credentials?: CredentialSource,
 ): SessionScope {
   const scope: SessionScope = {
     generation: ++generation,
@@ -28,8 +36,14 @@ export function newSessionScope(
     assertCurrent: () => {
       if (current !== scope) throw new StaleSessionError();
     },
-    unauthorized: (reason) => {
-      if (current === scope) onUnauthorized(reason);
+    credential: async () => {
+      scope.assertCurrent();
+      const lease = credentials ? await credentials.lease(scope) : { authorization, revision: 0 };
+      scope.assertCurrent();
+      return lease;
+    },
+    unauthorized: (reason, revision) => {
+      if (current === scope && (revision === undefined || !credentials || revision === credentials.revision())) onUnauthorized(reason);
     },
   };
   current = scope;

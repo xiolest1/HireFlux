@@ -9,6 +9,7 @@ from hireflux_backend.domain.workspace import (
     BootstrapResult,
     DurableWorkspace,
     DurableWorkspaceState,
+    ProviderFinalizationState,
     WorkspaceSnapshot,
 )
 from hireflux_backend.infrastructure.dynamodb.mapping import (
@@ -47,6 +48,10 @@ def workspace_to_item(workspace: DurableWorkspace) -> dict[str, Any]:
         item["deletion_started_at"] = format_timestamp(workspace.deletion_started_at)
     if workspace.deletion_completed_at is not None:
         item["deletion_completed_at"] = format_timestamp(workspace.deletion_completed_at)
+    if workspace.provider_finalization is not None:
+        item["provider_finalization"] = workspace.provider_finalization.value
+    if workspace.provider_finalized_at is not None:
+        item["provider_finalized_at"] = format_timestamp(workspace.provider_finalized_at)
     return item
 
 
@@ -118,6 +123,16 @@ class DynamoWorkspaceBootstrapRepository:
                     deletion_completed_at=(
                         parse_timestamp(workspace_item["deletion_completed_at"])
                         if "deletion_completed_at" in workspace_item
+                        else None
+                    ),
+                    provider_finalization=(
+                        ProviderFinalizationState(workspace_item["provider_finalization"])
+                        if "provider_finalization" in workspace_item
+                        else None
+                    ),
+                    provider_finalized_at=(
+                        parse_timestamp(workspace_item["provider_finalized_at"])
+                        if "provider_finalized_at" in workspace_item
                         else None
                     ),
                 )

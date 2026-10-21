@@ -3,13 +3,14 @@ import { createDemoSession } from "../api/demoSessions";
 import type { DemoSession } from "../api/schemas";
 import { bootstrapWorkspace, type WorkspaceBootstrap } from "../api/workspaceBootstrap";
 import { DEMO_SESSION_EVENT, loadDemoSession, removeStoredDemoSession, saveDemoSession } from "./sessionStore";
-import type { SessionScope } from "./sessionGeneration";
+import type { CredentialSource, SessionScope } from "./sessionGeneration";
 import type { WorkspaceLifetime } from "./workspaceCapabilities";
 
 export interface AdapterWorkspace {
   lifetime: WorkspaceLifetime;
   identityKind: "DEMO" | "LOCAL" | "PERSISTENT";
   authorization: string | null;
+  credentials?: CredentialSource;
   presentationKey?: string;
   demo?: DemoSession;
   bootstrap?: WorkspaceBootstrap;

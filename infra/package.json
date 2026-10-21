@@ -16,7 +16,7 @@
     "test:artifact": "npm run build && node --test build/test/cli.integration.js"
   },
   "dependencies": {
-    "aws-cdk-lib": "2.272.0",
+    "aws-cdk-lib": "2.273.0",
     "constructs": "10.8.1"
   },
   "devDependencies": {

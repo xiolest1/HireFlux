@@ -9,6 +9,8 @@ import type { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import type { CfnBranch } from 'aws-cdk-lib/aws-amplify';
 import { FrontendHosting } from './hosting/frontend-hosting';
 import { OperationalGuardrails, OperationalLogs } from './operations/operational-guardrails';
+import { CognitoAuth } from './auth/cognito-auth';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 export class HireFluxStack extends Stack {
   public readonly workspaceTable: Table;
@@ -19,6 +21,7 @@ export class HireFluxStack extends Stack {
   public readonly frontendBranch: CfnBranch;
   public readonly operationalLogs: OperationalLogs;
   public readonly operations: OperationalGuardrails;
+  public readonly cognitoAuth: CognitoAuth;
 
   constructor(scope: Construct, id: string, config: HireFluxEnvironmentConfig, artifact?: BackendArtifact) {
     validateEnvironmentConfig(config);
@@ -68,10 +71,20 @@ export class HireFluxStack extends Stack {
       description: 'Deploy-time Amplify GitHub repository authorization; Phase 4 prerequisite.',
     });
     this.frontendHosting = new FrontendHosting(this, 'FrontendHosting', config, accessToken.valueAsString);
+    this.cognitoAuth = new CognitoAuth(this, 'CognitoAuth', config, this.frontendHosting.frontendOrigin);
     this.operationalLogs = new OperationalLogs(this, 'OperationalLogs', config);
     this.backend = new BackendApi(this, 'BackendApi', this.workspaceTable, config,
       artifact ?? verifyBackendArtifact(), this.frontendHosting.frontendOrigin, this.operationalLogs);
     this.backendFunction = this.backend.backendFunction;
+    this.backendFunction.addEnvironment('AUTH_CAPABILITIES', config.environmentName === 'staging' ? 'demo,cognito' : 'cognito');
+    this.backendFunction.addEnvironment('COGNITO_USER_POOL_ID', this.cognitoAuth.pool.ref);
+    this.backendFunction.addEnvironment('COGNITO_APP_CLIENT_ID', this.cognitoAuth.client.ref);
+    this.backendFunction.addEnvironment('COGNITO_DOMAIN', this.cognitoAuth.origin);
+    this.backendFunction.addEnvironment('COGNITO_SELF_REGISTRATION_ENABLED', 'false');
+    this.backendFunction.addEnvironment('PERSISTENT_ACCOUNT_MANAGEMENT_ENABLED', 'true');
+    this.backend.executionRole.addToPolicy(new PolicyStatement({
+      actions: ['cognito-idp:AdminDeleteUser'], resources: [this.cognitoAuth.pool.attrArn],
+    }));
     this.httpApi = this.backend.httpApi;
     this.frontendBranch = this.frontendHosting.addBranch(this.httpApi.apiEndpoint);
     const alertEmail = new CfnParameter(this, 'OperationalAlertEmail', {

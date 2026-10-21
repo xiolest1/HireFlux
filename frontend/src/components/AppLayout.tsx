@@ -164,7 +164,7 @@ function WorkspaceLayout({ confirmingReset, setConfirmingReset }: {
   const session = identityReady ? state.workspace.demo : undefined;
   const isCreating = state.status === "switching";
   const error = identityReady ? state.error : undefined;
-  const workspaceLabel = capabilities.temporary ? "Demo workspace" : "Local development workspace";
+  const workspaceLabel = capabilities.temporary ? "Demo workspace" : identityReady && state.workspace.identityKind === "PERSISTENT" ? "Account workspace" : "Local development workspace";
   const meQuery = useMe({ enabled: identityReady });
   const settingsQuery = useSettings({ enabled: identityReady });
   const updateSettingsMutation = useUpdateSettings();
@@ -272,6 +272,11 @@ function WorkspaceLayout({ confirmingReset, setConfirmingReset }: {
   }
 
   function exitWorkspace(discard = false) {
+    if (capabilities.canSignOut) {
+      if (controller.hasUnsavedChanges && !discard) { setConfirmingExit(true); return; }
+      void controller.signOut({ discard }).catch(() => {});
+      return;
+    }
     if (!controller.leave({ discard })) { setConfirmingExit(true); return; }
     navigate("/", { replace: true });
   }
@@ -485,7 +490,7 @@ function WorkspaceLayout({ confirmingReset, setConfirmingReset }: {
                   }`}
                 >
                   <Clock3 aria-hidden="true" className="size-3.5" />
-                  {capabilities.showExpiry ? expiry.label : "Local development · Durable"}
+                  {capabilities.showExpiry ? expiry.label : capabilities.canSignOut ? "Account · Saved workspace" : "Local development · Durable"}
                 </span>
                 <div className="hidden lg:block">
                   <ThemeToggle
@@ -506,6 +511,7 @@ function WorkspaceLayout({ confirmingReset, setConfirmingReset }: {
                   <RotateCcw aria-hidden="true" className="size-4" />
                   Reset demo
                 </button> : null}
+                {capabilities.canSignOut ? <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exitWorkspace()}>Sign Out</Button> : null}
               </div>
             </div>
           </header>
@@ -526,6 +532,8 @@ function WorkspaceLayout({ confirmingReset, setConfirmingReset }: {
             tabIndex={-1}
             className="mx-auto w-full max-w-[100rem] px-4 py-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 sm:pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-10 lg:px-8 lg:py-10 xl:px-10"
           >
+            {identityReady && state.workspace.identityKind === "PERSISTENT" && controller.authenticationConfiguration?.account_data_policy === "disposable_staging" ? <p className="mb-5 rounded-xl border border-warning/30 bg-warning-soft p-3 text-sm" role="note">Supervised staging: use fictional application data. Records persist across sign-outs, but this database is disposable and does not guarantee backup or recovery.</p> : null}
+            {identityReady && state.credentialStatus === "refreshing" ? <p className="sr-only" role="status">Refreshing your account credential…</p> : null}
             {!identityReady ? (
               <LoadingState label="Preparing a fresh demo workspace..." />
             ) : (
@@ -663,7 +671,7 @@ function WorkspaceLayout({ confirmingReset, setConfirmingReset }: {
               onClick={() => exitWorkspace()}
             >
               <LogOut aria-hidden="true" className="size-5" />
-              {capabilities.temporary ? "Exit demo" : "Leave local workspace"}
+              {capabilities.canSignOut ? "Sign Out" : capabilities.temporary ? "Exit demo" : "Leave local workspace"}
             </button>
           </div>
         </Drawer>

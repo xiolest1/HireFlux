@@ -12,7 +12,11 @@ snapshots, not fresh AWS inventory or permission to repeat operations.
 
 Detailed supporting contracts remain in this directory:
 
+- [CDK security remediation and unchanged release — Phase 5D.1 addendum](phase5d1-cdk-security-remediation.md)
+- [Locally qualified account lifecycle and Cognito CDK — Phase 5D](phase5d-account-lifecycle-handoff.md)
+- [Operator reconciliation after uncertain identity finalization](account-finalization-operations.md)
 - [Locally implemented backend Cognito foundation — Phase 5B](phase5b-backend-cognito-handoff.md)
+- [Locally qualified frontend Cognito sessions — Phase 5C](phase5c-frontend-cognito-handoff.md)
 - [Accepted Phase 5A implementation contract](phase5a-cognito-implementation-contract.md)
 
 - [DynamoDB access patterns](dynamodb-access-patterns.md)

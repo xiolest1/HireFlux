@@ -1,6 +1,6 @@
 export type WorkspaceLifetime = "temporary" | "durable";
 
-export function workspaceCapabilities(lifetime: WorkspaceLifetime) {
+export function workspaceCapabilities(lifetime: WorkspaceLifetime, identityKind?: "LOCAL" | "DEMO" | "PERSISTENT") {
   return {
     temporary: lifetime === "temporary",
     showExpiry: lifetime === "temporary",
@@ -8,6 +8,6 @@ export function workspaceCapabilities(lifetime: WorkspaceLifetime) {
     canExportWorkspace: lifetime === "durable",
     showAccountSimulation: lifetime === "temporary",
     canManageAccount: false,
-    canSignOut: false,
+    canSignOut: identityKind === "PERSISTENT",
   } as const;
 }

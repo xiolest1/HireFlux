@@ -19,6 +19,7 @@ from hireflux_backend.application.errors import (
     InvalidCursorError,
     NotFoundError,
     PersistenceError,
+    RecentAuthenticationRequiredError,
     SessionExpiredError,
     ValidationError,
     WorkspaceBootstrapConflictError,
@@ -49,6 +50,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(SessionExpiredError, account_authentication_handler)
     app.add_exception_handler(AccountNotVerifiedError, account_not_verified_handler)
     app.add_exception_handler(AccountManagementUnavailableError, account_management_handler)
+    app.add_exception_handler(RecentAuthenticationRequiredError, recent_authentication_handler)
     app.add_exception_handler(ForbiddenError, forbidden_handler)
     app.add_exception_handler(DemoSessionRequiredError, demo_session_required_handler)
     app.add_exception_handler(DemoSessionExpiredError, demo_session_expired_handler)
@@ -166,6 +168,15 @@ async def account_management_handler(request: Request, error: Exception) -> JSON
         403,
         "ACCOUNT_MANAGEMENT_UNAVAILABLE",
         "Account management is currently unavailable.",
+    )
+
+
+async def recent_authentication_handler(request: Request, error: Exception) -> JSONResponse:
+    return _response(
+        request,
+        403,
+        "RECENT_AUTHENTICATION_REQUIRED",
+        "Sign in again to authorize this sensitive operation.",
     )
 
 

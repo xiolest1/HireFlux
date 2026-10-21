@@ -5,10 +5,12 @@ from time import monotonic
 from fastapi import APIRouter, Response
 
 from hireflux_backend.api.bootstrap_schemas import BootstrapRequest, BootstrapResponse
-from hireflux_backend.api.deletion_schemas import DeletionResponse
+from hireflux_backend.api.deletion_schemas import AccountDeleteRequest, DeletionResponse
 from hireflux_backend.api.dependencies import (
+    AccountLifecycleServiceDependency,
     AuthenticatedIdentityDependency,
     IdentityDependency,
+    SensitivePrincipalDependency,
     TrustedProfileDependency,
     UserServiceDependency,
     WorkspaceBootstrapServiceDependency,
@@ -19,6 +21,7 @@ from hireflux_backend.api.export_schemas import WorkspaceExportResponse
 from hireflux_backend.api.schemas import UserResponse
 from hireflux_backend.application.errors import AccountManagementUnavailableError, ForbiddenError
 from hireflux_backend.domain.models import IdentityKind
+from hireflux_backend.domain.workspace import ProviderFinalizationState
 
 router = APIRouter(prefix="/api/v1", tags=["profile"])
 
@@ -38,13 +41,24 @@ def deletion_status(
 def erase_workspace(
     identity: AuthenticatedIdentityDependency,
     service: WorkspaceErasureServiceDependency,
+    principal: SensitivePrincipalDependency,
+    lifecycle: AccountLifecycleServiceDependency,
     response: Response,
-    body: BootstrapRequest | None = None,
+    body: AccountDeleteRequest | None = None,
 ) -> DeletionResponse:
     if identity.kind is IdentityKind.PERSISTENT:
-        raise AccountManagementUnavailableError("Account management is currently unavailable.")
-    result = service.delete(identity)
-    response.status_code = 200 if result.workspace.state.value == "DELETED" else 202
+        if lifecycle is None or principal is None:
+            raise AccountManagementUnavailableError("Account management is currently unavailable.")
+        result = lifecycle.delete(
+            principal, body.confirmation if body and body.confirmation else ""
+        )
+    else:
+        result = service.delete(identity)
+    complete = result.workspace.state.value == "DELETED" and (
+        identity.kind is not IdentityKind.PERSISTENT
+        or result.workspace.provider_finalization is ProviderFinalizationState.COMPLETE
+    )
+    response.status_code = 200 if complete else 202
     response.headers["Cache-Control"] = "no-store"
     return DeletionResponse.from_domain(result)
 
@@ -79,6 +93,7 @@ def get_me(
 @router.get("/me/export", response_model=WorkspaceExportResponse)
 def export_workspace(
     identity: IdentityDependency,
+    principal: SensitivePrincipalDependency,
     service: WorkspaceExportServiceDependency,
     response: Response,
 ) -> Response:

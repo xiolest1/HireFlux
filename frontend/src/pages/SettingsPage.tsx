@@ -19,6 +19,8 @@ import {
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { ColorTheme, DashboardRange, Settings } from "../api/schemas";
+import { ApiError } from "../api/client";
+import { AccountDeletionEntry, RecentExportEntry } from "../features/accounts/AccountManagementControls";
 import { useWorkspaceSession, useWorkspaceUnsavedChanges } from "../auth/workspaceSessionContext";
 import { downloadInSession } from "../auth/sessionGeneration";
 import {
@@ -130,12 +132,24 @@ function draftsMatch(left: SettingsDraft | null, right: SettingsDraft | null) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function changedSettings(draft: SettingsDraft, current: Settings): Partial<SettingsDraft> {
+  return {
+    ...(draft.time_zone !== current.time_zone ? { time_zone: draft.time_zone } : {}),
+    ...(draft.default_follow_up_days !== current.default_follow_up_days ? { default_follow_up_days: draft.default_follow_up_days } : {}),
+    ...(draft.default_application_view !== current.default_application_view ? { default_application_view: draft.default_application_view } : {}),
+    ...(draft.default_dashboard_range !== current.default_dashboard_range ? { default_dashboard_range: draft.default_dashboard_range } : {}),
+    ...(draft.theme !== current.theme ? { theme: draft.theme } : {}),
+  };
+}
+
 export function SettingsPage() {
   const settingsQuery = useSettings();
   const updateMutation = useUpdateSettings();
   const meQuery = useMe();
-  const { state } = useWorkspaceSession();
+  const { state, controller } = useWorkspaceSession();
   const temporary = state.status === "ready" && state.capabilities.temporary;
+  const persistent = state.status === "ready" && state.workspace.identityKind === "PERSISTENT";
+  const staging = persistent && controller.authenticationConfiguration?.account_data_policy === "disposable_staging";
   const session = state.status === "ready" ? state.workspace.demo : undefined;
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
   const dirtyFields = useRef<Set<keyof SettingsDraft>>(new Set());
@@ -190,7 +204,10 @@ export function SettingsPage() {
     if (!draft || !settingsQuery.data || !dirty) return;
     setSaved(false);
     try {
-      const savedSettings = await updateMutation.mutateAsync({ expected_version: settingsQuery.data.version, ...draft });
+      const savedSettings = await updateMutation.mutateAsync({
+        expected_version: settingsQuery.data.version,
+        ...changedSettings(draft, settingsQuery.data),
+      });
       state.scope.assertCurrent();
       dirtyFields.current.clear();
       setDraft(draftFromSettings(savedSettings));
@@ -203,13 +220,13 @@ export function SettingsPage() {
 
   function previewProfileChange(event: FormEvent) {
     event.preventDefault();
-    if (!meQuery.data || !profileNameOverride?.trim()) return;
+    if (!temporary || !meQuery.data || !profileNameOverride?.trim()) return;
     setProfileNameOverride(profileNameOverride.trim());
     setProfilePreviewSaved(true);
   }
 
   const identityName = temporary ? "Demo Workspace" : meQuery.data?.name ?? "";
-  const profileName = profileNameOverride ?? identityName;
+  const profileName = temporary ? profileNameOverride ?? identityName : identityName;
 
   return (
     <WorkspaceFrame width="narrow" className="space-y-10">
@@ -219,7 +236,7 @@ export function SettingsPage() {
         <section className="border-b border-line pb-10" aria-labelledby="profile-title">
           <div className="flex items-start gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info"><UserRound aria-hidden="true" className="size-5" /></span>
-            <div><h2 id="profile-title" className="text-xl font-bold text-ink">Profile</h2><p className="mt-1 text-sm leading-6 text-ink-muted">{temporary ? "Try a profile update in this local preview. The signed-in demo identity remains server-owned." : "Profile attributes are supplied by the local backend. Profile editing and real authentication are not enabled."}</p></div>
+            <div><h2 id="profile-title" className="text-xl font-bold text-ink">Profile</h2><p className="mt-1 text-sm leading-6 text-ink-muted">{temporary ? "Try a profile update in this local preview. The signed-in demo identity remains server-owned." : persistent ? "Your profile comes from your account provider. Amazon Cognito manages sign-in, email confirmation, and password recovery. Profile editing is not available here." : "Profile attributes are supplied by the local backend. Profile editing and real authentication are not enabled."}</p></div>
           </div>
           {meQuery.isPending ? <p className="mt-6 text-sm text-ink-muted" role="status">Loading profile…</p> : null}
           {meQuery.isError ? <div className="mt-6"><ErrorPanel compact error={meQuery.error} onRetry={() => void meQuery.refetch()} /></div> : null}
@@ -229,22 +246,22 @@ export function SettingsPage() {
                 <div>
                   <label htmlFor="profile-name" className="text-sm font-semibold text-ink">Name</label>
                   <input id="profile-name" value={profileName} readOnly={!temporary} onChange={(event) => { setProfileNameOverride(event.target.value); setProfilePreviewSaved(false); }} className="hf-field mt-2 px-3" />
-                  <p id="profile-name-help" className="mt-2 text-xs leading-5 text-ink-tertiary">{temporary ? "Simulation only · no profile write endpoint is used." : "Server-owned local development profile."}</p>
+                  <p id="profile-name-help" className="mt-2 text-xs leading-5 text-ink-tertiary">{temporary ? "Simulation only · no profile write endpoint is used." : persistent ? "Account provider profile · read-only here." : "Server-owned local development profile."}</p>
                 </div>
                 <div>
                   <label htmlFor="profile-email" className="text-sm font-semibold text-ink">Email address</label>
                   <input id="profile-email" value={meQuery.data.email} readOnly disabled className="hf-field mt-2 px-3" />
-                  <p className="mt-2 text-xs leading-5 text-ink-tertiary">Read-only; email verification and delivery are not enabled.</p>
+                  <p className="mt-2 text-xs leading-5 text-ink-tertiary">{persistent ? "Verified email address · managed by your account provider." : "Read-only; email verification and delivery are not enabled."}</p>
                 </div>
               </div>
-              {profilePreviewSaved ? <SuccessBanner>Profile preview updated locally. The demo identity is unchanged.</SuccessBanner> : null}
+              {temporary && profilePreviewSaved ? <SuccessBanner>Profile preview updated locally. The demo identity is unchanged.</SuccessBanner> : null}
               {temporary ? <div className="flex flex-col gap-3 border-t border-line-subtle pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-ink-tertiary">{profileNameOverride && profileNameOverride !== identityName ? "You have a local profile preview change." : "Profile preview matches the demo identity."}</p><Button type="submit" disabled={!profileNameOverride?.trim() || profileNameOverride.trim() === identityName}>Save profile preview</Button></div> : null}
             </form>
           ) : null}
-          {meQuery.data ? <dl className="mt-6 grid gap-5 border-t border-line-subtle pt-5 sm:grid-cols-2"><ProfileItem label="Account type" value={temporary ? "Demo workspace" : "Local development workspace"} /><ProfileItem label="Workspace focus" value="Candidate job search" /></dl> : null}
+          {meQuery.data ? <dl className="mt-6 grid gap-5 border-t border-line-subtle pt-5 sm:grid-cols-2"><ProfileItem label="Account type" value={temporary ? "Demo workspace" : persistent ? "Persistent account" : "Local development workspace"} /><ProfileItem label="Workspace focus" value="Candidate job search" /></dl> : null}
         </section>
 
-        <aside className="border-l-2 border-line pl-5" aria-labelledby="workspace-lifecycle-title"><div className="flex items-start gap-3"><Clock3 aria-hidden="true" className="mt-1 size-5 shrink-0 text-ink-muted" /><div><h2 id="workspace-lifecycle-title" className="text-lg font-bold text-ink">{temporary ? "Demo workspace" : "Durable workspace"}</h2><p className="mt-1 text-sm leading-6 text-ink-muted">{temporary ? "Private fictional data for this browser session. It expires automatically after 24 hours." : "Development only, using the fixed backend identity. Saved data survives refresh and leaving this frontend session. This is not a real account login."}</p></div></div><dl className="mt-5 grid gap-4 border-t border-line-subtle pt-5">{temporary && session ? <ProfileItem label="Workspace expires" value={formatTimestamp(session.expires_at, settingsQuery.data?.time_zone ?? "UTC")} /> : null}<ProfileItem label="Persistence" value={temporary ? "This browser session only" : "Saved on the local backend"} /></dl></aside>
+        <aside className="border-l-2 border-line pl-5" aria-labelledby="workspace-lifecycle-title"><div className="flex items-start gap-3"><Clock3 aria-hidden="true" className="mt-1 size-5 shrink-0 text-ink-muted" /><div><h2 id="workspace-lifecycle-title" className="text-lg font-bold text-ink">{temporary ? "Demo workspace" : persistent ? "Account workspace" : "Durable workspace"}</h2><p className="mt-1 text-sm leading-6 text-ink-muted">{temporary ? "Private fictional data for this browser session. It expires automatically after 24 hours." : persistent ? "Your saved records and preferences remain when you sign out. Signing out clears access in this browser without deleting your workspace." : "Development only, using the fixed backend identity. Saved data survives refresh and leaving this frontend session. This is not a real account login."}</p></div></div><dl className="mt-5 grid gap-4 border-t border-line-subtle pt-5">{temporary && session ? <ProfileItem label="Workspace expires" value={formatTimestamp(session.expires_at, settingsQuery.data?.time_zone ?? "UTC")} /> : null}<ProfileItem label="Persistence" value={temporary ? "This browser session only" : persistent ? "Retained across sign-outs" : "Saved on the local backend"} /></dl>{persistent && !controller.authenticationConfiguration?.account_management_enabled ? <p className="mt-5 border-t border-line-subtle pt-5 text-sm leading-6 text-ink-muted">Account deletion is currently unavailable. Signing out does not delete your account or workspace data.</p> : null}</aside>
       </div>
 
       <section className="border-b border-line pb-10" aria-labelledby="preferences-title">
@@ -261,7 +278,7 @@ export function SettingsPage() {
               <SettingSelect label="Color theme" value={draft.theme} onChange={(value) => change({ ...draft, theme: value as ColorTheme })}><option value="SYSTEM">Use system preference</option><option value="LIGHT">Light</option><option value="DARK">Dark</option></SettingSelect>
             </div>
             <div className="space-y-4 border-t border-line-subtle pt-5">
-              {updateMutation.error ? <ErrorPanel compact title="Preferences could not be saved" error={updateMutation.error} /> : null}
+              {updateMutation.error ? <><ErrorPanel compact title="Preferences could not be saved" error={updateMutation.error} />{updateMutation.error instanceof ApiError && updateMutation.error.status === 409 ? <div className="space-y-3"><p role="status" className="text-sm leading-6 text-ink-muted">Your edits are still here. Refresh the saved preferences, review any changes, then save again.</p><Button type="button" variant="secondary" disabled={settingsQuery.isFetching} onClick={() => void settingsQuery.refetch()}>Refresh saved preferences</Button></div> : null}</> : null}
               {saved ? <SuccessBanner>{temporary ? "Preferences saved for this demo workspace." : "Preferences saved for this durable workspace."}</SuccessBanner> : null}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-ink-tertiary">{dirty ? "You have unsaved preference changes." : "Preferences are up to date."}</p><Button type="submit" disabled={!dirty || updateMutation.isPending || draft.default_follow_up_days < 1 || draft.default_follow_up_days > 30}>{updateMutation.isPending ? <PendingIndicator label="Saving…" /> : "Save preferences"}</Button></div>
             </div>
@@ -269,7 +286,14 @@ export function SettingsPage() {
         ) : null}
       </section>
 
-      <DataPrivacySection isTemporary={temporary} />
+      {staging ? <aside className="rounded-2xl border border-warning/30 bg-warning-soft p-5 text-sm leading-6 text-warning" aria-labelledby="staging-evaluation-title"><h2 id="staging-evaluation-title" className="font-semibold">Staging evaluation</h2><p className="mt-2">For owner-supervised staging evaluation, use fictional application data only. Records can remain across sign-outs, but the staging database is disposable and does not guarantee backup or recovery.</p></aside> : null}
+
+      <DataPrivacySection isTemporary={temporary} isPersistent={persistent} isStaging={staging} />
+      {persistent && controller.authenticationConfiguration?.account_management_enabled ? <section aria-labelledby="account-management-title" className="space-y-4 border-b border-line pb-10">
+        <h2 id="account-management-title" className="text-xl font-bold">Account management</h2>
+        <p>Your registered identity information is real. Deletion erases live HireFlux data before removing your Cognito identity; historical retention systems are separate.</p>
+        <AccountDeletionEntry />
+      </section> : null}
 
       {temporary ? <CandidateAccountPreview workspaceMarker={state.status === "ready" ? state.workspace.presentationKey ?? `workspace-${state.scope.generation}` : ""} /> : null}
     </WorkspaceFrame>
@@ -293,7 +317,7 @@ function SettingsSkeleton() {
   );
 }
 
-function DataPrivacySection({ isTemporary }: { isTemporary: boolean }) {
+function DataPrivacySection({ isTemporary, isPersistent, isStaging }: { isTemporary: boolean; isPersistent: boolean; isStaging: boolean }) {
   const exportMutation = useExportWorkspace();
   const applicationsCsvMutation = useExportApplicationsCsv();
 
@@ -322,12 +346,12 @@ function DataPrivacySection({ isTemporary }: { isTemporary: boolean }) {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 id="account-data-title" className="text-xl font-bold text-ink">Data & privacy</h2>
-            <PreviewStatus tone="available">{isTemporary ? "Available in demo" : "Available in local workspace"}</PreviewStatus>
+            <PreviewStatus tone="available">{isTemporary ? "Available in demo" : isPersistent ? "Available for your account" : "Available in local workspace"}</PreviewStatus>
           </div>
           <p className="mt-1 text-sm leading-6 text-ink-muted">
             {isTemporary
               ? "Download a spreadsheet-friendly copy of the fictional applications in this temporary workspace."
-              : "Export applications for review or download a complete machine-readable workspace copy."}
+              : isPersistent ? `Export applications for review or download a machine-readable copy of your current workspace. An export does not delete your data${isStaging ? " or guarantee recovery of the staging database" : ""}.` : "Export applications for review or download a complete machine-readable workspace copy."}
           </p>
         </div>
       </div>
@@ -341,7 +365,7 @@ function DataPrivacySection({ isTemporary }: { isTemporary: boolean }) {
             {applicationsCsvMutation.isPending ? <PendingIndicator label="Preparing…" /> : "Export CSV"}
           </Button>
         </div>
-        {!isTemporary ? (
+        {isPersistent ? <div className="rounded-2xl border border-line bg-surface p-4"><RecentExportEntry /></div> : !isTemporary ? (
           <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold text-ink">Export my HireFlux data</p>

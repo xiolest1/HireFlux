@@ -46,6 +46,10 @@ class AccountManagementUnavailableError(HireFluxError):
     pass
 
 
+class RecentAuthenticationRequiredError(HireFluxError):
+    pass
+
+
 class ForbiddenError(HireFluxError):
     pass
 

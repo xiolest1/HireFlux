@@ -77,7 +77,7 @@ def test_provider_trust_is_fixed(name: str, value: str) -> None:
         build_settings(auth_mode="cognito", **config)
 
 
-def test_production_only_cognito_and_account_management_stays_off() -> None:
+def test_production_only_cognito_and_management_requires_explicit_cognito_opt_in() -> None:
     secure = {
         "environment": "production",
         "cursor_signing_key": "C" * 64,
@@ -89,8 +89,13 @@ def test_production_only_cognito_and_account_management_stays_off() -> None:
     )
     with pytest.raises(ValidationError, match="Cognito-only"):
         build_settings(auth_mode="demo", auth_capabilities="demo,cognito", **secure)
-    for mode in ("demo", "cognito"):
-        with pytest.raises(ValidationError, match="5D"):
-            build_settings(
-                auth_mode=mode, persistent_account_management_enabled=True, **COGNITO_CONFIG
-            )
+    with pytest.raises(ValidationError, match="Cognito capability"):
+        build_settings(
+            auth_mode="demo", persistent_account_management_enabled=True, **COGNITO_CONFIG
+        )
+    assert not build_settings(
+        auth_mode="cognito", **COGNITO_CONFIG
+    ).persistent_account_management_enabled
+    assert build_settings(
+        auth_mode="cognito", persistent_account_management_enabled=True, **COGNITO_CONFIG
+    ).persistent_account_management_enabled

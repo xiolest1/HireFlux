@@ -1,6 +1,8 @@
 """Construct the API without initializing a runtime application on import."""
 
 import re
+from collections.abc import Callable
+from time import time
 from typing import Any
 from uuid import uuid4
 
@@ -22,6 +24,7 @@ from hireflux_backend.api.routes import (
 from hireflux_backend.api.routes import (
     settings as settings_routes,
 )
+from hireflux_backend.application.account_lifecycle import AccountLifecycleService, IdentityDeletion
 from hireflux_backend.application.demo_sessions import DemoSessionService
 from hireflux_backend.application.insights import InsightsService
 from hireflux_backend.application.opportunity_workspace import OpportunityWorkspaceService
@@ -36,6 +39,7 @@ from hireflux_backend.auth.demo import DemoSessionCodec
 from hireflux_backend.auth.principal import CognitoAuthentication
 from hireflux_backend.config import AuthMode, Settings, get_settings
 from hireflux_backend.cors_policy import CorsPolicy
+from hireflux_backend.infrastructure.cognito_identity import CognitoIdentityDeletion
 from hireflux_backend.infrastructure.dynamodb.client import build_dynamodb_client
 from hireflux_backend.infrastructure.dynamodb.cursor import CursorCodec
 from hireflux_backend.infrastructure.dynamodb.demo_workspace_repository import (
@@ -51,6 +55,9 @@ from hireflux_backend.infrastructure.dynamodb.resource_repositories import (
 from hireflux_backend.infrastructure.dynamodb.workspace_bootstrap_repository import (
     DynamoWorkspaceBootstrapRepository,
 )
+from hireflux_backend.infrastructure.dynamodb.workspace_finalization_repository import (
+    DynamoFinalizationRepository,
+)
 from hireflux_backend.infrastructure.dynamodb.workspace_safety_repository import (
     DynamoWorkspaceSafetyRepository,
 )
@@ -64,6 +71,8 @@ def create_app(
     dynamodb_client: Any | None = None,
     cors_policy: CorsPolicy | None = None,
     cognito_authentication: CognitoAuthentication | None = None,
+    identity_deletion: IdentityDeletion | None = None,
+    account_clock: Callable[[], float] = time,
 ) -> FastAPI:
     configured = settings or get_settings()
     client = dynamodb_client or build_dynamodb_client(configured)
@@ -78,6 +87,7 @@ def create_app(
         openapi_url="/openapi.json" if configured.expose_api_docs else None,
     )
     app.state.settings = configured
+    app.state.account_clock = account_clock
     app.state.cognito_authentication = (
         cognito_authentication or CognitoVerifier(configured)
         if AuthMode.COGNITO in configured.enabled_auth_capabilities
@@ -143,6 +153,18 @@ def create_app(
         max_applications=configured.max_applications_per_workspace,
     )
     app.state.workspace_erasure_service = WorkspaceErasureService(workspace_safety_repository)
+    app.state.account_lifecycle_service = None
+    if configured.persistent_account_management_enabled:
+        assert configured.cognito_user_pool_id and configured.cognito_app_client_id
+        app.state.account_lifecycle_service = AccountLifecycleService(
+            app.state.workspace_erasure_service,
+            DynamoFinalizationRepository(client, configured.dynamodb_table_name),
+            identity_deletion
+            or CognitoIdentityDeletion(configured.cognito_user_pool_id, configured.aws_region),
+            issuer=configured.cognito_issuer,
+            client_id=configured.cognito_app_client_id,
+            clock=account_clock,
+        )
     app.state.workspace_export_service = WorkspaceExportService(
         user_service,
         application_service,

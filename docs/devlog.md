@@ -1,5 +1,136 @@
 # HireFlux development log
 
+## 2026-10-20 — Phase 5D.1 CDK security remediation and release requalification
+
+**PASS.** Upgraded only aws-cdk-lib 2.272.0 → 2.273.0, the minimum verified
+official release carrying bundled brace-expansion 5.0.12. CLI 2.1144.0 and other
+dependencies remain pinned. The cited older CVE was already fixed in baseline
+5.0.9; the actual remaining three later advisories are now absent. Inspected the
+published tarball/SRI, matched all 13 installed brace-package files, confirmed
+the sole installed copy and consistent full dependency tree. Clean locked install,
+full infra audit (zero vulnerabilities), compilation, 127 unit tests, four real-
+artifact offline CLI tests, both synths, schema parity and UPDATE guards pass.
+
+Fresh staging/production templates are byte-identical to 5D, as are asset
+manifests. A new CloudFront feature-flag recommendation appears only in the
+assembly report; no resource/configuration change or relaxed guard is involved.
+Construct-tree version labels also reflect 2.273.0; these two metadata files are
+the only assembly file differences, with all asset/template bytes preserved.
+The same four additions/two nonreplacing modifications and unchanged prior-
+parameter/Amplify/deleted-PAT boundaries remain. Backend/frontend inputs and
+artifacts were directly rehashed without rebuilding or rerunning their suites.
+Old 5D evidence/handoff and frozen 4H records/ledgers remain unchanged.
+
+The [short addendum](phase5d1-cdk-security-remediation.md) records exact old/new
+identities, findings and current release metadata in `.tools/phase5d-remediation/`.
+No AWS/GitHub account operation, hosted/provider traffic, commit/push, remote CI,
+Amplify build, deployment, credential change or cost-control change occurred. The original
+5E proposal remains unchanged apart from closing the CDK qualification. **Stopped
+at 5D.1; Phase 5E still requires separate authorization.**
+
+## 2026-10-20 — Phase 5D account lifecycle and Cognito release qualified locally
+
+**PASS WITH EXPLICIT QUALIFICATIONS.** Reconciled actual 5B HEAD
+`138309d759e43ba4eda131e9f047a5bcf919f446` and all 46 inherited uncommitted 5C
+files before editing. Added recent-authenticated persistent full JSON export and
+typed-confirmed deletion using fresh uncached admission and signed auth_time
+within 300 seconds. Reused the bounded erasure engine, strong terminal proof,
+manifest and transactional ACTIVE guards; LOCAL/demo semantics remain compatible.
+
+Provider finalization uses only the verified canonical username/sub in the pinned
+pool after DELETED. Minimal non-TTL progress arms REVIEW_REQUIRED before one SDK
+dispatch, preventing blind retries after lost responses or completion-write loss.
+Explicit rejection is distinguishable; unknown outcomes require independent
+operator review. Added a typed metadata/strong-tombstone reconciliation helper,
+inert without separately authorized live flags; no public bypass or worker.
+
+Extended the existing frontend controller with one-use same-account OAuth intents,
+fresh prompt=login/PKCE, a restricted account route, recent export, typed deletion,
+truthful progress/status review and terminal credential/cache clearing. Different
+account, canceled/stale/replayed intents and unknown writes cannot resume deletion.
+Closed-registration metadata hides Create Account. Fictional-record, real-email,
+disposable-storage and historical-retention warnings remain explicit.
+
+Added exactly four Cognito resources per environment: Essentials email-username
+pool, public code/PKCE client, managed-login v2 domain and explicit default branding.
+Registration is closed; pool is protected/RETAIN. Real offline comparison against
+the frozen staging template permits only four additions plus existing Lambda
+code/config and exact-pool AdminDeleteUser policy modifications. All old logical
+IDs, Amplify App/Branch, table, secrets, CORS, monitoring, budgets and bootstrap
+remain stable. Inert UPDATE/UsePreviousValue fixtures contain no PAT value and
+reject replacements, unapproved changes or any Amplify reconnection requirement.
+
+Ruff/format/mypy, **630 backend tests**, **527 frontend tests**, **127 infra tests**,
+four offline real-artifact CLI tests, both account-bound synths, schema parity,
+12 hosting/artifact tests and 14 fake-provider desktop/mobile browser checks pass.
+Full frontend qualification uses one worker after concurrent runs timed out;
+assertions/timeouts were not weakened. Python/runtime and frontend audits are
+clean. Patched dev-only Werkzeug 3.1.8 → 3.1.9 and added Cognito typing stubs.
+The inherited bundled CDK high advisory remains open; a newer CDK is available
+but unqualified, requiring explicit acceptance or a separately qualified update
+before cloud release. No clean infra audit is claimed.
+
+Two clean current Linux-target ZIP builds match SHA-256
+`0934a7850fb2ec8c2946afc5828c76e830638a3965736434ef31025504f58f6d`.
+Docker's owner-started Linux engine passed isolated Python 3.14/native RS256/
+cold-warm transport checks with zero network attempts. The 30.21-MiB ZIP exceeds
+only the soft warning. A separate 45-file frontend artifact passes public-origin,
+private-material and source-map validation. New source/lock/template/artifact
+identities and receipts live in `.tools/phase5d/`; prior artifacts are preserved.
+
+Verified all 88 frozen evidence entries, ten consumed ledgers, 59 prior receipts,
+old canonical/bound/5B artifacts and guidance/diagrams/workflows/historical handoffs.
+A current-status edit to a frozen document was caught and restored byte-for-byte.
+No commit/push, AWS/GitHub account call, hosted test, provider request, email,
+credential change, resource mutation or deployment occurred. Tests remain paused;
+$0 usable credit and the cash-funded baseline/manual thresholds remain accepted.
+The [complete 15-part handoff](phase5d-account-lifecycle-handoff.md) contains the
+closed-registration rollout, cost model and bounded 5E proposal. **STOP at local
+5D; Phase 5E requires separate owner review and explicit authorization.**
+
+## 2026-10-20 — Phase 5C frontend Cognito sessions completed locally
+
+**PASS WITH EXPLICIT QUALIFICATIONS.** Extended the existing workspace controller
+with a Cognito adapter, explicit demo/account selection, public validated auth
+configuration, code/S256 PKCE callbacks, trusted persistent bootstrap, restoration,
+coordinated rotation and local-first logout. Pinned oidc-client-ts 3.5.0 and
+jwt-decode 4.0.0. The supported OidcClient layer avoids a second UserManager,
+automatic renewal, provider discovery, browser userInfo and SDK storage events.
+Backend signature verification/admission remains authoritative.
+
+Guarded tab storage contains the full SDK User, including all three credentials;
+localStorage/broadcast carry only credential-free logout coordination. Web Locks
+refuse cloned refresh families; unsupported locking uses memory-only sessions.
+One refresh attempt, revision-aware 401s and synchronous generation/epoch/storage
+fences prevent stale identities from returning. Lost rotation responses require
+interactive sign-in, with no retry or automatic family revocation. Query/cache,
+forms, mutations and exports retain identity isolation. Disposal, interrupted
+login, config outages and blocked cross-tab messaging have regression coverage.
+
+Added managed signup/sign-in guidance, public callback/sign-out pages, persistent
+profile/export/logout UI, lifecycle recovery and disposable-staging notices.
+Fixed changed-field Settings PATCH, demo timezone-manual marking and 409 edit
+preservation. Exact offline staging Cognito connect-src and no-referrer are
+qualified with separate production rendering; API CORS and infrastructure remain
+unchanged. Token expiry is conservatively capped at the token deadline to handle
+SDK receipt-time latency without extending validity.
+
+**510 unit/component tests, 12 hosting/artifact-verifier tests and eight mocked
+Chromium desktop/mobile tests pass.** Lint, TypeScript, clean locked install,
+production-mode build, 43-file private-material/source-map scan, dependency audit
+(zero vulnerabilities) and CycloneDX generation pass. Preserved all 88 frozen
+evidence entries, ten consumed ledgers, 59 prior receipts, canonical/bound assets
+and the 5B candidate. Backend/infra/workflows/diagrams remain unchanged.
+
+Actual starting HEAD was the clean 5B commit
+`138309d759e43ba4eda131e9f047a5bcf919f446`; this reconciles the request's older
+uncommitted-work premise. No commit/push, AWS/GitHub account call, real Cognito
+request, hosted traffic, credential operation, remote CI or deployment occurred.
+The [complete handoff](phase5c-frontend-cognito-handoff.md) records files, commands,
+retry/storage policy and limitations. Mock qualification does not prove live
+provider behavior; XSS/storage/browser limits remain explicit. Staging stays
+paused and cash-funded. **Stop at 5C; 5D and 5E are not authorized.**
+
 ## 2026-10-20 — Phase 5B backend Cognito foundation completed locally
 
 **PASS WITH EXPLICIT QUALIFICATIONS.** Implemented additive AUTH_CAPABILITIES with

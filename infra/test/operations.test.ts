@@ -183,8 +183,8 @@ for (const environment of ['staging', 'production'] as const) {
       assert.ok(!JSON.stringify(resources[id]).includes('OperationalAlertEmail'));
     const blank = resolveTemplate(template, '');
     const provided = resolveTemplate(template, 'operator@example.invalid');
-    assert.equal(Object.keys(blank).length, 22);
-    assert.equal(Object.keys(provided).length, 25);
+    assert.equal(Object.keys(blank).length, 26);
+    assert.equal(Object.keys(provided).length, 29);
     for (const id of [ids.topic, ids.subscription, ids.topicPolicy]) assert.equal(blank[id], undefined);
     for (const id of alarmIds) {
       assert.deepEqual(blank[id].Properties.AlarmActions, []);

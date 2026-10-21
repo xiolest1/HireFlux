@@ -1,5 +1,12 @@
 # Domain model
 
+Current account lifecycle is specified by the [5D handoff](phase5d-account-lifecycle-handoff.md)
+and [operator reconciliation procedure](account-finalization-operations.md).
+The existing durable WORKSPACE gains only provider finalization state and an
+optional completion timestamp after strong DELETED proof; no TTL, credentials,
+email or application payload is added to that minimal tombstone. Cloud account
+verification remains separately authorized 5E work.
+
 This file is the durable contract for HireFlux domain vocabulary. API JSON uses `snake_case`; generated resource/demo IDs and LOCAL owners are UUID strings. PERSISTENT owners preserve a verified Cognito `sub` as a bounded safe opaque string, without UUID normalization. Timestamps are timezone-aware UTC ISO 8601 values; date-only fields use `YYYY-MM-DD`.
 
 ## Shared ownership rules

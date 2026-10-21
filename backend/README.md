@@ -1,11 +1,12 @@
 # Backend Lambda packaging (Phase 3B)
 
-## Current local backend — Phase 5B
+## Current local backend — Phase 5D
 
 Backend Cognito verification/admission and persistent bootstrap are implemented
 locally. The accepted AWS demo deployment and historical ZIP remain unchanged.
-See the [complete 5B handoff](../docs/phase5b-backend-cognito-handoff.md) for the
-configuration/API contract, qualification results and remaining 5C–5E boundaries.
+See the [5D handoff](../docs/phase5d-account-lifecycle-handoff.md) and historical
+[5B foundation](../docs/phase5b-backend-cognito-handoff.md) for configuration,
+qualification and the remaining separately authorized 5E boundary.
 No real provider authentication is claimed from synthetic tests.
 
 `AUTH_MODE` remains required. Absent `AUTH_CAPABILITIES` preserves its singleton;
@@ -19,14 +20,20 @@ configuration constructs providers without network access. Staging may retain
 Public `GET /api/v1/auth/config` returns validated public capabilities/trust metadata,
 no-store, with no database/provider work. Cognito admission verifies RS256 then
 server-side userInfo. Only verified subjects own persistent data, always as
-STANDARD_USER. A token's expiry never becomes a durable TTL. Persistent deletion
-remains 403 until 5D; LOCAL development erasure remains available.
+STANDARD_USER. A token's expiry never becomes a durable TTL. Persistent full JSON
+export/deletion require fresh uncached admission and signed auth_time within 300
+seconds; token refresh alone is insufficient. Deletion requires exact typed
+confirmation, existing bounded erasure and strong DELETED proof before one
+pool-scoped AdminDeleteUser attempt. Ambiguous outcomes remain durable REVIEW_REQUIRED;
+see the [operator procedure](../docs/account-finalization-operations.md). Management
+is default-off and requires Cognito; the offline CDK proposal enables it with
+closed registration. LOCAL erasure and ordinary CSV/demo behavior are preserved.
 
 The new production graph has **35 distributions**, adding PyJWT 2.15.1 and its
 cryptography 50.0.2/cffi/pycparser runtime dependencies. The older accepted Phase 4
 ZIP has 31 and is historical evidence. New candidate builds must use a **separate
-output path** until 5D release qualification; never overwrite the accepted ZIP
-or manifest during 5B. The runtime probe now checks the 35-package graph, eight
+output path**; 5D qualifies `.tools/phase5d/hireflux-backend-candidate.zip` without
+overwriting the accepted ZIP/manifest or 5B candidate. The runtime probe checks the 35-package graph, eight
 native modules and real RS256 plus synthetic admission with networking blocked.
 
 The local ASGI entry point remains `hireflux_backend.main:app`. Lambda uses

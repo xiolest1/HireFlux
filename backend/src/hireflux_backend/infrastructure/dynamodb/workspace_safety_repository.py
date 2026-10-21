@@ -18,7 +18,11 @@ from hireflux_backend.application.workspace_safety import (
     require_complete_manifest,
 )
 from hireflux_backend.domain.models import IdentityKind
-from hireflux_backend.domain.workspace import DurableWorkspace, DurableWorkspaceState
+from hireflux_backend.domain.workspace import (
+    DurableWorkspace,
+    DurableWorkspaceState,
+    ProviderFinalizationState,
+)
 from hireflux_backend.infrastructure.dynamodb.mapping import (
     activity_from_item,
     application_from_item,
@@ -92,6 +96,12 @@ class DynamoWorkspaceSafetyRepository:
                 else None,
                 parse_timestamp(item["deletion_completed_at"])
                 if "deletion_completed_at" in item
+                else None,
+                ProviderFinalizationState(item["provider_finalization"])
+                if "provider_finalization" in item
+                else None,
+                parse_timestamp(item["provider_finalized_at"])
+                if "provider_finalized_at" in item
                 else None,
             )
         except (KeyError, TypeError, ValueError) as error:

@@ -11,7 +11,9 @@ import { CloudAssembly } from 'aws-cdk-lib/cx-api';
 const packageRoot = resolve(__dirname, '../..');
 
 function runLocal(args: readonly string[], auditPath: string) {
-  return spawnSync(process.execPath, ['scripts/cdk-local.mjs', ...args], {
+  const candidate = process.env.HIREFLUX_QUALIFIED_BACKEND_ARTIFACT;
+  const context = candidate ? ['-c', `backendArtifact=${candidate}`] : [];
+  return spawnSync(process.execPath, ['scripts/cdk-local.mjs', ...args, ...context], {
     cwd: packageRoot,
     timeout: 30_000,
     encoding: 'utf8',
@@ -48,7 +50,10 @@ for (const environment of ['staging', 'production'] as const) {
           [id, (resource as { Type: string }).Type])), REVIEWED_RESOURCES);
         assert.deepEqual(parsed.Outputs ?? {}, {});
         templates.push(template);
-        const accepted = JSON.parse(readFileSync(join(packageRoot, '../artifacts/lambda/hireflux-backend-lambda.manifest.json'), 'utf8'));
+        const candidate = process.env.HIREFLUX_QUALIFIED_BACKEND_ARTIFACT;
+        const manifestPath = candidate ? resolve(packageRoot, '..', candidate.replace(/\.zip$/, '.manifest.json'))
+          : join(packageRoot, '../artifacts/lambda/hireflux-backend-lambda.manifest.json');
+        const accepted = JSON.parse(readFileSync(manifestPath, 'utf8'));
         const assets = JSON.parse(readFileSync(join(outdir, `HireFlux-${environment}.assets.json`), 'utf8'));
         const files = Object.values(assets.files) as { source: { path: string; packaging: string } }[];
         assert.equal(files.length, 2); // The verified ZIP and the CloudFormation template.

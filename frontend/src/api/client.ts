@@ -3,13 +3,13 @@ import { requestScope, StaleSessionError, type SessionScope } from "../auth/sess
 
 const DEFAULT_API_BASE_URL = "http://localhost:8000";
 
-function apiBaseUrl(): string {
+export function apiOrigin(): string {
   const configured = import.meta.env.VITE_API_BASE_URL?.trim();
   const value = configured || DEFAULT_API_BASE_URL;
 
   try {
     const url = new URL(value);
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
+    if ((url.protocol !== "http:" && url.protocol !== "https:") || url.username || url.password || url.search || url.hash || (url.pathname !== "/" && url.pathname !== "")) {
       throw new Error("Unsupported protocol");
     }
   } catch {
@@ -18,7 +18,13 @@ function apiBaseUrl(): string {
     );
   }
 
-  return value.replace(/\/+$/, "");
+  return new URL(value).origin;
+}
+
+function apiUrl(path: string): string {
+  const base = apiOrigin();
+  if (!path.startsWith("/") || path.startsWith("//") || path.includes("\\") || new URL(path, base).origin !== base) throw new ApiError("INVALID_API_PATH", "The API request path is invalid.");
+  return `${base}${path}`;
 }
 
 const errorEnvelopeSchema = z.object({
@@ -125,7 +131,9 @@ export async function apiRequest<T>(
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
   headers.delete("Authorization");
-  if (!publicRequest && scope.authorization) headers.set("Authorization", scope.authorization);
+  const lease = publicRequest ? { authorization: null, revision: 0 } : await scope.credential();
+  scope.assertCurrent();
+  if (lease.authorization) headers.set("Authorization", lease.authorization);
 
   let body: string | undefined;
   if (json !== undefined) {
@@ -134,10 +142,11 @@ export async function apiRequest<T>(
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl()}${path}`, {
+    const response = await fetch(apiUrl(path), {
       ...requestOptions,
       headers,
       body,
+      credentials: "omit", redirect: "error",
     });
     scope.assertCurrent();
     const payload = await readJson(response);
@@ -145,7 +154,7 @@ export async function apiRequest<T>(
 
     if (!response.ok) {
       const apiError = errorFromResponse(response, payload);
-      if (response.status === 401 && !publicRequest) scope.unauthorized(apiError.code === "DEMO_SESSION_EXPIRED" ? "expired" : "invalidated");
+      if (response.status === 401 && !publicRequest) scope.unauthorized(["DEMO_SESSION_EXPIRED", "SESSION_EXPIRED"].includes(apiError.code) ? "expired" : "invalidated", lease.revision);
       throw apiError;
     }
 
@@ -178,16 +187,18 @@ export async function apiRequest<T>(
 export async function apiDownload(path: string, scope = requestScope()): Promise<DownloadedFile> {
   scope.assertCurrent();
   const headers = new Headers({ Accept: "text/csv" });
-  if (scope.authorization) headers.set("Authorization", scope.authorization);
+  const lease = await scope.credential();
+  scope.assertCurrent();
+  if (lease.authorization) headers.set("Authorization", lease.authorization);
 
   try {
-    const response = await fetch(`${apiBaseUrl()}${path}`, { headers });
+    const response = await fetch(apiUrl(path), { headers, credentials: "omit", redirect: "error" });
     scope.assertCurrent();
     const payload = await readJson(response);
     scope.assertCurrent();
     if (!response.ok) {
       const apiError = errorFromResponse(response, payload);
-      if (response.status === 401) scope.unauthorized(apiError.code === "DEMO_SESSION_EXPIRED" ? "expired" : "invalidated");
+      if (response.status === 401) scope.unauthorized(["DEMO_SESSION_EXPIRED", "SESSION_EXPIRED"].includes(apiError.code) ? "expired" : "invalidated", lease.revision);
       throw apiError;
     }
 

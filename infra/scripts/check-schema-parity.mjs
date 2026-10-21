@@ -17,10 +17,12 @@ for (const environment of ['staging', 'production']) {
   const auditPath = join(scratch, 'network-attempts');
   process.env.HIREFLUX_NETWORK_AUDIT_PATH = auditPath;
   try {
-    const stack = composeEnvironment(new App({ outdir: scratch, analyticsReporting: false, context: { environment } }));
+    const candidate = process.env.HIREFLUX_QUALIFIED_BACKEND_ARTIFACT;
+    const stack = composeEnvironment(new App({ outdir: scratch, analyticsReporting: false,
+      context: { environment, ...(candidate ? { backendArtifact: candidate } : {}) } }));
     const template = Template.fromStack(stack);
     const resources = template.toJSON().Resources;
-    assert.equal(Object.keys(resources).length, 25, 'Unexpected topology and operational resource inventory.');
+    assert.equal(Object.keys(resources).length, 29, 'Unexpected topology and operational resource inventory.');
     const tables = template.findResources('AWS::DynamoDB::Table');
     assert.equal(Object.keys(tables).length, 1, 'Exactly one DynamoDB table is required.');
     const [logicalId, table] = Object.entries(tables)[0];

@@ -31,7 +31,7 @@ export function LandingPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { state, controller } = useWorkspaceSession();
-  const isCreating = state.status === "activating" || state.status === "bootstrapping";
+  const isCreating = ["activating", "bootstrapping", "authenticating", "callback", "restoring", "signing-out"].includes(state.status);
   const error = state.status === "error" ? state.error : undefined;
   const localMode = import.meta.env.DEV && controller.adapterId === "local";
   const configurationBlocked = controller.adapterId === undefined;
@@ -51,7 +51,7 @@ export function LandingPage() {
   const actionLabel = configurationBlocked ? "Workspace unavailable" : isCreating
     ? "Preparing your workspace…"
     : state.status === "ready"
-      ? localMode ? "Continue local workspace" : "Continue Demo"
+      ? localMode ? "Continue local workspace" : state.workspace.identityKind === "PERSISTENT" ? "Return to workspace" : "Continue Demo"
       : localMode ? "Open local durable workspace"
       : "Explore the Demo";
 
@@ -62,7 +62,7 @@ export function LandingPage() {
       return;
     }
     try {
-      const ready = await controller.activate();
+      const ready = localMode ? await controller.activate() : await controller.activateDemo();
       ready.scope.assertCurrent();
       navigate(routeState.from ?? "/dashboard", { replace: true });
     } catch {
@@ -70,10 +70,23 @@ export function LandingPage() {
     }
   }
 
+  async function enterAccount() {
+    if (controller.hasUnsavedChanges && !window.confirm("Discard unsaved changes and continue to account sign-in? Saved data stays on the server.")) return;
+    try { await controller.beginSignIn(routeState.from ?? "/dashboard", { discard: true }); } catch { /* Controller exposes a privacy-safe error. */ }
+  }
+
+  async function switchToDemo() {
+    if (controller.hasUnsavedChanges && !window.confirm("Discard unsaved changes and switch to a fictional demo?")) return;
+    try {
+      const ready = await controller.activateDemo({ discard: true });
+      ready.scope.assertCurrent(); navigate("/dashboard");
+    } catch { /* Explicit demo entry uses the existing recovery UI. */ }
+  }
+
   const notice = state.status === "expired" && state.reason === "invalidated"
-    ? "Your workspace session was invalidated. Open a workspace again to continue."
+    ? "Your workspace session ended. Sign in again or explicitly choose a demo to continue."
     : routeState.reason === "expired" || state.status === "expired"
-    ? "Your previous demo workspace expired. Start a fresh one to keep exploring."
+    ? controller.adapterId === "cognito" ? "Your account session ended. Sign in again; saved workspace data is preserved." : "Your previous demo workspace expired. Start a fresh one to keep exploring."
     : routeState.reason === "required"
       ? localMode ? "Open the local development workspace to explore the page." : "Start a demo workspace to explore the page."
       : null;
@@ -102,12 +115,22 @@ export function LandingPage() {
               <p className="hf-hero-enter hf-hero-enter-support mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300" data-hero-entrance="support">HireFlux keeps each opportunity’s context intact and turns its history into a clear next action—without creating an account.</p>
 
               {notice ? <div className="mt-7 max-w-xl rounded-xl border border-line border-l-4 border-l-warning bg-warning-soft px-4 py-3 text-sm font-medium text-warning" role="status">{notice}</div> : null}
-              {error && actionOrigin !== "coda" ? <div className="mt-7 max-w-xl"><ErrorPanel compact title={localMode ? "Local workspace could not be prepared" : "Demo workspace could not be prepared"} error={error} /></div> : null}
+              {error && actionOrigin !== "coda" ? <div className="mt-7 max-w-xl"><ErrorPanel compact title={localMode ? "Local workspace could not be prepared" : state.status === "error" && ["account", "account-bootstrap", "logout"].includes(state.operation) ? "Account access could not be completed" : "Demo workspace could not be prepared"} error={error} /></div> : null}
 
               <div className="hf-hero-enter hf-hero-enter-cta mt-8 flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center" data-hero-entrance="cta">
-                <Button className="group min-w-48 gap-2 shadow-lg shadow-cyan-950/10" aria-busy={isCreating || undefined} disabled={isCreating || configurationBlocked} onClick={() => void enterDemo("hero")}>{actionLabel}<ArrowRight aria-hidden="true" className="size-4 transition-transform group-hover:translate-x-1 group-focus-visible:translate-x-1" /></Button>
+                <Button className="group min-w-48 gap-2 shadow-lg shadow-cyan-950/10" aria-busy={isCreating || undefined} disabled={isCreating || configurationBlocked || (!localMode && state.status !== "ready" && !controller.demoEntryAvailable)} onClick={() => void enterDemo("hero")}>{actionLabel}<ArrowRight aria-hidden="true" className="size-4 transition-transform group-hover:translate-x-1 group-focus-visible:translate-x-1" /></Button>
                 <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{localMode ? "Development only · Fixed backend identity · Durable data · No real sign-in" : "No sign-up · Fictional data · Resets anytime"}</p>
               </div>
+              {!localMode && controller.accountEntryAvailable ? <section aria-label="Account access" className="mt-6 max-w-xl space-y-3">
+                <div className="flex flex-wrap gap-3">
+                  {controller.authenticationConfiguration?.cognito?.self_registration_enabled ? <Button variant="secondary" disabled={isCreating} onClick={() => void enterAccount()}>Create Account</Button> : null}
+                  <Button variant="secondary" disabled={isCreating} onClick={() => void enterAccount()}>Sign In</Button>
+                  {state.status === "ready" && state.workspace.identityKind === "PERSISTENT" && controller.demoEntryAvailable ? <Button variant="secondary" disabled={isCreating} onClick={() => void switchToDemo()}>Try Demo</Button> : null}
+                </div>
+                <p className="text-sm text-ink-muted">{controller.authenticationConfiguration?.cognito?.self_registration_enabled ? "Account access opens Cognito’s secure sign-in page. New users choose Create account there; email confirmation and password recovery stay with Cognito." : "Account registration is closed. Only owner-provisioned supervised testers can sign in. Password recovery stays with Cognito."}</p>
+                {controller.authenticationConfiguration?.account_data_policy === "disposable_staging" ? <p role="note" className="rounded-lg border border-line p-3 text-sm">Supervised staging evaluation only. Use fictional application data. Accounts retain records across sign-outs, but the staging database is disposable and does not guarantee backup or recovery.</p> : null}
+              </section> : null}
+              {controller.authenticationConfigurationError ? <section className="mt-6 max-w-xl space-y-3" aria-label="Account configuration unavailable"><p role="status">Account configuration could not be loaded. Account entry is disabled until it is verified.</p><Button variant="secondary" onClick={() => void controller.retryAuthenticationConfiguration()}>Retry account configuration</Button></section> : null}
             </div>
             <div className="hf-hero-enter hf-hero-enter-visual min-w-0" data-hero-entrance="visual">
               <HeroApplicationStory

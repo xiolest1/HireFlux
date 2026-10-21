@@ -1,9 +1,12 @@
 # HireFlux
 
-The [Phase 5B backend handoff](docs/phase5b-backend-cognito-handoff.md) records
-locally implemented Cognito verification and durable accounts. The deployed staging
-demo remains unchanged; browser OAuth, account safety/CDK and deployment still
-require separate 5C, 5D and 5E authorization.
+The [Phase 5D handoff](docs/phase5d-account-lifecycle-handoff.md) records locally
+qualified recent-authentication export/deletion, recoverable provider finalization,
+frontend account controls and four Cognito CDK resources. It extends the
+[5B backend](docs/phase5b-backend-cognito-handoff.md) and
+[5C frontend](docs/phase5c-frontend-cognito-handoff.md), with closed registration
+and fake-provider/offline qualification. The deployed staging demo is unchanged;
+deployment and live Cognito verification require separate Phase 5E authorization.
 
 The [latest recorded AWS checkpoint (October 20)](docs/phase4h-staging-acceptance.md)
 accepts deployed staging **with explicit qualifications for owner-supervised
