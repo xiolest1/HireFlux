@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
+from threading import Lock
 from typing import Any
 from unittest.mock import Mock
 
@@ -296,7 +297,21 @@ def test_provenance_and_lifecycle_cannot_be_converted(
         assert before == items(dynamodb_client, user_partition(owner))
 
 
-def test_concurrent_bootstrap_converges(cognito_harness: Harness, dynamodb_client: Any) -> None:
+def test_concurrent_bootstrap_converges(
+    cognito_harness: Harness,
+    dynamodb_client: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_transaction = dynamodb_client.transact_write_items
+    transaction_lock = Lock()
+
+    def atomic_transaction(**arguments: Any) -> Any:
+        # Moto's Python transaction rollback is not isolated across threads.
+        # Serialize the atomic datastore operation, while requests/read snapshots race.
+        with transaction_lock:
+            return original_transaction(**arguments)
+
+    monkeypatch.setattr(dynamodb_client, "transact_write_items", atomic_transaction)
     h = cognito_harness
     auth = headers(h)
     with app_client(h, dynamodb_client) as client:
