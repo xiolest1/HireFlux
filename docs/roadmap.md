@@ -1,6 +1,14 @@
 # Roadmap
 
-For the final recorded AWS staging disposition and remaining qualifications, use
+The October 23 Phase 5E backend/Cognito and frontend deployments are complete at
+`ff18c6762aa1a1f5f423667659cfae83f74f786e`; live authenticated-user acceptance
+is **paused / incomplete**. Phase 5F Execution 1 is the current local architecture
+and UX planning milestone. See the [self-service registration plan](phase5f-self-service-registration-plan.md)
+for the evidence, required changes and separate implementation/rollout gates.
+Public registration remains disabled in the recorded deployment; this roadmap
+does not authorize AWS actions or accept untested authentication behavior.
+
+For the earlier recorded Phase 4 staging disposition and remaining qualifications, use
 the [October 20 Phase 4H acceptance and evidence freeze](phase4h-staging-acceptance.md)
 and [sanitized evidence index](phase4h-evidence-index.json), together with the
 [Phase 4G financial update](phase4g-operations-reliability-cost-verification.md),
@@ -17,8 +25,8 @@ the earlier product milestone descriptions. Those milestones remain scope
 references. The local demo and Phase 2A backend foundation are implemented.
 Completed phase entries describe their exit checkpoints, including then-absent
 resources, not today's AWS inventory. The provider-recovery checkpoint above
-records subsequent deployment progress. Real persistent browser accounts remain
-deferred.
+records the earlier deployment progress. The Phase 5 entries below distinguish
+implemented/deployed account capabilities from unfinished live acceptance.
 
 - **Phase 1 — completed:** architecture/readiness audit.
 - **Phase 2A — completed:** provider-neutral durable principal/data lifetime,
@@ -142,11 +150,45 @@ deferred.
   No cloud deployment or real provider verification. The [5D.1 maintenance addendum](phase5d1-cdk-security-remediation.md)
   resolves the CDK dependency qualification with zero resource/template changes;
   all other 5D qualifications and the separate 5E authorization gate remain.
-- **Phase 5E — not authorized:** controlled staging update and live verification.
-- **Phase 6 — deferred:** production hardening and release qualification.
-- **Phase 7 — deferred:** production deployment after the preceding gates.
+- **Phase 5E — deployment complete; live acceptance paused / incomplete:** the
+  October 23 Execution 3 receipt records `UPDATE_COMPLETE`, four Cognito additions,
+  two modifications and no replacements. Execution 4 records Amplify job 4
+  `SUCCEED` at the accepted release, hosted static/header checks and signed-out
+  browser checks. Execution 5 stopped before invitations: zero users, emails,
+  authentication journeys or deletions; five application API requests were
+  recorded. **Live authenticated behavior is not accepted.** The original
+  append-only ledger and deployment receipts are preserved. Execution 6 final
+  acceptance/retained-state closeout is pending; deployment success is not full
+  Phase 5E acceptance.
+- **Phase 5F — current: self-service registration and onboarding.** Execution 1
+  architecture/source/UX planning was approved. Execution 2 implements local managed
+  signup entry, default-closed unified registration configuration, account-aware
+  landing/empty Home and focused regressions. Local qualification passes, including
+  the separately authorized same-major security patches: fresh frontend audit has
+  zero findings, and affected checks were rerun. Approved isolated npm 11 generated
+  the minimal format-3 lock; the existing npm 10 `ci` workflow passed. Evidence is in
+  the [5F implementation status](phase5f-self-service-registration-plan.md).
+  Controlled staging rollout and real-user acceptance require separate authorization;
+  deployed registration remains closed in the accepted evidence.
+  Unfinished Phase 5E two-user isolation, persistence, recovery, refresh/logout,
+  export and deletion checks become mandatory Phase 5F live-acceptance criteria,
+  rather than restarting the abandoned invitation automation. A bounded signup
+  trial is not permission to leave public registration enabled.
+- **Phase 6 — planned:** broader product UX/UI, accessibility, performance and
+  hardening, building on Phase 5F's focused onboarding. Preserve the original
+  production-hardening and release-qualification gates.
+- **Phase 7 — planned:** separately authorized production readiness and deployment
+  after live authentication/lifecycle acceptance and the preceding protection,
+  recovery, privacy and operational gates.
 
 Each phase is bounded work, not authorization to implement subsequent phases.
+The intended public entry points are **Explore Demo** without an account,
+**Create Account** for a private persistent workspace, and **Sign In** for returning
+users. Administrator invitations are testing/optional private-beta tooling only.
+Demo data remains fictional and temporary, with no automatic transfer into an
+account. Staging remains disposable; it is not approval to store genuine job-search
+records or a promise of backup/recovery. No recruiter roles or organization features
+are added.
 Attachments, real reminders/email, and other optional product services remain
 separate future capabilities. The detailed Phase 2A evidence and remaining safety
 limits are in [readiness audit section 37](production-account-readiness.md#37-phase-2a-implementation-and-handoff).
@@ -180,7 +222,7 @@ Acceptance criteria: production-style protected workspace Home at `/dashboard`; 
 
 AWS infrastructure, persistent accounts, attachments, email delivery, and real notification delivery remain outside this local milestone.
 
-## Milestone 3 - optional persistent accounts with Cognito
+## Milestone 3 - persistent accounts with Cognito (selected product direction)
 
 Execution: Phase 5, after frontend sessions, persistent-account safety, CDK synth,
 and staging of the existing demo. The Phase 2A local durable backend does not
@@ -188,7 +230,14 @@ implement this account authentication capability.
 
 Dependencies: stable identity port and deployed-environment configuration design.
 
-This milestone is needed only if HireFlux expands beyond the temporary demo workspace. Acceptance criteria: signup, verification, login and reset flows; server-side access-token signature/issuer/client/scopes/token-use/expiry verification and trusted admission; direct Cognito `sub` ownership; STANDARD_USER only with no group/custom-role grants; and proof that local auth cannot start in deployed environments. Phase 5A–5E above defines its approved implementation sequence.
+Persistent accounts are now selected alongside the no-account demo. Acceptance
+criteria: signup, verification, login and reset flows; server-side access-token
+signature/issuer/client/scopes/token-use/expiry verification and trusted admission;
+direct Cognito `sub` ownership; STANDARD_USER only with no group/custom-role grants;
+safe export/erasure/provider finalization; and proof that local auth cannot start
+in deployed environments. Phase 5A–5E supplies the deployed foundation; Phase 5F
+adds self-service registration and completes real-user acceptance. Existing
+implementation does not substitute for those live checks.
 
 ## Milestone 4 - private attachments
 

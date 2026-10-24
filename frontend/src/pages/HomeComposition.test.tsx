@@ -4,8 +4,24 @@ import { describe, expect, it } from "vitest";
 import { makeAnalytics, makeApplication, testDashboard } from "../test/fixtures";
 import { renderApp } from "../test/renderApp";
 import { API_ORIGIN, server } from "../test/server";
+import type { SessionAdapter } from "../auth/sessionAdapters";
 
 describe("Home quiet context", () => {
+  it("gives an empty persistent account its own first action without demo headings or tour", async () => {
+    const workspace = { lifetime: "durable" as const, identityKind: "PERSISTENT" as const, authorization: null };
+    const adapter: SessionAdapter = { id: "cognito", lifetime: "durable", restore: () => workspace,
+      activate: async () => workspace, persist() {}, clear() {}, valid: () => true };
+    server.use(http.get(`${API_ORIGIN}/api/v1/dashboard`, () => HttpResponse.json({ ...testDashboard,
+      summary: { total_tracked: 0, active_pursuits: 0, drafts: 0, accepted: 0, rejected: 0, withdrawn: 0, archived: 0 },
+      actions: [], recent_applications: [], upcoming_interviews: [] })));
+    renderApp("/dashboard", { withSession: false, adapter });
+    expect(await screen.findByRole("link", { name: "Record an application" })).toHaveAttribute("href", "/applications/new");
+    expect(screen.getByText("Your job search")).toBeVisible();
+    expect(screen.queryByText("Recorded demo search")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Explore the demo workspace" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Northstar Labs")).not.toBeInTheDocument();
+  });
+
   it("uses selected Analytics weeks and server totals, not Dashboard's different history", async () => {
     server.use(http.get(`${API_ORIGIN}/api/v1/analytics`, () => HttpResponse.json({ ...makeAnalytics(), submission_trend: [{ week_start: "2026-08-03", count: 7 }, { week_start: "2026-08-10", count: 6 }] })));
     const { user } = renderApp("/dashboard");

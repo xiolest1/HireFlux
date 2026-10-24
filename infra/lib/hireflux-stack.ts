@@ -80,7 +80,7 @@ export class HireFluxStack extends Stack {
     this.backendFunction.addEnvironment('COGNITO_USER_POOL_ID', this.cognitoAuth.pool.ref);
     this.backendFunction.addEnvironment('COGNITO_APP_CLIENT_ID', this.cognitoAuth.client.ref);
     this.backendFunction.addEnvironment('COGNITO_DOMAIN', this.cognitoAuth.origin);
-    this.backendFunction.addEnvironment('COGNITO_SELF_REGISTRATION_ENABLED', 'false');
+    this.backendFunction.addEnvironment('COGNITO_SELF_REGISTRATION_ENABLED', String(config.selfRegistrationEnabled));
     this.backendFunction.addEnvironment('PERSISTENT_ACCOUNT_MANAGEMENT_ENABLED', 'true');
     this.backend.executionRole.addToPolicy(new PolicyStatement({
       actions: ['cognito-idp:AdminDeleteUser'], resources: [this.cognitoAuth.pool.attrArn],

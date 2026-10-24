@@ -1,4 +1,4 @@
-import { useWorkspaceScope } from "../auth/workspaceSessionContext";
+import { useWorkspaceScope, useWorkspaceSession } from "../auth/workspaceSessionContext";
 import { useWorkspaceNavigate } from "../auth/workspaceSessionContext";
 import { ArrowRight, ChevronDown, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -30,6 +30,8 @@ import {
 const textLink = "hf-home-quiet-link inline-flex min-h-11 items-center text-sm font-semibold text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
 export function DashboardPage() {
+  const { state: session } = useWorkspaceSession();
+  const isDemo = session.status === "ready" && session.workspace.identityKind === "DEMO";
   const sessionScope = useWorkspaceScope();
   const location = useLocation();
   const navigate = useWorkspaceNavigate();
@@ -120,7 +122,7 @@ export function DashboardPage() {
   return (
     <WorkspaceFrame width="wide" className="space-y-6 pb-12 sm:space-y-8">
       <header className="hf-home-divider flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-line pb-3 sm:pb-4">
-        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted">Recorded demo search</p><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">Home</h1></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-ink-muted">{isDemo ? "Recorded demo search" : "Your job search"}</p><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">Home</h1></div>
         <p className="w-full text-sm leading-6 text-ink-muted sm:w-auto">{dashboard ? `${dashboard.summary.active_pursuits} active · ${dashboard.summary.total_tracked} tracked` : "Your recorded workspace"}</p>
       </header>
 
@@ -167,7 +169,7 @@ export function DashboardPage() {
         </div>
       ) : null}
 
-      {!tour.dismissed ? <SearchTour tour={tour} onDismiss={() => setTour(updateSearchTour("dismissed"))} /> : null}
+      {isDemo && !tour.dismissed ? <SearchTour tour={tour} onDismiss={() => setTour(updateSearchTour("dismissed"))} /> : null}
     </WorkspaceFrame>
   );
 }

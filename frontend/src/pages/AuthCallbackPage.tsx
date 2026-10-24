@@ -37,6 +37,7 @@ export function AuthCallbackPage() {
           setError(undefined);
           void controller.retryAccountBootstrap().then((ready) => { if (ready.scope.isCurrent()) navigate("/dashboard", { replace: true }); }).catch(() => setError(new ApiError("ACCOUNT_BOOTSTRAP_UNAVAILABLE", "Workspace preparation could not be completed. Saved data is preserved.")));
         }}>Retry workspace preparation</Button> : null}
+        <p className="text-sm text-ink-muted">If you were creating an account, registration may already be complete. Start a fresh Sign In; your previous verification or sign-in response will not be replayed.</p>
         <Button variant="secondary" onClick={() => void controller.beginSignIn().catch(() => {})}>Start sign-in again</Button>
       </>}
     </> : <LoadingState label="Verifying your sign-in and preparing your workspace…" />}

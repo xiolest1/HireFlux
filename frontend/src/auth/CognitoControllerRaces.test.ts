@@ -60,6 +60,63 @@ afterEach(() => {
 });
 
 describe("Cognito controller configuration and cancellation fences", () => {
+  it("serializes signup clicks and passes an explicit signup intent once", async () => {
+    const config = deferred<AuthConfiguration>(), factory = accountFactory(), navigate = vi.fn();
+    const controller = managedController({ loadConfiguration: () => config.promise, accountFactory: factory, navigateExternal: navigate });
+    const first = controller.beginSignUp("/settings");
+    expect(controller.beginSignUp("/settings")).toBe(first);
+    config.resolve({ ...hybrid, cognito: { ...hybrid.cognito!, self_registration_enabled: true } });
+    await first;
+    expect(factory.mock.results[0].value.begin).toHaveBeenCalledExactlyOnceWith(expect.anything(), "/settings", undefined, "signup");
+    expect(navigate).toHaveBeenCalledOnce();
+  });
+
+  it("does not turn a concurrent Sign In into signup or merge a different sensitive intent", async () => {
+    const config = deferred<AuthConfiguration>(), factory = accountFactory(), navigate = vi.fn();
+    const controller = managedController({ loadConfiguration: () => config.promise, accountFactory: factory, navigateExternal: navigate });
+    const signIn = controller.beginSignIn();
+    await expect(controller.beginSignUp()).rejects.toMatchObject({ code: "ACCOUNT_ENTRY_BUSY" });
+    config.resolve(hybrid);
+    await signIn;
+    expect(factory.mock.results[0].value.begin).toHaveBeenCalledExactlyOnceWith(expect.anything(), "/dashboard", undefined, "signin");
+    expect(navigate).toHaveBeenCalledOnce();
+  });
+
+  it("clears the attempted transaction after canceled provider navigation without demo fallback", async () => {
+    const factory = accountFactory();
+    const controller = managedController({ loadConfiguration: async () => ({ ...hybrid, cognito: { ...hybrid.cognito!, self_registration_enabled: true } }), accountFactory: factory,
+      navigateExternal: () => { throw new Error("Synthetic blocked navigation"); } });
+    await expect(controller.beginSignUp()).rejects.toThrow();
+    expect(factory.mock.results[0].value.clear).toHaveBeenCalled();
+    expect(controller.getSnapshot().status).toBe("error");
+    expect(loadDemoSession().session).toBeNull();
+  });
+
+  it.each(["closed", "unsupported", "malformed", "unavailable"])("blocks %s signup at the controller boundary without demo fallback", async (fault) => {
+    const factory = accountFactory(), navigate = vi.fn();
+    const controller = managedController({ loadConfiguration: async () => {
+      if (fault === "malformed" || fault === "unavailable") throw new ApiError("AUTH_CONFIGURATION_INVALID", "Configuration unavailable.");
+      return fault === "unsupported" ? { ...hybrid, capabilities: ["demo"], cognito: undefined } : hybrid;
+    }, accountFactory: factory, navigateExternal: navigate });
+    await expect(controller.beginSignUp()).rejects.toBeInstanceOf(ApiError);
+    expect(navigate).not.toHaveBeenCalled();
+    for (const result of factory.mock.results) expect(result.value.begin).not.toHaveBeenCalled();
+    expect(controller.getSnapshot().status).toBe("error");
+    expect(loadDemoSession().session).toBeNull();
+  });
+
+  it("cancels stale signup and permits a fresh Sign In without replaying the canceled intent", async () => {
+    const config = deferred<AuthConfiguration>(), factory = accountFactory(), navigate = vi.fn();
+    const controller = managedController({ loadConfiguration: () => config.promise, accountFactory: factory, navigateExternal: navigate });
+    const signup = controller.beginSignUp();
+    const canceled = expect(signup).rejects.toBeInstanceOf(StaleSessionError);
+    controller.leave();
+    const signIn = controller.beginSignIn();
+    config.resolve({ ...hybrid, cognito: { ...hybrid.cognito!, self_registration_enabled: true } });
+    await canceled; await signIn;
+    expect(factory.mock.results[0].value.begin).toHaveBeenCalledExactlyOnceWith(expect.anything(), "/dashboard", undefined, "signin");
+    expect(navigate).toHaveBeenCalledOnce();
+  });
   it("never starts provider navigation after sign-in is canceled during configuration", async () => {
     const config = deferred<AuthConfiguration>();
     const factory = accountFactory();

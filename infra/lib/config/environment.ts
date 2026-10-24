@@ -20,6 +20,7 @@ export interface HireFluxEnvironmentConfig {
   readonly awsRegion: string;
   readonly awsAccount: string | undefined;
   readonly data: DynamoDBLifecycleConfig;
+  readonly selfRegistrationEnabled: boolean;
   readonly operations: Readonly<{
     lambdaLogRetentionDays: 14 | 30;
     apiLogRetentionDays: 14 | 30;
@@ -115,8 +116,12 @@ function resolveAccount(value: unknown): string | undefined {
 export function loadEnvironmentConfig(
   selection: unknown,
   accountBinding: unknown = undefined,
+  registration: unknown = undefined,
 ): HireFluxEnvironmentConfig {
   const environmentName = resolveEnvironment(selection);
+  if (registration !== undefined && registration !== true && registration !== false && registration !== 'true' && registration !== 'false') {
+    throw new Error('selfRegistrationEnabled must be an explicit true or false.');
+  }
   const config: HireFluxEnvironmentConfig = Object.freeze({
     environmentName,
     stackName: `hireflux-${environmentName}`,
@@ -124,6 +129,7 @@ export function loadEnvironmentConfig(
     awsRegion: AWS_REGION,
     awsAccount: resolveAccount(accountBinding),
     data: DATA_LIFECYCLE[environmentName],
+    selfRegistrationEnabled: registration === true || registration === 'true',
     operations: operationsConfig(environmentName),
     backend: backendConfig(environmentName),
     hosting: hostingConfig(environmentName),
@@ -139,6 +145,9 @@ export function loadEnvironmentConfig(
 
 export function validateEnvironmentConfig(config: HireFluxEnvironmentConfig): void {
   const environmentName = resolveEnvironment(config.environmentName);
+  if (typeof config.selfRegistrationEnabled !== 'boolean' || (environmentName === 'production' && config.selfRegistrationEnabled)) {
+    throw new Error('Registration must be explicit and production registration remains closed.');
+  }
   if (!/^[a-z]{2}(?:-[a-z]+)+-\d+$/.test(config.awsRegion)) {
     throw new Error('AWS region must be a valid region identifier.');
   }

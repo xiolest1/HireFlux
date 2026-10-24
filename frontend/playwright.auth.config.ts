@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const frontend = path.dirname(fileURLToPath(import.meta.url));
+const registration = process.env.HIREFLUX_AUTH_FIXTURE_PHASE === "5F";
+const port = registration ? "4177" : "4175";
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "cognito-auth.spec.ts",
@@ -11,9 +13,9 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 8_000 },
   reporter: [["line"]],
-  outputDir: "../.tools/phase5c-auth-browser/results",
+  outputDir: registration ? "../.tools/phase5f-auth-browser/results" : "../.tools/phase5c-auth-browser/results",
   use: {
-    baseURL: "http://127.0.0.1:4175", colorScheme: "dark", reducedMotion: "reduce",
+    baseURL: `http://127.0.0.1:${port}`, colorScheme: "dark", reducedMotion: "reduce",
     locale: "en-US", timezoneId: "UTC", trace: "off", screenshot: "only-on-failure",
   },
   projects: [
@@ -22,6 +24,6 @@ export default defineConfig({
   ],
   webServer: {
     command: "node scripts/serve-auth-fixture.mjs", cwd: frontend,
-    url: "http://127.0.0.1:4175", reuseExistingServer: false, timeout: 120_000,
+    url: `http://127.0.0.1:${port}`, reuseExistingServer: false, timeout: 120_000,
   },
 });

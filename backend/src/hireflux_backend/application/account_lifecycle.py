@@ -31,8 +31,9 @@ def require_recent(principal: VerifiedPrincipal, issuer: str, client_id: str, no
         or principal.client_id != client_id
         or principal.provider_username != principal.identity.user_id
     ):
-        # UsernameAttributes=email makes the provider's immutable username equal
-        # sub. Never send a mutable email/alias or another username to AdminDeleteUser.
+        # AWS documents matching generated username/sub for SignUp in our pinned
+        # email-username pool. Other creation paths still require live qualification.
+        # Fail closed; never substitute an email/alias as the provider deletion target.
         raise AuthenticationRequiredError("The account identity could not be confirmed.")
     if (
         type(principal.auth_time) is not int

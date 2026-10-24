@@ -17,7 +17,7 @@ export class CognitoAuth extends Construct {
       userPoolName: `${config.resourceNamePrefix}-accounts`, userPoolTier: 'ESSENTIALS',
       deletionProtection: 'ACTIVE', usernameAttributes: ['email'], autoVerifiedAttributes: ['email'],
       usernameConfiguration: { caseSensitive: false }, mfaConfiguration: 'OFF',
-      adminCreateUserConfig: { allowAdminCreateUserOnly: true },
+      adminCreateUserConfig: { allowAdminCreateUserOnly: !config.selfRegistrationEnabled },
       accountRecoverySetting: { recoveryMechanisms: [{ name: 'verified_email', priority: 1 }] },
       userAttributeUpdateSettings: { attributesRequireVerificationBeforeUpdate: ['email'] },
       emailConfiguration: { emailSendingAccount: 'COGNITO_DEFAULT' },

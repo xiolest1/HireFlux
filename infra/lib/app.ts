@@ -7,7 +7,7 @@ export function composeEnvironment(app: App, artifact?: BackendArtifact): HireFl
   const selection: unknown = app.node.tryGetContext('environment');
   const environmentName = resolveEnvironment(selection);
   const accountBinding: unknown = app.node.tryGetContext(`${environmentName}Account`);
-  const config = loadEnvironmentConfig(environmentName, accountBinding);
+  const config = loadEnvironmentConfig(environmentName, accountBinding, app.node.tryGetContext('selfRegistrationEnabled'));
   const candidate: unknown = app.node.tryGetContext('backendArtifact');
   if (candidate !== undefined && (typeof candidate !== 'string' || !candidate.trim())) throw new Error('backendArtifact must name an explicit local candidate ZIP.');
   return new HireFluxStack(app, `HireFlux-${environmentName}`, config,

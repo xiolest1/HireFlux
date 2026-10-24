@@ -1,22 +1,68 @@
 # HireFlux frontend build and hosting
 
-The React/Vite application runs locally, and the dated
-[Phase 4H acceptance](../docs/phase4h-staging-acceptance.md) records the qualified
-AWS fictional-demo deployment. The current Phase 5C/5D source/header changes are
-local only; that deployed build and the testing pause remain unchanged.
+The recorded October 23 Phase 5E frontend deployment is release
+`ff18c6762aa1a1f5f423667659cfae83f74f786e`, Amplify job 4. Its real authenticated-user
+acceptance is paused/incomplete. Phase 5F's registration changes below are local
+only; no hosting or AWS setting was changed. See the current
+[implementation plan/status](../docs/phase5f-self-service-registration-plan.md).
+
+## Phase 5F local account entry
+
+Explore Demo remains primary; capability-gated Create Account is secondary and
+Sign In is in the header. Signup reuses the SDK state/nonce/S256 PKCE transaction
+and changes only its pinned Cognito destination to `/signup`. Sign In and sensitive
+reauthentication keep `/oauth2/authorize`. The controller and client both reject
+closed signup. Passwords and verification/recovery codes remain on provider pages;
+there are no new frontend environment variables or password forms.
+
+The five-minute OAuth state bound is unchanged. An expired signup callback consumes
+the old state without exchanging its code and explains that registration may
+already have completed. Start a fresh Sign In; never repeat signup automatically.
+After admission, the existing empty/idempotent persistent bootstrap runs before
+protected content. Personal Home has no demo title/tour and keeps the existing
+Record an application action. Demo records are never transferred.
+
+The existing fake-provider suite now also models signup/confirmation, delayed
+verification and account-aware Home. Preserve older evidence by selecting its
+new output directory from the repository root (PowerShell):
+
+```powershell
+$env:HIREFLUX_AUTH_FIXTURE_PHASE = '5F'
+node frontend/node_modules/@playwright/test/cli.js test --config frontend/playwright.auth.config.ts
+```
+
+This uses port 4177 and `.tools/phase5f-auth-browser/`, with external/API/provider
+requests intercepted and OAuth tracing disabled. It is not live Cognito acceptance.
+Entry checks cover 320/390/768/1280 widths, actual light/dark theme selection,
+keyboard focus, touch targets, reduced motion and scoped browser axe checks.
+Clear the task-specific variable before selecting historical 5C/5D fixture modes.
+On Windows paths containing `&`, use direct Node entry points if npm's `.bin`
+wrappers fail. From `frontend/`, run `node node_modules/typescript/bin/tsc -b`,
+`node node_modules/vitest/vitest.mjs run` and
+`node node_modules/eslint/bin/eslint.js . --max-warnings 0`.
+
+The October 23 local security repair pins Zod 4.6.6, Vite 8.1.6 and Vitest 4.1.12,
+with matching Vitest internals and jsdom's undici 7.30.1 in the lockfile. No major
+was changed. An explicitly approved isolated npm 11.21.1 worked around npm 10's
+lock-generation peer-resolver defect; npm 10.9.3 `ci` and installed-tree validation
+passed with the resulting format-3 lock. Global tooling, project package-manager
+requirements and normal locked-install workflow are unchanged. Fresh audit and
+the affected frontend/browser/build checks passed; evidence is in the linked
+implementation status. A future dependency update may still encounter npm 10's
+resolver bug; this does not require npm 11 for the verified locked install.
 
 Each environment has a separate WEB app and one main branch. Staging uses
 BETA with auto-build; production uses PRODUCTION with auto-build disabled.
 Production's existing demo build setting does not imply production account
-readiness. Backend Cognito support was implemented locally in 5B; actual provider
-resources, hosted accounts and production launch remain separate future gates.
+readiness. Cognito was deployed in 5E; real signup/authentication acceptance and
+production launch remain separate gates.
 
 The [Phase 5C handoff](../docs/phase5c-frontend-cognito-handoff.md) describes the
 single workspace controller, OAuth transactions, credential storage and bounded
 recovery. Account entry requires validated `/api/v1/auth/config` metadata from the
 configured API; no new frontend build variables supply Cognito identifiers.
-The approved staging domain in source is an offline fixture only. Do not use
-these local tests to contact a real provider or the paused staging application.
+The domain is pinned to the recorded staging deployment. Local tests intercept it;
+do not use them to contact a real provider or the paused staging application.
 
 The [5D handoff](../docs/phase5d-account-lifecycle-handoff.md) adds one-use,
 same-account recent-auth intents for full JSON export and confirmed deletion,

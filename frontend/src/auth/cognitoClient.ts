@@ -106,17 +106,24 @@ export class CognitoClient {
     } catch { throw invalidSession(); }
   }
 
-  async begin(scope: SessionScope, returnPath = "/dashboard", sensitiveIntentId?: string): Promise<string> {
+  async begin(scope: SessionScope, returnPath = "/dashboard", sensitiveIntentId?: string, entry: "signin" | "signup" = "signin"): Promise<string> {
     try {
+      if (entry === "signup" && (this.config.self_registration_enabled !== true || sensitiveIntentId)) {
+        throw new ApiError("ACCOUNT_REGISTRATION_CLOSED", "Account registration is unavailable. You can still sign in to an existing account.");
+      }
       const target = safeWorkspaceReturnPath(returnPath);
       if (!target) throw new ApiError("OAUTH_RETURN_PATH_INVALID", "Choose a workspace page, then start sign-in again.");
       const guard = this.store.prepareLogin(scope);
       const request = await this.sdk(scope).createSigninRequest({
         request_type: "si:r", prompt: "login", nonce: crypto.randomUUID(),
-        state: { epoch: guard.epoch, instanceId: guard.instanceId, returnPath: target, ...(sensitiveIntentId ? { sensitiveIntentId } : {}) },
+        state: { epoch: guard.epoch, instanceId: guard.instanceId, returnPath: target, ...(entry === "signup" ? { entry } : {}), ...(sensitiveIntentId ? { sensitiveIntentId } : {}) },
       });
       this.store.assertCurrent(guard);
-      return request.url;
+      // Reuse the SDK transaction verbatim; only the documented browser page changes.
+      const destination = new URL(request.url);
+      if (destination.origin !== this.config.domain || destination.pathname !== "/oauth2/authorize") throw invalidSession();
+      if (entry === "signup") destination.pathname = "/signup";
+      return destination.href;
     } catch (error) { return safeError(error); }
   }
 

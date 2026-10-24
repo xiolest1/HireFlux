@@ -1,9 +1,32 @@
 # Backend Lambda packaging (Phase 3B)
 
-## Current local backend — Phase 5D
+## Phase 5F local registration compatibility
+
+The Phase 5E backend/Cognito deployment is recorded at
+`ff18c6762aa1a1f5f423667659cfae83f74f786e`; real authenticated-user acceptance
+remains paused/incomplete. Phase 5F adds no signup/password API, identity resolver,
+provider-read IAM or ownership-key change. Cognito managed signup supplies a new
+verified subject to the existing explicit empty/idempotent bootstrap. Signup alone
+does not create an application workspace. The existing public configuration
+boolean advertises signup; enforcement remains the Cognito pool policy.
+
+The Username/sub equality guard is unchanged for recent-auth JSON export and
+finalization. Its source comment now limits the AWS matching-identity statement
+to the documented SignUp/email-username configuration. Synthetic tests exercise a
+supported mapping and an incompatible admin-like mapping; mismatch rejects export
+and deletion before erasure/provider dispatch. No real user mapping is claimed.
+Real ownership, recovery, persistence, export and safe deletion remain rollout
+gates; see the [5F plan/status](../docs/phase5f-self-service-registration-plan.md).
+
+The comment changes a packaged source input, so qualification uses the separate
+`.tools/phase5f-local/hireflux-backend-candidate.zip` and matching manifest; older
+ZIPs/manifests remain untouched. Default example configuration stays closed and
+local/demo use remains independent of AWS. Nothing here authorizes deployment.
+
+## Phase 5D backend foundation (historical implementation checkpoint)
 
 Backend Cognito verification/admission and persistent bootstrap are implemented
-locally. The accepted AWS demo deployment and historical ZIP remain unchanged.
+locally at that checkpoint. Its historical ZIP remains preserved.
 See the [5D handoff](../docs/phase5d-account-lifecycle-handoff.md) and historical
 [5B foundation](../docs/phase5b-backend-cognito-handoff.md) for configuration,
 qualification and the remaining separately authorized 5E boundary.

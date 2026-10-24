@@ -85,9 +85,9 @@ export class CognitoSessionAdapter implements SessionAdapter, CredentialSource {
     return this.user ? this.activate(scope) : null;
   }
 
-  async begin(scope: SessionScope, returnPath: string, sensitiveIntentId?: string): Promise<string> {
+  async begin(scope: SessionScope, returnPath: string, sensitiveIntentId?: string, entry: "signin" | "signup" = "signin"): Promise<string> {
     this.clear();
-    return this.client.begin(scope, returnPath, sensitiveIntentId);
+    return this.client.begin(scope, returnPath, sensitiveIntentId, entry);
   }
 
   subject(): string | undefined { return this.user?.profile.sub; }

@@ -37,6 +37,7 @@ export interface CognitoTransactionContext {
   instanceId: string;
   returnPath: string;
   sensitiveIntentId?: string;
+  entry?: "signup";
 }
 
 interface StoreOptions {
@@ -128,15 +129,22 @@ export class CognitoSessionStore {
     const now = Math.floor(Date.now() / 1000);
     if (!data || data.epoch !== guard.epoch || data.instanceId !== guard.instanceId
       || typeof state.created !== "number" || !Number.isInteger(state.created)
-      || state.created > now + 60 || now - state.created > 300
+      || state.created > now + 60
       || state.redirect_uri !== redirectUri || state.request_type !== "si:r"
       || state.client_secret !== undefined || (state.extraTokenParams !== undefined
         && (typeof state.extraTokenParams !== "object" || state.extraTokenParams === null || Object.keys(state.extraTokenParams).length !== 0))
       || typeof state.nonce !== "string" || state.nonce.length < 16
       || typeof state.code_verifier !== "string" || state.code_verifier.length < 43
       || (data.sensitiveIntentId !== undefined && (typeof data.sensitiveIntentId !== "string" || !/^[A-Za-z0-9-]{36}$/.test(data.sensitiveIntentId)))
+      || (data.entry !== undefined && (data.entry !== "signup" || data.sensitiveIntentId !== undefined))
       || !safeWorkspaceReturnPath(data.returnPath)) {
       throw new ApiError("OAUTH_TRANSACTION_INVALID", "This sign-in request has expired or is no longer valid. Start sign-in again.");
+    }
+    if (now - state.created > 300) {
+      throw new ApiError(data.entry === "signup" ? "OAUTH_SIGNUP_EXPIRED" : "OAUTH_TRANSACTION_INVALID",
+        data.entry === "signup"
+          ? "Registration may have completed, but this sign-in request expired. Start a fresh Sign In to access your account. Do not register again."
+          : "This sign-in request has expired or is no longer valid. Start sign-in again.");
     }
     return data as CognitoTransactionContext;
   }

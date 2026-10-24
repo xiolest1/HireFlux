@@ -1,17 +1,51 @@
 # HireFlux infrastructure
 
-Current local source: [Phase 5D](../docs/phase5d-account-lifecycle-handoff.md) adds
-exactly four protected/closed-registration Cognito resources per environment.
-Offline comparison against the frozen staging template permits only existing
-Lambda code/environment and exact-pool AdminDeleteUser policy modifications.
-Inventory is 29 declarations / 26 with blank email; all old logical IDs and
-Amplify/table/secrets/monitoring/bootstrap properties remain stable. Historical
-phase narratives below describe their original checkpoints. The deployed demo
-remains the [qualified 4H checkpoint](../docs/phase4h-staging-acceptance.md), not
-the locally synthesized Cognito release. No 5E deployment is authorized.
+Recorded staging includes the [Phase 5D](../docs/phase5d-account-lifecycle-handoff.md)
+Cognito foundation deployed in Phase 5E at release
+`ff18c6762aa1a1f5f423667659cfae83f74f786e`. Actual authenticated-user acceptance is
+paused/incomplete. Phase 5F changes are local only; no new AWS rollout is authorized.
+Inventory stays 29 declarations / 26 with blank email. Historical narratives below
+describe their original checkpoints rather than current live inventory.
+
+## Phase 5F default-closed registration
+
+`loadEnvironmentConfig` owns one `selfRegistrationEnabled` setting. Its default is
+false; an explicit staging `-c selfRegistrationEnabled=true` may be synthesized
+offline for review. Only exact boolean values or `true`/`false` context strings are
+accepted. Production opening is rejected in this release. The same setting derives
+Cognito `AllowAdminCreateUserOnly = !enabled` and Lambda
+`COGNITO_SELF_REGISTRATION_ENABLED`; there is no separate advertising toggle.
+No `.env`, credentials or profile can enable it implicitly.
+
+Pool attributes/IDs, verification/recovery, token policy, callbacks/domain, Retain,
+deletion protection and IAM are unchanged. Restoring the setting to false is the
+registration shutdown source change; it preserves existing sign-in, demo and data.
+It still requires a separately reviewed/authorized update and fresh public config.
+The browser flag alone cannot close Cognito's public signup endpoint.
+
+The original `lib/release/update-contract.ts` remains unchanged and still rejects
+opening signup. New `registration-update-contract.ts` provides a separate opening
+review: `reviewRegistrationUpdate` pins the exact accepted 5E template bytes by
+SHA-256 before its delta check. Only existing-pool AdminCreateUserConfig and Lambda
+registration advertisement may change, plus an explicitly qualified replacement
+ZIP if supplied. CDK fingerprints the CUSTOM ZIP digest again for its destination
+key; that key is not the raw ZIP hash. Artifact/manifest/source verification is
+still required before synthesis. No IAM, identity, callback/domain, resource
+addition/deletion or unrelated change is allowed. The paired change-set reviewer
+rejects any replacement, including Conditional, and unexpected properties.
+`reviewRegistrationTemplateDelta` is the semantic unit-test helper and does not
+establish baseline provenance on its own. A later shutdown needs a newly reviewed
+open baseline; the pinned 5E opening reviewer does not authorize reversing arbitrary
+future changes. None of these functions contacts AWS or executes a change set.
+
+Current separate candidate: `.tools/phase5f-local/hireflux-backend-candidate.zip`.
+Use that explicit `backendArtifact` context / `HIREFLUX_QUALIFIED_BACKEND_ARTIFACT`
+for real synth/parity/CLI qualification. Preserve old qualified artifacts. The
+[5F plan](../docs/phase5f-self-service-registration-plan.md) records actual local
+results and remaining separate rollout/real-user gates.
 
 To qualify a separate current ZIP without overwriting historical artifacts,
-the local wrapper accepts `-c backendArtifact=.tools/phase5d/hireflux-backend-candidate.zip`.
+the local wrapper accepts `-c backendArtifact=.tools/phase5f-local/hireflux-backend-candidate.zip`.
 The verifier requires a ZIP under the repository's `.tools`, matching manifest,
 current source/lock, target, file hashes and budgets. Default canonical behavior
 is unchanged. CLI/parity tests can explicitly use the same candidate through

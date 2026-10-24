@@ -55,6 +55,76 @@ async function signedIn() {
 }
 
 describe("Cognito protocol client using the actual OIDC library", () => {
+  it("uses the SDK signup transaction unchanged and verifies its PKCE code exchange", async () => {
+    const client = new CognitoClient({ ...config, self_registration_enabled: true });
+    const scope = newSessionScope();
+    const url = new URL(await client.begin(scope, "/settings", undefined, "signup"));
+    expect(url.origin + url.pathname).toBe(config.domain + "/signup");
+    expect(url.searchParams.get("client_id")).toBe(config.client_id);
+    expect(url.searchParams.get("redirect_uri")).toBe(window.location.origin + "/auth/callback");
+    expect(url.searchParams.get("scope")).toBe("openid email profile");
+    expect(url.searchParams.get("response_type")).toBe("code");
+    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+    expect(url.searchParams.has("code_verifier")).toBe(false);
+    const keys = Object.keys(sessionStorage).filter((key) => key.startsWith("hireflux.cognito.transaction.v1."));
+    expect(keys).toHaveLength(1);
+    const transaction = JSON.parse(sessionStorage.getItem(keys[0])!);
+    expect(transaction.data.entry).toBe("signup");
+    expect(transaction.id).toBe(url.searchParams.get("state"));
+    expect(transaction.nonce).toBe(url.searchParams.get("nonce"));
+    const exchange = vi.fn(async ({ request }: { request: Request }) => {
+      const body = new URLSearchParams(await request.text());
+      expect(body.get("code_verifier")).toBe(transaction.code_verifier);
+      expect(body.has("client_secret")).toBe(false);
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body.get("code_verifier")!));
+      expect(btoa(String.fromCharCode(...new Uint8Array(digest))).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "")).toBe(url.searchParams.get("code_challenge"));
+      return HttpResponse.json(tokens(transaction.nonce));
+    });
+    server.use(http.post(config.domain + "/oauth2/token", exchange));
+    expect((await client.callback(scope, callback(url.href))).returnPath).toBe("/settings");
+    expect(exchange).toHaveBeenCalledOnce();
+  });
+
+  it("rejects disabled signup before creating a transaction and never uses signup for sensitive authentication", async () => {
+    const client = new CognitoClient(config);
+    await expect(client.begin(newSessionScope(), "/dashboard", undefined, "signup")).rejects.toMatchObject({ code: "ACCOUNT_REGISTRATION_CLOSED" });
+    const enabled = new CognitoClient({ ...config, self_registration_enabled: true });
+    await expect(enabled.begin(newSessionScope(), "/account", crypto.randomUUID(), "signup")).rejects.toMatchObject({ code: "ACCOUNT_REGISTRATION_CLOSED" });
+    expect(Object.keys(sessionStorage).filter((key) => key.includes("transaction"))).toHaveLength(0);
+  });
+
+  it("expires delayed signup without token exchange and recovers with a new ordinary sign-in", async () => {
+    const scope = newSessionScope();
+    const client = new CognitoClient({ ...config, self_registration_enabled: true });
+    const signup = await client.begin(scope, "/settings", undefined, "signup");
+    const key = Object.keys(sessionStorage).find((x) => x.includes("transaction"))!;
+    const transaction = JSON.parse(sessionStorage.getItem(key)!); transaction.created -= 301;
+    sessionStorage.setItem(key, JSON.stringify(transaction));
+    const exchange = vi.fn(() => HttpResponse.json({}, { status: 400 }));
+    server.use(http.post(config.domain + "/oauth2/token", exchange));
+    await expect(client.callback(scope, callback(signup))).rejects.toMatchObject({ code: "OAUTH_SIGNUP_EXPIRED", message: expect.stringContaining("Registration may have completed") });
+    expect(sessionStorage.getItem(key)).toBeNull();
+    expect(exchange).not.toHaveBeenCalled();
+    const signIn = new URL(await client.begin(scope, "/settings"));
+    expect(signIn.pathname).toBe("/oauth2/authorize");
+    expect(signIn.searchParams.get("state")).not.toBe(new URL(signup).searchParams.get("state"));
+    expect(signIn.searchParams.get("prompt")).toBe("login");
+    server.use(http.post(config.domain + "/oauth2/token", () => HttpResponse.json(tokens(signIn.searchParams.get("nonce")!))));
+    expect((await client.callback(scope, callback(signIn.href))).user.profile.sub).toBe("Opaque-Subject-A");
+    expect(await client.restore(scope)).not.toBeNull();
+  });
+
+  it("handles canceled managed signup without exchanging a code or retaining its transaction", async () => {
+    const scope = newSessionScope();
+    const client = new CognitoClient({ ...config, self_registration_enabled: true });
+    const signup = new URL(await client.begin(scope, "/dashboard", undefined, "signup"));
+    const exchange = vi.fn(() => HttpResponse.json({}, { status: 400 }));
+    server.use(http.post(config.domain + "/oauth2/token", exchange));
+    await expect(client.callback(scope, `${client.redirectUri}?error=access_denied&state=${signup.searchParams.get("state")}`)).rejects.toMatchObject({ code: "OAUTH_CANCELLED" });
+    expect(exchange).not.toHaveBeenCalled();
+    expect(Object.keys(sessionStorage).filter((key) => key.includes("transaction"))).toHaveLength(0);
+    expect(await client.restore(scope)).toBeNull();
+  });
   it("uses SDK state/nonce/S256 PKCE with pinned endpoints and no discovery/userInfo", async () => {
     const scope = newSessionScope();
     const client = new CognitoClient(config);

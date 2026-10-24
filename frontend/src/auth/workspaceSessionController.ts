@@ -65,6 +65,9 @@ export class WorkspaceSessionController {
   private configPromise?: Promise<void>;
   private callbackPending?: Promise<{ ready: ReadySession | AccountManagementSession; returnPath: string }>;
   private callbackAttempted = false;
+  private accountLoginPending?: Promise<boolean>;
+  private accountLoginScope?: SessionScope;
+  private accountLoginKey?: string;
   private stopLogoutObservation?: () => void;
   private readonly managed: boolean;
   private disposed = false;
@@ -291,6 +294,8 @@ export class WorkspaceSessionController {
 
   beginSignIn = (returnPath = "/dashboard", { discard = false } = {}): Promise<boolean> => this.startAccountLogin(returnPath, discard);
 
+  beginSignUp = (returnPath = "/dashboard", { discard = false } = {}): Promise<boolean> => this.startAccountLogin(returnPath, discard, undefined, "signup");
+
   beginSensitiveOperation = (operation: SensitiveOperation, confirmation = "", { discard = false } = {}): Promise<boolean> => {
     if (!this.account?.subject() || this.adapter !== this.account || !this.authConfig?.cognito) return Promise.reject(invalidIntent());
     if (operation === "delete" && (!this.authConfig.account_management_enabled || confirmation !== "DELETE_MY_ACCOUNT")) return Promise.reject(new ApiError("ACCOUNT_CONFIRMATION_REQUIRED", "Type DELETE_MY_ACCOUNT exactly before verifying your identity."));
@@ -303,7 +308,21 @@ export class WorkspaceSessionController {
     return this.startAccountLogin("/account", discard, intent);
   };
 
-  private startAccountLogin = async (returnPath: string, discard: boolean, intent?: SensitiveIntent): Promise<boolean> => {
+  private startAccountLogin = (returnPath: string, discard: boolean, intent?: SensitiveIntent, entry: "signin" | "signup" = "signin"): Promise<boolean> => {
+    const key = JSON.stringify([entry, returnPath, intent?.id]);
+    if (this.accountLoginPending && this.accountLoginScope?.isCurrent() && this.state.status === "authenticating") {
+      return this.accountLoginKey === key ? this.accountLoginPending : Promise.reject(new ApiError("ACCOUNT_ENTRY_BUSY", "Finish or cancel the current account redirect before starting another."));
+    }
+    const pending = this.prepareAccountLogin(returnPath, discard, intent, entry).finally(() => {
+      if (this.accountLoginPending === pending) this.accountLoginPending = undefined;
+    });
+    this.accountLoginPending = pending;
+    this.accountLoginScope = this.state.scope;
+    this.accountLoginKey = key;
+    return pending;
+  };
+
+  private prepareAccountLogin = async (returnPath: string, discard: boolean, intent?: SensitiveIntent, entry: "signin" | "signup" = "signin"): Promise<boolean> => {
     if (this.hasUnsavedChanges && !discard) return false;
     const base = this.next();
     this.adapter?.clear();
@@ -313,8 +332,11 @@ export class WorkspaceSessionController {
     try {
       await this.configure(); base.scope.assertCurrent();
       if (!this.account || this.configError) throw new ApiError("ACCOUNT_UNAVAILABLE", "Account sign-in is unavailable. Retry account configuration first.");
+      if (entry === "signup" && (!this.authConfig?.capabilities.includes("cognito") || this.authConfig.cognito?.self_registration_enabled !== true)) {
+        throw new ApiError("ACCOUNT_REGISTRATION_CLOSED", "Account registration is unavailable. You can still sign in to an existing account.");
+      }
       this.adapter = this.account;
-      const url = await this.account.begin(base.scope, safeWorkspaceReturnPath(returnPath) ?? "/dashboard", intent?.id);
+      const url = await this.account.begin(base.scope, safeWorkspaceReturnPath(returnPath) ?? "/dashboard", intent?.id, entry);
       base.scope.assertCurrent();
       if (intent) storeSensitiveIntent({ ...intent, instanceId: this.account.client.store.instanceId }, this.account.client.store, base.scope);
       (this.options.navigateExternal ?? ((value) => window.location.assign(value)))(url);

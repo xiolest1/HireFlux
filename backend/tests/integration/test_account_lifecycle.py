@@ -65,6 +65,37 @@ def bootstrap(client: TestClient, headers: dict[str, str]) -> None:
     assert client.post(API + "/me/bootstrap", headers=headers).status_code == 200
 
 
+@pytest.mark.parametrize("mapping", ["supported-self-signup", "incompatible-admin-like"])
+def test_creation_path_identity_guard_protects_export_and_provider_finalization(
+    cognito_harness: Harness, dynamodb_client: Any, mapping: str
+) -> None:
+    h, provider = cognito_harness, Mock()
+    subject = "73de20f6-e0a9-4ddd-8a35-4488a1c4a62a"
+    h.provider.profile["sub"] = subject
+    username = subject if mapping == "supported-self-signup" else "different-generated-username"
+    headers = {"Authorization": "Bearer " + h.token(sub=subject, username=username)}
+    with client_for(h, dynamodb_client, provider) as client:
+        bootstrap(client, headers)
+        before = owner_items(dynamodb_client, subject)
+        exported = client.get(API + "/me/export", headers=headers)
+        if mapping == "incompatible-admin-like":
+            assert exported.status_code == 401
+            assert (
+                client.request("DELETE", API + "/me", headers=headers, json=CONFIRM).status_code
+                == 401
+            )
+            assert before == owner_items(dynamodb_client, subject)
+            provider.delete.assert_not_called()
+        else:
+            assert exported.status_code == 200
+            assert exported.json()["profile"]["user_id"] == subject
+            assert before == owner_items(dynamodb_client, subject)
+            erased = client.request("DELETE", API + "/me", headers=headers, json=CONFIRM)
+            assert erased.status_code == 200
+            provider.delete.assert_called_once_with(subject)
+            assert erased.json()["provider_finalization"] == "COMPLETE"
+
+
 def test_erase_precedes_provider_and_leaves_only_minimal_terminal_tombstone(
     cognito_harness: Harness, dynamodb_client: Any
 ) -> None:

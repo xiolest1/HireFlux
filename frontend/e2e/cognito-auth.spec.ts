@@ -3,15 +3,18 @@ import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { makeAnalytics, testDashboard } from "../src/test/fixtures";
+import AxeBuilder from "@axe-core/playwright";
 
 const phase5d = process.env.HIREFLUX_AUTH_FIXTURE_PHASE === "5D";
-const SITE = `http://127.0.0.1:${phase5d ? "4176" : "4175"}`;
+const phase5f = process.env.HIREFLUX_AUTH_FIXTURE_PHASE === "5F";
+const SITE = `http://127.0.0.1:${phase5d ? "4176" : phase5f ? "4177" : "4175"}`;
 const API = "http://localhost:8000";
 const PROVIDER = "https://hireflux-staging-9465-use1-20261020.auth.us-east-1.amazoncognito.com";
 const ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_BROWSERTEST";
 const CLIENT = "fakepublicbrowserclient";
 const SUBJECT = "Browser-Opaque-Subject";
-const fixtures = path.resolve(path.dirname(fileURLToPath(import.meta.url)), `../../.tools/${phase5d ? "phase5d" : "phase5c"}-auth-browser`);
+const fixtures = path.resolve(path.dirname(fileURLToPath(import.meta.url)), `../../.tools/${phase5d ? "phase5d" : phase5f ? "phase5f" : "phase5c"}-auth-browser`);
 const key = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey;
 const now = "2026-10-20T00:00:00Z";
 const profile = { user_id: SUBJECT, name: "Browser Tester", email: "browser.tester@example.com",
@@ -28,7 +31,7 @@ function token(claims: Record<string, unknown>): string {
 }
 
 async function fakeNetwork(context: BrowserContext, options: { badNonce?: boolean; revokeFailure?: boolean; selfRegistration?: boolean; accountManagement?: boolean; differentReauth?: boolean; finalizationReview?: boolean } = {}) {
-  const counts = { authorize: 0, code: 0, refresh: 0, revoke: 0, logout: 0, bootstrap: 0, demo: 0, pkceValidated: 0, deletion: 0, export: 0 };
+  const counts = { authorize: 0, signup: 0, code: 0, refresh: 0, revoke: 0, logout: 0, bootstrap: 0, demo: 0, pkceValidated: 0, deletion: 0, export: 0 };
   const unexpected: string[] = [];
   let flow: { challenge: string; nonce: string; state: string; used: boolean } | undefined;
   let callback = "";
@@ -73,12 +76,17 @@ async function fakeNetwork(context: BrowserContext, options: { badNonce?: boolea
       }
       if (url.pathname === "/api/v1/me") return json(profile);
       if (url.pathname === "/api/v1/settings") return json(settings);
+      if (url.pathname === "/api/v1/dashboard") return json({ ...testDashboard,
+        summary: { total_tracked: 0, active_pursuits: 0, drafts: 0, accepted: 0, rejected: 0, withdrawn: 0, archived: 0 },
+        actions: [], recent_applications: [], upcoming_interviews: [] });
+      if (url.pathname === "/api/v1/analytics") return json(makeAnalytics());
       if (url.pathname === "/api/v1/demo-sessions") counts.demo++;
       unexpected.push("mock-api:" + request.method() + " " + url.pathname);
       return json({ error: { code: "MOCK_ROUTE_UNAVAILABLE", message: "Unexpected bounded fixture request", request_id: "browser-fixture" } }, 503);
     }
-    if (url.pathname === "/oauth2/authorize") {
-      counts.authorize++;
+    if (url.pathname === "/oauth2/authorize" || url.pathname === "/signup") {
+      if (url.pathname === "/signup") counts.signup++;
+      else counts.authorize++;
       if (url.searchParams.get("redirect_uri") !== SITE + "/auth/callback" || url.searchParams.get("response_type") !== "code" ||
           url.searchParams.get("code_challenge_method") !== "S256" || url.searchParams.get("client_id") !== CLIENT || !url.searchParams.get("nonce")) {
         unexpected.push("invalid-mock-authorization-request");
@@ -86,6 +94,7 @@ async function fakeNetwork(context: BrowserContext, options: { badNonce?: boolea
       }
       flow = { challenge: url.searchParams.get("code_challenge") ?? "", nonce: url.searchParams.get("nonce") ?? "", state: url.searchParams.get("state") ?? "", used: false };
       callback = `${SITE}/auth/callback?code=fictional-once-code&state=${encodeURIComponent(flow.state)}`;
+      if (url.pathname === "/signup") return route.fulfill({ contentType: "text/html", headers, body: `<!doctype html><html lang="en"><head><title>Fictional managed signup</title></head><body><main><h1>Fictional managed signup</h1><p>Offline provider fixture only. No account or email is created.</p><form id="verify"><label for="code">Fictional email confirmation code</label><input id="code" autocomplete="off"><button>Verify fictional email</button></form><p id="error" role="alert"></p><button id="resend">Resend fictional confirmation</button><p id="status" role="status"></p><a id="complete" hidden href="${callback.replaceAll("&", "&amp;")}">Complete fictional signup</a><script>document.getElementById('verify').onsubmit=function(e){e.preventDefault();if(document.getElementById('code').value==='123456'){document.getElementById('error').textContent='';document.getElementById('status').textContent='Fictional email verified';document.getElementById('complete').hidden=false;}else document.getElementById('error').textContent='Fictional code invalid or expired';};document.getElementById('resend').onclick=function(){document.getElementById('status').textContent='Fictional confirmation resent';this.disabled=true;};</script></main></body></html>` });
       return route.fulfill({ contentType: "text/html", headers, body: `<!doctype html><html><head><title>Fictional managed sign-in</title></head><body><main><h1>Fictional managed sign-in</h1><p>Offline provider fixture only. Cognito owns account creation and password recovery.</p><a href="#signup">Create account</a><a href="${callback.replaceAll("&", "&amp;")}">Complete fictional sign-in</a></main></body></html>` });
     }
     if (url.pathname === "/oauth2/token") {
@@ -135,9 +144,99 @@ async function signInToSettings(page: Page, entry = "Sign In") {
   await button.focus();
   await expect(button).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "Fictional managed sign-in" })).toBeVisible();
-  await page.getByRole("link", { name: "Complete fictional sign-in" }).click();
+  if (entry === "Create Account") {
+    await expect(page.getByRole("heading", { name: "Fictional managed signup" })).toBeVisible();
+    await page.getByLabel("Fictional email confirmation code").fill("123456");
+    await page.getByRole("button", { name: "Verify fictional email" }).click();
+    await page.getByRole("link", { name: "Complete fictional signup" }).click();
+  } else {
+    await expect(page.getByRole("heading", { name: "Fictional managed sign-in" })).toBeVisible();
+    await page.getByRole("link", { name: "Complete fictional sign-in" }).click();
+  }
 }
+
+test("signup confirmation errors recover without duplicate registration and reach an empty personal Home", async ({ page, context }, info) => {
+  const network = await fakeNetwork(context);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Create Account", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Fictional managed signup" })).toBeVisible();
+  await page.getByLabel("Fictional email confirmation code").fill("invalid");
+  await page.getByRole("button", { name: "Verify fictional email" }).click();
+  await expect(page.getByRole("alert")).toHaveText("Fictional code invalid or expired");
+  await page.getByRole("button", { name: "Resend fictional confirmation" }).click();
+  await expect(page.getByRole("status")).toHaveText("Fictional confirmation resent");
+  await page.getByLabel("Fictional email confirmation code").fill("123456");
+  await page.getByRole("button", { name: "Verify fictional email" }).click();
+  await page.getByRole("link", { name: "Complete fictional signup" }).click();
+  await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Record an application" })).toBeVisible();
+  await expect(page.getByText("Your job search", { exact: true })).toBeVisible();
+  await expect(page.getByText("Recorded demo search", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Explore the demo workspace" })).toHaveCount(0);
+  await mkdir(path.join(fixtures, "screenshots"), { recursive: true });
+  await page.screenshot({ path: path.join(fixtures, `screenshots/phase5f-empty-account-${info.project.name}.png`), fullPage: true, animations: "disabled" });
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Return to workspace" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create Account", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("banner").getByRole("button", { name: "Sign In" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Try Demo" })).toBeVisible();
+  expect(network.counts.signup).toBe(1); expect(network.counts.code).toBe(1);
+  expect(network.counts.demo).toBe(0); expect(network.unexpected).toEqual([]);
+});
+
+test("delayed signup expires safely and a fresh Sign In completes without reusing its code", async ({ page, context }) => {
+  const network = await fakeNetwork(context);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Create Account", exact: true }).click();
+  await page.getByLabel("Fictional email confirmation code").fill("123456");
+  await page.getByRole("button", { name: "Verify fictional email" }).click();
+  // Change only the local fixture's stored creation time, never a deployed session.
+  await page.goto(SITE + "/");
+  await page.evaluate(() => {
+    for (const key of Object.keys(sessionStorage).filter((x) => x.startsWith("hireflux.cognito.transaction.v1."))) {
+      const state = JSON.parse(sessionStorage.getItem(key)!); state.created -= 301;
+      sessionStorage.setItem(key, JSON.stringify(state));
+    }
+  });
+  await page.goto(network.callback());
+  await expect(page.getByText(/Registration may have completed, but this sign-in request expired/)).toBeVisible();
+  expect(network.counts.code).toBe(0);
+  await page.getByRole("button", { name: "Start sign-in again" }).click();
+  await page.getByRole("link", { name: "Complete fictional sign-in" }).click();
+  await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
+  expect(network.counts.signup).toBe(1); expect(network.counts.authorize).toBe(1);
+  expect(network.counts.code).toBe(1); expect(network.counts.demo).toBe(0);
+  expect(network.unexpected).toEqual([]); expect(network.safeConsole()).toBe(true);
+});
+
+test("account entry reflows with visible keyboard actions in light and dark narrow-to-desktop layouts", async ({ page, context }) => {
+  const network = await fakeNetwork(context);
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Create Account", exact: true })).toBeVisible();
+  await mkdir(path.join(fixtures, "screenshots"), { recursive: true });
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
+    const switchTheme = page.getByRole("button", { name: `Switch to ${colorScheme} mode` });
+    if (await switchTheme.count()) await switchTheme.click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains("dark"))).toBe(colorScheme === "dark");
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      const signin = page.getByRole("banner").getByRole("button", { name: "Sign In" });
+      await expect(signin).toBeVisible(); await signin.focus(); await expect(signin).toBeFocused();
+      const signup = page.getByRole("button", { name: "Create Account", exact: true });
+      await expect(signup).toBeVisible();
+      expect(await signup.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      if (width === 320 || width === 1280) {
+        const accessibility = await new AxeBuilder({ page }).include("header").include('[data-hero-entrance="cta"]').analyze();
+        expect(accessibility.violations).toEqual([]);
+      }
+      await page.screenshot({ path: path.join(fixtures, `screenshots/phase5f-entry-${width}-${colorScheme}.png`), animations: "disabled" });
+    }
+  }
+  expect(network.counts.signup + network.counts.authorize + network.counts.code + network.counts.demo).toBe(0);
+  expect(network.unexpected).toEqual([]);
+});
 
 test("account entry, real PKCE callback, reload restoration and provider sign-out stay bounded", async ({ page, context }, info) => {
   const network = await fakeNetwork(context, { revokeFailure: info.project.name === "mobile" });

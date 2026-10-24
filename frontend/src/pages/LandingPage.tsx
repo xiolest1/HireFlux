@@ -35,6 +35,8 @@ export function LandingPage() {
   const error = state.status === "error" ? state.error : undefined;
   const localMode = import.meta.env.DEV && controller.adapterId === "local";
   const configurationBlocked = controller.adapterId === undefined;
+  const persistent = state.status === "ready" && state.workspace.identityKind === "PERSISTENT";
+  const registrationAvailable = controller.accountEntryAvailable && controller.authenticationConfiguration?.cognito?.self_registration_enabled === true;
   const routeState = locationState(location.state);
   const [actionOrigin, setActionOrigin] = useState<"hero" | "coda" | null>(null);
   const closingOwnerRef = useRef<ConnectedClosingOwner | null>(null);
@@ -70,9 +72,13 @@ export function LandingPage() {
     }
   }
 
-  async function enterAccount() {
+  async function enterAccount(signup = false) {
     if (controller.hasUnsavedChanges && !window.confirm("Discard unsaved changes and continue to account sign-in? Saved data stays on the server.")) return;
-    try { await controller.beginSignIn(routeState.from ?? "/dashboard", { discard: true }); } catch { /* Controller exposes a privacy-safe error. */ }
+    setActionOrigin("hero");
+    try {
+      if (signup) await controller.beginSignUp(routeState.from ?? "/dashboard", { discard: true });
+      else await controller.beginSignIn(routeState.from ?? "/dashboard", { discard: true });
+    } catch { /* Controller exposes a privacy-safe error. */ }
   }
 
   async function switchToDemo() {
@@ -88,7 +94,7 @@ export function LandingPage() {
     : routeState.reason === "expired" || state.status === "expired"
     ? controller.adapterId === "cognito" ? "Your account session ended. Sign in again; saved workspace data is preserved." : "Your previous demo workspace expired. Start a fresh one to keep exploring."
     : routeState.reason === "required"
-      ? localMode ? "Open the local development workspace to explore the page." : "Start a demo workspace to explore the page."
+      ? localMode ? "Open the local development workspace to explore the page." : controller.accountEntryAvailable ? "Choose a demo or sign in to open this page." : "Start a demo workspace to explore the page."
       : null;
 
   return (
@@ -97,7 +103,7 @@ export function LandingPage() {
       <header className="relative z-20 border-b border-line bg-surface/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
         <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8" data-landing-clip-check>
           <div className="flex min-w-0 items-center gap-3 font-bold tracking-tight"><span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-brand-700 text-sm font-black text-white shadow-lg shadow-cyan-950/10">HF</span><span className="truncate">HireFlux</span></div>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3"><span className="hidden rounded-full border border-line bg-surface-raised px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-ink-muted dark:border-slate-700 dark:bg-slate-900 sm:inline-flex">{localMode ? "Local development workspace" : "Demo workspace"}</span><ThemeToggle /></div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">{!localMode && controller.accountEntryAvailable && !persistent ? <Button variant="ghost" disabled={isCreating} onClick={() => void enterAccount()}>Sign In</Button> : null}<span className="hidden rounded-full border border-line bg-surface-raised px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-ink-muted dark:border-slate-700 dark:bg-slate-900 sm:inline-flex">{localMode ? "Local development workspace" : persistent ? "Personal workspace" : controller.accountEntryAvailable ? "Demo & personal workspaces" : "Demo workspace"}</span><ThemeToggle /></div>
         </div>
       </header>
 
@@ -112,22 +118,20 @@ export function LandingPage() {
             <div className="min-w-0" data-landing-clip-check>
               <p className="hf-hero-enter hf-hero-enter-eyebrow inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-line bg-surface-raised px-3 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.11em] text-accent-strong shadow-sm backdrop-blur dark:border-cyan-900 dark:bg-slate-900/70 sm:text-xs sm:tracking-[0.16em]" data-hero-entrance="eyebrow"><Sparkles aria-hidden="true" className="size-3.5 shrink-0" />A focused job-search workspace</p>
               <h1 className="hf-hero-enter hf-hero-enter-headline mt-6 max-w-3xl text-4xl font-black tracking-[-0.045em] text-slate-950 sm:text-6xl sm:leading-[1.03] dark:text-white" data-hero-entrance="headline">Keep every opportunity connected to what comes next.</h1>
-              <p className="hf-hero-enter hf-hero-enter-support mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300" data-hero-entrance="support">HireFlux keeps each opportunity’s context intact and turns its history into a clear next action—without creating an account.</p>
+              <p className="hf-hero-enter hf-hero-enter-support mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300" data-hero-entrance="support">Keep each opportunity’s context intact and turn its history into a clear next action. Explore a fictional demo without an account, or sign in to your own saved workspace.</p>
 
               {notice ? <div className="mt-7 max-w-xl rounded-xl border border-line border-l-4 border-l-warning bg-warning-soft px-4 py-3 text-sm font-medium text-warning" role="status">{notice}</div> : null}
               {error && actionOrigin !== "coda" ? <div className="mt-7 max-w-xl"><ErrorPanel compact title={localMode ? "Local workspace could not be prepared" : state.status === "error" && ["account", "account-bootstrap", "logout"].includes(state.operation) ? "Account access could not be completed" : "Demo workspace could not be prepared"} error={error} /></div> : null}
 
               <div className="hf-hero-enter hf-hero-enter-cta mt-8 flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center" data-hero-entrance="cta">
                 <Button className="group min-w-48 gap-2 shadow-lg shadow-cyan-950/10" aria-busy={isCreating || undefined} disabled={isCreating || configurationBlocked || (!localMode && state.status !== "ready" && !controller.demoEntryAvailable)} onClick={() => void enterDemo("hero")}>{actionLabel}<ArrowRight aria-hidden="true" className="size-4 transition-transform group-hover:translate-x-1 group-focus-visible:translate-x-1" /></Button>
-                <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{localMode ? "Development only · Fixed backend identity · Durable data · No real sign-in" : "No sign-up · Fictional data · Resets anytime"}</p>
+                {registrationAvailable && !persistent ? <Button variant="secondary" disabled={isCreating} onClick={() => void enterAccount(true)}>Create Account</Button> : null}
               </div>
+              <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">{localMode ? "Development only · Fixed backend identity · Durable data · No real sign-in" : persistent ? "Return to your saved records and preferences." : "Demo: no sign-up · Fictional data · Temporary workspace"}</p>
+              {isCreating && controller.adapterId === "cognito" ? <p role="status" className="mt-3 text-sm text-ink-muted">Opening secure account access…</p> : null}
               {!localMode && controller.accountEntryAvailable ? <section aria-label="Account access" className="mt-6 max-w-xl space-y-3">
-                <div className="flex flex-wrap gap-3">
-                  {controller.authenticationConfiguration?.cognito?.self_registration_enabled ? <Button variant="secondary" disabled={isCreating} onClick={() => void enterAccount()}>Create Account</Button> : null}
-                  <Button variant="secondary" disabled={isCreating} onClick={() => void enterAccount()}>Sign In</Button>
-                  {state.status === "ready" && state.workspace.identityKind === "PERSISTENT" && controller.demoEntryAvailable ? <Button variant="secondary" disabled={isCreating} onClick={() => void switchToDemo()}>Try Demo</Button> : null}
-                </div>
-                <p className="text-sm text-ink-muted">{controller.authenticationConfiguration?.cognito?.self_registration_enabled ? "Account access opens Cognito’s secure sign-in page. New users choose Create account there; email confirmation and password recovery stay with Cognito." : "Account registration is closed. Only owner-provisioned supervised testers can sign in. Password recovery stays with Cognito."}</p>
+                {persistent && controller.demoEntryAvailable ? <Button variant="secondary" disabled={isCreating} onClick={() => void switchToDemo()}>Try Demo</Button> : null}
+                <p className="text-sm text-ink-muted">{registrationAvailable ? "Create a private workspace with records saved across sign-outs. Cognito handles credentials and email verification. Demo records do not transfer." : "Account registration is closed. Existing supervised testers can sign in; password recovery stays with Cognito."}</p>
                 {controller.authenticationConfiguration?.account_data_policy === "disposable_staging" ? <p role="note" className="rounded-lg border border-line p-3 text-sm">Supervised staging evaluation only. Use fictional application data. Accounts retain records across sign-outs, but the staging database is disposable and does not guarantee backup or recovery.</p> : null}
               </section> : null}
               {controller.authenticationConfigurationError ? <section className="mt-6 max-w-xl space-y-3" aria-label="Account configuration unavailable"><p role="status">Account configuration could not be loaded. Account entry is disabled until it is verified.</p><Button variant="secondary" onClick={() => void controller.retryAuthenticationConfiguration()}>Retry account configuration</Button></section> : null}
@@ -173,7 +177,7 @@ export function LandingPage() {
         </LandingReveal>
       </main>
 
-      <footer className="mx-auto flex max-w-7xl min-w-0 flex-col gap-2 border-t border-line px-4 py-8 text-sm text-ink-muted dark:border-slate-800 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8" data-landing-clip-check><p>HireFlux · Candidate job-search demo</p><p>Temporary workspaces expire automatically after 24 hours.</p></footer>
+      <footer className="mx-auto flex max-w-7xl min-w-0 flex-col gap-2 border-t border-line px-4 py-8 text-sm text-ink-muted dark:border-slate-800 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8" data-landing-clip-check><p>HireFlux · Your job-search workspace</p><p>Demo workspaces expire after 24 hours. Account records stay across sign-outs.</p></footer>
     </div>
   );
 }
