@@ -300,6 +300,7 @@
   --color-warning: var(--hf-warning);
   --color-warning-soft: var(--hf-warning-soft);
   --color-danger: var(--hf-danger);
+  --color-danger-contrast: var(--hf-danger-contrast);
   --color-danger-soft: var(--hf-danger-soft);
 
   --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
@@ -348,6 +349,7 @@
   --hf-warning: #9a3412;
   --hf-warning-soft: #fff4df;
   --hf-danger: #be123c;
+  --hf-danger-contrast: #ffffff;
   --hf-danger-soft: #ffe4e6;
 }
 
@@ -381,6 +383,7 @@
   --hf-warning: #fcd34d;
   --hf-warning-soft: #422d10;
   --hf-danger: #fda4af;
+  --hf-danger-contrast: #471b29;
   --hf-danger-soft: #471b29;
 }
 

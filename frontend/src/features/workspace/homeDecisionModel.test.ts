@@ -79,6 +79,19 @@ describe("Home decision evidence and state matrix", () => {
   it("E/G: no records offers a recording path without invented urgency", () => {
     const result = model({ ...testDashboard, summary: { ...testDashboard.summary, total_tracked: 0, active_pursuits: 0 } });
     expect(result.state).toBe("no-records");
+    expect(result.title).toBe("Your workspace is ready");
+    expect(result.explanation).toContain("Home will fill in as you save records");
+    expect(result.coverage).toContain("up to 100 due follow-ups and five upcoming interviews");
+  });
+  it("keeps archived-only history separate from a new workspace", () => {
+    const result = model({ ...testDashboard, summary: { ...testDashboard.summary, total_tracked: 1, active_pursuits: 0, archived: 1 } }, { workspace: workspace() });
+    expect(result.state).toBe("no-known-action");
+    expect(result.explanation).toContain("unrecorded obligations");
+  });
+  it("does not turn a stale empty snapshot into first-record reassurance after failure", () => {
+    const result = model({ ...testDashboard, summary: { ...testDashboard.summary, total_tracked: 0, active_pursuits: 0 } }, { error: true });
+    expect(result.state).toBe("partial");
+    expect(result.explanation).toContain("previous snapshot");
   });
   it("F/J/K: incomplete ownership evidence is partial, not caught up", () => {
     expect(model(testDashboard, { workspacePending: true }).state).toBe("partial");

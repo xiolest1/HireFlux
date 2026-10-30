@@ -47,8 +47,8 @@ test("an empty recorded search cannot inherit a conflicting Analytics story", as
   }));
   await page.goto("/dashboard");
   const band = page.getByRole("region", { name: "What can I work on now?" });
-  await expect(band.getByText("Start with a recorded opportunity")).toBeVisible();
-  await expect(band.getByRole("link", { name: "Record an application" })).toBeVisible();
+  await expect(band.getByText("Your workspace is ready")).toBeVisible();
+  await expect(band.getByRole("link", { name: "Add your first application" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Search activity" })).toHaveCount(0);
 });
 

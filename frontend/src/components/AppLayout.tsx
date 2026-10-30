@@ -490,7 +490,7 @@ function WorkspaceLayout({ confirmingReset, setConfirmingReset }: {
                   }`}
                 >
                   <Clock3 aria-hidden="true" className="size-3.5" />
-                  {capabilities.showExpiry ? expiry.label : capabilities.canSignOut ? "Account · Saved workspace" : "Local development · Durable"}
+                  {capabilities.showExpiry ? expiry.label : capabilities.canSignOut ? "Account · Saved workspace" : "Local development · Saved locally"}
                 </span>
                 <div className="hidden lg:block">
                   <ThemeToggle
@@ -589,7 +589,7 @@ function WorkspaceLayout({ confirmingReset, setConfirmingReset }: {
           open={moreOpen}
           onClose={() => setMoreOpen(false)}
           title="Workspace"
-          description="Demo tools, insights, and preferences."
+          description={capabilities.temporary ? "Demo tools, insights, and preferences." : capabilities.canSignOut ? "Account tools, insights, and preferences." : "Local development tools, insights, and preferences."}
           size="sm"
         >
           <div className="rounded-2xl border border-line bg-surface-muted p-4">
@@ -622,7 +622,7 @@ function WorkspaceLayout({ confirmingReset, setConfirmingReset }: {
               }`}
             >
               <Clock3 aria-hidden="true" className="size-4" />
-              {expiry.label}
+              {capabilities.showExpiry ? expiry.label : capabilities.canSignOut ? "Saved across sign-outs" : "Saved on the local backend"}
             </p>
           </div>
 

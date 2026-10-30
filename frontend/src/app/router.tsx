@@ -34,7 +34,7 @@ export const appRoutes: RouteObject[] = [
   { path: "/auth/signed-out", element: titledPage("Signed out", suspendedPage(<AuthSignedOutPage />, "Loading sign-out status…")), errorElement: <RouteErrorPage /> },
   {
     path: "/",
-    element: titledPage("Demo workspace", suspendedPage(<LandingPage />, "Loading demo workspace…")),
+    element: titledPage("Job application tracker", suspendedPage(<LandingPage />, "Loading HireFlux…")),
     errorElement: <RouteErrorPage />,
   },
   {

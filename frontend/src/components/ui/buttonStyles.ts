@@ -6,7 +6,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   secondary:
     "border-line bg-surface-raised text-ink shadow-sm hover:border-line-strong hover:bg-surface-hover active:bg-surface-pressed",
   danger:
-    "border-danger bg-danger text-white shadow-sm hover:brightness-90",
+    "border-danger bg-danger text-danger-contrast shadow-sm hover:brightness-90",
   ghost:
     "border-transparent bg-transparent text-ink-muted hover:bg-surface-hover hover:text-ink active:bg-surface-pressed",
 };

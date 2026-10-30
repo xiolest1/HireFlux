@@ -162,7 +162,7 @@ function OpportunitySection({
       {totalCount > 3 ? (
         <button
           type="button"
-          className={`mt-3 min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-accent hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${totalCount === 4 ? "inline-flex sm:hidden" : "inline-flex"}`}
+          className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-accent hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           aria-expanded={expanded}
           aria-controls={regionId}
           onClick={() => setExpanded((value) => !value)}

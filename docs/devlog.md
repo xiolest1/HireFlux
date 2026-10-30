@@ -1,5 +1,70 @@
 # HireFlux development log
 
+## 2026-10-29 — Phase 6 P2 navigation, first-record guidance and workspace wording
+
+Implemented F5–F7 locally on the preserved, uncommitted P1 baseline. Applications
+now carries the existing validated collection origin through Detail, Edit, save,
+Back and next-step exits, removing one-use intents while retaining success
+notices, optimistic concurrency and session fences. Genuine zero-record Home
+and unfiltered All views offer a coherent first-application path. Empty Active,
+Archived, filtered and incomplete-data states remain distinct without additional
+classification requests. Existing creation forms and server-confirmed feedback
+are reused.
+
+Demo, account and local-development descriptions now follow existing session
+capabilities. More no longer calls saved workspaces temporary; missing-interview
+messages, Settings copy and the public title are accurate. Shared layout,
+staging caveats, Cognito recovery and exit/reset behavior remain intact. No new
+mobile badge or navigation structure was added.
+
+Qualification: **606 frontend tests across 64 files**, a 29-test targeted recheck
+and final 14-case navigation check, six native contrast checks, lint, TypeScript
+and an isolated loopback production-style build pass. Ten distinct local browser
+scenarios passed across
+preserved runs, covering Edit continuity, first Saved/Applied creation, light/dark
+Home, 320/390px More, 768px tablet navigation, long fictional account names,
+keyboard/focus, scoped axe checks and public titles. Initial browser-fixture URL,
+selector, breakpoint, radio-input and bootstrap-theme mistakes are retained in
+the P2 evidence; they required no application workaround. All P1 F1–F4 tests and
+behavior remain present. Evidence is under `.tools/phase6-p2-validation-20261029/`.
+No backend/infrastructure/dependency change, AWS/GitHub call, real account or
+inbox access, staging, commit, push or deployment occurred. This is local
+qualification; deferred Phase 5F acceptance and live staging state are unchanged.
+
+## 2026-10-29 — Phase 6 P1 UX correctness, accessibility and trust fixes
+
+Implemented F1–F4 locally against clean `main` at
+`f62d762b23ec86ebcd1492980d8cf83eee6bae54`. Grouped Applications retain
+three-record previews while exposing the fourth-item disclosure at every
+breakpoint. Settings reuses the existing route-blocking, shared dialog and
+native unload patterns for dirty preferences, preserving deliberate saves,
+conflict drafts, single sign-out confirmation and forced-expiry cleanup.
+
+Analytics and grouped/flat Applications retain cached content, including valid
+empty results, after failed background refreshes. A shared accessible warning
+offers an explicit in-flight-disabled retry and clears after actual recovery;
+next-page errors remain separate. Cache lifetimes, automatic retries and session
+generation fencing are unchanged. Shared danger buttons now use a dedicated
+semantic contrast foreground; general error/status colors remain unchanged.
+
+Qualification: **573 frontend tests across 61 files**, six native contrast tests,
+lint, TypeScript and an isolated production-style frontend build pass. Seven
+distinct local synthetic browser scenarios passed across bounded runs: disclosure
+at 390/640/768/1280px, effective light/dark danger states and scoped dialog axe,
+and dirty Settings navigation plus a real canceled native reload. Initial new
+browser-fixture timing/navigation-wait failures were corrected and preserved in
+the local validation evidence; no application assertion or retry policy was
+weakened. Effective enabled danger-text contrast measured 6.42:1 in workspace
+light and 7.62:1 in dark. Inactive controls retain their existing styling; no
+application-wide WCAG conformance claim is made.
+
+Local outputs are isolated under `.tools/phase6-p1-validation-20261029/`;
+accepted deployment artifacts and historical ledgers remain intact. F5–F7,
+Home composition, authentication, backend/domain behavior and AWS configuration
+were not changed. No dependency installation, AWS/GitHub operation, real account
+or destructive data operation, commit, push or deployment occurred. Changes
+remain uncommitted for owner review; no staging-state re-verification is implied.
+
 ## 2026-10-20 — Phase 5D.1 CDK security remediation and release requalification
 
 **PASS.** Upgraded only aws-cdk-lib 2.272.0 → 2.273.0, the minimum verified

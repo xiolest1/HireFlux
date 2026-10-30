@@ -17,7 +17,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useBlocker } from "react-router-dom";
 import type { ColorTheme, DashboardRange, Settings } from "../api/schemas";
 import { ApiError } from "../api/client";
 import { AccountDeletionEntry, RecentExportEntry } from "../features/accounts/AccountManagementControls";
@@ -29,6 +29,7 @@ import {
 } from "../auth/timeZonePreference";
 import { Button } from "../components/ui/Button";
 import { Drawer } from "../components/ui/Drawer";
+import { Dialog } from "../components/ui/Dialog";
 import { ErrorPanel, SuccessBanner } from "../components/ui/Feedback";
 import { CollapsibleRegion, PendingIndicator } from "../components/ui/Motion";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -156,6 +157,7 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [profileNameOverride, setProfileNameOverride] = useState<string | null>(null);
   const [profilePreviewSaved, setProfilePreviewSaved] = useState(false);
+  const keepEditingButtonRef = useRef<HTMLButtonElement>(null);
   const browserTimeZone = detectBrowserTimeZone();
   const manualTimeZone = hasManualTimeZonePreference();
   const availableTimeZones = Array.from(
@@ -180,6 +182,23 @@ export function SettingsPage() {
   const original = settingsQuery.data ? draftFromSettings(settingsQuery.data) : null;
   const dirty = !draftsMatch(draft, original);
   useWorkspaceUnsavedChanges(dirty && !updateMutation.isPending);
+  const blocker = useBlocker(
+    () => state.status === "ready" && state.scope.isCurrent() && dirty && !updateMutation.isPending,
+  );
+
+  function keepEditing() {
+    if (blocker.state === "blocked") blocker.reset();
+  }
+
+  useEffect(() => {
+    if (!dirty || updateMutation.isPending || state.status !== "ready") return;
+    function warnBeforeUnload(event: BeforeUnloadEvent) {
+      // Sign-out and forced expiry invalidate this scope before leaving the page.
+      if (state.scope.isCurrent()) event.preventDefault();
+    }
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [dirty, state.scope, state.status, updateMutation.isPending]);
 
   function change(next: SettingsDraft) {
     if (settingsQuery.data) {
@@ -230,13 +249,26 @@ export function SettingsPage() {
 
   return (
     <WorkspaceFrame width="narrow" className="space-y-10">
-      <WorkspaceIntro title="Settings & profile" lead="Configure how HireFlux works for this candidate workspace." context={temporary ? "Profile, preferences, exports, and optional account simulations stay together in one quiet utility flow." : "View your server-owned profile, saved preferences, and workspace exports."} />
+      <Dialog
+        open={blocker.state === "blocked" && state.status === "ready" && state.scope.isCurrent()}
+        onClose={keepEditing}
+        title="Leave without saving preferences?"
+        description="Your unsaved preference changes will be discarded. Saved preferences stay on the server."
+        initialFocusRef={keepEditingButtonRef}
+        role="alertdialog"
+      >
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button ref={keepEditingButtonRef} variant="secondary" onClick={keepEditing}>Keep editing</Button>
+          <Button variant="danger" onClick={() => { if (blocker.state === "blocked") blocker.proceed(); }}>Discard changes</Button>
+        </div>
+      </Dialog>
+      <WorkspaceIntro title="Settings & profile" lead="Configure how HireFlux works for this candidate workspace." context={temporary ? "Profile, preferences, exports, and optional account simulations stay together in one quiet utility flow." : "View your profile, saved preferences, and workspace exports."} />
 
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,.52fr)]">
         <section className="border-b border-line pb-10" aria-labelledby="profile-title">
           <div className="flex items-start gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info"><UserRound aria-hidden="true" className="size-5" /></span>
-            <div><h2 id="profile-title" className="text-xl font-bold text-ink">Profile</h2><p className="mt-1 text-sm leading-6 text-ink-muted">{temporary ? "Try a profile update in this local preview. The signed-in demo identity remains server-owned." : persistent ? "Your profile comes from your account provider. Amazon Cognito manages sign-in, email confirmation, and password recovery. Profile editing is not available here." : "Profile attributes are supplied by the local backend. Profile editing and real authentication are not enabled."}</p></div>
+            <div><h2 id="profile-title" className="text-xl font-bold text-ink">Profile</h2><p className="mt-1 text-sm leading-6 text-ink-muted">{temporary ? "Try a profile update in this preview. It does not change your demo identity." : persistent ? "Your profile comes from your account provider. Amazon Cognito manages sign-in, email confirmation, and password recovery. Profile editing is not available here." : "Profile attributes are supplied by the local backend. Profile editing and real authentication are not enabled."}</p></div>
           </div>
           {meQuery.isPending ? <p className="mt-6 text-sm text-ink-muted" role="status">Loading profile…</p> : null}
           {meQuery.isError ? <div className="mt-6"><ErrorPanel compact error={meQuery.error} onRetry={() => void meQuery.refetch()} /></div> : null}
@@ -246,7 +278,7 @@ export function SettingsPage() {
                 <div>
                   <label htmlFor="profile-name" className="text-sm font-semibold text-ink">Name</label>
                   <input id="profile-name" value={profileName} readOnly={!temporary} onChange={(event) => { setProfileNameOverride(event.target.value); setProfilePreviewSaved(false); }} className="hf-field mt-2 px-3" />
-                  <p id="profile-name-help" className="mt-2 text-xs leading-5 text-ink-tertiary">{temporary ? "Simulation only · no profile write endpoint is used." : persistent ? "Account provider profile · read-only here." : "Server-owned local development profile."}</p>
+                  <p id="profile-name-help" className="mt-2 text-xs leading-5 text-ink-tertiary">{temporary ? "Simulation only · no profile write endpoint is used." : persistent ? "Account provider profile · read-only here." : "Local development profile · read-only here."}</p>
                 </div>
                 <div>
                   <label htmlFor="profile-email" className="text-sm font-semibold text-ink">Email address</label>
@@ -261,11 +293,11 @@ export function SettingsPage() {
           {meQuery.data ? <dl className="mt-6 grid gap-5 border-t border-line-subtle pt-5 sm:grid-cols-2"><ProfileItem label="Account type" value={temporary ? "Demo workspace" : persistent ? "Persistent account" : "Local development workspace"} /><ProfileItem label="Workspace focus" value="Candidate job search" /></dl> : null}
         </section>
 
-        <aside className="border-l-2 border-line pl-5" aria-labelledby="workspace-lifecycle-title"><div className="flex items-start gap-3"><Clock3 aria-hidden="true" className="mt-1 size-5 shrink-0 text-ink-muted" /><div><h2 id="workspace-lifecycle-title" className="text-lg font-bold text-ink">{temporary ? "Demo workspace" : persistent ? "Account workspace" : "Durable workspace"}</h2><p className="mt-1 text-sm leading-6 text-ink-muted">{temporary ? "Private fictional data for this browser session. It expires automatically after 24 hours." : persistent ? "Your saved records and preferences remain when you sign out. Signing out clears access in this browser without deleting your workspace." : "Development only, using the fixed backend identity. Saved data survives refresh and leaving this frontend session. This is not a real account login."}</p></div></div><dl className="mt-5 grid gap-4 border-t border-line-subtle pt-5">{temporary && session ? <ProfileItem label="Workspace expires" value={formatTimestamp(session.expires_at, settingsQuery.data?.time_zone ?? "UTC")} /> : null}<ProfileItem label="Persistence" value={temporary ? "This browser session only" : persistent ? "Retained across sign-outs" : "Saved on the local backend"} /></dl>{persistent && !controller.authenticationConfiguration?.account_management_enabled ? <p className="mt-5 border-t border-line-subtle pt-5 text-sm leading-6 text-ink-muted">Account deletion is currently unavailable. Signing out does not delete your account or workspace data.</p> : null}</aside>
+        <aside className="border-l-2 border-line pl-5" aria-labelledby="workspace-lifecycle-title"><div className="flex items-start gap-3"><Clock3 aria-hidden="true" className="mt-1 size-5 shrink-0 text-ink-muted" /><div><h2 id="workspace-lifecycle-title" className="text-lg font-bold text-ink">{temporary ? "Demo workspace" : persistent ? "Account workspace" : "Local workspace"}</h2><p className="mt-1 text-sm leading-6 text-ink-muted">{temporary ? "Private fictional data for this browser session. It expires automatically after 24 hours." : persistent ? "Your saved records and preferences remain when you sign out. Signing out clears access in this browser without deleting your workspace." : "Development only, using the fixed backend identity. Saved data survives refresh and leaving this frontend session. This is not a real account login."}</p></div></div><dl className="mt-5 grid gap-4 border-t border-line-subtle pt-5">{temporary && session ? <ProfileItem label="Workspace expires" value={formatTimestamp(session.expires_at, settingsQuery.data?.time_zone ?? "UTC")} /> : null}<ProfileItem label="Persistence" value={temporary ? "This browser session only" : persistent ? "Retained across sign-outs" : "Saved on the local backend"} /></dl>{persistent && !controller.authenticationConfiguration?.account_management_enabled ? <p className="mt-5 border-t border-line-subtle pt-5 text-sm leading-6 text-ink-muted">Account deletion is currently unavailable. Signing out does not delete your account or workspace data.</p> : null}</aside>
       </div>
 
       <section className="border-b border-line pb-10" aria-labelledby="preferences-title">
-        <div className="pb-5"><div className="flex items-start gap-3"><Palette aria-hidden="true" className="mt-1 size-5 shrink-0 text-ink-muted" /><div><h2 id="preferences-title" className="font-display text-2xl font-bold text-ink">Preferences</h2><p className="mt-1 text-sm leading-6 text-ink-muted">{temporary ? "These settings persist only for this isolated 24-hour workspace. New workspaces start with this browser’s detected time zone; selecting a different zone creates a manual override." : "Preferences are saved on the server and restored when this durable workspace reopens. Your saved time zone is preserved."}</p></div></div></div>
+        <div className="pb-5"><div className="flex items-start gap-3"><Palette aria-hidden="true" className="mt-1 size-5 shrink-0 text-ink-muted" /><div><h2 id="preferences-title" className="font-display text-2xl font-bold text-ink">Preferences</h2><p className="mt-1 text-sm leading-6 text-ink-muted">{temporary ? "These settings persist only for this isolated 24-hour workspace. New workspaces start with this browser’s detected time zone; selecting a different zone creates a manual override." : "Preferences are saved for this workspace and restored when you return. Your saved time zone is preserved."}</p></div></div></div>
         {settingsQuery.isPending || (!draft && !settingsQuery.isError) ? <SettingsSkeleton /> : null}
         {settingsQuery.isError ? <div className="p-5 sm:p-6"><ErrorPanel compact error={settingsQuery.error} onRetry={() => void settingsQuery.refetch()} /></div> : null}
         {draft && settingsQuery.data ? (
@@ -279,7 +311,7 @@ export function SettingsPage() {
             </div>
             <div className="space-y-4 border-t border-line-subtle pt-5">
               {updateMutation.error ? <><ErrorPanel compact title="Preferences could not be saved" error={updateMutation.error} />{updateMutation.error instanceof ApiError && updateMutation.error.status === 409 ? <div className="space-y-3"><p role="status" className="text-sm leading-6 text-ink-muted">Your edits are still here. Refresh the saved preferences, review any changes, then save again.</p><Button type="button" variant="secondary" disabled={settingsQuery.isFetching} onClick={() => void settingsQuery.refetch()}>Refresh saved preferences</Button></div> : null}</> : null}
-              {saved ? <SuccessBanner>{temporary ? "Preferences saved for this demo workspace." : "Preferences saved for this durable workspace."}</SuccessBanner> : null}
+              {saved ? <SuccessBanner>{temporary ? "Preferences saved for this demo workspace." : persistent ? "Preferences saved for your account workspace." : "Preferences saved for this local workspace."}</SuccessBanner> : null}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-ink-tertiary">{dirty ? "You have unsaved preference changes." : "Preferences are up to date."}</p><Button type="submit" disabled={!dirty || updateMutation.isPending || draft.default_follow_up_days < 1 || draft.default_follow_up_days > 30}>{updateMutation.isPending ? <PendingIndicator label="Saving…" /> : "Save preferences"}</Button></div>
             </div>
           </form>

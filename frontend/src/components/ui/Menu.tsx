@@ -5,6 +5,7 @@ import { usePresence } from "./motionHooks";
 export interface MenuItem {
   label: ReactNode;
   href?: string;
+  state?: unknown;
   onSelect?: () => void;
   icon?: ReactNode;
   danger?: boolean;
@@ -107,6 +108,7 @@ export function Menu({ label, trigger, items, align = "end" }: MenuProps) {
               <Link
                 key={index}
                 to={item.href}
+                state={item.state}
                 role="menuitem"
                 className={classes}
                 aria-disabled={item.disabled || undefined}

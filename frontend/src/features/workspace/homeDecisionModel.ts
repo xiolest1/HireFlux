@@ -148,7 +148,7 @@ export function buildHomeDecisionModel({
       explanation: recorded ? "Dates show recorded timing, not personal importance." : "Suggested work has no recorded deadline.",
     };
   }
-  if (dashboard.summary.total_tracked === 0) return { ...base, state: "no-records", title: "Start with a recorded opportunity", explanation: "There are no opportunities in this workspace yet, so Home cannot infer a next move." };
+  if (dashboard.summary.total_tracked === 0) return { ...base, state: "no-records", title: "Your workspace is ready", explanation: "You haven’t recorded any job applications yet. Add your first application; Home will fill in as you save records." };
   if (workspacePending || workspaceError || !workspace) return {
     ...base,
     state: "partial",

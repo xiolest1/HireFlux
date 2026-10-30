@@ -15,7 +15,7 @@ describe("Home quiet context", () => {
       summary: { total_tracked: 0, active_pursuits: 0, drafts: 0, accepted: 0, rejected: 0, withdrawn: 0, archived: 0 },
       actions: [], recent_applications: [], upcoming_interviews: [] })));
     renderApp("/dashboard", { withSession: false, adapter });
-    expect(await screen.findByRole("link", { name: "Record an application" })).toHaveAttribute("href", "/applications/new");
+    expect(await screen.findByRole("link", { name: "Add your first application" })).toHaveAttribute("href", "/applications/new");
     expect(screen.getByText("Your job search")).toBeVisible();
     expect(screen.queryByText("Recorded demo search")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Explore the demo workspace" })).not.toBeInTheDocument();

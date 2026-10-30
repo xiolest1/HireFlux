@@ -3,6 +3,7 @@ import { useWorkspaceNavigate } from "../auth/workspaceSessionContext";
 import { useEffect } from "react";
 import {
   Link,
+  useLocation,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -23,11 +24,20 @@ import {
   useUpdateApplication,
 } from "../features/applications/queries";
 import { useSettings } from "../features/resources/queries";
+import {
+  applicationsRouteStateWithoutIntent,
+  readApplicationsRouteState,
+} from "../features/applications/opportunityNavigation";
 
 export function ApplicationEditPage() {
   const sessionScope = useWorkspaceScope();
   const { applicationId = "" } = useParams();
   const navigate = useWorkspaceNavigate();
+  const location = useLocation();
+  const applicationsOrigin = readApplicationsRouteState(location.state);
+  const detailRouteState = applicationsOrigin
+    ? applicationsRouteStateWithoutIntent(applicationsOrigin)
+    : null;
   const [searchParams] = useSearchParams();
   const applicationQuery = useApplication(applicationId);
   const updateMutation = useUpdateApplication();
@@ -62,7 +72,7 @@ export function ApplicationEditPage() {
           title={isMissing ? "Application not found" : "Application could not be loaded"}
           onRetry={isMissing ? undefined : () => void applicationQuery.refetch()}
         />
-        <Link to="/applications" className={buttonClassName("secondary")}>
+        <Link to={applicationsOrigin?.returnTo ?? "/applications"} className={buttonClassName("secondary")}>
           Back to applications
         </Link>
       </div>
@@ -83,7 +93,7 @@ export function ApplicationEditPage() {
       sessionScope.assertCurrent();
       navigate(`/applications/${updated.application_id}`, {
         replace: true,
-        state: { notice: "Application details updated." },
+        state: { ...detailRouteState, notice: "Application details updated." },
       });
     } catch {
       return;
@@ -94,6 +104,7 @@ export function ApplicationEditPage() {
     <div className="mx-auto max-w-4xl">
       <Link
         to={`/applications/${application.application_id}`}
+        state={detailRouteState}
         className="inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-semibold text-accent underline-offset-4 hover:underline"
       >
         <ChevronLeft aria-hidden="true" className="size-4" />
@@ -112,7 +123,7 @@ export function ApplicationEditPage() {
             application={application}
             timeZone={settingsQuery.data?.time_zone ?? "UTC"}
             onSaved={() => void applicationQuery.refetch()}
-            onLeaveUnclear={() => navigate(`/applications/${application.application_id}`)}
+            onLeaveUnclear={() => navigate(`/applications/${application.application_id}`, { state: detailRouteState })}
             onConflict={() => applicationQuery.refetch()}
           />
         </section>

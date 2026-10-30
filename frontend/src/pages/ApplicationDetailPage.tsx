@@ -89,14 +89,15 @@ export function ApplicationDetailPage() {
   }, [searchParams, setSearchParams]);
   useEffect(() => {
     const currentOrigin = readApplicationsRouteState(location.state);
-    if (!currentOrigin?.intent && !notice) return;
+    const currentNotice = (location.state as LocationState | null)?.notice;
+    if (!currentOrigin?.intent && !currentNotice) return;
     void navigate(`${location.pathname}${location.search}`, {
       replace: true,
       state: currentOrigin
         ? applicationsRouteStateWithoutIntent(currentOrigin)
         : null,
     });
-  }, [location.pathname, location.search, location.state, navigate, notice]);
+  }, [location.pathname, location.search, location.state, navigate]);
   useEffect(() => {
     if (applicationQuery.isPending) return;
     const section = searchParams.get("section");
@@ -179,7 +180,7 @@ export function ApplicationDetailPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Menu label="More opportunity actions" trigger={<span className={buttonClassName("secondary", "gap-2")}><Ellipsis aria-hidden="true" className="size-4" /> More</span>} items={[
-            { label: "Edit opportunity", href: `/applications/${application.application_id}/edit`, icon: <Pencil aria-hidden="true" className="size-4" /> },
+            { label: "Edit opportunity", href: `/applications/${application.application_id}/edit`, state: applicationsOrigin ? applicationsRouteStateWithoutIntent(applicationsOrigin) : null, icon: <Pencil aria-hidden="true" className="size-4" /> },
             ...(["APPLIED", "SCREENING", "INTERVIEW", "OFFER"].includes(application.status) ? [{ label: "Manage next step", onSelect: () => setFollowUpOpen(true), icon: <CalendarClock aria-hidden="true" className="size-4" /> }] : []),
             ...model.moreTransitions.map((status) => ({ label: status === "ARCHIVED" ? "Archive opportunity" : status === "OFFER" && application.status === "REJECTED" ? "Correct to Offer" : status === "DRAFT" && application.status === "APPLIED" ? "Correct to Draft" : `Move to ${formatStatus(status)}`, danger: status === "ARCHIVED", onSelect: () => status === "ARCHIVED" ? setArchiveOpen(true) : (setTransitionTarget(status), setTransitionOpen(true)) })),
           ]} />

@@ -27,6 +27,7 @@ import {
 } from "../api/schemas";
 import { buttonClassName } from "../components/ui/buttonStyles";
 import {
+  CachedRefreshWarning,
   EmptyState,
   ErrorPanel,
   SuccessBanner,
@@ -35,6 +36,7 @@ import { Drawer } from "../components/ui/Drawer";
 import { WorkspaceFrame, WorkspaceIntro } from "../components/ui/WorkspaceComposition";
 import { ApplicationListSkeleton } from "../features/applications/ApplicationSkeletons";
 import {
+  applicationCreateRouteState,
   readApplicationCreatedRouteState,
 } from "../features/applications/createNavigation";
 import {
@@ -546,9 +548,14 @@ export function ApplicationListPage() {
             </button>
           </div>
         ) : null}
+        {groupedActiveMode && workspaceQuery.isRefetchError ? (
+          <div className="mb-5"><CachedRefreshWarning title="Opportunity workspace refresh failed" retrying={workspaceQuery.isFetching} onRetry={() => void workspaceQuery.refetch()} /></div>
+        ) : !groupedActiveMode && applicationsQuery.isRefetchError ? (
+          <div className="mb-5"><CachedRefreshWarning title="Applications refresh failed" retrying={applicationsQuery.isFetching} onRetry={() => void applicationsQuery.refetch()} /></div>
+        ) : null}
         {groupedActiveMode && workspaceQuery.isPending ? (
           <ApplicationListSkeleton />
-        ) : groupedActiveMode && workspaceQuery.isError ? (
+        ) : groupedActiveMode && workspaceQuery.isError && !workspaceQuery.data ? (
           <ErrorPanel
             error={workspaceQuery.error}
             title="Opportunity workspace could not be loaded"
@@ -558,8 +565,17 @@ export function ApplicationListPage() {
           Object.values(workspaceQuery.data.groups).every((group) => group.total_count === 0) ? (
             <EmptyState
               title="No active applications"
-              description="Add an application from the main navigation, or review your complete application history."
-              action={<button type="button" className={buttonClassName("secondary")} onClick={() => setApplicationView("ALL")}>View all applications</button>}
+              description="Add an application to track, or review your complete history, including saved and archived applications."
+              action={
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Link to="/applications/new" state={applicationCreateRouteState("applications", location.pathname, location.search)} className={buttonClassName("primary")}>
+                    Add an application
+                  </Link>
+                  <button type="button" className={buttonClassName("secondary")} onClick={() => setApplicationView("ALL")}>
+                    View all applications
+                  </button>
+                </div>
+              }
             />
           ) : (
             <OpportunityWorkspace
@@ -570,17 +586,25 @@ export function ApplicationListPage() {
           )
         ) : applicationsQuery.isPending ? (
           <ApplicationListSkeleton />
-        ) : applicationsQuery.isError && applications.length === 0 ? (
+        ) : applicationsQuery.isError && !applicationsQuery.data ? (
           <ErrorPanel error={applicationsQuery.error} title="Applications could not be loaded" onRetry={() => void applicationsQuery.refetch()} />
         ) : applications.length === 0 ? (
           <EmptyState
-            title={hasFilters ? "No applications match these filters" : "No applications yet"}
+            title={hasFilters
+              ? "No applications match these filters"
+              : applicationView === "ARCHIVED"
+                ? "No archived applications"
+                : applicationView === "ACTIVE"
+                  ? "No active applications"
+                  : "No applications yet"}
             description={
               hasFilters
                 ? "Try clearing one or more filters, or search for a different company or role."
                 : applicationView === "ARCHIVED"
-                  ? "Archived opportunities will stay safely available here."
-                  : "Add your first opportunity to start building a clear application history."
+                  ? "Applications you archive will appear here. Review Active or All to see other applications."
+                  : applicationView === "ACTIVE"
+                    ? "Add an application to track, or review your complete history, including saved and archived applications."
+                    : "Your workspace is ready. Add your first job application; your history will fill in as you save records."
             }
             action={hasFilters ? (
                 <button
@@ -590,7 +614,20 @@ export function ApplicationListPage() {
                 >
                   Clear filters
                 </button>
-              ) : undefined}
+              ) : applicationView === "ARCHIVED" ? (
+                <button type="button" className={buttonClassName("secondary")} onClick={() => setApplicationView("ALL")}>View all applications</button>
+              ) : (
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Link to="/applications/new" state={applicationCreateRouteState("applications", location.pathname, location.search)} className={buttonClassName("primary")}>
+                    {applicationView === "ALL" ? "Add your first application" : "Add an application"}
+                  </Link>
+                  {applicationView === "ACTIVE" ? (
+                    <button type="button" className={buttonClassName("secondary")} onClick={() => setApplicationView("ALL")}>
+                      View all applications
+                    </button>
+                  ) : null}
+                </div>
+              )}
           />
         ) : (
           <>

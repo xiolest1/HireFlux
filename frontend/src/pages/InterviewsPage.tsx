@@ -1,4 +1,4 @@
-import { useWorkspaceScope } from "../auth/workspaceSessionContext";
+import { useWorkspaceScope, useWorkspaceSession } from "../auth/workspaceSessionContext";
 import { useWorkspaceNavigate } from "../auth/workspaceSessionContext";
 import {
   ArrowRight,
@@ -180,6 +180,8 @@ function orientation(
 
 export function InterviewsPage() {
   const sessionScope = useWorkspaceScope();
+  const { state } = useWorkspaceSession();
+  const temporary = state.status === "ready" && state.capabilities.temporary;
   const location = useLocation();
   const navigate = useWorkspaceNavigate();
   const [applicationsOrigin] = useState(() =>
@@ -431,7 +433,7 @@ export function InterviewsPage() {
         {requestedInterviewMissing ? (
           <EmptyState
             title="Interview not found"
-            description="This interview is not available in the current demo workspace. It may have expired or the link may be incorrect."
+            description={temporary ? "This interview is not available in this demo workspace. The workspace may have expired or the link may be incorrect." : "This interview is not available in this workspace. Check the link or choose another interview."}
             action={preferredInterview(interviews) ? (
               <button
                 type="button"

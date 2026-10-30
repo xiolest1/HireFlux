@@ -14,7 +14,7 @@ import {
 import type { Analytics } from "../api/workspace";
 import { buttonClassName } from "../components/ui/buttonStyles";
 import { Drawer } from "../components/ui/Drawer";
-import { ErrorPanel } from "../components/ui/Feedback";
+import { CachedRefreshWarning, ErrorPanel } from "../components/ui/Feedback";
 import { PanelSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { Tabs } from "../components/ui/Tabs";
 import { NarrativeSection, TonalChapter, WorkspaceFrame, WorkspaceIntro } from "../components/ui/WorkspaceComposition";
@@ -138,6 +138,7 @@ export function AnalyticsPage() {
         {analyticsQuery.isFetching && analyticsQuery.data ? <p className="text-xs font-semibold text-ink-tertiary" role="status">Refreshing analytics…</p> : null}
         {analyticsQuery.isPending ? <AnalyticsSkeleton /> : null}
         {analyticsQuery.isError && !analyticsQuery.data ? <ErrorPanel title="Analytics could not be loaded" error={analyticsQuery.error} onRetry={() => void analyticsQuery.refetch()} /> : null}
+        {analyticsQuery.isRefetchError ? <CachedRefreshWarning title="Analytics refresh failed" retrying={analyticsQuery.isFetching} onRetry={() => void analyticsQuery.refetch()} /> : null}
         {analyticsQuery.data ? <div key={`${range}-${status ?? "all"}-${source ?? "all"}-${workMode ?? "all"}-${section}`} className={`hf-content-enter ${analyticsQuery.isFetching ? "hf-updating" : ""}`} aria-busy={analyticsQuery.isFetching || undefined}><AnalyticsResults analytics={analyticsQuery.data} section={section} /></div> : null}
       </>}
 

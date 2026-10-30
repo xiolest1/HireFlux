@@ -237,8 +237,8 @@ describe("workspace milestone features", () => {
       actions: [], recent_applications: [],
     })));
     renderApp("/dashboard");
-    expect(await screen.findByText("Start with a recorded opportunity")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Record an application" })).toHaveAttribute("href", "/applications/new");
+    expect(await screen.findByText("Your workspace is ready")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Add your first application" })).toHaveAttribute("href", "/applications/new");
     expect(screen.queryByRole("heading", { name: "Search activity" })).not.toBeInTheDocument();
   });
 

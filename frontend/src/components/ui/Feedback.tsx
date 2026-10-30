@@ -94,3 +94,19 @@ export function SuccessBanner({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+export function CachedRefreshWarning({ title, retrying, onRetry }: {
+  title: string;
+  retrying: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <section role="status" aria-label={title} className="rounded-xl border border-warning/30 bg-warning-soft p-4 text-sm text-ink">
+      <h2 className="font-semibold">{title}</h2>
+      <p className="mt-1 leading-6">Previously loaded information is shown and may not reflect the latest server state.</p>
+      <Button variant="secondary" className="mt-3" disabled={retrying} onClick={onRetry}>
+        {retrying ? "Retrying…" : "Retry refresh"}
+      </Button>
+    </section>
+  );
+}
