@@ -159,10 +159,14 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "The local demo-session signing key is forbidden in deployed environments."
                 )
-        if self.environment is Environment.PRODUCTION and self.enabled_auth_capabilities != (
-            AuthMode.COGNITO,
-        ):
-            raise ValueError("Production requires Cognito-only authentication.")
+        if self.environment is Environment.PRODUCTION:
+            if self.auth_mode is not AuthMode.COGNITO:
+                raise ValueError("Production requires AUTH_MODE=cognito.")
+            if (
+                AuthMode.DEMO in self.enabled_auth_capabilities
+                and self.demo_session_ttl_hours != 24
+            ):
+                raise ValueError("Production Demo sessions require a 24-hour lifetime.")
         if AuthMode.COGNITO in self.enabled_auth_capabilities:
             if self.aws_region != "us-east-1":
                 raise ValueError("Cognito currently requires the reviewed us-east-1 region.")

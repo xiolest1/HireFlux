@@ -12,6 +12,8 @@ snapshots, not fresh AWS inventory or permission to repeat operations.
 
 Detailed supporting contracts remain in this directory:
 
+- [Shared production trust and fail-closed configuration — Phase 7B Batch 1, local only](phase7b-batch1-local-handoff.md)
+
 - [CDK security remediation and unchanged release — Phase 5D.1 addendum](phase5d1-cdk-security-remediation.md)
 - [Locally qualified account lifecycle and Cognito CDK — Phase 5D](phase5d-account-lifecycle-handoff.md)
 - [Operator reconciliation after uncertain identity finalization](account-finalization-operations.md)

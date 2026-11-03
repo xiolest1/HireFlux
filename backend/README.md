@@ -23,6 +23,23 @@ The comment changes a packaged source input, so qualification uses the separate
 ZIPs/manifests remain untouched. Default example configuration stays closed and
 local/demo use remains independent of AWS. Nothing here authorizes deployment.
 
+## Phase 7B Batch 1 production authentication contract
+
+Current source requires `AUTH_MODE=cognito` in production. Absent
+`AUTH_CAPABILITIES`, or an explicit `cognito` value, keeps Cognito-only operation.
+An explicit `demo,cognito` value enables independent signed Demo and Cognito
+verification on the same API. Production cannot use a Demo anchor, local auth,
+duplicate/unknown capabilities, missing provider configuration, or a Demo lifetime
+other than 24 hours. Existing staging Demo anchors and local/test behavior remain
+compatible. The Lambda loader resolves the existing two signing secrets and
+delegates to the same Settings validation; it does not gain a credential fallback.
+
+Registration remains disabled by default. No provider, cryptography, ownership,
+durable TTL, or data-model rule changes. This local source contract supersedes the
+historical Cognito-only production restriction described below; it is not a
+production release. Demo admission/cleanup controls remain Batch 2, and CDK wiring,
+packaging, hosting/release qualification and any publication remain later gates.
+
 ## Phase 5D backend foundation (historical implementation checkpoint)
 
 Backend Cognito verification/admission and persistent bootstrap are implemented

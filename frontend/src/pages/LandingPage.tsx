@@ -134,7 +134,7 @@ export function LandingPage() {
                 <p className="text-sm text-ink-muted">{registrationAvailable ? "Create a private workspace with records saved across sign-outs. Cognito handles credentials and email verification. Demo records do not transfer." : "Account registration is closed. Existing supervised testers can sign in; password recovery stays with Cognito."}</p>
                 {controller.authenticationConfiguration?.account_data_policy === "disposable_staging" ? <p role="note" className="rounded-lg border border-line p-3 text-sm">Supervised staging evaluation only. Use fictional application data. Accounts retain records across sign-outs, but the staging database is disposable and does not guarantee backup or recovery.</p> : null}
               </section> : null}
-              {controller.authenticationConfigurationError ? <section className="mt-6 max-w-xl space-y-3" aria-label="Account configuration unavailable"><p role="status">Account configuration could not be loaded. Account entry is disabled until it is verified.</p><Button variant="secondary" onClick={() => void controller.retryAuthenticationConfiguration()}>Retry account configuration</Button></section> : null}
+              {controller.authenticationConfigurationError ? <section className="mt-6 max-w-xl space-y-3" aria-label="Account configuration unavailable"><p role="status">Workspace configuration could not be loaded. Demo and account entry are disabled until it is verified.</p><Button variant="secondary" onClick={() => void controller.retryAuthenticationConfiguration()}>Retry account configuration</Button></section> : null}
             </div>
             <div className="hf-hero-enter hf-hero-enter-visual min-w-0" data-hero-entrance="visual">
               <HeroApplicationStory
@@ -164,7 +164,7 @@ export function LandingPage() {
                 <LandingViewportReveal className="hf-post-story-reveal" normalEntryReady={codaEntryReady}>
                   <QuietCoda
                     localDevelopment={localMode}
-                    disabled={configurationBlocked}
+                    disabled={configurationBlocked || (!localMode && state.status !== "ready" && !controller.demoEntryAvailable)}
                     actionLabel={actionLabel}
                     error={actionOrigin === "coda" ? error : null}
                     isCreating={isCreating}

@@ -63,6 +63,7 @@ export class WorkspaceSessionController {
   private authConfig?: AuthConfiguration;
   private configError?: unknown;
   private configPromise?: Promise<void>;
+  private configurationLoading = false;
   private callbackPending?: Promise<{ ready: ReadySession | AccountManagementSession; returnPath: string }>;
   private callbackAttempted = false;
   private accountLoginPending?: Promise<boolean>;
@@ -92,8 +93,8 @@ export class WorkspaceSessionController {
   get lifetime() { return this.adapter?.lifetime; }
   get authenticationConfiguration() { return this.authConfig; }
   get authenticationConfigurationError() { return this.configError; }
-  get accountEntryAvailable() { return Boolean(this.authConfig?.cognito && this.account); }
-  get demoEntryAvailable() { return !this.authConfig || this.authConfig.capabilities.includes("demo"); }
+  get accountEntryAvailable() { return Boolean(!this.configError && this.authConfig?.cognito && this.account); }
+  get demoEntryAvailable() { return !this.managed || this.adapter?.id === "local" || Boolean(!this.configError && this.authConfig?.capabilities.includes("demo")); }
   get providerLogoutUnconfirmed() { try { return window.sessionStorage.getItem(LOGOUT_NOTICE) === "true"; } catch { return false; } }
   private select(value: "demo" | "cognito" | "none"): void {
     this.selected = value;
@@ -156,6 +157,9 @@ export class WorkspaceSessionController {
         return;
       }
       if (this.selected === "none") { this.publish({ ...this.state, status: "anonymous" }); return; }
+      if (this.configError || !this.authConfig) {
+        this.publish({ ...this.state, status: "error", error: this.configurationFailure(), operation: "configuration" }); return;
+      }
       if (this.selected === "cognito") {
         if (!this.account || this.configError) { this.publish({ ...this.state, status: "error", error: this.configError ?? new ApiError("ACCOUNT_UNAVAILABLE", "Account sign-in is unavailable on this backend."), operation: "configuration" }); return; }
         this.adapter = this.account;
@@ -181,6 +185,11 @@ export class WorkspaceSessionController {
   };
 
   activate = (reset = false): Promise<ReadySession> => {
+    if (this.managed && this.adapter?.id !== "local") {
+      if (this.configError || !this.authConfig) return Promise.reject(this.configurationFailure());
+      if (this.adapter?.id === "demo" && !this.demoEntryAvailable) return Promise.reject(new ApiError("DEMO_UNAVAILABLE", "Demo workspaces are unavailable on this backend."));
+      if (this.adapter === this.account && !this.accountEntryAvailable) return Promise.reject(this.configurationFailure());
+    }
     if (this.pending?.scope.isCurrent()) return this.pending.promise;
     if (!this.adapter) return Promise.reject(new ApiError("SESSION_CONFIGURATION", "Workspace mode is unavailable."));
     const previous = reset && this.state.status === "ready" ? this.state.workspace : undefined;
@@ -250,27 +259,49 @@ export class WorkspaceSessionController {
   private configure(): Promise<void> {
     if (this.configPromise) return this.configPromise;
     const revision = ++this.configRevision;
+    this.configurationLoading = true;
     this.configPromise = (this.options.loadConfiguration ?? loadAuthConfiguration)().then((config) => {
       if (this.disposed || revision !== this.configRevision) return;
       this.authConfig = config; this.configError = undefined;
       if (config.cognito && !this.account) {
         const factory = this.options.accountFactory ?? ((value, failed, refreshing) => new CognitoSessionAdapter(value, failed, refreshing));
-        this.account = factory(config.cognito, this.accountFailed, (refreshing) => {
-          if (this.state.status === "ready" && this.state.workspace.identityKind === "PERSISTENT") this.publish({ ...this.state, credentialStatus: refreshing ? "refreshing" : undefined });
-        });
-        if (this.selected === "none") this.account.clear();
-        this.stopLogoutObservation = observeAccountLogout(() => {
-          if (this.adapter === this.account && this.selected === "cognito") this.invalidate();
-          else this.account?.clear(); // Demo keeps its own independent session.
-        });
+        // Provider/session setup failure does not invalidate trusted Demo metadata.
+        try {
+          this.account = factory(config.cognito, this.accountFailed, (refreshing) => {
+            if (this.state.status === "ready" && this.state.workspace.identityKind === "PERSISTENT") this.publish({ ...this.state, credentialStatus: refreshing ? "refreshing" : undefined });
+          });
+          if (this.selected === "none") this.account.clear();
+          this.stopLogoutObservation = observeAccountLogout(() => {
+            if (this.adapter === this.account && this.selected === "cognito") this.invalidate();
+            else this.account?.clear(); // Demo keeps its own independent session.
+          });
+        } catch {
+          this.account?.clear(); this.account = undefined;
+        }
       }
       this.publish({ ...this.state });
-    }).catch((error: unknown) => { if (!this.disposed && revision === this.configRevision) { this.configError = error; this.publish({ ...this.state }); } });
+    }).catch((error: unknown) => { if (!this.disposed && revision === this.configRevision) { this.authConfig = undefined; this.configError = error; this.publish({ ...this.state }); } })
+      .finally(() => { if (revision === this.configRevision) this.configurationLoading = false; });
     return this.configPromise;
   }
 
-  retryAuthenticationConfiguration = async (): Promise<void> => {
+  private configurationFailure(): ApiError {
+    return this.configError instanceof ApiError ? this.configError : new ApiError("AUTH_CONFIGURATION_UNAVAILABLE", "Workspace configuration must be verified before continuing. Retry configuration when the service is available.");
+  }
+
+  retryAuthenticationConfiguration = async ({ discard = false } = {}): Promise<void> => {
+    if (this.hasUnsavedChanges && !discard) return;
+    if (this.configurationLoading) return this.configPromise;
+    // Retire credentials and continuations before replacing the trust contract.
+    const base = this.next();
+    this.adapter?.clear(); this.account?.clear(); this.account = undefined;
+    clearStoredCognitoState(); this.select("none");
+    this.stopLogoutObservation?.(); this.stopLogoutObservation = undefined;
+    if (this.adapter?.id === "cognito") this.adapter = createDemoAdapter();
+    this.authConfig = undefined; this.configError = undefined;
+    this.operationKey = null;
     this.configPromise = undefined;
+    this.publish({ ...base, status: "anonymous" });
     await this.configure();
   };
 
@@ -282,8 +313,13 @@ export class WorkspaceSessionController {
 
   activateDemo = async ({ discard = false } = {}): Promise<ReadySession> => {
     if (this.hasUnsavedChanges && !discard) throw new ApiError("UNSAVED_CHANGES", "Confirm leaving your unsaved changes first.");
-    if (!this.demoEntryAvailable) throw new ApiError("DEMO_UNAVAILABLE", "Demo workspaces are unavailable on this backend.");
     if (this.adapter?.id === "local") return this.activate();
+    if (this.managed) {
+      const scope = this.state.scope;
+      await this.configure(); scope.assertCurrent();
+      if (this.configError || !this.authConfig) throw this.configurationFailure();
+    }
+    if (!this.demoEntryAvailable) throw new ApiError("DEMO_UNAVAILABLE", "Demo workspaces are unavailable on this backend.");
     if (this.adapter === this.account) {
       const base = this.next(); this.account?.clear(); this.publish({ ...base, status: "anonymous" });
     }
@@ -297,6 +333,7 @@ export class WorkspaceSessionController {
   beginSignUp = (returnPath = "/dashboard", { discard = false } = {}): Promise<boolean> => this.startAccountLogin(returnPath, discard, undefined, "signup");
 
   beginSensitiveOperation = (operation: SensitiveOperation, confirmation = "", { discard = false } = {}): Promise<boolean> => {
+    if (this.configError || !this.authConfig) return Promise.reject(this.configurationFailure());
     if (!this.account?.subject() || this.adapter !== this.account || !this.authConfig?.cognito) return Promise.reject(invalidIntent());
     if (operation === "delete" && (!this.authConfig.account_management_enabled || confirmation !== "DELETE_MY_ACCOUNT")) return Promise.reject(new ApiError("ACCOUNT_CONFIRMATION_REQUIRED", "Type DELETE_MY_ACCOUNT exactly before verifying your identity."));
     const intent: SensitiveIntent = {
@@ -390,6 +427,7 @@ export class WorkspaceSessionController {
   };
 
   private consumeIntent(operation: SensitiveOperation): AccountManagementSession {
+    if (this.configError || !this.authConfig) throw this.configurationFailure();
     const state = this.state;
     if (state.status !== "account-management" || state.busy || state.consumed || !this.account || !this.authConfig?.cognito) throw invalidIntent();
     consumeSensitiveIntent(state.intent, operation, this.account.client.store, this.authConfig.cognito, state.scope, this.account.subject());
@@ -450,6 +488,7 @@ export class WorkspaceSessionController {
   }
 
   retryAccountBootstrap = async (): Promise<ReadySession> => {
+    if (!this.accountEntryAvailable) throw this.configurationFailure();
     if (!this.account?.hasAccount()) throw new ApiError("ACCOUNT_SIGN_IN_REQUIRED", "Sign in again to continue.");
     const base = this.next(null, false, true, this.account);
     this.publish({ ...base, status: "bootstrapping" });
@@ -483,7 +522,7 @@ export class WorkspaceSessionController {
   };
 
   finishProviderLogout = (): void => {
-    if (this.account) (this.options.navigateExternal ?? ((value) => window.location.assign(value)))(this.account.client.logoutUrl());
+    if (this.accountEntryAvailable) (this.options.navigateExternal ?? ((value) => window.location.assign(value)))(this.account!.client.logoutUrl());
   };
 
   acceptSignedOut = (): void => {

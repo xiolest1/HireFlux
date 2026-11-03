@@ -308,6 +308,56 @@ def test_lambda_additive_capabilities_preserve_legacy_demo_anchor(
 
 
 @pytest.mark.usefixtures("lambda_environment")
+def test_production_lambda_supports_explicit_mixed_capabilities_without_local_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from unittest.mock import Mock
+
+    from fastapi.testclient import TestClient
+
+    from hireflux_backend.app_factory import create_app
+    from hireflux_backend.config import AuthMode
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("AUTH_MODE", "cognito")
+    monkeypatch.setenv("AUTH_CAPABILITIES", "demo,cognito")
+    for name, value in COGNITO_CONFIG.items():
+        monkeypatch.setenv(name.upper(), value)
+    secrets = FakeSecrets()
+    configured = get_lambda_settings(secrets_client=secrets)
+    assert secrets.calls == [CURSOR_ARN, DEMO_ARN]
+    assert configured.auth_mode is AuthMode.COGNITO
+    assert configured.enabled_auth_capabilities == (AuthMode.DEMO, AuthMode.COGNITO)
+    assert configured.demo_session_ttl_hours == 24
+    assert configured.dynamodb_endpoint_url is None
+    from hireflux_backend.infrastructure.dynamodb.client import build_dynamodb_client
+
+    with patch("hireflux_backend.infrastructure.dynamodb.client.boto3.client") as client:
+        build_dynamodb_client(configured)
+    client.assert_called_once_with("dynamodb", region_name="us-east-1")
+    assert not configured.cognito_self_registration_enabled
+    db = Mock()
+    with TestClient(create_app(configured, dynamodb_client=db)) as client:
+        public = client.get("/api/v1/auth/config").json()
+        assert public["environment"] == public["account_data_policy"] == "production"
+        assert public["capabilities"] == ["demo", "cognito"]
+        assert public["cognito"]["self_registration_enabled"] is False
+        for token in ("untrusted", "invalid.demo", "invalid.jwt.signature"):
+            assert (
+                client.get("/api/v1/me", headers={"Authorization": "Bearer " + token}).status_code
+                == 401
+            )
+    assert not db.mock_calls
+    monkeypatch.setenv("AUTH_MODE", "demo")
+    with pytest.raises(RuntimeError, match="Invalid Lambda configuration"):
+        get_lambda_settings(secrets_client=FakeSecrets())
+    monkeypatch.setenv("AUTH_MODE", "cognito")
+    monkeypatch.setenv("DEMO_SESSION_TTL_HOURS", "25")
+    with pytest.raises(RuntimeError, match="Invalid Lambda configuration"):
+        get_lambda_settings(secrets_client=FakeSecrets())
+
+
+@pytest.mark.usefixtures("lambda_environment")
 @pytest.mark.parametrize(
     "change",
     [

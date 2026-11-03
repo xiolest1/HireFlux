@@ -1,24 +1,19 @@
 import { z } from "zod";
 import { requestScope, StaleSessionError, type SessionScope } from "../auth/sessionGeneration";
+import { exactOrigin, isLoopbackOrigin, resolvePublicDeployment } from "../publicDeployment";
 
 const DEFAULT_API_BASE_URL = "http://localhost:8000";
 
 export function apiOrigin(): string {
   const configured = import.meta.env.VITE_API_BASE_URL?.trim();
-  const value = configured || DEFAULT_API_BASE_URL;
-
   try {
-    const url = new URL(value);
-    if ((url.protocol !== "http:" && url.protocol !== "https:") || url.username || url.password || url.search || url.hash || (url.pathname !== "/" && url.pathname !== "")) {
-      throw new Error("Unsupported protocol");
-    }
+    if (!configured && !isLoopbackOrigin(window.location.origin)) throw new Error("Missing public API.");
+    const origin = exactOrigin(configured || DEFAULT_API_BASE_URL);
+    resolvePublicDeployment(window.location.origin, origin, import.meta.env.VITE_PUBLIC_SITE_URL?.trim());
+    return origin;
   } catch {
-    throw new Error(
-      "VITE_API_BASE_URL must be an absolute http:// or https:// URL.",
-    );
+    throw new ApiError("AUTH_CONFIGURATION_INVALID", "This build does not match a trusted API and website.");
   }
-
-  return new URL(value).origin;
 }
 
 function apiUrl(path: string): string {
@@ -124,6 +119,7 @@ export async function apiRequest<T>(
   schema: z.ZodType<T>,
   options: ApiRequestOptions = {},
 ): Promise<T> {
+  const url = apiUrl(path);
   const scope = options.scope ?? requestScope();
   scope.assertCurrent();
   const { scope: _scope, publicRequest, json, ...requestOptions } = options;
@@ -142,7 +138,7 @@ export async function apiRequest<T>(
   }
 
   try {
-    const response = await fetch(apiUrl(path), {
+    const response = await fetch(url, {
       ...requestOptions,
       headers,
       body,
@@ -185,6 +181,7 @@ export async function apiRequest<T>(
 }
 
 export async function apiDownload(path: string, scope = requestScope()): Promise<DownloadedFile> {
+  const url = apiUrl(path);
   scope.assertCurrent();
   const headers = new Headers({ Accept: "text/csv" });
   const lease = await scope.credential();
@@ -192,7 +189,7 @@ export async function apiDownload(path: string, scope = requestScope()): Promise
   if (lease.authorization) headers.set("Authorization", lease.authorization);
 
   try {
-    const response = await fetch(apiUrl(path), { headers, credentials: "omit", redirect: "error" });
+    const response = await fetch(url, { headers, credentials: "omit", redirect: "error" });
     scope.assertCurrent();
     const payload = await readJson(response);
     scope.assertCurrent();

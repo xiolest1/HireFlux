@@ -48,11 +48,19 @@ def test_anchor_and_environments_cannot_enable_local_fallback(
 
 
 @pytest.mark.parametrize("name", list(COGNITO_CONFIG))
-def test_provider_configuration_required(name: str) -> None:
+@pytest.mark.parametrize("environment", ["test", "production"])
+def test_provider_configuration_required(name: str, environment: str) -> None:
     config: dict[str, object] = dict(COGNITO_CONFIG)
     config[name] = None
     with pytest.raises(ValidationError):
-        build_settings(auth_mode="demo", auth_capabilities="demo,cognito", **config)
+        build_settings(
+            environment=environment,
+            auth_mode="cognito",
+            auth_capabilities="demo,cognito",
+            cursor_signing_key="C" * 64,
+            demo_session_signing_key="D" * 64,
+            **config,
+        )
 
 
 @pytest.mark.parametrize(
@@ -71,24 +79,92 @@ def test_provider_configuration_required(name: str) -> None:
         ("cognito_domain", "https://hireflux.auth.us-east-1.amazoncognito.com:443"),
     ],
 )
-def test_provider_trust_is_fixed(name: str, value: str) -> None:
+@pytest.mark.parametrize("environment", ["test", "production"])
+def test_provider_trust_is_fixed(name: str, value: str, environment: str) -> None:
     config = {**COGNITO_CONFIG, name: value}
     with pytest.raises(ValidationError):
-        build_settings(auth_mode="cognito", **config)
+        build_settings(environment=environment, auth_mode="cognito", **config)
 
 
-def test_production_only_cognito_and_management_requires_explicit_cognito_opt_in() -> None:
+@pytest.mark.parametrize("capabilities", [None, "cognito", "demo,cognito", "cognito,demo"])
+def test_production_requires_cognito_anchor_and_explicit_demo_opt_in(
+    capabilities: str | None,
+) -> None:
     secure = {
         "environment": "production",
         "cursor_signing_key": "C" * 64,
         "demo_session_signing_key": "D" * 64,
         **COGNITO_CONFIG,
     }
-    assert build_settings(auth_mode="cognito", **secure).enabled_auth_capabilities == (
-        AuthMode.COGNITO,
+    configured = build_settings(auth_mode="cognito", auth_capabilities=capabilities, **secure)
+    assert configured.enabled_auth_capabilities == (
+        (AuthMode.DEMO, AuthMode.COGNITO)
+        if capabilities in {"demo,cognito", "cognito,demo"}
+        else (AuthMode.COGNITO,)
     )
-    with pytest.raises(ValidationError, match="Cognito-only"):
+    assert not configured.cognito_self_registration_enabled
+    assert not configured.persistent_account_management_enabled
+    with pytest.raises(ValidationError, match="AUTH_MODE=cognito"):
         build_settings(auth_mode="demo", auth_capabilities="demo,cognito", **secure)
+
+
+@pytest.mark.parametrize(
+    ("mode", "capabilities"),
+    [
+        ("demo", None),
+        ("demo", "demo"),
+        ("cognito", "demo"),
+        ("cognito", ""),
+        ("cognito", "demo,cognito,"),
+        ("cognito", "cognito,cognito"),
+        ("cognito", "demo,cognito,demo"),
+        ("cognito", "local,cognito"),
+        ("cognito", "unknown,cognito"),
+        ("local", "local"),
+    ],
+)
+def test_unsafe_production_capabilities_fail_closed(mode: str, capabilities: str | None) -> None:
+    with pytest.raises(ValidationError):
+        build_settings(
+            environment="production",
+            auth_mode=mode,
+            auth_capabilities=capabilities,
+            cursor_signing_key="C" * 64,
+            demo_session_signing_key="D" * 64,
+            **COGNITO_CONFIG,
+        )
+
+
+@pytest.mark.parametrize("hours", [1, 23, 25, 168])
+def test_production_demo_lifetime_is_exactly_24_hours(hours: int) -> None:
+    with pytest.raises(ValidationError, match="24-hour"):
+        build_settings(
+            environment="production",
+            auth_mode="cognito",
+            auth_capabilities="demo,cognito",
+            cursor_signing_key="C" * 64,
+            demo_session_signing_key="D" * 64,
+            demo_session_ttl_hours=hours,
+            **COGNITO_CONFIG,
+        )
+
+
+@pytest.mark.parametrize("environment", ["test", "local", "staging"])
+def test_existing_demo_anchor_and_configurable_lifetime_remain_compatible(environment: str) -> None:
+    configured = build_settings(
+        environment=environment,
+        auth_mode="demo",
+        auth_capabilities="demo,cognito",
+        cursor_signing_key="C" * 64,
+        demo_session_signing_key="D" * 64,
+        demo_session_ttl_hours=1,
+        **COGNITO_CONFIG,
+    )
+    assert configured.enabled_auth_capabilities == (AuthMode.DEMO, AuthMode.COGNITO)
+    assert configured.demo_session_ttl_hours == 1
+
+
+def test_management_requires_explicit_cognito_opt_in() -> None:
     with pytest.raises(ValidationError, match="Cognito capability"):
         build_settings(
             auth_mode="demo", persistent_account_management_enabled=True, **COGNITO_CONFIG

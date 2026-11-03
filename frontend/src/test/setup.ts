@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, configure } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { server } from "./server";
 import { newSessionScope } from "../auth/sessionGeneration";
 
@@ -35,6 +35,12 @@ configure({ asyncUtilTimeout: 3_000 });
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 beforeAll(() => document.documentElement.setAttribute("lang", "en"));
+beforeEach(() => {
+  // Keep HTTP fixtures independent of a developer's private deployment env file.
+  // Public trust tests explicitly override these local defaults in their own hooks.
+  vi.stubEnv("VITE_API_BASE_URL", "http://localhost:8000");
+  vi.stubEnv("VITE_PUBLIC_SITE_URL", "");
+});
 afterEach(() => {
   cleanup();
   newSessionScope();
@@ -43,5 +49,6 @@ afterEach(() => {
   window.localStorage.clear();
   document.documentElement.classList.remove("dark");
   document.documentElement.style.colorScheme = "";
+  vi.unstubAllEnvs();
 });
 afterAll(() => server.close());

@@ -57,12 +57,12 @@ describe("integrated account and demo landing entry", () => {
     expect(navigate).toHaveBeenCalledExactlyOnceWith(STAGING_COGNITO_ORIGIN + "/oauth2/authorize");
   });
 
-  it("disables account entry on unverified configuration while keeping explicit demo and retry", async () => {
+  it("disables both Demo and account entry on unverified configuration while keeping retry", async () => {
     landing(false, true);
     await waitFor(() => expect(screen.getByRole("region", { name: "Account configuration unavailable" })).toBeVisible());
     expect(screen.queryByRole("button", { name: "Create Account" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Sign In" })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Explore the Demo" })[0]).toBeEnabled();
+    for (const button of screen.getAllByRole("button", { name: "Explore the Demo" })) expect(button).toBeDisabled();
     expect(screen.getByRole("button", { name: "Retry account configuration" })).toBeEnabled();
   });
 

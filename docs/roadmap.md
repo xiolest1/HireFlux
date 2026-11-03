@@ -1,5 +1,16 @@
 # Roadmap
 
+## November 3 local implementation checkpoint
+
+The owner selected Option A: shared production frontend/API/Lambda/table with
+independent anonymous Demo and real Cognito Personal Accounts; staging remains
+separate. [Phase 7B Batch 1](phase7b-batch1-local-handoff.md) implements the local
+production capability and exact frontend trust gates. Production remains unbound
+and unpublished. Batch 2 admission/cleanup and Batch 3 infrastructure/header/release
+qualification require separate authorization, followed by the established Phase
+7C–7G gates. This note adds no phase and does not accept unverified live behavior.
+The dated entries below remain historical rather than current AWS inventory.
+
 The October 23 Phase 5E backend/Cognito and frontend deployments are complete at
 `ff18c6762aa1a1f5f423667659cfae83f74f786e`; live authenticated-user acceptance
 is **paused / incomplete**. Phase 5F Execution 1 is the current local architecture

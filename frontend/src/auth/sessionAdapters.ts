@@ -5,6 +5,7 @@ import { bootstrapWorkspace, type WorkspaceBootstrap } from "../api/workspaceBoo
 import { DEMO_SESSION_EVENT, loadDemoSession, removeStoredDemoSession, saveDemoSession } from "./sessionStore";
 import type { CredentialSource, SessionScope } from "./sessionGeneration";
 import type { WorkspaceLifetime } from "./workspaceCapabilities";
+import { isLoopbackOrigin } from "../api/authConfiguration";
 
 export interface AdapterWorkspace {
   lifetime: WorkspaceLifetime;
@@ -102,7 +103,7 @@ export function configuredSessionAdapter(
   development = import.meta.env.DEV,
 ): SessionAdapter {
   if (mode === "demo") return createDemoAdapter();
-  if (mode === "local" && development) {
+  if (mode === "local" && development && isLoopbackOrigin(window.location.origin)) {
     // The configured backend mode wins over an unrelated stored demo token.
     removeStoredDemoSession();
     return createLocalDurableAdapter();

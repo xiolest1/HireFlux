@@ -1,5 +1,27 @@
 # HireFlux development log
 
+## 2026-11-03 — Phase 7B Batch 1 shared production trust and fail-closed configuration
+
+Implemented the owner-selected shared production foundation locally: mandatory
+Cognito anchor with explicit optional Demo capability and a 24-hour production
+Demo lifetime. Added one exact site/API/environment/provider/callback/logout
+frontend binding, preserving staging IDs and leaving production unbound. Public
+configuration errors cannot restore or start Demo/Personal sessions or fall back
+to localhost/legacy Demo. Retry retires private caches, credentials and stale
+continuations while preserving dirty-form consent. Provider failure remains
+independent from trusted Demo availability. Existing verifiers, ownership,
+persistence and Phase 6 UX remain.
+
+Qualification: **670 backend tests**, **662 frontend tests / 67 files**, full
+affected lint/type/format checks, **12 hosting checks**, isolated production-mode
+frontend build and private-material scan, and **5 intercepted local Chromium
+scenarios** passed. Initial fixture syntax/environment issues were corrected;
+final checks pass. No AWS/GitHub/hosted traffic, login, account/email creation,
+resource mutation, synth, release ZIP, commit, push or deployment occurred.
+Registration remains CLOSED in source/defaults; no live setting was changed or
+re-read. Admission/cleanup remain Batch 2; infrastructure/header/release work
+remains Batch 3. See the [full Batch 1 handoff](phase7b-batch1-local-handoff.md).
+
 ## 2026-10-29 — Phase 6 P2 navigation, first-record guidance and workspace wording
 
 Implemented F5–F7 locally on the preserved, uncommitted P1 baseline. Applications

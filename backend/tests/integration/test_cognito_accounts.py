@@ -22,6 +22,20 @@ from hireflux_backend.infrastructure.dynamodb.mapping import (
 API = "/api/v1"
 
 
+def shared_production_harness(h: Harness) -> Harness:
+    return Harness(
+        build_settings(
+            environment="production",
+            auth_mode="cognito",
+            auth_capabilities="demo,cognito",
+            cursor_signing_key="C" * 64,
+            demo_session_signing_key="D" * 64,
+            **COGNITO_CONFIG,
+        ),
+        h.key,
+    )
+
+
 def headers(h: Harness, **claims: Any) -> dict[str, str]:
     return {"Authorization": "Bearer " + h.token(**claims)}
 
@@ -170,10 +184,11 @@ def test_persistent_bootstrap_empty_idempotent_and_trusted_projection(
             assert client.post(API + "/me/bootstrap", headers=auth, json=body).status_code == 422
 
 
+@pytest.mark.parametrize("production", [False, True], ids=["test", "production"])
 def test_owner_isolation_lifetime_and_persistent_deletion_gate(
-    cognito_harness: Harness, dynamodb_client: Any
+    cognito_harness: Harness, dynamodb_client: Any, production: bool
 ) -> None:
-    h = cognito_harness
+    h = shared_production_harness(cognito_harness) if production else cognito_harness
     a, b = headers(h, username="CaseSensitive-Opaque-Subject"), headers(h, sub="Other-subject")
     with app_client(h, dynamodb_client) as client:
         for auth in (a, b):
@@ -326,10 +341,14 @@ def test_concurrent_bootstrap_converges(
     assert len(items(dynamodb_client, user_partition("CaseSensitive-Opaque-Subject"))) == 3
 
 
+@pytest.mark.parametrize("production", [False, True], ids=["test", "production"])
 def test_provider_outage_does_not_break_demo_and_errors_are_private(
-    cognito_harness: Harness, dynamodb_client: Any, caplog: pytest.LogCaptureFixture
+    cognito_harness: Harness,
+    dynamodb_client: Any,
+    caplog: pytest.LogCaptureFixture,
+    production: bool,
 ) -> None:
-    h = cognito_harness
+    h = shared_production_harness(cognito_harness) if production else cognito_harness
     h.provider.key_failure = True
     token = h.token()
     with app_client(h, dynamodb_client) as client:

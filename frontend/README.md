@@ -1,5 +1,33 @@
 # HireFlux frontend build and hosting
 
+## Phase 7B Batch 1 local trust contract
+
+Current source uses `src/publicDeployment.ts` as the exact public trust binding:
+website, single API, environment, capability set, Cognito issuer/client/domain,
+fixed callback/logout URLs, and expected registration flag. Staging IDs come from
+retained sanitized deployment evidence, not a new live inspection. Production is
+explicitly unbound (`null`); fictional production targets exist only in tests.
+
+Public API/site validation runs before configuration fetch, stored-session
+restoration or credential leasing. Missing/mismatched inputs, unavailable or
+malformed metadata, and public HTTP 404 fail closed for Demo and Personal entry.
+Only two loopback origins retain the development API default and legacy 404 Demo
+compatibility. `VITE_WORKSPACE_MODE=demo` remains the managed session convention;
+it does not force Demo-only authentication. Local durable mode also requires a
+loopback site and development build.
+
+Configuration retry fences old continuations, clears private caches/credentials,
+and requires deliberate entry afterward; dirty work requires explicit discard.
+A provider/session outage does not invalidate independently trusted Demo config.
+The existing PKCE, state/nonce, refresh, ownership and identity-switch protections
+are preserved. Registration is CLOSED in the public binding and examples.
+See the [Batch 1 handoff](../docs/phase7b-batch1-local-handoff.md) for qualification
+and remaining Batch 2/3 gates. No header migration or publication occurred.
+
+The older release notes below are historical checkpoints. In particular, the
+former staging-only shape-based provider validation and public legacy fallback
+are superseded by this source contract; no new hosted state is claimed here.
+
 The recorded October 23 Phase 5E frontend deployment is release
 `ff18c6762aa1a1f5f423667659cfae83f74f786e`, Amplify job 4. Its real authenticated-user
 acceptance is paused/incomplete. Phase 5F's registration changes below are local

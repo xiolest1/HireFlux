@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { STAGING_COGNITO_ORIGIN } from "../securityHeaders";
 import { ApiError } from "./client";
+import { stagingPublicDeployment, type PublicDeploymentBinding, type PublicDeploymentBindings } from "../publicDeployment";
 import {
   authConfigurationSchema,
   isLoopbackOrigin,
@@ -58,12 +59,19 @@ describe("public authentication metadata", () => {
 
   it("admits only the exact accepted staging site and API pair for staging metadata", () => {
     vi.stubEnv("VITE_PUBLIC_SITE_URL", STAGING_SITE);
-    const stage = config({ environment: "staging", account_data_policy: "disposable_staging" });
+    const stage = config({ environment: "staging", account_data_policy: "disposable_staging", cognito: {
+      ...cognito, issuer: stagingPublicDeployment.cognito.issuer, client_id: stagingPublicDeployment.cognito.clientId,
+    } });
     expect(validateAuthConfiguration(stage, STAGING_SITE, STAGING_API).environment).toBe("staging");
     invalid(stage, STAGING_SITE, "https://other.execute-api.us-east-1.amazonaws.com");
     invalid(stage, "https://main.other.amplifyapp.com", STAGING_API);
     invalid(stage, STAGING_SITE, LOCAL_API);
     invalid(stage, LOCAL_SITE, STAGING_API);
+    for (const provider of [
+      { issuer: cognito.issuer }, { client_id: cognito.client_id },
+      { domain: "https://other.auth.us-east-1.amazoncognito.com" },
+      { self_registration_enabled: true },
+    ]) invalid({ ...stage, cognito: { ...stage.cognito, ...provider } }, STAGING_SITE, STAGING_API);
   });
 
   it("requires agreement between compiled site, selected frontend environment and backend", () => {
@@ -83,6 +91,31 @@ describe("public authentication metadata", () => {
     invalid(production);
     invalid(production, STAGING_SITE, STAGING_API);
     invalid(production, "https://production.example.com", "https://api.production.example.com");
+  });
+
+  it.each([false, true])("validates exact fictional production metadata independently of staging (mixed=%s)", (mixed) => {
+    const production: PublicDeploymentBinding = {
+      environment: "production", siteOrigin: "https://hireflux.example.invalid", apiOrigin: "https://api.hireflux.example.invalid",
+      capabilities: mixed ? ["demo", "cognito"] : ["cognito"],
+      cognito: { issuer: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_FICTIONAL", clientId: "FICTIONALPUBLICCLIENT", domain: "https://fictional-hireflux.auth.us-east-1.amazoncognito.com" },
+      callbackUrl: "https://hireflux.example.invalid/auth/callback", logoutUrl: "https://hireflux.example.invalid/auth/signed-out", selfRegistrationEnabled: false,
+    };
+    const bindings: PublicDeploymentBindings = { staging: null, production };
+    const provider = { ...cognito, issuer: production.cognito.issuer, client_id: production.cognito.clientId, domain: production.cognito.domain };
+    const metadata = config({ environment: "production", account_data_policy: "production", capabilities: [...production.capabilities], cognito: provider });
+    vi.stubEnv("VITE_PUBLIC_SITE_URL", production.siteOrigin);
+    expect(validateAuthConfiguration(metadata, production.siteOrigin, production.apiOrigin, bindings)).toMatchObject({ environment: "production", capabilities: production.capabilities });
+    for (const overrides of [
+      { environment: "staging", account_data_policy: "disposable_staging" },
+      { capabilities: ["demo"], cognito: undefined },
+      { capabilities: mixed ? ["cognito"] : ["demo", "cognito"] },
+      { cognito: { ...provider, issuer: stagingPublicDeployment.cognito.issuer } },
+      { cognito: { ...provider, client_id: stagingPublicDeployment.cognito.clientId } },
+      { cognito: { ...provider, domain: STAGING_COGNITO_ORIGIN } },
+      { cognito: { ...provider, self_registration_enabled: true } },
+    ]) expect(() => validateAuthConfiguration({ ...metadata, ...overrides }, production.siteOrigin, production.apiOrigin, bindings)).toThrow(ApiError);
+    // A test-only target never binds the shipped production configuration.
+    expect(() => validateAuthConfiguration(metadata, production.siteOrigin, production.apiOrigin)).toThrow(ApiError);
   });
 
   it.each([
@@ -129,6 +162,71 @@ describe("public authentication metadata", () => {
 });
 
 describe("public auth configuration retrieval", () => {
+  function publicWindow(origin = STAGING_SITE) {
+    const original = window;
+    vi.stubGlobal("window", new Proxy(original, { get(target, property) {
+      return property === "location" ? new URL(origin) : Reflect.get(target, property);
+    } }));
+    vi.stubEnv("VITE_PUBLIC_SITE_URL", origin);
+    vi.stubEnv("VITE_API_BASE_URL", STAGING_API);
+  }
+
+  it.each([404, 500, 503])("fails closed for public HTTP %s with no legacy Demo fallback", async (status) => {
+    publicWindow();
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response("unused", { status }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(loadAuthConfiguration()).rejects.toMatchObject({ code: "AUTH_CONFIGURATION_UNAVAILABLE", status });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["", "http://localhost:8000", "https://other.example.invalid", "https://0z0fpmukik.execute-api.us-east-1.amazonaws.com/path"])("rejects an untrusted public API before fetch: %s", async (origin) => {
+    publicWindow();
+    vi.stubEnv("VITE_API_BASE_URL", origin);
+    const fetchMock = vi.fn<typeof fetch>();
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(loadAuthConfiguration()).rejects.toMatchObject({ code: "AUTH_CONFIGURATION_INVALID" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects unbound production and missing public build identity before fetch", async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    vi.stubGlobal("fetch", fetchMock);
+    publicWindow();
+    vi.stubEnv("VITE_PUBLIC_SITE_URL", "");
+    await expect(loadAuthConfiguration()).rejects.toMatchObject({ code: "AUTH_CONFIGURATION_INVALID" });
+    publicWindow("https://hireflux.example.invalid");
+    vi.stubEnv("VITE_API_BASE_URL", "https://api.hireflux.example.invalid");
+    await expect(loadAuthConfiguration()).rejects.toMatchObject({ code: "AUTH_CONFIGURATION_INVALID" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed, network-failed or mismatched public metadata without fallback", async () => {
+    publicWindow();
+    for (const response of [new Response("not-json"), new Response(JSON.stringify(config())), new Response(JSON.stringify(config({ environment: "staging", account_data_policy: "disposable_staging" })))]) {
+      const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(response);
+      vi.stubGlobal("fetch", fetchMock);
+      await expect(loadAuthConfiguration()).rejects.toBeInstanceOf(ApiError);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    }
+    const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("private-provider-diagnostic"));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(loadAuthConfiguration()).rejects.toMatchObject({ code: "AUTH_CONFIGURATION_UNAVAILABLE" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("loads the reviewed staging provider without contacting Cognito", async () => {
+    publicWindow();
+    const stage = stagingPublicDeployment;
+    const metadata = config({ environment: "staging", account_data_policy: "disposable_staging", cognito: {
+      ...cognito, issuer: stage.cognito.issuer, client_id: stage.cognito.clientId,
+    } });
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(metadata)));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(loadAuthConfiguration()).resolves.toMatchObject({ environment: "staging" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(STAGING_API + "/api/v1/auth/config");
+  });
+
   it("fetches the fixed endpoint once without credentials, follows no redirects and validates the result", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(config()), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);

@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { STAGING_COGNITO_ORIGIN } from "../securityHeaders";
+import { isLoopbackOrigin, resolvePublicDeployment, type PublicDeploymentBindings } from "../publicDeployment";
 import { ApiError, apiOrigin } from "./client";
+
+export { isLoopbackOrigin } from "../publicDeployment";
 
 export interface PublicCognitoConfiguration {
   issuer: string;
@@ -13,7 +16,7 @@ export interface PublicCognitoConfiguration {
 const cognitoSchema = z.strictObject({
   issuer: z.string().regex(/^https:\/\/cognito-idp\.us-east-1\.amazonaws\.com\/us-east-1_[A-Za-z0-9]{1,55}$/),
   client_id: z.string().regex(/^[A-Za-z0-9]{1,128}$/),
-  domain: z.literal(STAGING_COGNITO_ORIGIN),
+  domain: z.string().regex(/^https:\/\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.auth\.us-east-1\.amazoncognito\.com$/),
   scopes: z.tuple([z.literal("openid"), z.literal("email"), z.literal("profile")]),
   self_registration_enabled: z.boolean().default(false),
 });
@@ -28,31 +31,32 @@ export const authConfigurationSchema = z.strictObject({
   if (new Set(value.capabilities).size !== value.capabilities.length ||
       value.capabilities.includes("cognito") !== Boolean(value.cognito) ||
       (value.account_management_enabled && !value.capabilities.includes("cognito")) ||
+      (value.environment === "production" && !value.capabilities.includes("cognito")) ||
       value.account_data_policy !== (value.environment === "staging" ? "disposable_staging" : value.environment === "production" ? "production" : "local_development")) {
     ctx.addIssue({ code: "custom", message: "Authentication configuration is inconsistent." });
   }
 });
 export type AuthConfiguration = z.infer<typeof authConfigurationSchema>;
 
-export function isLoopbackOrigin(origin: string): boolean {
-  try { return ["localhost", "127.0.0.1", "[::1]"].includes(new URL(origin).hostname); } catch { return false; }
-}
-
-export function validateAuthConfiguration(value: unknown, siteOrigin = window.location.origin, backendOrigin = apiOrigin()): AuthConfiguration {
+export function validateAuthConfiguration(value: unknown, siteOrigin = window.location.origin, backendOrigin = apiOrigin(), bindings?: PublicDeploymentBindings): AuthConfiguration {
   const parsed = authConfigurationSchema.safeParse(value);
   if (!parsed.success) throw new ApiError("AUTH_CONFIGURATION_INVALID", "Account configuration is unavailable. Please contact the operator.");
   const config = parsed.data;
-  const compiledSite = import.meta.env.VITE_PUBLIC_SITE_URL?.trim();
-  if (compiledSite) {
-    try {
-      const compiled = new URL(compiledSite);
-      if (compiled.origin !== siteOrigin || !["https:", "http:"].includes(compiled.protocol) || compiled.username || compiled.password || compiled.search || compiled.hash || compiled.pathname !== "/") throw new Error("Invalid public site.");
-    } catch { throw new ApiError("AUTH_CONFIGURATION_INVALID", "This build does not match the current site."); }
-  }
-  const local = isLoopbackOrigin(siteOrigin) && isLoopbackOrigin(backendOrigin);
-  const staging = siteOrigin === "https://main.d31vp0nq9fzl6q.amplifyapp.com" && backendOrigin === "https://0z0fpmukik.execute-api.us-east-1.amazonaws.com";
-  if ((!local && !staging) || (local && !["local", "test"].includes(config.environment)) || (staging && config.environment !== "staging")) {
-    // A production trust map/domain is not approved by the staging-only contract.
+  try {
+    const binding = resolvePublicDeployment(siteOrigin, backendOrigin, import.meta.env.VITE_PUBLIC_SITE_URL?.trim(), bindings);
+    if (binding) {
+      if (config.environment !== binding.environment ||
+          config.capabilities.length !== binding.capabilities.length ||
+          !config.capabilities.every((capability) => binding.capabilities.includes(capability)) ||
+          config.cognito?.issuer !== binding.cognito.issuer ||
+          config.cognito.client_id !== binding.cognito.clientId ||
+          config.cognito.domain !== binding.cognito.domain ||
+          config.cognito.self_registration_enabled !== binding.selfRegistrationEnabled) throw new Error("Untrusted metadata.");
+    } else if (!["local", "test"].includes(config.environment) ||
+        (config.cognito && config.cognito.domain !== STAGING_COGNITO_ORIGIN)) {
+      throw new Error("Untrusted development metadata.");
+    }
+  } catch {
     throw new ApiError("AUTH_CONFIGURATION_INVALID", "This account configuration does not match this environment.");
   }
   return config;
@@ -93,12 +97,14 @@ export async function loadAuthConfiguration(): Promise<AuthConfiguration> {
   const abort = new AbortController();
   let timer: number | undefined;
   try {
+    // apiOrigin validates the build/site/API tuple before any network activity.
+    const backendOrigin = apiOrigin();
     return await Promise.race([
       (async () => {
-        const response = await fetch(`${apiOrigin()}/api/v1/auth/config`, {
+        const response = await fetch(`${backendOrigin}/api/v1/auth/config`, {
           headers: { Accept: "application/json" }, credentials: "omit", redirect: "error", signal: abort.signal,
         });
-        if (response.status === 404) return legacyDemoConfiguration();
+        if (response.status === 404 && isLoopbackOrigin(window.location.origin) && isLoopbackOrigin(backendOrigin)) return legacyDemoConfiguration();
         if (!response.ok) throw new ApiError("AUTH_CONFIGURATION_UNAVAILABLE", "Account configuration could not be loaded. Please retry when the service is available.", response.status);
         return validateAuthConfiguration(JSON.parse(await boundedBody(response, abort.signal)));
       })(),
