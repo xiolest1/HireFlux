@@ -2,6 +2,12 @@
 
 ## November 3 local implementation checkpoint
 
+[Phase 7B Batch 2](phase7b-batch2-local-handoff.md) adds finite atomic new-Demo
+admission, independent operator pause semantics and conditional failed-provisioning
+cleanup. This is local source work only. The next bounded implementation is Batch 3
+infrastructure/header/release qualification under separate authorization; no AWS
+control initialization, deployment or later roadmap phase begins automatically.
+
 The owner selected Option A: shared production frontend/API/Lambda/table with
 independent anonymous Demo and real Cognito Personal Accounts; staging remains
 separate. [Phase 7B Batch 1](phase7b-batch1-local-handoff.md) implements the local

@@ -14,6 +14,31 @@ class DemoProvisioningInProgressError(ConflictError):
     pass
 
 
+class DemoIssuancePausedError(HireFluxError):
+    pass
+
+
+class DemoQuotaExhaustedError(HireFluxError):
+    def __init__(self, retry_after_seconds: int) -> None:
+        super().__init__("Demo creation is temporarily at capacity. Please try again later.")
+        self.retry_after_seconds = max(1, min(86_400, retry_after_seconds))
+
+
+class DemoAdmissionUnavailableError(HireFluxError):
+    def __init__(self) -> None:
+        super().__init__(
+            "Demo creation is temporarily unavailable. Existing workspaces are preserved."
+        )
+
+
+class DemoAdmissionUncertainError(HireFluxError):
+    def __init__(self) -> None:
+        super().__init__(
+            "Demo preparation could not be confirmed. Retry explicitly with the same request; "
+            "do not start a replacement automatically."
+        )
+
+
 class ValidationError(HireFluxError):
     pass
 

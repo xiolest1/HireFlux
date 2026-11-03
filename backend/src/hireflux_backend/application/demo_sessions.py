@@ -3,7 +3,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from hireflux_backend.application.errors import PersistenceError, ValidationError
+from hireflux_backend.application.demo_admission import DemoAdmission, DemoIssuancePolicy
+from hireflux_backend.application.errors import (
+    DemoAdmissionUncertainError,
+    DemoIssuancePausedError,
+    PersistenceError,
+    ValidationError,
+)
 from hireflux_backend.application.ports import DemoSessionTokenIssuer, DemoWorkspaceRepository
 from hireflux_backend.application.resource_services import (
     CreateInterviewCommand,
@@ -336,6 +342,7 @@ class DemoSessionService:
         failure_ttl_minutes: int,
         resource_service: WorkspaceResourceService | None = None,
         workspace_repository: DemoWorkspaceRepository,
+        local_issuance_compatibility: bool = False,
         clock: Callable[[], datetime] = utc_now,
         id_factory: Callable[[], str] = new_id,
     ) -> None:
@@ -348,11 +355,27 @@ class DemoSessionService:
         self._clock = clock
         self._id_factory = id_factory
         self._workspace_repository = workspace_repository
+        self._local_issuance_compatibility = local_issuance_compatibility
 
     def create(self, idempotency_key: str | None = None) -> DemoSession:
         if idempotency_key is not None and not 16 <= len(idempotency_key) <= 255:
             raise ValidationError("Idempotency-Key must contain between 16 and 255 characters.")
         issued_at = self._clock().astimezone(UTC)
+        if not self._local_issuance_compatibility and idempotency_key is None:
+            raise ValidationError("An Idempotency-Key is required to prepare a Demo safely.")
+        if idempotency_key is not None:
+            previous = self._workspace_repository.find_reservation(idempotency_key, now=issued_at)
+            if previous is not None:
+                return self._session_for_workspace(previous.workspace)
+        record = self._workspace_repository.read_issuance_policy()
+        if record is None:
+            if not self._local_issuance_compatibility:
+                raise DemoIssuancePausedError()
+            policy = DemoIssuancePolicy(enabled=True, version=1, local_default=True)
+        else:
+            policy = DemoIssuancePolicy.from_record(record)
+        if not policy.enabled:
+            raise DemoIssuancePausedError()
         expires_at = issued_at + self._ttl
         workspace_id = self._id_factory()
         reservation = self._workspace_repository.reserve(
@@ -360,6 +383,7 @@ class DemoSessionService:
             issued_at=issued_at,
             expires_at=int(expires_at.timestamp()),
             idempotency_key=idempotency_key,
+            admission=DemoAdmission.at(policy, issued_at),
         )
         if not reservation.is_new:
             return self._session_for_workspace(reservation.workspace)
@@ -381,7 +405,8 @@ class DemoSessionService:
             self._seed_workspace(identity, issued_at, created)
             self._workspace_repository.mark_ready(reservation.workspace)
         except Exception as error:
-            self._handle_provisioning_failure(reservation.workspace, created)
+            if not self._handle_provisioning_failure(reservation.workspace, created):
+                raise DemoAdmissionUncertainError() from error
             raise PersistenceError("Unable to create demo workspace.") from error
         return self._session_for_workspace(reservation.workspace)
 
@@ -396,19 +421,20 @@ class DemoSessionService:
 
     def _handle_provisioning_failure(
         self, workspace: DemoWorkspace, created: list[Application]
-    ) -> None:
+    ) -> bool:
         failed_expires_at = int((self._clock().astimezone(UTC) + self._failure_ttl).timestamp())
         try:
             self._workspace_repository.mark_failed(workspace, expires_at=failed_expires_at)
         except Exception:
-            pass
+            return False  # Without a committed FAILED fence, cleanup has no authority.
         try:
             self._workspace_repository.cleanup(
-                workspace.workspace_id,
+                workspace,
                 application_ids=tuple(application.application_id for application in created),
             )
         except Exception:
             pass
+        return True
 
     def _seed_workspace(
         self, identity: CurrentIdentity, now: datetime, created: list[Application]

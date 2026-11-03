@@ -37,7 +37,7 @@ from hireflux_backend.application.workspace_safety import WorkspaceErasureServic
 from hireflux_backend.auth.cognito import CognitoVerifier
 from hireflux_backend.auth.demo import DemoSessionCodec
 from hireflux_backend.auth.principal import CognitoAuthentication
-from hireflux_backend.config import AuthMode, Settings, get_settings
+from hireflux_backend.config import AuthMode, Environment, Settings, get_settings
 from hireflux_backend.cors_policy import CorsPolicy
 from hireflux_backend.infrastructure.cognito_identity import CognitoIdentityDeletion
 from hireflux_backend.infrastructure.dynamodb.client import build_dynamodb_client
@@ -184,6 +184,8 @@ def create_app(
         failure_ttl_minutes=configured.demo_session_failure_ttl_minutes,
         resource_service=workspace_resource_service,
         workspace_repository=demo_workspace_repository,
+        local_issuance_compatibility=configured.environment
+        in {Environment.LOCAL, Environment.TEST},
     )
 
     app.add_middleware(

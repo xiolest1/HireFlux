@@ -206,7 +206,7 @@ export class WorkspaceSessionController {
       return this.ready(workspace);
     }).catch((error: unknown) => {
       base.scope.assertCurrent();
-      if (!(error instanceof ApiError && ["NETWORK_ERROR", "DEMO_PROVISIONING_IN_PROGRESS"].includes(error.code))) this.operationKey = null;
+      if (!(error instanceof ApiError && ["NETWORK_ERROR", "DEMO_PROVISIONING_IN_PROGRESS", "DEMO_ADMISSION_UNCERTAIN", "DEMO_ADMISSION_UNAVAILABLE"].includes(error.code))) this.operationKey = null;
       if (previous && this.adapter?.valid(previous)) this.ready(previous, error);
       else this.publish({ ...base, status: "error", error, operation: "activate" });
       throw error;

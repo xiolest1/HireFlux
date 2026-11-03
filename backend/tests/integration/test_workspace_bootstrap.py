@@ -570,6 +570,13 @@ def test_real_product_flows_keep_all_items_at_the_correct_data_lifetime(
     for item in stored:
         if expected_expiry is None:
             assert "expires_at" not in item, item
+        elif item["entity_type"] == "DEMO_IDEMPOTENCY":
+            from hireflux_backend.application.demo_admission import IDEMPOTENCY_RETENTION_SECONDS
+
+            # Operational replay evidence outlives authorization. It cannot issue
+            # a session beyond the original signed deadline or become user data.
+            assert item["session_expires_at"] == expected_expiry, item
+            assert item["expires_at"] == expected_expiry + IDEMPOTENCY_RETENTION_SECONDS, item
         else:
             assert item.get("expires_at") == expected_expiry, item
     if mode == "local":

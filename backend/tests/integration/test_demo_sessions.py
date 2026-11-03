@@ -211,11 +211,25 @@ def test_failed_demo_provisioning_is_marked_and_cleaned_up(
     workspace_id = "00000000-0000-4000-8000-000000000099"
     idempotency_key = "demo-session-failure-key-123456"
     monkeypatch.setattr(service, "_id_factory", lambda: workspace_id)
+    before_failure: dict[str, dict[str, Any]] = {}
 
     def fail_after_one_application(identity: Any, now: Any, created: list[Any]) -> None:
         service._application_service.create(
             identity,
             CreateApplicationCommand(company_name="Partial Seed", job_title="Unfinished role"),
+        )
+        before_failure.update(
+            {
+                deserialize_item(item)["SK"]: item
+                for item in dynamodb_client.query(
+                    TableName="HireFluxTest",
+                    KeyConditionExpression="PK = :partition",
+                    ExpressionAttributeValues=serialize_item(
+                        {":partition": user_partition(workspace_id)}
+                    ),
+                    ConsistentRead=True,
+                )["Items"]
+            }
         )
         raise RuntimeError("simulated seed failure")
 
@@ -242,7 +256,22 @@ def test_failed_demo_provisioning_is_marked_and_cleaned_up(
         KeyConditionExpression="PK = :partition",
         ExpressionAttributeValues=serialize_item({":partition": user_partition(workspace_id)}),
     )["Items"]
-    assert [deserialize_item(item)["SK"] for item in user_items] == ["WORKSPACE"]
+    retained = {deserialize_item(item)["SK"]: item for item in user_items}
+    assert set(retained) == {
+        "WORKSPACE",
+        "WORKSPACE_QUOTA",
+        "COUNTER#FUNNEL",
+        "COUNTER#STATUS#DRAFT",
+    }
+    for sk, raw_item in retained.items():
+        if sk != "WORKSPACE":
+            # These legacy counters lack explicit owner provenance. Preserve the
+            # entire record and its original TTL rather than delete by key alone.
+            assert raw_item == before_failure[sk]
+            assert int(deserialize_item(raw_item)["expires_at"]) == int(
+                workspace["data_expires_at"]
+            )
+    assert "PROFILE" not in retained
 
     idempotency_hash = hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()
     idempotency_item = dynamodb_client.get_item(

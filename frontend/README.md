@@ -2,6 +2,13 @@
 
 ## Phase 7B Batch 1 local trust contract
 
+Batch 2 additionally preserves the same Demo operation key through admission
+uncertainty or control-store unavailability. Retry remains explicit. A denied
+reset restores only its still-valid previous Demo; a failed deliberate switch
+never resurrects cleared Personal credentials. Existing error UI presents pause,
+quota and unavailable messages without polling or an invented reopening time.
+No frontend policy toggle, additional API client or registration change exists.
+
 Current source uses `src/publicDeployment.ts` as the exact public trust binding:
 website, single API, environment, capability set, Cognito issuer/client/domain,
 fixed callback/logout URLs, and expected registration flag. Staging IDs come from

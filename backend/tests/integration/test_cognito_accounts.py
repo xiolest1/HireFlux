@@ -36,6 +36,24 @@ def shared_production_harness(h: Harness) -> Harness:
     )
 
 
+def enable_test_issuance(client: Any) -> None:
+    client.put_item(
+        TableName="HireFluxTest",
+        Item=serialize_item(
+            {
+                "PK": "DEMO_ADMISSION#CONTROL",
+                "SK": "POLICY",
+                "entity_type": "DEMO_ISSUANCE_POLICY",
+                "schema_version": 1,
+                "enabled": True,
+                "version": 1,
+                "daily_limit": 10,
+                "minute_limit": 2,
+            }
+        ),
+    )
+
+
 def headers(h: Harness, **claims: Any) -> dict[str, str]:
     return {"Authorization": "Bearer " + h.token(**claims)}
 
@@ -189,6 +207,8 @@ def test_owner_isolation_lifetime_and_persistent_deletion_gate(
     cognito_harness: Harness, dynamodb_client: Any, production: bool
 ) -> None:
     h = shared_production_harness(cognito_harness) if production else cognito_harness
+    if production:
+        enable_test_issuance(dynamodb_client)
     a, b = headers(h, username="CaseSensitive-Opaque-Subject"), headers(h, sub="Other-subject")
     with app_client(h, dynamodb_client) as client:
         for auth in (a, b):
@@ -235,7 +255,9 @@ def test_owner_isolation_lifetime_and_persistent_deletion_gate(
             == 404
         )
         assert client.get(API + "/applications", headers=b).json()["items"] == []
-        demo = client.post(API + "/demo-sessions").json()["access_token"]
+        demo = client.post(
+            API + "/demo-sessions", headers={"Idempotency-Key": "owner-isolation-demo-key"}
+        ).json()["access_token"]
         demo_auth = {"Authorization": "Bearer " + demo}
         assert client.get(path, headers=demo_auth).status_code == 404
         demo_apps = client.get(API + "/applications", headers=demo_auth).json()["items"]
@@ -349,6 +371,8 @@ def test_provider_outage_does_not_break_demo_and_errors_are_private(
     production: bool,
 ) -> None:
     h = shared_production_harness(cognito_harness) if production else cognito_harness
+    if production:
+        enable_test_issuance(dynamodb_client)
     h.provider.key_failure = True
     token = h.token()
     with app_client(h, dynamodb_client) as client:
@@ -357,7 +381,9 @@ def test_provider_outage_does_not_break_demo_and_errors_are_private(
         assert result.json()["error"]["code"] == "AUTHENTICATION_UNAVAILABLE"
         assert result.json()["error"]["request_id"] == result.headers["X-Request-ID"]
         assert not items(dynamodb_client, user_partition("CaseSensitive-Opaque-Subject"))
-        demo = client.post(API + "/demo-sessions")
+        demo = client.post(
+            API + "/demo-sessions", headers={"Idempotency-Key": "provider-outage-demo-key"}
+        )
         assert demo.status_code == 201
         assert (
             client.get(

@@ -115,3 +115,4 @@ class DemoWorkspace:
     updated_at: datetime
     expires_at: int
     idempotency_key_hash: str | None = None
+    reservation_id: str | None = None

@@ -12,6 +12,8 @@ snapshots, not fresh AWS inventory or permission to repeat operations.
 
 Detailed supporting contracts remain in this directory:
 
+- [Atomic Demo admission and guarded failure cleanup — Phase 7B Batch 2, local only](phase7b-batch2-local-handoff.md)
+
 - [Shared production trust and fail-closed configuration — Phase 7B Batch 1, local only](phase7b-batch1-local-handoff.md)
 
 - [CDK security remediation and unchanged release — Phase 5D.1 addendum](phase5d1-cdk-security-remediation.md)

@@ -1,5 +1,21 @@
 # Backend Lambda packaging (Phase 3B)
 
+## Phase 7B Batch 2 local issuance and cleanup contract
+
+New Demo creation is now independent of Demo credential verification. A finite,
+versioned policy and two UTC counters atomically reserve new work in the existing
+table; staging/production missing policy is paused by default. Deployed issuance
+requires an Idempotency-Key. Local/test compatibility is finite (10/day, 2/minute),
+never an enabled production initializer. READY replay and existing Demo/Personal
+operations do not depend on the control store.
+
+Unknown write outcomes never grant another seed. Failed cleanup requires a proved
+FAILED reservation and conditional item guards; unproved records remain for TTL.
+See the [Batch 2 handoff](../docs/phase7b-batch2-local-handoff.md) for exact schema,
+retention, bounded cleanup, tests and future operator preparation. This source is
+unpublished. The accepted deployed artifact is not replaced by these local edits;
+fresh release packaging, CDK qualification and live actions remain later gates.
+
 ## Phase 5F local registration compatibility
 
 The Phase 5E backend/Cognito deployment is recorded at

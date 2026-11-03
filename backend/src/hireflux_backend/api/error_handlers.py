@@ -12,7 +12,11 @@ from hireflux_backend.application.errors import (
     AuthenticationRequiredError,
     AuthenticationUnavailableError,
     ConflictError,
+    DemoAdmissionUnavailableError,
+    DemoAdmissionUncertainError,
+    DemoIssuancePausedError,
     DemoProvisioningInProgressError,
+    DemoQuotaExhaustedError,
     DemoSessionExpiredError,
     DemoSessionRequiredError,
     ForbiddenError,
@@ -40,6 +44,10 @@ def register_exception_handlers(app: FastAPI) -> None:
         DemoProvisioningInProgressError, demo_provisioning_in_progress_handler
     )
     app.add_exception_handler(ConflictError, conflict_handler)
+    app.add_exception_handler(DemoIssuancePausedError, demo_issuance_paused_handler)
+    app.add_exception_handler(DemoQuotaExhaustedError, demo_quota_handler)
+    app.add_exception_handler(DemoAdmissionUnavailableError, demo_admission_unavailable_handler)
+    app.add_exception_handler(DemoAdmissionUncertainError, demo_admission_uncertain_handler)
     app.add_exception_handler(WorkspaceBootstrapRequiredError, bootstrap_required_handler)
     app.add_exception_handler(WorkspaceBootstrapConflictError, bootstrap_conflict_handler)
     app.add_exception_handler(ValidationError, domain_validation_handler)
@@ -114,6 +122,39 @@ async def bootstrap_conflict_handler(request: Request, error: Exception) -> JSON
 async def demo_provisioning_in_progress_handler(request: Request, error: Exception) -> JSONResponse:
     assert isinstance(error, DemoProvisioningInProgressError)
     return _response(request, 409, "DEMO_PROVISIONING_IN_PROGRESS", str(error))
+
+
+async def demo_issuance_paused_handler(request: Request, error: Exception) -> JSONResponse:
+    return _response(
+        request,
+        429,
+        "DEMO_ISSUANCE_PAUSED",
+        "New Demo workspaces are paused. "
+        "Existing workspaces and Personal Accounts remain available.",
+    )
+
+
+async def demo_quota_handler(request: Request, error: Exception) -> JSONResponse:
+    assert isinstance(error, DemoQuotaExhaustedError)
+    response = _response(
+        request,
+        429,
+        "DEMO_QUOTA_EXHAUSTED",
+        str(error),
+        {"retry_after_seconds": error.retry_after_seconds},
+    )
+    response.headers["Retry-After"] = str(error.retry_after_seconds)
+    return response
+
+
+async def demo_admission_unavailable_handler(request: Request, error: Exception) -> JSONResponse:
+    return _response(
+        request, 503, "DEMO_ADMISSION_UNAVAILABLE", str(DemoAdmissionUnavailableError())
+    )
+
+
+async def demo_admission_uncertain_handler(request: Request, error: Exception) -> JSONResponse:
+    return _response(request, 503, "DEMO_ADMISSION_UNCERTAIN", str(DemoAdmissionUncertainError()))
 
 
 async def domain_validation_handler(request: Request, error: Exception) -> JSONResponse:

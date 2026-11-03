@@ -14,6 +14,37 @@ All three indexes use `ALL` projection. Archived applications are removed from t
 
 Adding or changing an index is an explicit schema migration decision, not an application-startup behavior. A tightly controlled sparse admin index remains deferred.
 
+## Phase 7B Batch 2 Demo admission (local source contract)
+
+New issuance uses operational primary-table records outside `USER#...`:
+`PK=DEMO_ADMISSION#CONTROL, SK=POLICY`, plus
+`PK=DEMO_ADMISSION#DAY#<UTC-start-epoch>, SK=COUNTER` and
+`PK=DEMO_ADMISSION#MINUTE#<UTC-start-epoch>, SK=COUNTER`.
+They have no GSI keys and are excluded from user manifests, exports and erasure.
+No table/index migration or startup initialization is introduced.
+
+Policy schema 1 has `enabled`, monotonically increasing `version`, `daily_limit`
+and `minute_limit`; reviewed defaults are 10/day and 2/minute. Deployed missing
+policy means issuance paused, independently of Demo authentication. Local/test
+alone have a finite missing-policy compatibility path. Valid same-key READY reuse
+is resolved through strongly consistent primary reads before any policy access.
+
+One admission transaction checks policy, compare-and-swaps both validated counter
+snapshots, checks absence of known owner roots and creates the workspace/replay
+records. No seed write precedes its success. Counter TTL is window end + 48 hours;
+replay TTL is original session expiry + 24 hours. Neither extends Demo authorization.
+The lifecycle now records immutable `reservation_id` and `data_expires_at`.
+Legacy valid READY records remain reusable under their original deadline; legacy
+failure markers without new provenance do not authorize cleanup.
+
+Failed cleanup uses bounded strong primary inventory, GSI candidate discovery,
+and a FAILED-marker condition plus per-item conditional deletion. It retains
+records with missing/incompatible ownership/lifetime markers, including legacy
+quota/counter items without explicit owner fields. TTL may remove these later.
+GSI absence is not an atomic proof that orphan child partitions do not exist.
+See the [complete Batch 2 protocol and operator contract](phase7b-batch2-local-handoff.md)
+for collision limits, reconciliation, recovery prerequisites and qualifications.
+
 ## Item shapes
 
 | Entity | Primary key | Sort key | Relevant index keys |

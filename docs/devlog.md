@@ -1,5 +1,29 @@
 # HireFlux development log
 
+## 2026-11-03 — Phase 7B Batch 2 atomic Demo admission and safe failed cleanup
+
+Added finite versioned Demo issuance policy/counters in the existing table,
+atomically fenced with owner-root absence, workspace and replay reservation.
+Staging/production default to paused without policy; finite local/test compatibility
+does not initialize production controls. Strong same-key reconciliation prevents
+ambiguous replies from granting a second seed. Valid Demo and Personal operations
+remain independent of issuance pause/control-store failure.
+
+Failed cleanup now requires exact FAILED reservation provenance and conditional
+per-item deletion. Durable, incompatible and unowned helper records are retained;
+bounded partial progress leaves TTL remnants rather than widening deletion. The
+frontend keeps request keys through uncertainty/read outages and preserves valid
+reset sessions and identity/dirty-form safeguards.
+
+Final qualification: **810 backend tests**, **672 frontend tests / 68 files**,
+Ruff/format/Mypy/ESLint/TypeScript, isolated frontend build and artifact scan PASS.
+Initial fault-injection/legacy test failures and their corrections are documented.
+The accepted Batch 1 files were verified exactly against the intervening local
+`ff1ecad` commit before editing. No AWS/hosted/account/email activity, CDK/ZIP work,
+commit, push or deployment occurred. Registration remains CLOSED in source/defaults.
+See the [full Batch 2 handoff](phase7b-batch2-local-handoff.md) for operator/recovery
+contracts, collision/replay limitations and separately authorized Batch 3 scope.
+
 ## 2026-11-03 — Phase 7B Batch 1 shared production trust and fail-closed configuration
 
 Implemented the owner-selected shared production foundation locally: mandatory

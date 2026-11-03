@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Protocol
 
+from hireflux_backend.application.demo_admission import DemoAdmission
 from hireflux_backend.domain.enums import (
     ApplicationSort,
     ApplicationSource,
@@ -143,6 +144,12 @@ class DemoWorkspaceReservation:
 
 
 class DemoWorkspaceRepository(Protocol):
+    def find_reservation(
+        self, idempotency_key: str, *, now: datetime
+    ) -> DemoWorkspaceReservation | None: ...
+
+    def read_issuance_policy(self) -> dict[str, object] | None: ...
+
     def reserve(
         self,
         workspace_id: str,
@@ -150,10 +157,13 @@ class DemoWorkspaceRepository(Protocol):
         issued_at: datetime,
         expires_at: int,
         idempotency_key: str | None,
+        admission: DemoAdmission,
     ) -> DemoWorkspaceReservation: ...
 
     def mark_ready(self, workspace: DemoWorkspace) -> None: ...
 
     def mark_failed(self, workspace: DemoWorkspace, *, expires_at: int) -> None: ...
 
-    def cleanup(self, workspace_id: str, *, application_ids: tuple[str, ...] = ()) -> None: ...
+    def cleanup(
+        self, workspace: DemoWorkspace, *, application_ids: tuple[str, ...] = ()
+    ) -> None: ...
