@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
-from threading import Lock
+from threading import Barrier, Lock
 from typing import Any
 from unittest.mock import Mock
 
@@ -13,10 +13,14 @@ from fastapi.testclient import TestClient
 from hireflux_backend.app_factory import create_app
 from hireflux_backend.auth.cognito import CognitoVerifier
 from hireflux_backend.config import AuthMode
+from hireflux_backend.domain.workspace import WorkspaceSnapshot
 from hireflux_backend.infrastructure.dynamodb.mapping import (
     deserialize_item,
     serialize_item,
     user_partition,
+)
+from hireflux_backend.infrastructure.dynamodb.workspace_bootstrap_repository import (
+    DynamoWorkspaceBootstrapRepository,
 )
 
 API = "/api/v1"
@@ -340,15 +344,32 @@ def test_concurrent_bootstrap_converges(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     original_transaction = dynamodb_client.transact_write_items
+    original_read = DynamoWorkspaceBootstrapRepository.read
     transaction_lock = Lock()
+    first_reads = Barrier(4)
+    reads = 0
 
     def atomic_transaction(**arguments: Any) -> Any:
-        # Moto's Python transaction rollback is not isolated across threads.
-        # Serialize the atomic datastore operation, while requests/read snapshots race.
         with transaction_lock:
             return original_transaction(**arguments)
 
+    def synchronized_read(
+        repository: DynamoWorkspaceBootstrapRepository, owner: str
+    ) -> WorkspaceSnapshot:
+        nonlocal reads
+        # Moto exposes intermediate transaction writes/rollback to concurrent queries.
+        # Keep mock reads outside those writes, then race four empty-snapshot commits.
+        with transaction_lock:
+            snapshot = original_read(repository, owner)
+            reads += 1
+            initial = reads <= first_reads.parties
+        if initial:
+            assert snapshot == WorkspaceSnapshot(None, None, None)
+            first_reads.wait(timeout=10)
+        return snapshot
+
     monkeypatch.setattr(dynamodb_client, "transact_write_items", atomic_transaction)
+    monkeypatch.setattr(DynamoWorkspaceBootstrapRepository, "read", synchronized_read)
     h = cognito_harness
     auth = headers(h)
     with app_client(h, dynamodb_client) as client:
