@@ -31,10 +31,19 @@ test("production rendering is separate and cannot silently retain staging Cognit
   const production = renderHostingHeaders(template, { environment: "production" });
   const headers = parseHostingHeaders(production, { environment: "production" });
   assert.doesNotMatch(headers["Content-Security-Policy"], /amazoncognito\.com/);
-  assert.match(headers["Content-Security-Policy"], /https:\/\/\*\.execute-api\.us-east-1\.amazonaws\.com/);
+  assert.ok(headers["Content-Security-Policy"].split("; ").includes("connect-src 'self'"));
+  assert.doesNotMatch(headers["Content-Security-Policy"], /execute-api|localhost|staging/);
   assert.throws(() => parseHostingHeaders(policy, { environment: "production" }));
   assert.throws(() => renderHostingHeaders(template, { environment: "unreviewed" }));
   assert.equal(load(policy).applications[0].appRoot, "frontend");
+});
+
+test("exact staging proposal narrows the API without retiring root authority", () => {
+  const exact = renderHostingHeaders(template, { environment: "staging", policy: "exact" });
+  const headers = parseHostingHeaders(exact, { environment: "staging", policy: "exact" });
+  assert.ok(headers["Content-Security-Policy"].includes("https://0z0fpmukik.execute-api.us-east-1.amazonaws.com"));
+  assert.doesNotMatch(headers["Content-Security-Policy"], /\*\.execute-api/);
+  assert.throws(() => parseHostingHeaders(policy, { environment: "staging", policy: "exact" }));
 });
 
 test("production CLI cannot overwrite the checked-in staging artifact", async () => {

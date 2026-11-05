@@ -5,7 +5,7 @@ import { Template } from 'aws-cdk-lib/assertions';
 import { loadEnvironmentConfig } from '../lib/config/environment';
 import { HireFluxStack } from '../lib/hireflux-stack';
 import { fixtureArtifact } from './fixture';
-import { REVIEWED_RESOURCES } from './resource-inventory';
+import { reviewedResources, reviewedResourceCount } from './resource-inventory';
 
 const ids = {
   lambdaLogs: 'OperationalLogsBackendFunctionLogs44D131F8', apiLogs: 'OperationalLogsHttpApiAccessLogs3515ABA0',
@@ -102,11 +102,11 @@ for (const environment of ['staging', 'production'] as const) {
   const resources = template.Resources;
 
   test(`${environment} operational resources have stable identities and no unexpected family`, () => {
-    assert.deepEqual(Object.fromEntries(Object.entries(resources).map(([id, resource]: [string, any]) => [id, resource.Type])), REVIEWED_RESOURCES);
+    assert.deepEqual(Object.fromEntries(Object.entries(resources).map(([id, resource]: [string, any]) => [id, resource.Type])), reviewedResources(environment));
     assert.deepEqual(template.Outputs ?? {}, {});
     assert.equal(stack.operationalLogs.backendFunctionLogs.node.id, 'BackendFunctionLogs');
     assert.equal(stack.operationalLogs.httpApiAccessLogs.node.id, 'HttpApiAccessLogs');
-    assert.equal(stack.operations.dashboard.node.id, 'OperationalDashboard');
+    assert.equal(stack.operations.dashboard?.node.id, environment === 'staging' ? 'OperationalDashboard' : undefined);
     assert.equal(stack.operations.budget.node.id, 'MonthlyCostBudget');
     for (const id of [ids.lambdaLogs, ids.apiLogs, ...alarmIds, ids.topic]) {
       assert.deepEqual(resources[id].Properties.Tags, Object.entries(config.tags).sort().map(([Key, Value]) => ({ Key, Value })));
@@ -139,7 +139,9 @@ for (const environment of ['staging', 'production'] as const) {
       DetailedMetricsEnabled: false, ThrottlingRateLimit: config.operations.apiThrottleRate,
       ThrottlingBurstLimit: config.operations.apiThrottleBurst,
     });
-    assert.equal(resources[ids.stage].Properties.RouteSettings, undefined);
+    assert.deepEqual(resources[ids.stage].Properties.RouteSettings, { 'POST /api/v1/demo-sessions': {
+      DetailedMetricsEnabled: false, ThrottlingRateLimit: 1, ThrottlingBurstLimit: 2,
+    } });
     assert.equal(resources[ids.function].Properties.ReservedConcurrentExecutions, config.operations.lambdaReservedConcurrency);
     assert.ok(config.operations.lambdaReservedConcurrency > 0);
     for (const type of ['AWS::Lambda::Function', 'AWS::ApiGatewayV2::Api', 'AWS::ApiGatewayV2::Stage'])
@@ -183,8 +185,8 @@ for (const environment of ['staging', 'production'] as const) {
       assert.ok(!JSON.stringify(resources[id]).includes('OperationalAlertEmail'));
     const blank = resolveTemplate(template, '');
     const provided = resolveTemplate(template, 'operator@example.invalid');
-    assert.equal(Object.keys(blank).length, 26);
-    assert.equal(Object.keys(provided).length, 29);
+    assert.equal(Object.keys(blank).length, reviewedResourceCount(environment) - 3);
+    assert.equal(Object.keys(provided).length, reviewedResourceCount(environment));
     for (const id of [ids.topic, ids.subscription, ids.topicPolicy]) assert.equal(blank[id], undefined);
     for (const id of alarmIds) {
       assert.deepEqual(blank[id].Properties.AlarmActions, []);
@@ -230,6 +232,12 @@ for (const environment of ['staging', 'production'] as const) {
   });
 
   test(`${environment} dashboard has six native metric graphs scoped to local function, API and table`, () => {
+    if (environment === 'production') {
+      assert.equal(stack.operations.dashboard, undefined);
+      assert.equal(resources[ids.dashboard], undefined);
+      assert.equal(Object.values(resources).filter((r: any) => r.Type === 'AWS::CloudWatch::Alarm').length, 5);
+      return;
+    }
     const p = resolveTemplate(template, '')[ids.dashboard].Properties;
     assert.equal(p.DashboardName, `hireflux-${environment}-operations`);
     const body = JSON.parse(p.DashboardBody);
@@ -323,6 +331,10 @@ test('operational constructs belong to independently bound environments with no 
     const template = Template.fromStack(stack).toJSON();
     const other = stack === staging ? 'production' : 'staging';
     for (const id of [ids.topic, ids.topicPolicy, ids.dashboard, ids.budget, ...alarmIds]) {
+      if (id === ids.dashboard && stack === production) {
+        assert.equal(template.Resources[id], undefined);
+        continue;
+      }
       assert.ok(!JSON.stringify(template.Resources[id]).includes(`hireflux-${other}`));
     }
     assert.ok(!JSON.stringify(template).includes('Fn::ImportValue'));

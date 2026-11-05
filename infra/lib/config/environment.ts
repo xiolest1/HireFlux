@@ -29,9 +29,14 @@ export interface HireFluxEnvironmentConfig {
     apiThrottleBurst: number;
     lambdaReservedConcurrency: number;
     monthlyBudgetUsd: number;
+    demoIssueThrottleRate: number;
+    demoIssueThrottleBurst: number;
+    dashboardEnabled: boolean;
   }>;
   readonly backend: Readonly<{
     authMode: 'demo' | 'cognito';
+    authCapabilities: readonly ('demo' | 'cognito')[];
+    demoSessionTtlHours: 24;
     secretRemovalPolicy: 'DESTROY' | 'RETAIN';
     cors: DeployedCorsPolicy;
   }>;
@@ -61,9 +66,11 @@ const CORS_METHODS = Object.freeze(['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
 const CORS_HEADERS = Object.freeze(['Accept', 'Authorization', 'Content-Type', 'Idempotency-Key', 'X-Request-ID']);
 const CORS_EXPOSE = Object.freeze(['X-Request-ID', 'Content-Disposition']);
 
-function backendConfig(environment: EnvironmentName): HireFluxEnvironmentConfig['backend'] {
+function backendConfig(environment: EnvironmentName, capabilities: readonly ('demo' | 'cognito')[] = ['demo', 'cognito']): HireFluxEnvironmentConfig['backend'] {
   return Object.freeze({
     authMode: environment === 'staging' ? 'demo' : 'cognito',
+    authCapabilities: Object.freeze([...capabilities]),
+    demoSessionTtlHours: 24,
     secretRemovalPolicy: environment === 'staging' ? 'DESTROY' : 'RETAIN',
     cors: Object.freeze({
       allowMethods: CORS_METHODS, allowHeaders: CORS_HEADERS, exposeHeaders: CORS_EXPOSE,
@@ -78,9 +85,11 @@ function operationsConfig(environment: EnvironmentName): HireFluxEnvironmentConf
   return Object.freeze(environment === 'staging' ? {
     lambdaLogRetentionDays: 14, apiLogRetentionDays: 14, logRemovalPolicy: 'DESTROY',
     apiThrottleRate: 10, apiThrottleBurst: 20, lambdaReservedConcurrency: 5, monthlyBudgetUsd: 10,
+    demoIssueThrottleRate: 1, demoIssueThrottleBurst: 2, dashboardEnabled: true,
   } : {
     lambdaLogRetentionDays: 30, apiLogRetentionDays: 30, logRemovalPolicy: 'RETAIN',
     apiThrottleRate: 20, apiThrottleBurst: 40, lambdaReservedConcurrency: 10, monthlyBudgetUsd: 30,
+    demoIssueThrottleRate: 1, demoIssueThrottleBurst: 2, dashboardEnabled: false,
   });
 }
 
@@ -117,8 +126,13 @@ export function loadEnvironmentConfig(
   selection: unknown,
   accountBinding: unknown = undefined,
   registration: unknown = undefined,
+  productionCapabilities: unknown = undefined,
 ): HireFluxEnvironmentConfig {
   const environmentName = resolveEnvironment(selection);
+  if (environmentName === 'staging' && productionCapabilities !== undefined) {
+    throw new Error('productionAuthCapabilities applies only to an explicit production target.');
+  }
+  const capabilities = resolveCapabilities(environmentName, productionCapabilities);
   if (registration !== undefined && registration !== true && registration !== false && registration !== 'true' && registration !== 'false') {
     throw new Error('selfRegistrationEnabled must be an explicit true or false.');
   }
@@ -131,7 +145,7 @@ export function loadEnvironmentConfig(
     data: DATA_LIFECYCLE[environmentName],
     selfRegistrationEnabled: registration === true || registration === 'true',
     operations: operationsConfig(environmentName),
-    backend: backendConfig(environmentName),
+    backend: backendConfig(environmentName, capabilities),
     hosting: hostingConfig(environmentName),
     tags: Object.freeze({
       Project: 'HireFlux',
@@ -165,7 +179,11 @@ export function validateEnvironmentConfig(config: HireFluxEnvironmentConfig): vo
   if (!isDeepStrictEqual(config.operations, operationsConfig(environmentName))) {
     throw new Error('Operational retention, lifecycle, throttle, concurrency and budget policy must match the selected environment.');
   }
-  if (!isDeepStrictEqual(config.backend, backendConfig(environmentName))) {
+  if (!Array.isArray(config.backend?.authCapabilities)) {
+    throw new Error('Backend auth capabilities must be an explicit reviewed array.');
+  }
+  const capabilities = resolveCapabilities(environmentName, config.backend.authCapabilities.join(','));
+  if (!isDeepStrictEqual(config.backend, backendConfig(environmentName, capabilities))) {
     throw new Error('Backend auth, secret lifecycle and CORS policy must match the selected environment.');
   }
   if (!isDeepStrictEqual(config.hosting, hostingConfig(environmentName))) {
@@ -188,4 +206,10 @@ export function validateEnvironmentConfig(config: HireFluxEnvironmentConfig): vo
   ) {
     throw new Error('Common tags must match the project and selected environment.');
   }
+}
+
+function resolveCapabilities(environment: EnvironmentName, value: unknown): readonly ('demo' | 'cognito')[] {
+  if (value === undefined || value === 'demo,cognito') return Object.freeze(['demo', 'cognito']);
+  if (environment === 'production' && value === 'cognito') return Object.freeze(['cognito']);
+  throw new Error('Backend auth capabilities require exact demo,cognito or production cognito.');
 }

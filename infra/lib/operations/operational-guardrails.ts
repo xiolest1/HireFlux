@@ -42,7 +42,7 @@ export class OperationalLogs extends Construct {
 
 export class OperationalGuardrails extends Construct {
   public readonly alarms: readonly Alarm[];
-  public readonly dashboard: Dashboard;
+  public readonly dashboard: Dashboard | undefined;
   public readonly budget: CfnBudget;
   public readonly alertTopic: CfnTopic;
 
@@ -101,23 +101,25 @@ export class OperationalGuardrails extends Construct {
       return alarm;
     }));
 
-    this.dashboard = new Dashboard(this, 'OperationalDashboard', {
-      dashboardName: explicitResourceName(config, 'operations'), start: '-PT6H', periodOverride: PeriodOverride.INHERIT,
-    });
-    const graph = (title: string, left: (Metric | MathExpression)[], right: (Metric | MathExpression)[] = []) =>
-      new GraphWidget({ title, left, right, width: 12, height: 6, period: PERIOD });
-    this.dashboard.addWidgets(
-      graph('HTTP API requests and responses', [api('Count'), api('4xx'), api('5xx')]),
-      graph('HTTP API latency (ms)', [api('Latency', 'Average'), api('IntegrationLatency', 'Average')]),
-      graph('Lambda invocations and failures', [lambda('Invocations'), lambda('Errors'), lambda('Throttles')]),
-      new GraphWidget({ title: `Lambda runtime / concurrency (reservation ${config.operations.lambdaReservedConcurrency})`,
-        left: [lambda('Duration', 'p95')], right: [lambda('ConcurrentExecutions', 'Maximum')],
-        rightAnnotations: [{ value: config.operations.lambdaReservedConcurrency, label: 'Reserved concurrency' }],
-        width: 12, height: 6, period: PERIOD }),
-      graph('DynamoDB request throttles and system errors', [throttles, systemErrors]),
-      graph('DynamoDB Query latency (ms) / transaction conflicts',
-        [dynamodb('SuccessfulRequestLatency', 'Query', 'Average')], [dynamodb('TransactionConflict')]),
-    );
+    if (config.operations.dashboardEnabled) {
+      this.dashboard = new Dashboard(this, 'OperationalDashboard', {
+        dashboardName: explicitResourceName(config, 'operations'), start: '-PT6H', periodOverride: PeriodOverride.INHERIT,
+      });
+      const graph = (title: string, left: (Metric | MathExpression)[], right: (Metric | MathExpression)[] = []) =>
+        new GraphWidget({ title, left, right, width: 12, height: 6, period: PERIOD });
+      this.dashboard.addWidgets(
+        graph('HTTP API requests and responses', [api('Count'), api('4xx'), api('5xx')]),
+        graph('HTTP API latency (ms)', [api('Latency', 'Average'), api('IntegrationLatency', 'Average')]),
+        graph('Lambda invocations and failures', [lambda('Invocations'), lambda('Errors'), lambda('Throttles')]),
+        new GraphWidget({ title: `Lambda runtime / concurrency (reservation ${config.operations.lambdaReservedConcurrency})`,
+          left: [lambda('Duration', 'p95')], right: [lambda('ConcurrentExecutions', 'Maximum')],
+          rightAnnotations: [{ value: config.operations.lambdaReservedConcurrency, label: 'Reserved concurrency' }],
+          width: 12, height: 6, period: PERIOD }),
+        graph('DynamoDB request throttles and system errors', [throttles, systemErrors]),
+        graph('DynamoDB Query latency (ms) / transaction conflicts',
+          [dynamodb('SuccessfulRequestLatency', 'Query', 'Average')], [dynamodb('TransactionConflict')]),
+      );
+    }
     this.budget = new CfnBudget(this, 'MonthlyCostBudget', {
       budget: {
         budgetName: explicitResourceName(config, 'monthly-cost'), budgetType: 'COST', timeUnit: 'MONTHLY',

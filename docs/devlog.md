@@ -1,5 +1,109 @@
 # HireFlux development log
 
+## Current documented checkpoint
+
+As of this November 4, 2026 reconciliation, local `main` is
+`ceaca6a892b81f1ac48fd62cb900c5c052c4ddac` plus the uncommitted, locally qualified
+[Phase 7B Batch 3 candidate](phase7b-batch3-local-handoff.md). Production browser
+bindings remain unbound and publication blocked. The latest retained AWS inspection
+on November 4 found the existing 26-resource staging stack UPDATE_COMPLETE and
+registration CLOSED; it did not deploy Batch 3 or accept live account behavior.
+Authorization 4's real two-account acceptance remains incomplete. Build/job metadata,
+source commits, local qualification and deployed backend identity are separate facts.
+These are dated records, not continuous monitoring or new operational authorization.
+
+Recent milestones: [read-only preflight](#2026-11-04--phase-7b-authorization-1-read-only-preflight-completed-conditionally),
+[shared-production direction](#2026-11-03--phase-7-direction-recorded-before-shared-production-implementation),
+[registration closure](#2026-10-27--gate-c-registration-closure-recovered-and-independently-verified),
+and [managed signup](#2026-10-23--phase-5f-managed-signup-and-onboarding-qualified-locally).
+The **Next recommended work** section near the bottom is an earlier historical
+checkpoint, not the current roadmap or permission to resume its operations.
+
+This backfill used Codex-assisted comparison of the existing journal, local Git
+diffs, tracked contracts and sanitized handoffs. Original event dates and test
+results are attributed to those records; no new application qualification or live
+verification was performed for this documentation task. Ignored operational handoffs
+are identified below as locally retained evidence, not public repository links.
+
+## 2026-11-04 — Phase 7B Authorization 1 read-only preflight completed conditionally
+
+**Status: read-only preflight complete; conditional readiness for separately
+authorized preparation only.** The first attempt stopped at 03:25:33 EST because
+the nonrefreshing credential provider could not establish its required 25 seconds
+of remaining validity. Zero of 32 allowed service invocations occurred, including
+zero STS calls; this did not establish the exact expiry or a provider defect.
+After one separately approved owner login, the continuation used 23/32 invocations,
+including one STS and one Cost Explorer query, without repeated service operations
+or transmitted service failures. It found the expected 26 staging resources,
+UPDATE_COMPLETE, and registration CLOSED in Cognito and the backend.
+
+The comparison exposed why fresh deployed-state evidence matters: live Lambda
+code differs from the locally qualified Batch 3 ZIP. Equivalent resolved account
+expressions also differ in the candidate security declarations; only a future real
+change set can establish replacement reporting. Existing transaction IAM component
+permissions were already present; Batch 3 restricts writes rather than repairing
+a demonstrated missing permission. No item or Demo control-policy state was read.
+
+The November 4 13:31:29 EST cost query covered November 1–3, returning an estimated
+whole-account net of about USD0.957. It was delayed service-level evidence, not
+final Bills or precise HireFlux attribution. Alarm OK states with empty action
+lists and a budget with zero notification rules did not prove delivered alerts.
+Runtime/account acceptance, control/rollback containment, actual replacement review
+and launch cost supervision remain gates. Job 9 metadata names `ceaca6a`, not the
+dirty Batch 3 source; served browser bytes were not fetched.
+
+The accepted source/artifact snapshot was rechecked without rerunning tests,
+builds or synthesis. No asset upload, AWS change-set preparation/execution, data
+mutation, hosted journey, commit or push occurred. Evidence is the preserved
+original STOP and final continuation in `.tools/phase7b-live-auth1-20261104/`,
+particularly `handoff.md` and `completed-handoff-final.md`. Conditional readiness
+concerns only a separately approved backend asset and unexecuted staging UPDATE
+preparation; it is not production deployment or Authorization 4 acceptance.
+
+## 2026-11-03 — Phase 7B Batch 3 shared production and offline release qualification
+
+Implemented explicit mixed production capabilities/24-hour TTL, table-scoped
+transaction component IAM with a write LeadingKeys boundary excluding operator
+control, one separately throttled existing Demo POST route, and optional production
+dashboard omission while preserving logs/alarms and staging stateful identities.
+One canonical public binding/header policy now feeds frontend/CDK/rendering, and
+target-specific build projection excludes staging IDs from fictional-production
+artifacts. Stored staging headers preserve root equivalence; root remains unchanged.
+Production remains unbound and its publication guard stops before publication.
+
+Added independent CREATE, complete-source-bound publication and future paired
+activation reviews without changing frozen historical UPDATE reviewers. Built two
+identical current backend ZIPs and passed two cached, network-disabled pinned Linux
+runtime checks. Final full checks: backend 811, frontend 672, infrastructure 164,
+real-artifact CLI 4, script/header 19, and intercepted browser 20 scenarios, plus
+affected lint/types/build/schema checks. Stale inventory assertions were corrected.
+
+Boundary qualification: three initial provider-redirect fixtures unintentionally
+requested the static staging callback. No live API/token/account activity occurred.
+The corrected suite forwarded zero requests. All cloud resources, historical
+ledgers, root policy, prior artifacts and release baselines remain preserved;
+no commit/push/deployment occurred. Source starts at existing clean ceaca6a8,
+including the owner's dnspython/Moto-fixture changes; final work is uncommitted.
+See the [full handoff](phase7b-batch3-local-handoff.md) for exact evidence, limits,
+financial assumptions and separately authorized next steps.
+
+## 2026-11-03 — Dependency patch and concurrent-bootstrap fixture stabilized
+
+**Status: committed source correction, retained by Batch 3.** Commit
+`ceaca6a892b81f1ac48fd62cb900c5c052c4ddac` updated the locked dnspython distribution
+from 2.8.0 to 2.9.0 and strengthened the existing Cognito bootstrap concurrency
+fixture. A four-party barrier now collects four genuinely empty initial snapshots;
+mock reads and transactions share a lock so Moto's intermediate writes/rollback
+cannot masquerade as committed state before the requests race to initialize.
+The convergence and record assertions remain; application code was unchanged.
+
+This extends the October 24 test-fixture repair rather than changing DynamoDB
+concurrency policy. The inspected commit contains no original standalone test
+summary or specific advisory attribution, so neither is reconstructed. Subsequent
+[Batch 3 qualification](phase7b-batch3-local-handoff.md#k-test-results) covers the
+retained source/lock graph; its results are not a newly claimed test run for this
+commit. Evidence is the local commit's two-file diff and the Batch 3 baseline.
+
 ## 2026-11-03 — Phase 7B Batch 2 atomic Demo admission and safe failed cleanup
 
 Added finite versioned Demo issuance policy/counters in the existing table,
@@ -45,6 +149,61 @@ resource mutation, synth, release ZIP, commit, push or deployment occurred.
 Registration remains CLOSED in source/defaults; no live setting was changed or
 re-read. Admission/cleanup remain Batch 2; infrastructure/header/release work
 remains Batch 3. See the [full Batch 1 handoff](phase7b-batch1-local-handoff.md).
+
+## 2026-11-03 — Phase 7 direction recorded before shared-production implementation
+
+**Status: owner-selected architecture, corroborated by the first retained Batch 1
+record.** Option A keeps one production frontend, HTTP API/Lambda and DynamoDB
+table for two independent experiences: isolated signed 24-hour Explore Demo and
+genuine Cognito Personal Accounts. Staging remains a separate environment. Reusing
+the existing identity/session and ownership boundaries avoids an unnecessary second
+Demo backend, duplicated hosting and a separate release/operations path.
+
+Cognito is the mandatory production anchor; registration stays CLOSED by default
+and new Demo issuance requires finite operator admission policy. Neither shared
+infrastructure nor a successful fictional Demo substitutes for persistent-account
+acceptance, protection/recovery or cost controls. The decision preceded the batches;
+it was not itself deployment or live acceptance. The request dates the selection
+to November 2, but no original November 2 decision record was located; November 3
+is the independently retained documentary checkpoint used here. Evidence:
+[Batch 1 decision and scope](phase7b-batch1-local-handoff.md#a-executive-summary)
+and the subsequent [Batch 3 contract](phase7b-batch3-local-handoff.md).
+
+## 2026-10-29 — Phase 6 P1/P2 source checkpoint recorded
+
+**Status: committed locally; deployment not established by Git history.** Commit
+`efcd8afddcde93103637c6476a632245c431a141`, recorded at 23:21:21 EDT, consolidates
+the existing P1/P2 implementation, tests and the two journal entries below across
+33 files. Their qualification counts and browser limitations remain attached to
+those original checkpoints. This commit is source provenance, not a new UX result
+or proof of push, hosted publication or backend deployment. No additional execution
+results are inferred from the commit message or file inventory.
+
+## 2026-10-29 — Authorization 4 remained paused after browser and inbox prerequisites
+
+**Status: real-provider acceptance incomplete.** The October 27 attempt stopped
+at the native browser-control URL-verification boundary. The October 28 assessment
+could not establish independently instrumented A/B browser contexts; unknown
+historical browser traffic was left unknown rather than relabeled zero. A subsequent
+authorized autonomous-prerequisite investigation found installed Playwright
+metadata but no authorized mailbox-read connection for actual email confirmation.
+It did not launch fresh acceptance contexts, reopen signup or substitute admin
+confirmation for the required genuine registration flow.
+
+The lesson was to distinguish available tooling from an executable acceptance
+workflow. Synthetic fixtures and an installed browser framework cannot establish
+email access, OPTIONS-inclusive request accounting, isolated real sessions or
+provider acceptance. Two-account signup/confirmation, persistence/isolation,
+recovery, refresh/logout, export and deletion remained unaccepted; no new
+application defect was demonstrated by these prerequisite stops.
+
+The October 29 recovery performed no AWS or hosted requests, signup, email or
+account operations. Its latest CLOSED observation was still October 27, not a
+fresh October 29 read. Locally retained evidence is the dated blocked handoff in
+`.tools/phase5f-execution3/auth4-20261027/`, browser-capability assessment in
+`auth4-20261028/`, and final autonomous-recovery handoff under
+`auth4-autonomous-prerequisites-20261029T062508Z/` in that same directory.
+The Phase 6 work below did not complete or supersede this acceptance requirement.
 
 ## 2026-10-29 — Phase 6 P2 navigation, first-record guidance and workspace wording
 
@@ -110,6 +269,239 @@ Home composition, authentication, backend/domain behavior and AWS configuration
 were not changed. No dependency installation, AWS/GitHub operation, real account
 or destructive data operation, commit, push or deployment occurred. Changes
 remain uncommitted for owner review; no staging-state re-verification is implied.
+
+## 2026-10-27 — Gate C registration closure recovered and independently verified
+
+**Status: staging registration CLOSED at 13:53:11 EDT; acceptance still incomplete.**
+The initial closure attempt could not transport a template-bearing command exceeding
+65,000 characters through Windows' 32,767-character command-line limit. A neutral
+reproduction produced WinError 206; it did not reconstruct the discarded original
+exception. No closure execution occurred in that stopped attempt. Separately
+qualified file-backed JSON transport reduced the actual command to 389 UTF-16
+units, preserving the exact reviewed request; 32 offline cases covered the repair.
+A later own-lock hash check hit PermissionError before creation. Its narrow approved
+coordination-file correction retained the other preservation guards and fresh lease.
+
+One subsequent create and one execution completed the two-flag closure while
+retaining the deployed backend code. Independent reads found Cognito admin-only
+at 13:53:02, Lambda advertisement false at 13:53:03 and public configuration false
+at 13:53:10; final proof at 13:53:11 confirmed UPDATE_COMPLETE and all 26 resource
+identities preserved. The continuation used 17 service invocations; cumulative
+closure accounting was 24/40 attempts plus one signed-out configuration GET.
+
+The manual supervision deadline had been exceeded; there was no automatic shutdown
+or tester-only signup allowlist, and external registration during the OPEN interval
+remains unknown. Closure did not delete previously created accounts/data or revoke
+existing sessions. Existing sign-in/Demo configuration was preserved, not newly
+accepted through authenticated journeys. Authorization 4 had not run. Evidence:
+the original STOP and final complete handoffs in
+`.tools/phase5f-execution3/gatec-registration-closure-20261027/` and
+`gatec-registration-closure-continuation-20261027/`. These historical transport
+repairs are not instructions to repeat an operation.
+
+## 2026-10-26 — Gate C Authorization 3 opened registration under manual supervision
+
+**Status: staging configuration activated; account acceptance not performed.**
+The reviewed change set was executed exactly once and reached UPDATE_COMPLETE,
+preserving all 26 physical resource identities. A JSON-only acknowledgement decoder
+reported STOP for an operation whose documented success returns no result; the
+exact discarded stdout was not retained. Independent event-token and terminal-stack
+evidence established that the submission had been accepted. The mutation was never
+retried; only permitted observations continued against the preserved ledger and
+deadline.
+
+The conservative manual-window anchor was 12:28:47 EDT, not the measured activation
+instant. First provider OPEN evidence was 12:33:04, Lambda advertisement true at
+12:33:05, and public configuration agreed. The sequence consumed 14/25 service
+invocations plus one public GET, without users, emails, Demo issuance or account
+data operations. Opening signup was a two-hour supervised configuration window,
+not successful registration testing or permission to leave it open. There was no
+automatic closure. Evidence is the Authorization 3 activation handoff under
+`.tools/phase5f-execution3/gatec-authorization3-20261026/`, building on the
+[default-closed registration contract](phase5f-self-service-registration-plan.md).
+
+## 2026-10-26 — Gate C closed-state preparation and Authorization 2 review completed
+
+**Status: artifact published and change set prepared; not executed.** Preparation
+began October 25 by reconciling the 26-resource closed staging baseline and release
+bindings. The candidate backend differed from deployed code only in lifecycle
+comments, with identical parsed AST; it did not justify a separate closed-state
+feature deployment. The bounded OPEN proposal could modify only the existing pool
+policy and Lambda advertisement/code reference. The paired closure would retain
+that code and reverse just the two registration flags, without IAM/table changes.
+
+Tooling stops remained separate from application failures. October 26 remediation
+qualified the canonical preparation path with 49 offline scenarios; a later
+accounting adapter restored ten previously consumed calls rather than resetting
+the allowance. Seven adapter groups passed. At 10:56:53 EDT, Authorization 2 had
+completed one conditional ZIP publication with full-object verification and one
+CREATE_COMPLETE/AVAILABLE change set: two Modify actions, Replacement=False,
+26 cumulative invocations, no execution. Subsequent activation required its own
+authorization and supervision.
+
+Evidence is the October 25 Gate C preparation handoff, October 26 tooling-remediation
+handoff, and final Authorization 2 complete handoff under
+`.tools/phase5f-execution3/` (`gatec-tooling-remediation-20261026/` and
+`gatec-login-recovery-20261026/`). The pinned
+[registration-update contract](../infra/lib/release/registration-update-contract.ts)
+remained distinct from the historical Cognito-introduction reviewer.
+
+## 2026-10-25 — Gate B accepted the hosted Demo path with registration closed
+
+**Status: bounded staging Demo acceptance; not persistent-account acceptance.**
+An earlier expired AWS login stopped the final Applications attempt before browser
+or Demo traffic. After separate owner-assisted renewal, the final journey passed
+at 12:21:41 EDT: hosted landing → Explore Demo → ready Home → populated grouped
+Applications. The checker observed 22 active opportunities, nine rendered previews,
+the expected fictional company/job pairs and valid UUID application links. It did
+not fetch every detail page. The displayed 24-hour expiry was checked; natural
+signed expiry and physical TTL deletion were not retested.
+
+Provider, direct public and browser configuration still reported registration
+CLOSED. Final cumulative Gate B use was 18/18 selected GETs, 42/44 application API
+requests including OPTIONS, 3/3 fictional demos and 7/12 build observations. The
+last journey used three selected GETs, fourteen API requests and one Demo, with
+zero console, page, API or request-guard errors. These ceilings cover the recorded
+gate, not every incidental browser asset request or future authorization.
+
+No persistent user, real signup or authenticated account journey was accepted.
+The final authoritative evidence is locally retained as
+`.tools/phase5f-execution3/HireFlux-GateB-Acceptance-and-AWS-Login-Recovery-Handoff-2026-10-25.md`;
+the similarly named live-Applications handoff records the earlier authentication
+STOP. The [registration plan](phase5f-self-service-registration-plan.md) remains
+the source contract, not proof that the later account-acceptance gate passed.
+
+## 2026-10-25 — Gate B browser evidence and Applications readiness repaired
+
+**Status: October 24–25 checker qualification complete; live acceptance remained pending.**
+An early whole-body, case-sensitive predicate could reject CSS-uppercase Home text and
+failed to retain enough per-assertion evidence. Controlled fixtures established
+that failure mode, not the exact cause of the original live STOP. Independent
+scoped observations, explicit FAIL versus NOT VERIFIED outcomes and screenshots
+before stopping replaced the compound guess; 25 offline cases covered positive,
+negative and transport behavior without changing application source.
+
+The October 25 Applications continuation exposed a second measurement error:
+the heading could render before records arrived, and the checker assumed company
+text lived inside the job-title link. The earlier screenshot preceded the actual
+API response by about 84 ms. Thirteen focused cases qualified waiting for populated,
+empty or explicit error outcomes and verifying the real record/link structure.
+Old stops and source hashes remained preserved. Neither HTTP 200, a disappeared
+skeleton nor correct heading text alone was accepted as proof of usable records.
+
+This agent-assisted checker investigation improved evidence collection rather
+than disguising uncertainty as a product fix. It did not prove the original live
+cause or grant another browser/Demo attempt. Evidence is the dated browser-checker
+repair and Applications-readiness-correction handoffs in
+`.tools/phase5f-execution3/`; final hosted acceptance is recorded separately above.
+
+## 2026-10-24 — Managed-signup publication stopped on CI, then fixture recovery passed
+
+**Status: source published and CI recovered; Gate B browser acceptance still pending.**
+The approved 29-file managed-signup release
+`d0c780d09c8519e644d79ec9b5c5691950bdc51d` was committed at 06:10 EDT and then pushed.
+Amplify job 5 succeeded, but the backend concurrency test failed in CI, so the gate stopped before its
+browser/Demo journey. Publishing backend/infra source did not apply those resources
+or deploy the candidate backend ZIP. Registration remained CLOSED.
+
+Earlier Gate A had reconciled the unchanged 26-resource staging baseline and
+CLOSED configuration. Its financial pause was superseded only after an approved
+bounded cost review cleared this rollout with qualifications and existing manual
+controls. That inspection was neither a backend deployment nor ongoing cost approval.
+
+A controlled reproduction showed Moto rollback restoring an old whole-table
+snapshot over another request's successful bootstrap. This explained a mock
+isolation failure without asserting the exact historical CI interleaving. The
+test-only correction serialized each whole mock transaction while four HTTP
+requests and read snapshots still raced; full response equality and the three-record
+assertion stayed intact. Exact-case, 32-case module and six related bootstrap
+checks passed, with deliberate bad-response/missing-record controls retaining
+failure sensitivity.
+
+The separately approved one-file commit
+`f62d762b23ec86ebcd1492980d8cf83eee6bae54` at 14:56 EDT triggered successful Amplify
+job 6 and all five required exact-revision CI jobs in run 40123002064. The failed
+run was preserved, not relabeled or rerun. No detailed remote suite count is
+reconstructed from job conclusions. Evidence: local commit diffs and the CI
+diagnosis, fixture-repair and recovery-publication handoffs in
+`.tools/phase5f-execution3/`. A test-only push still triggered a real hosting build
+because staging auto-build was enabled; source publication was an operational event.
+
+## 2026-10-23 — Phase 5F managed signup and onboarding qualified locally
+
+**Status: locally implemented; provider acceptance and rollout separate.** The
+owner-selected public experience needed Create Account alongside Explore Demo and
+returning Sign In. Reused Cognito managed signup in the existing Essentials pool
+rather than introducing passwords, a custom signup API or another identity system.
+Both client and controller gate signup on validated capability and reuse the SDK's
+state/nonce/S256 PKCE transaction. Duplicate clicks share one attempt; conflicting,
+stale or canceled intents cannot redirect. Delayed confirmation preserves the
+five-minute transaction lifetime and offers fresh Sign In, without replaying an
+expired code or promising that registration failed.
+
+Landing and empty-account Home distinguish saved personal work from a fictional
+Demo with no automatic transfer. One default-false infrastructure setting controls
+provider signup policy and backend advertisement together; the historical release
+rejected production opening. Focused backend tests distinguish supported self-signup
+identity mappings from unsafe administrative-like mappings before sensitive erasure.
+No new identity resolver or provider-admin permission was added.
+
+The accepted local qualification records 632 backend, 544 frontend, 144 infra,
+12 hosting and 20 fake-provider browser cases, four offline CLI cases, schema
+parity and reproducible ZIP/isolated runtime checks. A separately approved same-major
+dependency repair patched Zod, Vite, Vitest/matching internals and transitive undici
+without expanding inventory. npm 10 lock generation hit a peer-resolution crash;
+isolated npm 11.21.1 generated the minimal lock, then existing npm 10.9.3 install
+compatibility and byte-idempotent regeneration passed. Final recorded audits were
+clean; fixtures still did not establish actual Cognito confirmation/recovery.
+
+Evidence: the [managed-signup plan and implementation record](phase5f-self-service-registration-plan.md),
+the subsequent `d0c780d` diff, and the accepted Execution 2 handoff in
+`.tools/phase5f-local/`. This was local qualification, not staging registration opening.
+
+## 2026-10-23 — Phase 5E deployed Cognito and frontend; invitation acceptance paused
+
+**Status: backend/Cognito and frontend deployed; authenticated-user acceptance
+incomplete.** After the separate artifact/change-set preparation, one reviewed
+UPDATE reached UPDATE_COMPLETE, preserving the original 22 physical identities
+and verifying four Cognito additions. The accepted handoff records 69 final
+configuration checks. One fast-forward push then published the previously committed
+`ff18c6762aa1a1f5f423667659cfae83f74f786e`; Amplify job 4 built, deployed and verified
+that exact revision. Seven selected public configuration/static probes and limited
+signed-out browser initialization passed. Sign In and Explore Demo were not clicked
+in that publication check; prior mock-provider test counts were not new live results.
+
+The next invitation exercise encountered owner-input/tooling constraints and was
+paused at the owner's direction before users, invitation emails or authentication
+journeys were created. That was not a demonstrated Cognito application failure.
+The owner selected self-service signup/onboarding planning instead of making admin
+invitations the public entry flow. Unfinished two-user isolation, persistence,
+recovery, refresh, export and deletion acceptance carried forward into Phase 5F;
+deployment completion did not discharge those requirements.
+
+Evidence: local release history, the tracked [Gate 0 release boundary](phase5e-readiness-gate0.md),
+[account lifecycle contract](phase5d-account-lifecycle-handoff.md), and sanitized
+October 23 Execution 4/5 handoffs under `.tools/phase5e-readiness/`. The subsequent
+registration implementation and its separately authorized deployment gates are
+recorded above; no private input or identity material is reproduced here.
+
+## 2026-10-21 — Phase 5E technical preflight and local release identity established
+
+**Status: technical inspection complete and source committed; deployment not yet
+authorized at that checkpoint.** Authentication-path investigation separated a
+local nonrefreshing snapshot-validity guard from claims about the owner's broader
+login session. The completed bounded continuation used 15/15 metadata invocations
+to reconcile identity, staging configuration, IAM and the candidate provider path.
+Financial readiness for mutations still required a separate decision; a filtered
+budget or delayed estimate could not establish usable promotional credit.
+
+The qualified 5C/5D/5D.1 source and reviewed Gate 0 documentation were finalized
+locally as `ff18c6762aa1a1f5f423667659cfae83f74f786e` at 19:45:55 EDT. No new product
+feature, test campaign, artifact build or cloud deployment is implied by that
+commit. Its later October 23 push/deployment is a separate historical event.
+Evidence: local Git history, the [Gate 0 report](phase5e-readiness-gate0.md) and
+[authentication-path diagnosis](phase5e-auth-path-diagnosis.md); original stopped
+receipts remain preserved rather than replaced by the successful continuation.
 
 ## 2026-10-20 — Phase 5D.1 CDK security remediation and release requalification
 

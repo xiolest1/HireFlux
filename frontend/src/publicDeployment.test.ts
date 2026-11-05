@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { exactOrigin, isLoopbackOrigin, resolvePublicDeployment, reviewedPublicDeployments, stagingPublicDeployment, type PublicDeploymentBinding, type PublicDeploymentBindings } from "./publicDeployment";
+import { exactOrigin, isLoopbackOrigin, resolvePublicDeployment, reviewedPublicDeployments, stagingPublicDeployment as reviewedStaging, type PublicDeploymentBinding, type PublicDeploymentBindings } from "./publicDeployment";
+
+const stagingPublicDeployment = (() => {
+  if (!reviewedStaging) throw new Error("Expected the normal staging test binding.");
+  return reviewedStaging;
+})();
 
 const fictionalProduction: PublicDeploymentBinding = {
   environment: "production",

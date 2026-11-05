@@ -5,7 +5,20 @@ import { Template } from 'aws-cdk-lib/assertions';
 import { loadEnvironmentConfig } from '../lib/config/environment';
 import { HireFluxStack } from '../lib/hireflux-stack';
 import { FRONTEND_BUILD_SPEC, SPA_REWRITE_SOURCE } from '../lib/hosting/frontend-hosting';
+import { PRODUCTION_FRONTEND_BUILD_SPEC } from '../lib/hosting/frontend-hosting';
 import { fixtureArtifact } from './fixture';
+import path from 'node:path';
+import { readFileSync } from 'node:fs';
+
+const root = path.resolve(__dirname, '../../..');
+const { load } = require(path.join(root, 'frontend/node_modules/js-yaml')) as { load(template: string): any };
+function parseHostingHeaders(template: string): Record<string, string> {
+  const parsed = load(template);
+  assert.equal(parsed.applications[0].appRoot, 'frontend');
+  const headers = Object.fromEntries(parsed.applications[0].customHeaders[0].headers.map(({ key, value }: { key: string; value: string }) => [key, value]));
+  headers['Content-Security-Policy'] = headers['Content-Security-Policy'].split(';').map((part: string) => part.trim().replace(/\s+/g, ' ')).sort().join('; ');
+  return headers;
+}
 
 const appId = 'FrontendHostingApp3EC0FC15';
 const branchId = 'FrontendHostingBranchB5734B41';
@@ -84,8 +97,15 @@ for (const environment of ['staging', 'production'] as const) {
     assert.deepEqual(app.Properties.AutoBranchCreationConfig, { EnableAutoBranchCreation: false, EnablePullRequestPreview: false });
     assert.equal(app.Properties.EnableBranchAutoDeletion, false);
     assert.deepEqual(app.Properties.CustomRules, [{ Source: SPA_REWRITE_SOURCE, Target: '/index.html', Status: '200' }]);
-    assert.equal(app.Properties.BuildSpec, FRONTEND_BUILD_SPEC);
-    for (const property of ['CustomHeaders', 'IAMServiceRole', 'ComputeRoleArn', 'BasicAuthConfig', 'OauthToken']) assert.equal(app.Properties[property], undefined);
+    assert.equal(app.Properties.BuildSpec, environment === 'staging' ? FRONTEND_BUILD_SPEC : PRODUCTION_FRONTEND_BUILD_SPEC);
+    for (const property of ['IAMServiceRole', 'ComputeRoleArn', 'BasicAuthConfig', 'OauthToken']) assert.equal(app.Properties[property], undefined);
+    const headers = parseHostingHeaders(app.Properties.CustomHeaders);
+    if (environment === 'staging') {
+      assert.deepEqual(headers, parseHostingHeaders(readFileSync(path.join(root, 'customHttp.yml'), 'utf8')));
+    } else {
+      assert.ok(headers['Content-Security-Policy']!.split('; ').includes("connect-src 'self'"));
+      assert.doesNotMatch(app.Properties.CustomHeaders, /execute-api|amazoncognito|localhost/);
+    }
     const branch = template.Resources[branchId];
     assert.deepEqual(branch.Properties.AppId, { 'Fn::GetAtt': [appId, 'AppId'] });
     assert.equal(branch.Properties.BranchName, 'main');
@@ -152,6 +172,11 @@ test('hosting build stays frontend-only, lockfile-based and on the validated Nod
   assert.match(FRONTEND_BUILD_SPEC, /- npm run build/);
   assert.match(FRONTEND_BUILD_SPEC, /baseDirectory: dist/);
   assert.doesNotMatch(FRONTEND_BUILD_SPEC, /backend:|buildPath:|npm install|npm update|latest|amplifyPush|cdk |aws |python|pip |CustomHeaders/);
+});
+
+test('new production builds require the explicit publication guard while staging build stays identical', () => {
+  assert.equal(PRODUCTION_FRONTEND_BUILD_SPEC.replace('\n            - node scripts/verify-hosted-build.mjs --publication --environment production', ''), FRONTEND_BUILD_SPEC);
+  assert.match(PRODUCTION_FRONTEND_BUILD_SPEC, /--publication --environment production/);
 });
 
 test('two explicitly bound environment stacks own separate App/Branch resources and only local backend references', () => {

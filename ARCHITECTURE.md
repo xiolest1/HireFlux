@@ -1,5 +1,19 @@
 # HireFlux architecture
 
+**Current local source checkpoint — Phase 7B Batch 3, November 3, 2026:**
+Option A is represented offline: a shared production frontend/API/Lambda/table
+supports independent signed 24-hour Demo and genuine Cognito Personal identities;
+staging remains separate. Production registration is configured CLOSED, missing
+admission policy pauses new Demo issuance, and retained/protected production
+storage is unchanged. Exact production browser identities remain unbound and
+publication is blocked pending reviewed binding/header migration. This is local
+qualification, not a new deployment or fresh staging inventory. See the
+[Batch 3 handoff](docs/phase7b-batch3-local-handoff.md), building on
+[Batch 1 trust](docs/phase7b-batch1-local-handoff.md) and
+[Batch 2 admission](docs/phase7b-batch2-local-handoff.md).
+Earlier checkpoint prose below is historical; it does not replace this source
+contract or authorize live operations.
+
 **Local source checkpoint — Phase 5D:** additive demo/Cognito authentication and
 code/PKCE sessions now include recent-authenticated full JSON export and confirmed
 account deletion. The existing bounded erasure engine strongly verifies DELETED

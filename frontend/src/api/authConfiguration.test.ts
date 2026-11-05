@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { STAGING_COGNITO_ORIGIN } from "../securityHeaders";
 import { ApiError } from "./client";
-import { stagingPublicDeployment, type PublicDeploymentBinding, type PublicDeploymentBindings } from "../publicDeployment";
+import { stagingPublicDeployment as reviewedStaging, type PublicDeploymentBinding, type PublicDeploymentBindings } from "../publicDeployment";
 import {
   authConfigurationSchema,
   isLoopbackOrigin,
@@ -9,6 +9,11 @@ import {
   loadAuthConfiguration,
   validateAuthConfiguration,
 } from "./authConfiguration";
+
+const stagingPublicDeployment = (() => {
+  if (!reviewedStaging) throw new Error("Expected the normal staging test binding.");
+  return reviewedStaging;
+})();
 
 const LOCAL_SITE = "http://localhost:5173";
 const LOCAL_API = "http://localhost:8000";

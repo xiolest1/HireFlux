@@ -16,6 +16,11 @@ def main() -> None:
     parser.add_argument(
         "--artifact", type=Path, default=ROOT / "artifacts/lambda/hireflux-backend-lambda.zip"
     )
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="Require the pinned image to exist locally; never pull.",
+    )
     args = parser.parse_args()
     artifact = args.artifact.resolve(strict=True)
     probe = Path(__file__).with_name("lambda_artifact_probe.py").resolve(strict=True)
@@ -24,6 +29,7 @@ def main() -> None:
         [
             "docker",
             "run",
+            *(["--pull", "never"] if args.offline else []),
             "--rm",
             "--platform",
             "linux/amd64",

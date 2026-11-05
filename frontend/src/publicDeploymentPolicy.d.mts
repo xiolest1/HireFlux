@@ -1,0 +1,10 @@
+import type { PublicDeploymentBinding, PublicDeploymentBindings } from "./publicDeployment";
+export const reviewedPublicDeployments: PublicDeploymentBindings;
+export const stagingPublicDeployment: PublicDeploymentBinding | null;
+export function exactOrigin(value: string): string;
+export function isLoopbackOrigin(value: string): boolean;
+export function validBinding(binding: PublicDeploymentBinding, key: string): boolean;
+export function resolvePublicDeployment(siteOrigin: string, apiOrigin: string, compiledSiteOrigin: string | undefined, bindings?: PublicDeploymentBindings): PublicDeploymentBinding | null;
+export function createPolicyHeaders(apiOrigins: readonly string[], options?: { allowInlineScripts?: boolean; includeTransportSecurity?: boolean; cognitoOrigin?: string | null; hosted?: boolean }): Record<string, string>;
+export function hostedHeaders(environment: "staging" | "production", options?: { bindings?: PublicDeploymentBindings; legacyStaging?: boolean }): Record<string, string>;
+export function renderHostedHeaders(environment: "staging" | "production", options?: { bindings?: PublicDeploymentBindings; legacyStaging?: boolean }): string;

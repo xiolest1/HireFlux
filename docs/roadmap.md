@@ -2,20 +2,23 @@
 
 ## November 3 local implementation checkpoint
 
-[Phase 7B Batch 2](phase7b-batch2-local-handoff.md) adds finite atomic new-Demo
-admission, independent operator pause semantics and conditional failed-provisioning
-cleanup. This is local source work only. The next bounded implementation is Batch 3
-infrastructure/header/release qualification under separate authorization; no AWS
-control initialization, deployment or later roadmap phase begins automatically.
+[Phase 7B Batch 3](phase7b-batch3-local-handoff.md) locally qualifies shared
+production CDK/IAM, Demo route throttling, per-app headers, target-specific build
+projection, actual backend ZIP/Linux runtime and future release review contracts.
+[Batch 1](phase7b-batch1-local-handoff.md) trust and
+[Batch 2](phase7b-batch2-local-handoff.md) atomic admission are preserved.
+The owner-selected Option A remains one shared production site/API/Lambda/table
+with separate staging. Registration is configured CLOSED; new issuance remains
+default-paused; production identities remain unbound/unpublished. Root header
+retirement, real bindings, staging compatibility, cloud provisioning, recovery,
+operations and genuine account acceptance all require separate approval.
 
-The owner selected Option A: shared production frontend/API/Lambda/table with
-independent anonymous Demo and real Cognito Personal Accounts; staging remains
-separate. [Phase 7B Batch 1](phase7b-batch1-local-handoff.md) implements the local
-production capability and exact frontend trust gates. Production remains unbound
-and unpublished. Batch 2 admission/cleanup and Batch 3 infrastructure/header/release
-qualification require separate authorization, followed by the established Phase
-7C–7G gates. This note adds no phase and does not accept unverified live behavior.
-The dated entries below remain historical rather than current AWS inventory.
+This adds no phase and does not change the established Phase 7B–7G order.
+Batch 3 is local engineering evidence. No later phase begins automatically.
+The full handoff explicitly records three unintended static staging callback GETs
+from a failed browser fixture; the corrected all-intercepted suite passed with
+zero forwarded requests. No live application API/account activity resulted.
+The dated entries below remain historical, not fresh AWS inventory.
 
 The October 23 Phase 5E backend/Cognito and frontend deployments are complete at
 `ff18c6762aa1a1f5f423667659cfae83f74f786e`; live authenticated-user acceptance

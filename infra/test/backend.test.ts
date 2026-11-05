@@ -5,7 +5,7 @@ import { Template } from 'aws-cdk-lib/assertions';
 import { loadEnvironmentConfig } from '../lib/config/environment';
 import { HireFluxStack } from '../lib/hireflux-stack';
 import { fixtureArtifact } from './fixture';
-import { REVIEWED_RESOURCES } from './resource-inventory';
+import { reviewedResources } from './resource-inventory';
 import { HTTP_ACCESS_LOG_FORMAT } from '../lib/operations/operational-guardrails';
 
 const ids = {
@@ -19,8 +19,9 @@ const ids = {
 };
 const getAtt = (id: string) => ({ 'Fn::GetAtt': [id, 'Arn'] });
 const ref = (id: string) => ({ Ref: id });
-const itemActions = ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem',
-  'dynamodb:BatchWriteItem', 'dynamodb:ConditionCheckItem'];
+const readActions = ['dynamodb:GetItem', 'dynamodb:ConditionCheckItem'];
+const writeActions = ['dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem', 'dynamodb:BatchWriteItem'];
+const writeKeys = ['USER#*', 'DEMO_IDEMPOTENCY#*', 'DEMO_ADMISSION#DAY#*', 'DEMO_ADMISSION#MINUTE#*'];
 
 for (const environment of ['staging', 'production'] as const) {
   const config = loadEnvironmentConfig(environment);
@@ -28,7 +29,7 @@ for (const environment of ['staging', 'production'] as const) {
   const json = Template.fromStack(stack).toJSON();
   const resources = json.Resources;
   test(`${environment} contains only the reviewed resource families and stable logical identities`, () => {
-    assert.deepEqual(Object.fromEntries(Object.entries(resources).map(([id, resource]: [string, any]) => [id, resource.Type])), REVIEWED_RESOURCES);
+    assert.deepEqual(Object.fromEntries(Object.entries(resources).map(([id, resource]: [string, any]) => [id, resource.Type])), reviewedResources(environment));
     assert.deepEqual(json.Outputs ?? {}, {});
     for (const construct of [stack.backendFunction, stack.httpApi, stack.backend.executionRole,
       stack.backend.cursorSecret, stack.backend.demoSessionSecret]) {
@@ -57,9 +58,11 @@ for (const environment of ['staging', 'production'] as const) {
       'CORS_ALLOWED_ORIGINS', 'CURSOR_SIGNING_SECRET_ARN', 'DEMO_SESSION_SIGNING_SECRET_ARN', 'LAMBDA_CORS_POLICY',
       'MAX_SYNC_EXPORT_BYTES', 'MAX_SYNC_EXPORT_WORK_SECONDS', 'ACCOUNT_ERASURE_MAX_SECONDS_PER_REQUEST',
       'AUTH_CAPABILITIES', 'COGNITO_USER_POOL_ID', 'COGNITO_APP_CLIENT_ID', 'COGNITO_DOMAIN',
-      'COGNITO_SELF_REGISTRATION_ENABLED', 'PERSISTENT_ACCOUNT_MANAGEMENT_ENABLED'].sort());
+      'COGNITO_SELF_REGISTRATION_ENABLED', 'PERSISTENT_ACCOUNT_MANAGEMENT_ENABLED', 'DEMO_SESSION_TTL_HOURS'].sort());
     assert.equal(variables.ENVIRONMENT, environment);
     assert.equal(variables.AUTH_MODE, environment === 'staging' ? 'demo' : 'cognito');
+    assert.equal(variables.AUTH_CAPABILITIES, 'demo,cognito');
+    assert.equal(variables.DEMO_SESSION_TTL_HOURS, '24');
     assert.deepEqual(variables.DYNAMODB_TABLE_NAME, ref(ids.table));
     assert.deepEqual(variables.CURSOR_SIGNING_SECRET_ARN, ref(ids.cursor));
     assert.deepEqual(variables.DEMO_SESSION_SIGNING_SECRET_ARN, ref(ids.demo));
@@ -86,7 +89,11 @@ for (const environment of ['staging', 'production'] as const) {
     const policy = resources[ids.policy].Properties;
     assert.deepEqual(policy.Roles, [ref(ids.role)]);
     assert.deepEqual(policy.PolicyDocument.Statement, [
-      { Effect: 'Allow', Action: itemActions, Resource: getAtt(ids.table) },
+      { Effect: 'Allow', Action: readActions, Resource: getAtt(ids.table) },
+      { Effect: 'Allow', Action: writeActions, Resource: getAtt(ids.table), Condition: {
+        'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': writeKeys },
+        Null: { 'dynamodb:LeadingKeys': 'false' },
+      } },
       { Effect: 'Allow', Action: 'dynamodb:Query', Resource: [getAtt(ids.table),
         ...['GSI1', 'GSI2', 'GSI3'].map((index) => ({ 'Fn::Join': ['', [getAtt(ids.table), `/index/${index}`]] }))] },
       { Effect: 'Allow', Action: 'secretsmanager:GetSecretValue', Resource: [ref(ids.cursor), ref(ids.demo)] },
@@ -135,6 +142,9 @@ for (const environment of ['staging', 'production'] as const) {
       AccessLogSettings: { DestinationArn: getAtt('OperationalLogsHttpApiAccessLogs3515ABA0'), Format: HTTP_ACCESS_LOG_FORMAT },
       DefaultRouteSettings: { DetailedMetricsEnabled: false,
         ThrottlingRateLimit: config.operations.apiThrottleRate, ThrottlingBurstLimit: config.operations.apiThrottleBurst },
+      RouteSettings: { 'POST /api/v1/demo-sessions': {
+        DetailedMetricsEnabled: false, ThrottlingRateLimit: 1, ThrottlingBurstLimit: 2,
+      } },
     });
     assert.ok(resources[ids.function].Properties.Timeout * 1000 < resources[ids.integration].Properties.TimeoutInMillis);
     assert.deepEqual(resources[ids.permission].Properties, {
@@ -142,6 +152,13 @@ for (const environment of ['staging', 'production'] as const) {
       SourceArn: { 'Fn::Join': ['', ['arn:', ref('AWS::Partition'), ':execute-api:us-east-1:',
         ref('AWS::AccountId'), ':', ref(ids.api), '/*/*']] },
     });
+    const demoRoute = resources.BackendApiDemoIssuanceRoute3494DE53.Properties;
+    assert.deepEqual(demoRoute, { ApiId: ref(ids.api), AuthorizationType: 'NONE',
+      RouteKey: 'POST /api/v1/demo-sessions', Target: resources[ids.route].Properties.Target });
+    assert.equal(Object.values(resources).filter((r: any) => r.Type === 'AWS::ApiGatewayV2::Integration').length, 1);
+    assert.equal(Object.values(resources).filter((r: any) => r.Type === 'AWS::Lambda::Permission').length, 1);
+    assert.equal(Object.values(resources).filter((r: any) => r.Type === 'AWS::ApiGatewayV2::Route').length, 2);
+    assert.ok(!Object.values(resources).some((r: any) => r.Type === 'AWS::ApiGatewayV2::Authorizer'));
   });
   test(`${environment} gateway and runtime CORS share the exact bearer-client contract`, () => {
     const gateway = resources[ids.api].Properties.CorsConfiguration;

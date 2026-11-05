@@ -7,6 +7,7 @@ import { App } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { composeEnvironment } from '../build/lib/app.js';
 import { assertSchemaParity } from '../build/lib/data/schema-parity.js';
+import { reviewedResourceCount } from '../build/test/resource-inventory.js';
 
 const { values } = parseArgs({ options: { schema: { type: 'string' } } });
 assert.ok(values.schema, 'Supply --schema pointing to a fresh backend schema export.');
@@ -22,7 +23,7 @@ for (const environment of ['staging', 'production']) {
       context: { environment, ...(candidate ? { backendArtifact: candidate } : {}) } }));
     const template = Template.fromStack(stack);
     const resources = template.toJSON().Resources;
-    assert.equal(Object.keys(resources).length, 29, 'Unexpected topology and operational resource inventory.');
+    assert.equal(Object.keys(resources).length, reviewedResourceCount(environment), 'Unexpected topology and operational resource inventory.');
     const tables = template.findResources('AWS::DynamoDB::Table');
     assert.equal(Object.keys(tables).length, 1, 'Exactly one DynamoDB table is required.');
     const [logicalId, table] = Object.entries(tables)[0];

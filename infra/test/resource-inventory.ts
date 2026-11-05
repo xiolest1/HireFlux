@@ -15,6 +15,7 @@ export const REVIEWED_RESOURCES = Object.freeze({
   BackendApiHttpApiDefaultRouteBackendIntegrationPermission521AD465: 'AWS::Lambda::Permission',
   BackendApiHttpApiDefaultRoute408A2CCF: 'AWS::ApiGatewayV2::Route',
   BackendApiHttpApiDefaultStage89B5186D: 'AWS::ApiGatewayV2::Stage',
+  BackendApiDemoIssuanceRoute3494DE53: 'AWS::ApiGatewayV2::Route',
   OperationsOperationalAlerts7AC1A668: 'AWS::SNS::Topic',
   OperationsOperationalAlertSubscription953AAEA9: 'AWS::SNS::Subscription',
   OperationsOperationalAlertPolicy4A085B4E: 'AWS::SNS::TopicPolicy',
@@ -30,4 +31,14 @@ export const REVIEWED_RESOURCES = Object.freeze({
   CognitoAuthDomain0075BD90: 'AWS::Cognito::UserPoolDomain',
   CognitoAuthManagedLoginBranding8935A739: 'AWS::Cognito::ManagedLoginBranding',
 });
-export const REVIEWED_RESOURCE_COUNT = 29;
+export const REVIEWED_RESOURCE_COUNT = 30;
+
+export function reviewedResources(environment: 'staging' | 'production'): Readonly<Record<string, string>> {
+  return environment === 'staging' ? REVIEWED_RESOURCES : Object.fromEntries(
+    Object.entries(REVIEWED_RESOURCES).filter(([id]) => id !== 'OperationsOperationalDashboard098A469E'),
+  );
+}
+
+export function reviewedResourceCount(environment: 'staging' | 'production'): number {
+  return Object.keys(reviewedResources(environment)).length;
+}

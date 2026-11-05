@@ -1,5 +1,59 @@
 # HireFlux infrastructure
 
+## Phase 7B Batch 3 current local contract — November 3, 2026
+
+The current source represents Option A: one production site/API/Lambda/table,
+independent signed Demo and Cognito Personal identities, with separate staging.
+`AUTH_MODE=cognito`, explicit `AUTH_CAPABILITIES=demo,cognito`, TTL 24 hours and
+closed registration are production defaults. Explicit production
+`-c productionAuthCapabilities=cognito` deliberately excludes Demo; it does not
+enable issuance. Missing deployed admission policy pauses new Demo creation.
+No startup creates or modifies that operator-controlled policy.
+
+Both environments now have an explicit `POST /api/v1/demo-sessions` route using
+the existing Lambda integration, with best-effort 1 RPS / burst 2. Global staging
+10/20 and production 20/40, concurrency 5/10, 1024 MB / 15 seconds, integration
+20 seconds, managed CORS and existing `$default` routing remain unchanged.
+IAM grants transaction component actions on the table; write LeadingKeys exclude
+the operator CONTROL partition. See the full handoff for the exact action scope
+and the required future live IAM qualification.
+
+Staging has 30 declarations (27 with blank notification email); production has
+29 (26 blank), because only staging retains the dashboard. Both keep two finite
+log groups and five alarms. Production storage remains PITR/protected/Retain.
+All pre-existing staging logical IDs and lifecycle settings are preserved.
+
+Shared public binding/header authority lives in
+`frontend/src/deployment-targets.json` and `publicDeploymentPolicy.mjs`.
+Production remains unbound. Root `customHttp.yml` remains unchanged/authoritative;
+stored staging App headers are equivalent to it, including the historical regional
+API source solely during transition. The production App uses restrictive unbound
+headers and its BuildSpec runs a publication guard. Root retirement and real
+production binding require separately approved migration and delivered-header checks.
+
+The current qualified backend is
+`.tools/phase7b-batch3-20261103/hireflux-backend-candidate.zip` with matching
+manifest, SHA-256 `08933f7b30edc158e09ac2528bc6c66554087a6706694bcf8f0e7a320da45066`.
+Use this explicit `backendArtifact` context or
+`HIREFLUX_QUALIFIED_BACKEND_ARTIFACT` for candidate CLI/parity checks. Local CLI
+remains credential-isolated and lookup-disabled; a process-inherited
+`NODE_OPTIONS=--require=.../build/test/block-network.js` also blocks child networking.
+No AWS profile belongs in a local synth command.
+
+`lib/release/shared-production-contract.ts` adds separate CREATE, actual-bound
+publication, and target-bound future activation reviewers. Tuple consistency alone
+is not publication qualification. Actual publication verifies complete nonignored
+Git source inventory/bytes, HEAD, locks, package, template, IAM, exact binding,
+headers, frontend contents and scanner receipt. It rejects the current unbound
+target. Future paired activation requires exact deployed account/resource evidence
+and prerequisites; normal production signup remains rejected. Frozen historical
+UPDATE/opening reviewers remain unchanged and are not repurposed for this release.
+
+See the [full Batch 3 handoff](../docs/phase7b-batch3-local-handoff.md) for evidence,
+safe staging/header sequence and remaining live gates. No publication or cloud
+change is authorized by these local checks. Earlier descriptions below are dated
+historical checkpoints, including their resource counts and prior artifacts.
+
 Recorded staging includes the [Phase 5D](../docs/phase5d-account-lifecycle-handoff.md)
 Cognito foundation deployed in Phase 5E at release
 `ff18c6762aa1a1f5f423667659cfae83f74f786e`. Actual authenticated-user acceptance is

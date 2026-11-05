@@ -52,7 +52,7 @@ for (const environment of ['staging', 'production'] as const) {
     const domain = resources.CognitoAuthDomain0075BD90.Properties.Domain;
     assert.equal(domain, environment === 'staging' ? 'hireflux-staging-9465-use1-20261020' : 'hireflux-production-111111119465-use1-20261020');
     const vars = resources[FUNCTION_ID].Properties.Environment.Variables;
-    assert.equal(vars.AUTH_CAPABILITIES, environment === 'staging' ? 'demo,cognito' : 'cognito');
+    assert.equal(vars.AUTH_CAPABILITIES, 'demo,cognito');
     assert.equal(vars.PERSISTENT_ACCOUNT_MANAGEMENT_ENABLED, 'true');
     assert.equal(vars.COGNITO_SELF_REGISTRATION_ENABLED, 'false');
     assert.equal(JSON.stringify(resources.BackendApiHttpApiB4B1202A.Properties.CorsConfiguration).includes('amazoncognito'), false);

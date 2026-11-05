@@ -109,6 +109,26 @@ test('backend configuration rejects cross-environment auth, secret lifecycle and
   }
 });
 
+test('shared production keeps Cognito mandatory and allows only explicit reviewed capability sets', () => {
+  assert.deepEqual(loadEnvironmentConfig('production').backend.authCapabilities, ['demo', 'cognito']);
+  const personalOnly = loadEnvironmentConfig('production', undefined, undefined, 'cognito');
+  assert.equal(personalOnly.backend.authMode, 'cognito');
+  assert.deepEqual(personalOnly.backend.authCapabilities, ['cognito']);
+  assert.equal(personalOnly.backend.demoSessionTtlHours, 24);
+  assert.equal(personalOnly.selfRegistrationEnabled, false);
+  for (const value of ['', 'demo', 'local', 'cognito,demo', 'demo,demo', 'cognito,cognito', 'other', ['cognito'], true]) {
+    assert.throws(() => loadEnvironmentConfig('production', undefined, undefined, value), /capabilities/);
+  }
+  assert.throws(() => loadEnvironmentConfig('staging', undefined, undefined, 'cognito'), /only.*production/);
+  const shared = loadEnvironmentConfig('production');
+  for (const backend of [
+    { ...shared.backend, authMode: 'demo' as const },
+    { ...shared.backend, authCapabilities: ['demo'] as any },
+    { ...shared.backend, authCapabilities: ['demo', 'cognito', 'demo'] as any },
+    { ...shared.backend, demoSessionTtlHours: 48 as any },
+  ]) assert.throws(() => validateEnvironmentConfig({ ...shared, backend }), /Backend auth/);
+});
+
 test('hosting configuration is explicit, frozen and cannot cross-wire environments or invent auth', () => {
   const staging = loadEnvironmentConfig('staging');
   const production = loadEnvironmentConfig('production');
@@ -134,9 +154,11 @@ test('operational policies are frozen, distinct and reject invalid or cross-envi
   const production = loadEnvironmentConfig('production');
   assert.ok(Object.isFrozen(staging.operations) && Object.isFrozen(production.operations));
   assert.deepEqual(staging.operations, { lambdaLogRetentionDays: 14, apiLogRetentionDays: 14,
-    logRemovalPolicy: 'DESTROY', apiThrottleRate: 10, apiThrottleBurst: 20, lambdaReservedConcurrency: 5, monthlyBudgetUsd: 10 });
+    logRemovalPolicy: 'DESTROY', apiThrottleRate: 10, apiThrottleBurst: 20, lambdaReservedConcurrency: 5, monthlyBudgetUsd: 10,
+    demoIssueThrottleRate: 1, demoIssueThrottleBurst: 2, dashboardEnabled: true });
   assert.deepEqual(production.operations, { lambdaLogRetentionDays: 30, apiLogRetentionDays: 30,
-    logRemovalPolicy: 'RETAIN', apiThrottleRate: 20, apiThrottleBurst: 40, lambdaReservedConcurrency: 10, monthlyBudgetUsd: 30 });
+    logRemovalPolicy: 'RETAIN', apiThrottleRate: 20, apiThrottleBurst: 40, lambdaReservedConcurrency: 10, monthlyBudgetUsd: 30,
+    demoIssueThrottleRate: 1, demoIssueThrottleBurst: 2, dashboardEnabled: false });
   for (const operations of [production.operations, undefined, ...Object.keys(staging.operations).map((key) => ({
     ...staging.operations, [key]: key === 'logRemovalPolicy' ? 'RETAIN' : 0,
   }))]) assert.throws(() => validateEnvironmentConfig({ ...staging, operations: operations as any }), /Operational retention/);

@@ -1,5 +1,27 @@
 # Backend Lambda packaging (Phase 3B)
 
+## Phase 7B Batch 3 package qualification — November 3, 2026
+
+The current source/lock was packaged twice into identical Linux x86_64 Python 3.14
+ZIPs at `.tools/phase7b-batch3-20261103/hireflux-backend-candidate.zip` with matching
+manifest. SHA-256 is `08933f7b30edc158e09ac2528bc6c66554087a6706694bcf8f0e7a320da45066`.
+It includes the pre-existing dnspython 2.9.0 lock update. Neither old artifacts nor
+application source/lock were rewritten in Batch 3.
+
+`validate_lambda_artifact.py --offline` requires the already cached pinned runtime
+image using `--pull never`; existing default CI behavior remains unchanged. Two
+network-disabled, non-root, read-only Linux runs passed native imports, HTTP API,
+logging/error handling, mixed/Cognito-only production startup, missing/invalid
+provider fields, 24-hour Demo boundaries, closed registration and default-paused
+issuance. Synthetic boundaries do not prove live IAM, cold-start percentiles or
+provider integration. Full backend suite: 811 passing tests.
+
+The candidate is unpublished. Lambda remains 1024 MB / 15 seconds with 20-second
+API integration; the synthetic 2.219-second seed measurement is not live timeout
+headroom evidence. See the [Batch 3 handoff](../docs/phase7b-batch3-local-handoff.md)
+for manifests and operational qualifications. The older packaging references below
+remain historical and must not be substituted for this current candidate.
+
 ## Phase 7B Batch 2 local issuance and cleanup contract
 
 New Demo creation is now independent of Demo credential verification. A finite,

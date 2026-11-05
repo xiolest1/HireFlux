@@ -1,4 +1,4 @@
-import { REVIEWED_RESOURCE_COUNT } from './resource-inventory';
+import { reviewedResourceCount } from './resource-inventory';
 import { fixtureArtifact } from './fixture';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -16,7 +16,7 @@ for (const environment of ['staging', 'production'] as const) {
     const json = template.toJSON();
     const tables = template.findResources('AWS::DynamoDB::Table');
     assert.deepEqual(Object.keys(tables), ['WorkspaceTable68AC2584']);
-    assert.equal(Object.keys(json.Resources).length, REVIEWED_RESOURCE_COUNT);
+    assert.equal(Object.keys(json.Resources).length, reviewedResourceCount(environment));
     assert.deepEqual(json.Outputs ?? {}, {});
     const table = tables.WorkspaceTable68AC2584;
     assert.ok(table);

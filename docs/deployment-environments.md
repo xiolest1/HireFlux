@@ -139,16 +139,30 @@ Amplify must serve `/index.html` with status `200` for routes that do not look l
 
 ## Hosted security headers
 
-The repository root `customHttp.yml` is the canonical Amplify Hosting policy
-for the `frontend/` monorepo app. It applies a strict CSP, HTTPS enforcement,
-clickjacking protection, MIME sniffing protection, referrer and permissions
-policies, and cross-origin isolation headers to hosted responses. Its committed
-connect-src permits only self and https://*.execute-api.us-east-1.amazonaws.com.
-The narrow regional source supports generated API IDs while keeping App independent
-of API references; exact origin enforcement remains in backend CORS. The aligned
-template/render helper preserves the same static policy without URL inputs.
-No App.CustomHeaders duplicates it. This supersedes the earlier exact-API rendering
-workflow; header validation checks the complete parsed monorepo/CSP contract.
+The Phase 7B Batch 3 local hosting definitions use one
+[deployment/header registry](../frontend/src/deployment-targets.json) and
+[shared pure policy module](../frontend/src/publicDeploymentPolicy.mjs) for
+browser trust, header proposals and `CfnApp.CustomHeaders`. The exact recorded
+staging tuple is retained; production remains unbound (`null`). This local source
+qualification changes no deployed headers or AWS resources.
+
+Repository-root `customHttp.yml` remains the effective Amplify Hosting authority
+for the `frontend/` monorepo app because repository headers override app-level
+headers. The prepared staging App policy is semantically equivalent to that
+retained policy, including the historical regional API source and exact staging
+Cognito domain. This is a transitional equivalence step. The final exact policy
+uses only self, one reviewed API and one reviewed provider; unbound production
+renders self-only connect-src. No new wildcard or API/Branch token reference is
+introduced into App headers, preserving the acyclic origin wiring.
+
+Exact staging and production renderers require separate output paths and cannot
+overwrite root authority. Retirement of the overriding root file, real production
+binding and effective-header qualification require a separate approved release.
+The production build's publication guard blocks on the retained root file or an
+unbound target. The ordinary artifact scanner remains compatible with synthetic
+builds and does not establish publication readiness. See the
+[frontend guide](../frontend/README.md#routing-and-headers) and
+[ADR 0012 amendment](adr/0012-amplify-hosting-origin-wiring.md#phase-7b-batch-3-amendment-2026-11-03).
 
 The pre-React theme bootstrap lives in `frontend/public/theme-bootstrap.js`,
 so the policy does not need `unsafe-inline` in `script-src`. The existing
@@ -157,9 +171,10 @@ runtime style attributes. HSTS is intentionally present only in the hosted
 policy; local Vite development serves HTTP and uses a separate API allowlist.
 The local development server allows Vite's own inline React-refresh bootstrap;
 the production build preview and hosted policy keep inline scripts blocked.
-The bearer token remains a temporary demo credential in `sessionStorage`, so
-the CSP reduces script-injection risk but does not replace server-side token
-validation or a future HttpOnly production session design.
+Demo bearer credentials remain temporary and stored in `sessionStorage`; current
+Personal sessions use the existing guarded Cognito session controller. CSP
+reduces script-injection risk but does not replace backend token verification,
+ownership checks or the separately deferred HttpOnly/BFF decision.
 
 ## API documentation exposure
 

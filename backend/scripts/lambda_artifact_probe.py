@@ -14,6 +14,7 @@ import socket
 import sys
 import time
 import zipfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -66,6 +67,12 @@ def configure() -> None:
             "PYTHONPATH",
             "CURSOR_SIGNING_KEY",
             "DEMO_SESSION_SIGNING_KEY",
+            "AUTH_CAPABILITIES",
+            "COGNITO_USER_POOL_ID",
+            "COGNITO_APP_CLIENT_ID",
+            "COGNITO_DOMAIN",
+            "COGNITO_SELF_REGISTRATION_ENABLED",
+            "PERSISTENT_ACCOUNT_MANAGEMENT_ENABLED",
         }:
             os.environ.pop(name)
     os.environ.update(
@@ -128,6 +135,239 @@ def block_network() -> None:
     socket.socket.connect = connect  # type: ignore[method-assign]
     socket.socket.connect_ex = connect_ex  # type: ignore[method-assign]
     socket.getaddrinfo = resolve
+
+
+def qualify_shared_production(
+    factory: Any, settings_module: Any, secrets: Any, provider: Any, key: Any
+) -> dict[str, Any]:
+    """Exercise the packaged production path with inert service boundaries only."""
+    import jwt
+    from botocore.exceptions import ClientError
+    from mangum import Mangum
+
+    from hireflux_backend.auth.cognito import CognitoVerifier
+    from hireflux_backend.domain.enums import UserRole
+    from hireflux_backend.domain.models import IdentityKind, UserProfile
+    from hireflux_backend.domain.workspace import (
+        DurableWorkspace,
+        DurableWorkspaceState,
+        default_workspace_settings,
+    )
+    from hireflux_backend.infrastructure.dynamodb.mapping import (
+        deserialize_item,
+        profile_to_item,
+        serialize_item,
+        user_partition,
+    )
+    from hireflux_backend.infrastructure.dynamodb.resource_mapping import settings_to_item
+    from hireflux_backend.infrastructure.dynamodb.workspace_bootstrap_repository import (
+        workspace_to_item,
+    )
+
+    observed = []
+    for capabilities in ("cognito", "demo,cognito"):
+        configure()
+        os.environ.update(
+            {
+                "ENVIRONMENT": "production",
+                "AUTH_MODE": "cognito",
+                "AUTH_CAPABILITIES": capabilities,
+                "COGNITO_USER_POOL_ID": "us-east-1_PRODUCTIONFIXTURE",
+                "COGNITO_APP_CLIENT_ID": "productionfixtureclient",
+                "COGNITO_DOMAIN": "https://production-fixture.auth.us-east-1.amazoncognito.com",
+                "COGNITO_SELF_REGISTRATION_ENABLED": "false",
+            }
+        )
+        if capabilities == "demo,cognito":
+            for name in ("COGNITO_USER_POOL_ID", "COGNITO_APP_CLIENT_ID", "COGNITO_DOMAIN"):
+                original = os.environ.pop(name)
+                try:
+                    settings_module.get_lambda_settings(secrets_client=secrets)
+                except RuntimeError:
+                    pass
+                else:
+                    raise AssertionError("A required production provider field was omitted.")
+                finally:
+                    os.environ[name] = original
+        secrets.calls = []
+        configured = settings_module.get_lambda_settings(secrets_client=secrets)
+        assert len(secrets.calls) == 2, "Production did not resolve both signing secrets."
+        assert (
+            configured.environment.value == "production" and configured.auth_mode.value == "cognito"
+        )
+        assert configured.demo_session_ttl_hours == 24
+        assert configured.dynamodb_table_name == "ArtifactOnlyFixture"
+        assert configured.aws_region == "us-east-1" and configured.dynamodb_endpoint_url is None
+        assert configured.aws_access_key_id is None and configured.aws_secret_access_key is None
+        assert not configured.cognito_self_registration_enabled
+
+        subject = "Probe-Opaque-Subject"
+        demo_subject = "00000000-0000-4000-8000-000000000077"
+        stamp = datetime.now(UTC).replace(microsecond=0)
+        expiry = stamp + timedelta(hours=24)
+        personal_profile = UserProfile(
+            subject,
+            "Packaged Personal Fixture",
+            "personal@example.invalid",
+            UserRole.STANDARD_USER,
+            stamp,
+            None,
+        )
+        demo_profile = UserProfile(
+            demo_subject,
+            "Demo Workspace",
+            "demo@example.invalid",
+            UserRole.STANDARD_USER,
+            stamp,
+            None,
+            int(expiry.timestamp()),
+        )
+        owner_records = [
+            profile_to_item(personal_profile),
+            settings_to_item(default_workspace_settings(subject, stamp)),
+            workspace_to_item(
+                DurableWorkspace(
+                    subject,
+                    IdentityKind.PERSISTENT,
+                    DurableWorkspaceState.ACTIVE,
+                    1,
+                    stamp,
+                    stamp,
+                    application_manifest_version=1,
+                )
+            ),
+        ]
+
+        class SyntheticDynamo:
+            def __init__(
+                self, personal: Any, demo: Any, owner: str, records: list[dict[str, Any]]
+            ) -> None:
+                self.calls: list[str] = []
+                self.policy_reads = 0
+                self.policy_unavailable = False
+                self.personal = personal
+                self.demo = demo
+                self.owner = owner
+                self.records = records
+
+            def get_item(self, **arguments: Any) -> dict[str, Any]:
+                assert arguments["TableName"] == "ArtifactOnlyFixture"
+                lookup = deserialize_item(arguments["Key"])
+                self.calls.append("get")
+                if lookup["PK"] == "DEMO_ADMISSION#CONTROL":
+                    self.policy_reads += 1
+                    if self.policy_unavailable:
+                        raise ClientError(
+                            {
+                                "Error": {
+                                    "Code": "InternalServerError",
+                                    "Message": "synthetic-private-control-failure",
+                                }
+                            },
+                            "GetItem",
+                        )
+                    return {"ResponseMetadata": {"HTTPStatusCode": 200}}
+                if lookup["PK"].startswith("DEMO_IDEMPOTENCY#"):
+                    return {"ResponseMetadata": {"HTTPStatusCode": 200}}
+                assert lookup["SK"] == "PROFILE"
+                profile = self.personal if lookup["PK"] == user_partition(self.owner) else self.demo
+                assert lookup["PK"] == user_partition(profile.user_id)
+                return {
+                    "Item": serialize_item(profile_to_item(profile)),
+                    "ResponseMetadata": {"HTTPStatusCode": 200},
+                }
+
+            def query(self, **arguments: Any) -> dict[str, Any]:
+                assert arguments["TableName"] == "ArtifactOnlyFixture"
+                assert arguments["ConsistentRead"] is True and "IndexName" not in arguments
+                assert deserialize_item(arguments["ExpressionAttributeValues"])[
+                    ":pk"
+                ] == user_partition(self.owner)
+                self.calls.append("query")
+                return {"Items": [serialize_item(item) for item in self.records]}
+
+        database = SyntheticDynamo(personal_profile, demo_profile, subject, owner_records)
+        app = factory.create_app(
+            configured,
+            dynamodb_client=database,
+            cognito_authentication=CognitoVerifier(configured, transport=provider),
+            cors_policy=settings_module.get_lambda_cors_policy(),
+        )
+        assert not database.calls, "Startup accessed the Demo operational store."
+        handler = Mangum(app, lifespan="off")
+        context = SimpleNamespace(get_remaining_time_in_millis=lambda: 15_000)
+        public = handler(event("/api/v1/auth/config"), context)
+        metadata = json.loads(public["body"])
+        assert public["statusCode"] == 200 and metadata["environment"] == "production"
+        assert metadata["cognito"]["self_registration_enabled"] is False
+        assert metadata["capabilities"] == capabilities.split(",")
+        assert not database.calls, "Public config accessed operational policy."
+        invitation = event("/api/v1/demo-sessions", "POST")
+        invitation["headers"]["idempotency-key"] = "packaged-probe-idempotency-key"
+        paused = handler(invitation, context)
+        if capabilities == "cognito":
+            assert paused["statusCode"] == 503 and not database.calls
+        else:
+            assert paused["statusCode"] == 429
+            assert json.loads(paused["body"])["error"]["code"] == "DEMO_ISSUANCE_PAUSED"
+            assert database.policy_reads == 1
+            database.policy_unavailable = True
+            unavailable = handler(invitation, context)
+            assert unavailable["statusCode"] == 503
+            assert json.loads(unavailable["body"])["error"]["code"] == "DEMO_ADMISSION_UNAVAILABLE"
+            assert "synthetic-private-control-failure" not in unavailable["body"]
+        before = database.policy_reads
+        current = int(stamp.timestamp())
+        access = jwt.encode(
+            {
+                "iss": configured.cognito_issuer,
+                "client_id": configured.cognito_app_client_id,
+                "token_use": "access",
+                "sub": subject,
+                "username": "packaged-personal",
+                "iat": current,
+                "auth_time": current,
+                "exp": current + 3600,
+                "scope": "openid email profile",
+            },
+            key,
+            algorithm="RS256",
+            headers={"kid": "probe-key"},
+        )
+        personal_request = event("/api/v1/me")
+        personal_request["headers"]["authorization"] = "Bearer " + access
+        personal = handler(personal_request, context)
+        assert personal["statusCode"] == 200 and json.loads(personal["body"])["user_id"] == subject
+        assert database.policy_reads == before
+        if capabilities == "demo,cognito":
+            token = app.state.demo_session_codec.issue(
+                workspace_id=demo_subject, issued_at=stamp, expires_at=expiry
+            )
+            demo_request = event("/api/v1/me")
+            demo_request["headers"]["authorization"] = "Bearer " + token
+            existing_demo = handler(demo_request, context)
+            assert existing_demo["statusCode"] == 200
+            assert json.loads(existing_demo["body"])["user_id"] == demo_subject
+            assert database.policy_reads == before
+            old_token = app.state.demo_session_codec.issue(
+                workspace_id=demo_subject,
+                issued_at=stamp - timedelta(days=2),
+                expires_at=stamp - timedelta(days=1),
+            )
+            demo_request["headers"]["authorization"] = "Bearer " + old_token
+            assert handler(demo_request, context)["statusCode"] == 401
+        observed.append(
+            {
+                "capabilities": capabilities.split(","),
+                "startup_policy_io": 0,
+                "registration_closed": True,
+                "new_demo_status": paused["statusCode"],
+                "personal_status": personal["statusCode"],
+                "existing_identities_policy_reads": 0,
+            }
+        )
+    configure()
+    return {"production_cases": observed, "service_mutations": 0}
 
 
 def main() -> None:
@@ -237,8 +477,12 @@ def main() -> None:
     secret_calls: list[str] = []
 
     class SyntheticSecrets:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
         def get_secret_value(self, *, SecretId: str) -> dict[str, str]:
             secret_calls.append(SecretId)
+            self.calls.append(SecretId)
             return {"ARN": SecretId, "SecretString": "S" * 64}
 
     def synthetic_client(service: str, **kwargs: Any) -> Any:
@@ -256,6 +500,7 @@ def main() -> None:
         {"CURSOR_SIGNING_KEY": "short-secret-must-never-appear"},
         {"CORS_ALLOWED_ORIGINS": "*"},
         {"DYNAMODB_TABLE_NAME": ""},
+        {"CURSOR_SIGNING_SECRET_ARN": ""},
     ):
         configure()
         os.environ.update(bad_env)
@@ -265,6 +510,21 @@ def main() -> None:
             assert "short-secret-must-never-appear" not in str(error)
         else:
             raise AssertionError("Invalid Lambda configuration was accepted.")
+    configure()
+
+    class InvalidSecrets:
+        def get_secret_value(self, *, SecretId: str) -> dict[str, str]:
+            return {"ARN": SecretId, "SecretString": "short-private-key-never-display"}
+
+    try:
+        settings_module.get_lambda_settings(secrets_client=InvalidSecrets())
+    except RuntimeError as error:
+        assert "short-private-key" not in str(error)
+    else:
+        raise AssertionError("Invalid packaged signing-secret resolution was accepted.")
+    production = qualify_shared_production(
+        factory, settings_module, SyntheticSecrets(), SyntheticProvider(), rsa_key
+    )
     configure()
     secret_calls.clear()
     runtime = importlib.import_module("hireflux_backend.lambda_handler")
@@ -385,6 +645,7 @@ def main() -> None:
     assert importlib.metadata.version("cryptography") == "50.0.2"
     assert importlib.metadata.version("boto3") == "1.43.53"
     assert importlib.metadata.version("botocore") == "1.43.78"
+    assert importlib.metadata.version("dnspython") == "2.9.0"
     assert not NETWORK_ATTEMPTS, NETWORK_ATTEMPTS
     print(
         json.dumps(
@@ -410,6 +671,8 @@ def main() -> None:
                 "cold_start_secret_reads": len(secret_calls),
                 "warm_secret_reuse": True,
                 "large_json_proxy_envelope": True,
+                "shared_production": production,
+                "required_production_provider_fields": True,
             },
             indent=2,
         )

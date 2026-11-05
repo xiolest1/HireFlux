@@ -3,6 +3,17 @@ import { CfnApp, CfnBranch } from 'aws-cdk-lib/aws-amplify';
 import { Construct } from 'constructs';
 import type { HireFluxEnvironmentConfig } from '../config/environment';
 import { explicitResourceName } from '../config/naming';
+import path from 'node:path';
+import { existsSync } from 'node:fs';
+
+// One shared pure policy engine supplies browser trust, offline YAML and App headers.
+// Resolve source/build layouts without importing frontend TypeScript into rootDir.
+const policyPaths = ['../../../frontend/src/publicDeploymentPolicy.mjs', '../../../../frontend/src/publicDeploymentPolicy.mjs'];
+const policyPath = policyPaths.map((candidate) => path.resolve(__dirname, candidate)).find(existsSync);
+if (!policyPath) throw new Error('Shared public deployment/header policy is missing.');
+const { renderHostedHeaders } = require(policyPath) as {
+  renderHostedHeaders(environment: 'staging' | 'production', options?: { legacyStaging?: boolean }): string;
+};
 
 // AWS's SPA expression, extended for the static extensions used by this Vite app.
 export const SPA_REWRITE_SOURCE = '</^[^.]+$|\\.(?!(css|gif|ico|jpg|jpeg|js|mjs|png|txt|svg|woff|woff2|ttf|map|json|webp|avif|html|pdf|wasm|webmanifest)$)([^.]+$)/>';
@@ -27,6 +38,13 @@ applications:
           - '**/*'
 `;
 
+// New production builds must pass the publication guard. Unbound targets and
+// retained root-header authority are expected blockers, never publishable fixtures.
+export const PRODUCTION_FRONTEND_BUILD_SPEC = FRONTEND_BUILD_SPEC.replace(
+  '            - npm run build',
+  '            - npm run build\n            - node scripts/verify-hosted-build.mjs --publication --environment production',
+);
+
 export class FrontendHosting extends Construct {
   public readonly app: CfnApp;
   public readonly frontendOrigin: string;
@@ -35,7 +53,14 @@ export class FrontendHosting extends Construct {
     super(scope, id);
     this.app = new CfnApp(this, 'App', {
       name: explicitResourceName(config, 'frontend'), repository: config.hosting.repositoryUrl,
-      platform: 'WEB', accessToken, buildSpec: FRONTEND_BUILD_SPEC,
+      platform: 'WEB', accessToken,
+      buildSpec: config.environmentName === 'production' ? PRODUCTION_FRONTEND_BUILD_SPEC : FRONTEND_BUILD_SPEC,
+      // Staging first receives equivalent stored policy; root YAML still wins.
+      // Production is self-only while unbound. Literal reviewed bindings later
+      // avoid an App → API → App reference cycle; publication stays separately gated.
+      customHeaders: renderHostedHeaders(config.environmentName, {
+        legacyStaging: config.environmentName === 'staging',
+      }),
       environmentVariables: [{ name: 'AMPLIFY_MONOREPO_APP_ROOT', value: config.hosting.appRoot }],
       autoBranchCreationConfig: { enableAutoBranchCreation: false, enablePullRequestPreview: false },
       enableBranchAutoDeletion: false,

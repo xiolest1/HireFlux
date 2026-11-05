@@ -1,6 +1,6 @@
 # HireFlux frontend build and hosting
 
-## Phase 7B Batch 1 local trust contract
+## Phase 7B local trust and hosting contract
 
 Batch 2 additionally preserves the same Demo operation key through admission
 uncertainty or control-store unavailability. Retry remains explicit. A denied
@@ -9,11 +9,23 @@ never resurrects cleared Personal credentials. Existing error UI presents pause,
 quota and unavailable messages without polling or an invented reopening time.
 No frontend policy toggle, additional API client or registration change exists.
 
-Current source uses `src/publicDeployment.ts` as the exact public trust binding:
-website, single API, environment, capability set, Cognito issuer/client/domain,
-fixed callback/logout URLs, and expected registration flag. Staging IDs come from
-retained sanitized deployment evidence, not a new live inspection. Production is
-explicitly unbound (`null`); fictional production targets exist only in tests.
+The canonical [deployment/header registry](src/deployment-targets.json) contains
+the exact website, single API, environment, capability set, Cognito
+issuer/client/domain, fixed callback/logout URLs and expected registration flag.
+[publicDeployment.ts](src/publicDeployment.ts) exposes typed access through the
+shared pure [policy module](src/publicDeploymentPolicy.mjs). Browser validation,
+header rendering and CDK App headers consume this same contract. Staging IDs come
+from retained sanitized deployment evidence, not a new live inspection.
+Production remains explicitly unbound (`null`); fictional production targets
+exist only in programmatic test fixtures.
+
+The build-only [Vite projection](scripts/public-deployment-projection.mjs) keeps
+only the exact target selected by the existing site/API build inputs. An unknown
+or unbound public pair retains neither target and cannot pass publication checks.
+A production artifact therefore cannot inherit staging trust. Loopback builds
+retain the local staging fixture for isolated tests. The projected staging value
+is nullable; callers must check it rather than invent a provider fallback. There
+is no browser/runtime registry override, extra build variable or identity lookup.
 
 Public API/site validation runs before configuration fetch, stored-session
 restoration or credential leasing. Missing/mismatched inputs, unavailable or
@@ -28,8 +40,10 @@ and requires deliberate entry afterward; dirty work requires explicit discard.
 A provider/session outage does not invalidate independently trusted Demo config.
 The existing PKCE, state/nonce, refresh, ownership and identity-switch protections
 are preserved. Registration is CLOSED in the public binding and examples.
-See the [Batch 1 handoff](../docs/phase7b-batch1-local-handoff.md) for qualification
-and remaining Batch 2/3 gates. No header migration or publication occurred.
+See the [Batch 1 handoff](../docs/phase7b-batch1-local-handoff.md) for its historical
+qualification and the [hosting decision amendment](../docs/adr/0012-amplify-hosting-origin-wiring.md#phase-7b-batch-3-amendment-2026-11-03)
+for current local header/publication gates. Root-header migration and production
+publication remain separately authorized work.
 
 The older release notes below are historical checkpoints. In particular, the
 former staging-only shape-based provider validation and public legacy fallback
@@ -133,7 +147,10 @@ token enters the build. Existing development defaults and session code remain.
 
 The monorepo build uses appRoot=frontend and matching static app-level
 AMPLIFY_MONOREPO_APP_ROOT, then nvm install/use 22, npm ci and npm run build.
-Publish dist/**. No Python/backend/infra install/build is involved.
+Artifacts are dist/**. The staging build spec is preserved. The production build
+spec additionally runs `node scripts/verify-hosted-build.mjs --publication
+--environment production`; it must fail while production is unbound or root
+header authority remains. No Python/backend/infra install/build is involved.
 
 To validate a deployment-style build from the repository root in Command Prompt:
 
@@ -144,6 +161,7 @@ npm --prefix frontend run typecheck
 npm --prefix frontend run test
 npm --prefix frontend run test:hosting-headers
 npm --prefix frontend run test:hosting-build
+node --test frontend/scripts/public-deployment-projection.test.mjs
 set VITE_API_BASE_URL=https://phase3e-example.execute-api.us-east-1.amazonaws.com
 set VITE_PUBLIC_SITE_URL=https://main.phase3e-example.amplifyapp.com
 set VITE_WORKSPACE_MODE=demo
@@ -151,8 +169,18 @@ npm --prefix frontend run build
 npm --prefix frontend run verify:hosting-build
 ```
 
-These are visibly synthetic public URLs, not deployed resources. Clear these
-shell variables before ordinary local preview. On this Windows workspace path,
+These synthetic URLs exercise only the artifact scanner. Their public trust
+binding is deliberately absent, so this build is not an authenticated/publication
+candidate. For a locally built exact staging candidate, use the reviewed site/API
+pair in `src/deployment-targets.json`, keep `VITE_WORKSPACE_MODE=demo`, then run
+`node frontend/scripts/verify-hosted-build.mjs --directory frontend/dist
+--publication --environment staging`. This performs local file validation only;
+it does not publish or authorize deployment. Production requires a separately
+reviewed real binding and root-header migration before the corresponding guard
+can pass. Fictional production qualification uses explicit programmatic fixture
+input, never normal runtime configuration, and always returns `publishable:false`.
+
+Clear the shell variables before ordinary local preview. On this Windows workspace path,
 npm's Command Prompt shims mishandle the ampersand for executable scripts;
 `npm --prefix frontend --script-shell pwsh run build` (likewise lint/typecheck/test)
 uses PowerShell without changing persisted npm settings. Linux Amplify/CI uses
@@ -166,19 +194,22 @@ direct navigation to index.html. Regex tests cover protected deep links and
 missing static files. Actual Amplify refresh/preflight behavior is Phase 4 smoke
 validation; local synthesis is not a live hosting test.
 
-Repository-root customHttp.yml is the only hosted header authority, using
-applications/appRoot=frontend. No App.CustomHeaders duplication exists. The
-aligned template/helper render the reviewed **staging artifact**. CSP connect-src
-permits self, the unchanged regional API source
-https://*.execute-api.us-east-1.amazonaws.com, and the exact offline Cognito proposal
-`https://hireflux-staging-9465-use1-20261020.auth.us-east-1.amazoncognito.com`.
-The domain is an offline 5A fixture, not evidence that it exists. No broad Cognito
-wildcard, browser JWKS/userInfo origin or arbitrary HTTPS source is allowed.
-The regional API source supports generated API IDs
-without an App→API cycle. It does not permit arbitrary HTTPS or wildcard egress.
-Other directives and security headers are preserved. Inline scripts remain
-blocked; the existing inline style allowance remains. Source maps remain disabled
-by Vite's default. A future reviewed custom API domain could narrow CSP further.
+Repository-root `customHttp.yml` remains the effective hosted header authority,
+using `applications/appRoot=frontend`; AWS gives it precedence over app-level
+headers. Batch 3 prepares `CfnApp.CustomHeaders` locally without changing or
+removing that file. Staging's prepared app policy is semantically equivalent to
+the retained root policy, including its historical regional API wildcard and
+exact recorded staging Cognito domain. This equivalence is transitional, not the
+final exact-origin production policy.
+
+The shared policy module also renders the final exact staging policy from the
+registry: self plus the one reviewed API and provider. Production currently has
+no binding and renders self-only connect-src, with no staging/API/provider trust.
+Future real provider/API origins must be literal reviewed registry values;
+App headers must not reference API/Branch tokens and create an App→API→App cycle.
+No new CSP wildcard, arbitrary HTTPS source, browser JWKS/userInfo origin or
+provider fallback is introduced. Inline scripts stay blocked, the existing
+inline style allowance remains, and Vite source maps remain disabled by default.
 
 Referrer-Policy is `no-referrer` to minimize subsequent callback-query exposure;
 the initial hosting request can still contain the OAuth code/state. Form action
@@ -187,23 +218,34 @@ preview allow the exact staging Cognito fixture only for the accepted staging
 public site or loopback, deriving from existing VITE_PUBLIC_SITE_URL; there is no
 new Amplify branch setting.
 
-The renderer has an explicit per-environment origin map. Production currently has
-no reviewed Cognito domain and is separately rendered **without staging trust**:
+Render proposals separately from the retained root authority:
 
 ```text
+node frontend/scripts/render-hosting-headers.mjs --environment staging --policy exact --output .tools/staging-exact-headers.yml
 node frontend/scripts/render-hosting-headers.mjs --environment production --output .tools/production-headers.yml
 ```
 
-The output parent must already exist. Production output must be explicit and
-cannot overwrite root customHttp.yml. Rendering does not publish that file; a
-future production release must separately bind and qualify its actual provider
-origin. The checked-in staging file does not automatically provide isolated
-production publication. Phase 5C changes no AWS resource or API CORS policy.
+The output parent must already exist. Exact/production output must be explicit
+and cannot overwrite root `customHttp.yml`. The default staging renderer still
+validates and preserves the retained legacy policy. Rendering a proposal does not
+retire root authority or publish anything. A future approved migration must remove
+the overriding root policy, qualify each app's exact effective headers and
+artifact, and record that authority change before production publication.
 
 Header tests parse YAML and reject wrong roots, missing/duplicate headers and
-weakened CSP. The build verifier checks index/assets, expected public URLs, no
-private config, credentials/signing material, local API endpoints, unresolved
-placeholders or source maps. It prints summary evidence, not bundle contents.
+weakened CSP. `verify:hosting-build` is the compatibility artifact scanner: it
+checks index/assets, public URLs, private material, local endpoints, placeholders
+and source maps, and returns `artifact_scan_only:true, publishable:false`.
+The explicit `--publication --environment ...` guard additionally requires the
+exact reviewed target/provider metadata and CLOSED registration; production
+rejects staging identifiers and retained root authority. A successful local guard
+is evidence for a later release decision, not permission to publish. Neither
+scanner performs network or live API configuration verification.
+
+Offline browser fixtures must intercept every navigation as well as assets/API
+requests. Do not implement a synthetic provider callback using an intercepted
+HTTP redirect: redirect continuations can escape Playwright routing. Use an
+explicit locally routed callback navigation and preserve any failed-run evidence.
 
 See [ADR 0012](../docs/adr/0012-amplify-hosting-origin-wiring.md),
 [infra guide](../infra/README.md) and the

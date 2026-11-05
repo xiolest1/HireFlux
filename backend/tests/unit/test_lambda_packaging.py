@@ -2,6 +2,7 @@ import importlib.util
 import json
 import stat
 import struct
+import sys
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -96,3 +97,30 @@ def test_expanded_artifact_budget_is_enforced(
     monkeypatch.setattr(builder, "EXPANDED_LIMIT", 32)
     with pytest.raises(ValueError, match="budget"):
         builder.write_zip(stage, tmp_path / "oversized.zip")
+
+
+def test_offline_validator_never_pulls_and_keeps_container_isolation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    validator_path = SCRIPT.with_name("validate_lambda_artifact.py")
+    spec = importlib.util.spec_from_file_location("lambda_validator", validator_path)
+    assert spec is not None and spec.loader is not None
+    validator: Any = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(validator)
+    artifact = tmp_path / "synthetic.zip"
+    artifact.write_bytes(b"not-executed-fixture")
+    commands: list[list[str]] = []
+    monkeypatch.setattr(
+        sys, "argv", [str(validator_path), "--offline", "--artifact", str(artifact)]
+    )
+    monkeypatch.setattr(
+        validator.subprocess, "run", lambda command, **kwargs: commands.append(command)
+    )
+    validator.main()
+    assert len(commands) == 1
+    command = commands[0]
+    assert command[:4] == ["docker", "run", "--pull", "never"]
+    assert command[command.index("--network") + 1] == "none"
+    assert "--read-only" in command and "--cap-drop" in command
+    assert command[command.index("--user") + 1] == "1000:1000"
+    assert "--privileged" not in command and validator.IMAGE in command

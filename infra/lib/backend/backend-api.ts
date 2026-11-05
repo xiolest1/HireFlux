@@ -1,5 +1,5 @@
 import { AssetHashType, Duration, RemovalPolicy } from 'aws-cdk-lib';
-import { CfnStage, CorsHttpMethod, HttpApi, PayloadFormatVersion } from 'aws-cdk-lib/aws-apigatewayv2';
+import { CfnRoute, CfnStage, CorsHttpMethod, HttpApi, PayloadFormatVersion } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import type { Table } from 'aws-cdk-lib/aws-dynamodb';
 import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
@@ -30,9 +30,20 @@ export class BackendApi extends Construct {
     });
     // Audit: repository transactions require their underlying item actions, including ACTIVE guards.
     this.executionRole.addToPolicy(new PolicyStatement({
-      actions: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem',
-        'dynamodb:BatchWriteItem', 'dynamodb:ConditionCheckItem'],
+      actions: ['dynamodb:GetItem', 'dynamodb:ConditionCheckItem'],
       resources: [table.tableArn],
+    }));
+    // IAM evaluates the underlying transaction actions. The public role can read
+    // and condition-check policy but can mutate only user/replay/bucket partitions.
+    this.executionRole.addToPolicy(new PolicyStatement({
+      actions: ['dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem', 'dynamodb:BatchWriteItem'],
+      resources: [table.tableArn],
+      conditions: {
+        'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': [
+          'USER#*', 'DEMO_IDEMPOTENCY#*', 'DEMO_ADMISSION#DAY#*', 'DEMO_ADMISSION#MINUTE#*',
+        ] },
+        Null: { 'dynamodb:LeadingKeys': 'false' },
+      },
     }));
     this.executionRole.addToPolicy(new PolicyStatement({
       actions: ['dynamodb:Query'],
@@ -58,6 +69,7 @@ export class BackendApi extends Construct {
       applicationLogLevelV2: ApplicationLogLevel.WARN, systemLogLevelV2: SystemLogLevel.WARN,
       environment: {
         ENVIRONMENT: config.environmentName, AUTH_MODE: config.backend.authMode,
+        DEMO_SESSION_TTL_HOURS: String(config.backend.demoSessionTtlHours),
         DYNAMODB_TABLE_NAME: table.tableName, CORS_ALLOWED_ORIGINS: cors.allowOrigins.join(','),
         MAX_SYNC_EXPORT_BYTES: '4000000',
         MAX_SYNC_EXPORT_WORK_SECONDS: '5', ACCOUNT_ERASURE_MAX_SECONDS_PER_REQUEST: '2',
@@ -81,8 +93,22 @@ export class BackendApi extends Construct {
       },
     });
     const stage = this.httpApi.defaultStage!.node.defaultChild as CfnStage;
+    // Reuse the existing integration and its already-scoped API invocation grant.
+    // The explicit POST outranks $default; API-managed CORS still handles OPTIONS.
+    const defaultRoute = this.httpApi.node.findChild('DefaultRoute').node.defaultChild as CfnRoute;
+    new CfnRoute(this, 'DemoIssuanceRoute', {
+      apiId: this.httpApi.apiId, routeKey: 'POST /api/v1/demo-sessions',
+      authorizationType: 'NONE', target: defaultRoute.target!,
+    });
     stage.accessLogSettings = { destinationArn: logs.httpApiAccessLogs.logGroupArn, format: HTTP_ACCESS_LOG_FORMAT };
     stage.defaultRouteSettings = { detailedMetricsEnabled: false,
       throttlingRateLimit: config.operations.apiThrottleRate, throttlingBurstLimit: config.operations.apiThrottleBurst };
+    stage.routeSettings = {
+      'POST /api/v1/demo-sessions': {
+        DetailedMetricsEnabled: false,
+        ThrottlingRateLimit: config.operations.demoIssueThrottleRate,
+        ThrottlingBurstLimit: config.operations.demoIssueThrottleBurst,
+      },
+    };
   }
 }

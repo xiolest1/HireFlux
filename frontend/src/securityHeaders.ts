@@ -1,12 +1,11 @@
 import { stagingPublicDeployment } from "./publicDeployment";
+import { createPolicyHeaders } from "./publicDeploymentPolicy.mjs";
 
 export type SecurityHeaders = Record<string, string>;
-
-export const STAGING_COGNITO_ORIGIN = stagingPublicDeployment.cognito.domain;
-export const reviewedCognitoOrigins = {
-  staging: STAGING_COGNITO_ORIGIN,
-  production: null,
-} as const;
+// A projected public production bundle carries no staging provider. Empty is
+// deliberately not a valid origin; loopback provider compatibility then closes.
+export const STAGING_COGNITO_ORIGIN = stagingPublicDeployment?.cognito.domain ?? "";
+export const reviewedCognitoOrigins = { staging: STAGING_COGNITO_ORIGIN, production: null } as const;
 export type HostingAuthEnvironment = keyof typeof reviewedCognitoOrigins;
 
 export function hostingAuthEnvironment(publicSiteUrl: string): HostingAuthEnvironment {
@@ -14,68 +13,18 @@ export function hostingAuthEnvironment(publicSiteUrl: string): HostingAuthEnviro
     const url = new URL(publicSiteUrl);
     if (!["https:", "http:"].includes(url.protocol) || url.username || url.password ||
       url.pathname !== "/" || url.search || url.hash) return "production";
-    if (url.origin === stagingPublicDeployment.siteOrigin ||
+    if (url.origin === stagingPublicDeployment?.siteOrigin ||
       ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) return "staging";
-  } catch {
-    // Invalid public configuration never expands the header allowlist.
-  }
+  } catch { /* Invalid configuration never expands the allowlist. */ }
   return "production";
 }
 
-const contentSecurityPolicyDirectives = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "font-src 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "img-src 'self' data:",
-  "manifest-src 'self'",
-  "media-src 'none'",
-  "object-src 'none'",
-  "script-src 'self'",
-  "script-src-attr 'none'",
-  "style-src 'self' 'unsafe-inline'",
-  "worker-src 'self'",
-];
-
-export function createSecurityHeaders(
-  apiOrigins: readonly string[],
-  options: {
-    allowInlineScripts?: boolean;
-    includeTransportSecurity?: boolean;
-    cognitoEnvironment?: HostingAuthEnvironment;
-  } = {},
-): SecurityHeaders {
+export function createSecurityHeaders(apiOrigins: readonly string[], options: {
+  allowInlineScripts?: boolean;
+  includeTransportSecurity?: boolean;
+  cognitoEnvironment?: HostingAuthEnvironment;
+} = {}): SecurityHeaders {
   const environment = options.cognitoEnvironment;
-  if (environment !== undefined && !Object.hasOwn(reviewedCognitoOrigins, environment)) {
-    throw new Error("Unreviewed authentication header environment.");
-  }
-  const cognitoOrigin = environment ? reviewedCognitoOrigins[environment] : null;
-  const connectSources = ["'self'", ...apiOrigins, ...(cognitoOrigin ? [cognitoOrigin] : [])];
-  const scriptSource = options.allowInlineScripts
-    ? "script-src 'self' 'unsafe-inline'"
-    : "script-src 'self'";
-  const headers: SecurityHeaders = {
-    "Content-Security-Policy": [
-      ...contentSecurityPolicyDirectives.filter(
-        (directive) => directive !== "script-src 'self'",
-      ),
-      scriptSource,
-      `connect-src ${connectSources.join(" ")}`,
-    ].join("; "),
-    "Cross-Origin-Opener-Policy": "same-origin",
-    "Cross-Origin-Resource-Policy": "same-origin",
-    "Permissions-Policy":
-      "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
-    "Referrer-Policy": "no-referrer",
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-  };
-
-  if (options.includeTransportSecurity !== false) {
-    headers["Strict-Transport-Security"] =
-      "max-age=31536000; includeSubDomains";
-  }
-
-  return headers;
+  if (environment !== undefined && !Object.hasOwn(reviewedCognitoOrigins, environment)) throw new Error("Unreviewed authentication header environment.");
+  return createPolicyHeaders(apiOrigins, { ...options, cognitoOrigin: environment ? reviewedCognitoOrigins[environment] : null });
 }

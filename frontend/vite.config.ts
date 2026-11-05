@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { configDefaults, defineConfig } from "vitest/config";
 import { loadEnv } from "vite";
 import { createSecurityHeaders, hostingAuthEnvironment } from "./src/securityHeaders";
+import { publicDeploymentProjection } from "./scripts/public-deployment-projection.mjs";
 
 function localSecurityHeaders(
   mode: string,
@@ -27,7 +28,10 @@ function localSecurityHeaders(
 
 export default defineConfig(({ mode }) => ({
   envDir: "..",
-  plugins: [react(), tailwindcss()],
+  plugins: [publicDeploymentProjection({
+    siteOrigin: loadEnv(mode, "..", "").VITE_PUBLIC_SITE_URL || "http://localhost:5173",
+    apiOrigin: loadEnv(mode, "..", "").VITE_API_BASE_URL || "http://localhost:8000",
+  }), react(), tailwindcss()],
   server: {
     host: "127.0.0.1",
     port: 5173,

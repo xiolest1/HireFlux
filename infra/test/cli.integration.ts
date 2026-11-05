@@ -1,4 +1,4 @@
-import { REVIEWED_RESOURCE_COUNT, REVIEWED_RESOURCES } from './resource-inventory';
+import { reviewedResourceCount, reviewedResources } from './resource-inventory';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -45,9 +45,9 @@ for (const environment of ['staging', 'production'] as const) {
           existsSync(auditPath) ? readFileSync(auditPath, 'utf8') : 'No network attempts expected.');
         const template = readFileSync(join(outdir, `HireFlux-${environment}.template.json`), 'utf8');
         const parsed = JSON.parse(template);
-        assert.equal(Object.keys(parsed.Resources).length, REVIEWED_RESOURCE_COUNT);
+        assert.equal(Object.keys(parsed.Resources).length, reviewedResourceCount(environment));
         assert.deepEqual(Object.fromEntries(Object.entries(parsed.Resources).map(([id, resource]) =>
-          [id, (resource as { Type: string }).Type])), REVIEWED_RESOURCES);
+          [id, (resource as { Type: string }).Type])), reviewedResources(environment));
         assert.deepEqual(parsed.Outputs ?? {}, {});
         templates.push(template);
         const candidate = process.env.HIREFLUX_QUALIFIED_BACKEND_ARTIFACT;
@@ -89,9 +89,9 @@ test('explicit environment accounts synthesize independently without credential 
       const artifact = new CloudAssembly(outdir).getStackArtifact(`HireFlux-${environment}`);
       assert.equal(artifact.environment.account, account);
       assert.equal(artifact.environment.region, 'us-east-1');
-      assert.equal(Object.keys(artifact.template.Resources).length, REVIEWED_RESOURCE_COUNT);
+      assert.equal(Object.keys(artifact.template.Resources).length, reviewedResourceCount(environment));
       assert.deepEqual(Object.fromEntries(Object.entries(artifact.template.Resources).map(([id, resource]) =>
-        [id, (resource as { Type: string }).Type])), REVIEWED_RESOURCES);
+        [id, (resource as { Type: string }).Type])), reviewedResources(environment));
     }
   } finally {
     rmSync(scratch, { recursive: true, force: true });

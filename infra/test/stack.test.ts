@@ -1,4 +1,4 @@
-import { REVIEWED_RESOURCE_COUNT } from './resource-inventory';
+import { reviewedResourceCount } from './resource-inventory';
 import { fixtureArtifact } from './fixture';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -19,7 +19,7 @@ for (const environment of ['staging', 'production'] as const) {
       const stack = composeEnvironment(app, fixtureArtifact);
       const template = Template.fromStack(stack);
       template.resourceCountIs('AWS::DynamoDB::Table', 1);
-      assert.equal(Object.keys(template.toJSON().Resources).length, REVIEWED_RESOURCE_COUNT);
+      assert.equal(Object.keys(template.toJSON().Resources).length, reviewedResourceCount(environment));
       const assembly = app.synth();
       assert.equal(assembly.stacks.length, 1);
       assert.equal(assembly.manifest.missing, undefined);
@@ -29,7 +29,7 @@ for (const environment of ['staging', 'production'] as const) {
       assert.equal(artifact.environment.region, 'us-east-1');
       assert.equal(artifact.environment.account, 'unknown-account');
       assert.deepEqual(artifact.tags, { Project: 'HireFlux', Environment: environment, ManagedBy: 'AWS-CDK' });
-      assert.equal(Object.keys(artifact.template.Resources).length, REVIEWED_RESOURCE_COUNT);
+      assert.equal(Object.keys(artifact.template.Resources).length, reviewedResourceCount(environment));
       assert.deepEqual(artifact.template.Metadata.HireFlux, {
         environmentName: environment,
         resourceNamePrefix: `hireflux-${environment}`,
@@ -57,6 +57,15 @@ test('composition rejects missing/invalid selection and malformed selected bindi
   assert.throws(() => composeEnvironment(new App()), /explicit environment/);
   assert.throws(() => composeEnvironment(new App({ context: { environment: 'prod' } })), /explicit environment/);
   assert.throws(() => composeEnvironment(new App({ context: { environment: 'staging', stagingAccount: '' } }), fixtureArtifact), /12-digit/);
+});
+
+test('composition keeps a deliberate production Cognito-only candidate explicit and rejects cross-wiring', () => {
+  const app = new App({ context: { environment: 'production', productionAuthCapabilities: 'cognito' } });
+  const stack = composeEnvironment(app, fixtureArtifact);
+  const json = Template.fromStack(stack).toJSON();
+  assert.equal(json.Resources.BackendApiBackendFunctionFFB5248D.Properties.Environment.Variables.AUTH_CAPABILITIES, 'cognito');
+  assert.equal(json.Resources.BackendApiBackendFunctionFFB5248D.Properties.Environment.Variables.AUTH_MODE, 'cognito');
+  assert.throws(() => composeEnvironment(new App({ context: { environment: 'staging', productionAuthCapabilities: 'cognito' } }), fixtureArtifact), /only.*production/);
 });
 
 test('stack validates configuration before creating a construct', () => {

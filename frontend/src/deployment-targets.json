@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "targets": {
+    "staging": {
+      "environment": "staging",
+      "siteOrigin": "https://main.d31vp0nq9fzl6q.amplifyapp.com",
+      "apiOrigin": "https://0z0fpmukik.execute-api.us-east-1.amazonaws.com",
+      "capabilities": [
+        "demo",
+        "cognito"
+      ],
+      "cognito": {
+        "issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_A8ogxr5nI",
+        "clientId": "7shrt9ejr715i8accus6a0u1e3",
+        "domain": "https://hireflux-staging-9465-use1-20261020.auth.us-east-1.amazoncognito.com"
+      },
+      "callbackUrl": "https://main.d31vp0nq9fzl6q.amplifyapp.com/auth/callback",
+      "logoutUrl": "https://main.d31vp0nq9fzl6q.amplifyapp.com/auth/signed-out",
+      "selfRegistrationEnabled": false
+    },
+    "production": null
+  },
+  "security": {
+    "headers": {
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer",
+      "Permissions-Policy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Resource-Policy": "same-origin"
+    },
+    "directives": [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "font-src 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      "img-src 'self' data:",
+      "manifest-src 'self'",
+      "media-src 'none'",
+      "object-src 'none'",
+      "script-src 'self'",
+      "script-src-attr 'none'",
+      "style-src 'self' 'unsafe-inline'",
+      "worker-src 'self'"
+    ],
+    "hostedDirectives": [
+      "upgrade-insecure-requests"
+    ]
+  }
+}

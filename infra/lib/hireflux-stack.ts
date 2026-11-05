@@ -76,7 +76,7 @@ export class HireFluxStack extends Stack {
     this.backend = new BackendApi(this, 'BackendApi', this.workspaceTable, config,
       artifact ?? verifyBackendArtifact(), this.frontendHosting.frontendOrigin, this.operationalLogs);
     this.backendFunction = this.backend.backendFunction;
-    this.backendFunction.addEnvironment('AUTH_CAPABILITIES', config.environmentName === 'staging' ? 'demo,cognito' : 'cognito');
+    this.backendFunction.addEnvironment('AUTH_CAPABILITIES', config.backend.authCapabilities.join(','));
     this.backendFunction.addEnvironment('COGNITO_USER_POOL_ID', this.cognitoAuth.pool.ref);
     this.backendFunction.addEnvironment('COGNITO_APP_CLIENT_ID', this.cognitoAuth.client.ref);
     this.backendFunction.addEnvironment('COGNITO_DOMAIN', this.cognitoAuth.origin);

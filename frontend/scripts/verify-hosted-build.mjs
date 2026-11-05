@@ -4,13 +4,16 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, URL } from "node:url";
 import { parseArgs } from "node:util";
+import { existsSync } from "node:fs";
+import { reviewedPublicDeployments, resolvePublicDeployment } from "../src/publicDeploymentPolicy.mjs";
 
-export async function verifyHostedBuild(directory, { apiBaseUrl, siteUrl, workspaceMode }) {
+async function scanHostedBuild(directory, { apiBaseUrl, siteUrl, workspaceMode }, fixtureOnly = false) {
   for (const value of [apiBaseUrl, siteUrl]) {
     const url = new URL(value);
     assert.equal(url.protocol, "https:");
     assert.ok(!url.username && !url.password && url.pathname === "/" && !url.search && !url.hash);
-    assert.ok(!/localhost|127\.0\.0\.1|\.invalid|\*/i.test(url.hostname));
+    assert.ok(!/localhost|127\.0\.0\.1|\*/i.test(url.hostname));
+    assert.ok(fixtureOnly || !/\.invalid$/i.test(url.hostname), "Fictional targets are test-only");
   }
   assert.equal(workspaceMode, "demo", "Hosted workspace mode must use the existing demo adapter");
   const files = [];
@@ -40,12 +43,52 @@ export async function verifyHostedBuild(directory, { apiBaseUrl, siteUrl, worksp
   return { file_count: files.length, source_maps: false, public_urls_present: true, private_material_and_local_endpoints: "absent" };
 }
 
+export async function verifyHostedBuild(directory, options) {
+  return scanHostedBuild(directory, options);
+}
+
+async function verifyBoundArtifact(directory, options, bindings, fixtureOnly = false) {
+  assert.ok(["staging", "production"].includes(options.environment), "Select an explicit publication environment");
+  const binding = bindings[options.environment];
+  assert.ok(binding, "Publication target remains unbound");
+  assert.equal(resolvePublicDeployment(options.siteUrl, options.apiBaseUrl, options.siteUrl, bindings), binding,
+    "Build and reviewed publication target must agree exactly");
+  assert.equal(binding.selfRegistrationEnabled, false, "This candidate must keep registration closed");
+  const result = await scanHostedBuild(directory, options, fixtureOnly);
+  const text = (await Promise.all((await readdir(path.join(directory, "assets"))).filter((name) => name.endsWith(".js"))
+    .map((name) => readFile(path.join(directory, "assets", name), "utf8")))).join("\n");
+  for (const value of [binding.cognito.issuer, binding.cognito.clientId, binding.cognito.domain]) assert.ok(text.includes(value), "Reviewed public provider metadata missing from artifact");
+  if (options.environment === "production") {
+    const staging = reviewedPublicDeployments.staging;
+    if (staging) for (const value of [staging.siteOrigin, staging.apiOrigin,
+      staging.cognito.issuer, staging.cognito.clientId, staging.cognito.domain]) assert.ok(!text.includes(value), "Production artifact contains staging identity");
+  }
+  return { ...result, environment: options.environment, exact_target_and_provider: true, registration: "CLOSED" };
+}
+
+export async function verifyPublicationBuild(directory, options) {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+  if (options.environment === "production") assert.ok(!existsSync(path.join(root, "customHttp.yml")),
+    "Production publication blocked pending separately approved root-header migration");
+  return { ...await verifyBoundArtifact(directory, options, reviewedPublicDeployments), publishable: true };
+}
+
+// Explicit pure fixture input is available only to tests; no CLI or Vite override
+// can turn fictional targets into a reviewed runtime/publication binding.
+export async function verifyHostedBuildFixture(directory, options, bindings) {
+  return { ...await verifyBoundArtifact(directory, options, bindings, true), publishable: false, fixture_only: true };
+}
+
 async function main() {
-  const { values } = parseArgs({ options: { directory: { type: "string", default: "dist" } } });
-  const result = await verifyHostedBuild(path.resolve(values.directory), {
+  const { values } = parseArgs({ options: { directory: { type: "string", default: "dist" },
+    publication: { type: "boolean", default: false }, environment: { type: "string" } } });
+  const options = {
     apiBaseUrl: process.env.VITE_API_BASE_URL, siteUrl: process.env.VITE_PUBLIC_SITE_URL,
-    workspaceMode: process.env.VITE_WORKSPACE_MODE,
-  });
+    workspaceMode: process.env.VITE_WORKSPACE_MODE, environment: values.environment,
+  };
+  const result = values.publication
+    ? await verifyPublicationBuild(path.resolve(values.directory), options)
+    : { ...await verifyHostedBuild(path.resolve(values.directory), options), publishable: false, artifact_scan_only: true };
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

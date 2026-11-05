@@ -3,6 +3,42 @@
 - Status: accepted for Phase 3E, local synthesis and validation only
 - Date: 2026-10-06
 
+## Phase 7B Batch 3 amendment (2026-11-03)
+
+This amendment updates the local hosting/header contract. The Phase 3E decision
+and evidence below remain historical; they do not describe fresh deployed state.
+
+The [canonical registry](../../frontend/src/deployment-targets.json) and
+[shared pure policy module](../../frontend/src/publicDeploymentPolicy.mjs) now
+supply browser trust, offline header rendering and `CfnApp.CustomHeaders`.
+Staging retains its exact recorded site/API/provider tuple. Production is `null`;
+no placeholder IDs or runtime override create a public binding. Build-only target
+projection includes only the selected exact public tuple and removes staging
+identity from a bound production artifact. Explicit fictional fixtures remain
+test-only and cannot return a publishable result.
+
+The root `customHttp.yml` remains unchanged and effective. The locally prepared
+staging App headers are semantically equivalent to it, including its historical
+regional API source. The final exact renderer narrows connect-src to self and
+the selected reviewed API/provider; unbound production is self-only. Literal
+reviewed values avoid an App→API→App dependency cycle. No App logical-ID,
+origin-wiring or staging build-spec change is needed for this preparation.
+
+AWS documents [repository-header precedence](https://docs.aws.amazon.com/amplify/latest/userguide/setting-custom-headers.html)
+and the [monorepo application format](https://docs.aws.amazon.com/amplify/latest/userguide/custom-header-YAML-format.html).
+Consequently the prepared App policy cannot become authoritative while the root
+file overrides it. A later approved migration must retire that root authority,
+qualify exact effective headers for each app and establish a reviewed production
+binding before publication. No root deletion or hosting update occurs here.
+
+Production's disabled-auto-build Branch is preserved. Its build spec now runs
+the explicit publication guard after the normal frontend build, blocking an
+unbound target, staging identity or retained root authority. The ordinary build
+scanner validates artifact hygiene only and is not a publication approval. This
+separation preserves historical synthetic-build CI while preventing those
+fixtures from qualifying a production release. See the
+[frontend guide](../../frontend/README.md#public-build-configuration).
+
 ## Context
 
 Phase 3D defines the backend request path with verified packaging and scoped

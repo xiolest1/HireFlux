@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { newSessionScope } from "../auth/sessionGeneration";
 import { apiDownload, apiOrigin, apiRequest } from "./client";
-import { stagingPublicDeployment } from "../publicDeployment";
+import { stagingPublicDeployment as reviewedStaging } from "../publicDeployment";
+
+const stagingPublicDeployment = (() => {
+  if (!reviewedStaging) throw new Error("Expected the normal staging test binding.");
+  return reviewedStaging;
+})();
 
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
