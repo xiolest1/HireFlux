@@ -11,7 +11,7 @@ import path from 'node:path';
 import { readFileSync } from 'node:fs';
 
 const root = path.resolve(__dirname, '../../..');
-const { load } = require(path.join(root, 'frontend/node_modules/js-yaml')) as { load(template: string): any };
+const { load } = require('js-yaml') as { load(template: string): any };
 function parseHostingHeaders(template: string): Record<string, string> {
   const parsed = load(template);
   assert.equal(parsed.applications[0].appRoot, 'frontend');

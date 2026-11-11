@@ -25,6 +25,51 @@ results are attributed to those records; no new application qualification or liv
 verification was performed for this documentation task. Ignored operational handoffs
 are identified below as locally retained evidence, not public repository links.
 
+## 2026-11-10 — Assignment 1 locally qualified; remote CI publication pending
+
+Continued the accepted four-assignment production roadmap from clean `main`
+`a1b4df4d2f4f8de676eae7151b44dd26777b31c5`. Fixed the isolated infrastructure CI
+failure by declaring infrastructure-owned development dependency `js-yaml`
+exactly 4.3.2 and replacing the hosting test's frontend-installation import with
+normal resolution. The lock adds only that parser and `argparse` 2.0.1; no
+application, infrastructure behavior, workflow or unrelated dependency changed.
+
+A clean source copy with no frontend installation passed infrastructure locked
+installation, typecheck, all 164 unit tests, four real-artifact CLI tests, both
+offline synths and both-environment schema parity. Nineteen focused hosting/script
+tests passed with frontend-owned dependencies. Fresh unbound template bytes match
+Batch 3 exactly. An additional explicit-account staging synth preserves the
+retained Lambda permission's complete SourceArn expression without a source fix;
+its template SHA-256 is
+`ba2b06fc1d776ebbb98cbbcff84e99ed9e0dea5d2b475ad09038be0814b39c4a`.
+
+Downloaded the existing November 5 CI artifact read-only and compared all 3,969
+members with the retained Batch 3 ZIP. Extracted bytes and canonical metadata are
+identical; classic-zlib recompression reproduces CI's exact ZIP hash. The differing
+manifest lock hashes are explained exactly by Windows CRLF versus the LF Git blob.
+Both archives pass the unchanged artifact verifier with their corresponding input
+bytes. The selected ZIP remains untouched:
+`08933f7b30edc158e09ac2528bc6c66554087a6706694bcf8f0e7a320da45066`.
+Fresh infra audit has no high/critical finding; the pre-existing moderate bundled
+CDK/minimatch advisory remains explicitly qualified, with no unrelated repair.
+
+The [staging procedure](assignment1-staging-release-procedure.md) records the
+release identities, temporary auto-build hold proposal, real change-set review,
+old-code mutation quarantine proposal, concurrency-zero limitations and rollback
+decisions. Those live controls need separate authorization and verification.
+Evidence is retained in `.tools/assignment1-20261110/`. Two corrected local
+invocations are recorded: Windows/npm output-path escaping and a frontend-owned
+test dependency absent from the intentionally infra-only copy. No assertion was
+weakened or failed receipt removed.
+
+No Assignment 1 signed AWS request, deployment, hosted request, user/email activity,
+commit, push or workflow/build trigger occurred. Separate preceding authentication
+maintenance completed an approved CLI login and the single exact-identity STS
+check after two stopped login attempts. Local work remains uncommitted; current
+remote CI is not newly green. Next: approve the minimum source publication/remote
+CI verification, then Assignment 2's actual supervised staging deployment and
+acceptance. Production binding remains null, and signup opening is not authorized.
+
 ## 2026-11-04 — Phase 7B Authorization 1 read-only preflight completed conditionally
 
 **Status: read-only preflight complete; conditional readiness for separately

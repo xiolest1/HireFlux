@@ -178,6 +178,12 @@ assets/change-set/execution/build approval and later tag activation remain timed
 
 ## Install and validate
 
+Assignment 1's [release and staging procedure](../docs/assignment1-staging-release-procedure.md)
+records the November 10 isolated CI repair and selected artifact. Infrastructure
+owns pinned development dependency `js-yaml`; its hosting tests must not load it
+from `frontend/node_modules`. Frontend source policy inputs remain shared, but a
+frontend dependency installation is not required for the infra unit suite.
+
 Use Node.js 22.12 or newer and npm. Commands below run from the repository root;
 the repository-local CDK CLI is canonical. AWS credentials and AWS CLI are not
 required. Installing dependencies needs npm registry access; synthesis after
