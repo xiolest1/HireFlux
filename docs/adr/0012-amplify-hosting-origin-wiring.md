@@ -3,6 +3,28 @@
 - Status: accepted for Phase 3E, local synthesis and validation only
 - Date: 2026-10-06
 
+## Assignment 2 staging-header recovery amendment (2026-11-11)
+
+Defer only staging's optional stored `CfnApp.CustomHeaders` addition. The shared
+construct emits it for production and omits it for staging. Staging keeps the
+unchanged root `customHttp.yml` and its complete security-header policy; the
+existing staging App definition therefore does not need this update. Tests pin
+property absence and root/shared-policy equivalence. Production behavior remains
+unchanged, including its separate binding, root-header migration and delivered
+header gates.
+
+The November 11 staging attempt failed when Amplify rejected repository
+authorization with an upstream GitHub 401; normal CloudFormation rollback
+completed. Neither malformed header YAML nor a particular token/expiry was
+established as the cause. Avoiding the optional App update removes that dependency
+from this recovery; it does not repair credentials for future App changes.
+
+This is a local, uncommitted correction to be synthesized and reviewed as a new
+unexecuted recovery candidate. The old backend remains quarantined with reserved
+concurrency zero. No root file, deployed headers, production resource, token or
+backend artifact is changed by this amendment. The dated Batch 3 contract below
+records the earlier stored-staging proposal and is superseded only on that point.
+
 ## Phase 7B Batch 3 amendment (2026-11-03)
 
 This amendment updates the local hosting/header contract. The Phase 3E decision

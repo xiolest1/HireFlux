@@ -11,6 +11,9 @@ import path from 'node:path';
 import { readFileSync } from 'node:fs';
 
 const root = path.resolve(__dirname, '../../..');
+const { renderHostedHeaders } = require(path.join(root, 'frontend/src/publicDeploymentPolicy.mjs')) as {
+  renderHostedHeaders(environment: 'staging', options: { legacyStaging: true }): string;
+};
 const { load } = require('js-yaml') as { load(template: string): any };
 function parseHostingHeaders(template: string): Record<string, string> {
   const parsed = load(template);
@@ -99,10 +102,14 @@ for (const environment of ['staging', 'production'] as const) {
     assert.deepEqual(app.Properties.CustomRules, [{ Source: SPA_REWRITE_SOURCE, Target: '/index.html', Status: '200' }]);
     assert.equal(app.Properties.BuildSpec, environment === 'staging' ? FRONTEND_BUILD_SPEC : PRODUCTION_FRONTEND_BUILD_SPEC);
     for (const property of ['IAMServiceRole', 'ComputeRoleArn', 'BasicAuthConfig', 'OauthToken']) assert.equal(app.Properties[property], undefined);
-    const headers = parseHostingHeaders(app.Properties.CustomHeaders);
     if (environment === 'staging') {
-      assert.deepEqual(headers, parseHostingHeaders(readFileSync(path.join(root, 'customHttp.yml'), 'utf8')));
+      assert.ok(!('CustomHeaders' in app.Properties), 'Staging must preserve root header authority without updating the App');
+      assert.deepEqual(
+        parseHostingHeaders(readFileSync(path.join(root, 'customHttp.yml'), 'utf8')),
+        parseHostingHeaders(renderHostedHeaders('staging', { legacyStaging: true })),
+      );
     } else {
+      const headers = parseHostingHeaders(app.Properties.CustomHeaders);
       assert.ok(headers['Content-Security-Policy']!.split('; ').includes("connect-src 'self'"));
       assert.doesNotMatch(app.Properties.CustomHeaders, /execute-api|amazoncognito|localhost/);
     }

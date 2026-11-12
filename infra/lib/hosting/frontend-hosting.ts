@@ -55,12 +55,12 @@ export class FrontendHosting extends Construct {
       name: explicitResourceName(config, 'frontend'), repository: config.hosting.repositoryUrl,
       platform: 'WEB', accessToken,
       buildSpec: config.environmentName === 'production' ? PRODUCTION_FRONTEND_BUILD_SPEC : FRONTEND_BUILD_SPEC,
-      // Staging first receives equivalent stored policy; root YAML still wins.
-      // Production is self-only while unbound. Literal reviewed bindings later
-      // avoid an App → API → App reference cycle; publication stays separately gated.
-      customHeaders: renderHostedHeaders(config.environmentName, {
-        legacyStaging: config.environmentName === 'staging',
-      }),
+      // Staging retains root YAML authority without an unnecessary App update.
+      // Production stays self-only while unbound; its header migration and
+      // publication remain separately gated.
+      ...(config.environmentName === 'production'
+        ? { customHeaders: renderHostedHeaders('production') }
+        : {}),
       environmentVariables: [{ name: 'AMPLIFY_MONOREPO_APP_ROOT', value: config.hosting.appRoot }],
       autoBranchCreationConfig: { enableAutoBranchCreation: false, enablePullRequestPreview: false },
       enableBranchAutoDeletion: false,

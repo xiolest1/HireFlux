@@ -1,5 +1,52 @@
 # HireFlux infrastructure
 
+## Assignment 2 stage-ordering reconciliation — November 11, 2026
+
+The header-corrected update subsequently exposed a separate ordering defect:
+the API stage applied literal Demo route settings before that new route existed,
+then failed rollback while removing nonexistent settings. After explicit owner
+approval, one ContinueUpdateRollback skipped only the failed stage. The stack
+reached UPDATE_ROLLBACK_COMPLETE; its Original template, checked stage properties
+and all 26 original physical identities reconciled. This bounded comparison is
+not complete drift detection. Backend concurrency zero and the exact separate
+mutation quarantine remain; registration is CLOSED.
+
+The local source now explicitly makes the stage depend on the dedicated Demo
+route. Both environment graphs have this same ordering correction; route
+properties, throttles, IAM, hosting and the selected ZIP are unchanged. Two new
+regressions failed before the fix and pass afterward; the existing full-graph
+acyclic checks remain active. Typechecking, 166 infra tests, four real-artifact
+CLI tests, 13 hosting/projection tests, repeatable synths and both schema-parity
+checks pass. The pinned CDK 2 API emits an `addDependency` deprecation warning;
+the generated dependency is verified, with no dependency upgrade in this repair.
+
+The new staging template is SHA-256
+`8536423bc7e59b4143ce6a27263f8e29ced2ee0f80b69551c840d2389467c9d5`.
+The actual `hireflux-staging-a2-44540308-route-8536423b-review` change set is
+CREATE_COMPLETE / AVAILABLE, with 1 Add / 5 Modify, only the previously reviewed
+Lambda-permission Conditional, and no App/Branch change. It is **not executed**.
+Published HEAD remains `44540308`; this qualified source delta is uncommitted and
+has no new remote CI. Execution and maintenance release require separate owner
+approval; preserve the failed sets and all earlier evidence.
+
+## Assignment 2 staging-header recovery — November 11, 2026
+
+Staging now omits stored `App.CustomHeaders` and retains the unchanged repository
+root `customHttp.yml` as its header authority. This narrowly defers the optional
+storage migration: the November 11 update unnecessarily touched the App and
+Amplify rejected repository authentication with an upstream GitHub 401. Normal
+rollback completed; the old backend remains under concurrency-zero maintenance
+and the separate mutation quarantine. No token repair or release execution is
+authorized by this source correction.
+
+Production's stored policy and publication guard remain unchanged. Its reviewed
+binding, root-header retirement/migration and delivered-header qualification are
+still required before publication. Source/header equality does not verify current
+CDN delivery. The new staging template must be synthesized from this source and
+its actual recovery change set must exclude the App; do not patch or overwrite
+the historical qualified template. See the [release procedure's recovery
+addendum](../docs/assignment1-staging-release-procedure.md#assignment-2-staging-header-recovery--november-11-2026).
+
 ## Phase 7B Batch 3 current local contract — November 3, 2026
 
 The current source represents Option A: one production site/API/Lambda/table,

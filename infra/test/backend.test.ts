@@ -15,6 +15,7 @@ const ids = {
   api: 'BackendApiHttpApiB4B1202A', integration: 'BackendApiHttpApiDefaultRouteBackendIntegrationC791C627',
   permission: 'BackendApiHttpApiDefaultRouteBackendIntegrationPermission521AD465',
   route: 'BackendApiHttpApiDefaultRoute408A2CCF', stage: 'BackendApiHttpApiDefaultStage89B5186D',
+  demoRoute: 'BackendApiDemoIssuanceRoute3494DE53',
   app: 'FrontendHostingApp3EC0FC15', branch: 'FrontendHostingBranchB5734B41',
 };
 const getAtt = (id: string) => ({ 'Fn::GetAtt': [id, 'Arn'] });
@@ -152,13 +153,17 @@ for (const environment of ['staging', 'production'] as const) {
       SourceArn: { 'Fn::Join': ['', ['arn:', ref('AWS::Partition'), ':execute-api:us-east-1:',
         ref('AWS::AccountId'), ':', ref(ids.api), '/*/*']] },
     });
-    const demoRoute = resources.BackendApiDemoIssuanceRoute3494DE53.Properties;
+    const demoRoute = resources[ids.demoRoute].Properties;
     assert.deepEqual(demoRoute, { ApiId: ref(ids.api), AuthorizationType: 'NONE',
       RouteKey: 'POST /api/v1/demo-sessions', Target: resources[ids.route].Properties.Target });
     assert.equal(Object.values(resources).filter((r: any) => r.Type === 'AWS::ApiGatewayV2::Integration').length, 1);
     assert.equal(Object.values(resources).filter((r: any) => r.Type === 'AWS::Lambda::Permission').length, 1);
     assert.equal(Object.values(resources).filter((r: any) => r.Type === 'AWS::ApiGatewayV2::Route').length, 2);
     assert.ok(!Object.values(resources).some((r: any) => r.Type === 'AWS::ApiGatewayV2::Authorizer'));
+  });
+  test(`${environment} stage route settings wait for the dedicated Demo route`, () => {
+    assert.ok(resources[ids.stage].DependsOn?.includes(ids.demoRoute),
+      'RouteSettings keys are literals: the stage must explicitly depend on the route');
   });
   test(`${environment} gateway and runtime CORS share the exact bearer-client contract`, () => {
     const gateway = resources[ids.api].Properties.CorsConfiguration;

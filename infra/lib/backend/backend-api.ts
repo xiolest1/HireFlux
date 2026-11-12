@@ -96,10 +96,12 @@ export class BackendApi extends Construct {
     // Reuse the existing integration and its already-scoped API invocation grant.
     // The explicit POST outranks $default; API-managed CORS still handles OPTIONS.
     const defaultRoute = this.httpApi.node.findChild('DefaultRoute').node.defaultChild as CfnRoute;
-    new CfnRoute(this, 'DemoIssuanceRoute', {
+    const demoIssuanceRoute = new CfnRoute(this, 'DemoIssuanceRoute', {
       apiId: this.httpApi.apiId, routeKey: 'POST /api/v1/demo-sessions',
       authorizationType: 'NONE', target: defaultRoute.target!,
     });
+    // RouteSettings uses a literal key, so CloudFormation cannot infer this order.
+    stage.addDependency(demoIssuanceRoute);
     stage.accessLogSettings = { destinationArn: logs.httpApiAccessLogs.logGroupArn, format: HTTP_ACCESS_LOG_FORMAT };
     stage.defaultRouteSettings = { detailedMetricsEnabled: false,
       throttlingRateLimit: config.operations.apiThrottleRate, throttlingBurstLimit: config.operations.apiThrottleBurst };

@@ -2,28 +2,190 @@
 
 ## Current documented checkpoint
 
-As of this November 4, 2026 reconciliation, local `main` is
-`ceaca6a892b81f1ac48fd62cb900c5c052c4ddac` plus the uncommitted, locally qualified
-[Phase 7B Batch 3 candidate](phase7b-batch3-local-handoff.md). Production browser
-bindings remain unbound and publication blocked. The latest retained AWS inspection
-on November 4 found the existing 26-resource staging stack UPDATE_COMPLETE and
-registration CLOSED; it did not deploy Batch 3 or accept live account behavior.
-Authorization 4's real two-account acceptance remains incomplete. Build/job metadata,
-source commits, local qualification and deployed backend identity are separate facts.
-These are dated records, not continuous monitoring or new operational authorization.
+As of November 11, 2026, published `main` is
+`44540308d154d60cf3e12897479da87f3257b041`, with Assignment 1's five required CI jobs
+passed, plus local, uncommitted staging-header and route-ordering recoveries. The first Assignment 2
+backend UPDATE failed at Amplify repository authorization and rolled back. The
+original 26 stack identities and old backend remain; concurrency zero and the
+separate mutation quarantine deliberately keep the staging API in maintenance.
+Registration is CLOSED and the temporary verifier was deleted.
 
-Recent milestones: [read-only preflight](#2026-11-04--phase-7b-authorization-1-read-only-preflight-completed-conditionally),
+The header-corrected recovery change set was subsequently executed once under
+separate approval. Its API stage attempted route settings before the new Demo
+route existed; rollback also failed removing those nonexistent settings. The stack
+reached UPDATE_ROLLBACK_FAILED, with the stage as the sole rollback-failed resource.
+After separate owner approval, one ContinueUpdateRollback skipped only that stage
+and reached UPDATE_ROLLBACK_COMPLETE. The Original template, checked stage
+configuration and all 26 original physical identities reconciled. The old backend,
+concurrency zero, exact quarantine and CLOSED registration remain. The local
+stage-to-route dependency correction passed its affected gates, and one new
+change set is CREATE_COMPLETE / AVAILABLE with 1 Add / 5 Modify and no App/Branch
+change. It is unexecuted; no maintenance restoration occurred. Production browser bindings
+remain unbound and publication blocked. Real Demo and
+two-account acceptance remains incomplete. Published source, local correction,
+build/job metadata and live backend identity are separate facts. These are dated
+observations, not continuous monitoring or new operational authorization.
+
+Recent milestones: [rollback reconciliation and ordering preparation](#2026-11-11--assignment-2-rollback-reconciled-and-ordering-fix-prepared),
+[route-ordering failure](#2026-11-11--assignment-2-recovery-execution-blocked-by-route-ordering),
+[staging recovery](#2026-11-11--assignment-2-amplify-header-recovery-prepared),
+[read-only preflight](#2026-11-04--phase-7b-authorization-1-read-only-preflight-completed-conditionally),
 [shared-production direction](#2026-11-03--phase-7-direction-recorded-before-shared-production-implementation),
 [registration closure](#2026-10-27--gate-c-registration-closure-recovered-and-independently-verified),
 and [managed signup](#2026-10-23--phase-5f-managed-signup-and-onboarding-qualified-locally).
 The **Next recommended work** section near the bottom is an earlier historical
 checkpoint, not the current roadmap or permission to resume its operations.
 
-This backfill used Codex-assisted comparison of the existing journal, local Git
+The November 4 backfill used Codex-assisted comparison of the existing journal, local Git
 diffs, tracked contracts and sanitized handoffs. Original event dates and test
 results are attributed to those records; no new application qualification or live
-verification was performed for this documentation task. Ignored operational handoffs
+verification was performed for that documentation backfill. Ignored operational handoffs
 are identified below as locally retained evidence, not public repository links.
+
+## 2026-11-11 — Assignment 2 rollback reconciled and ordering fix prepared
+
+Under explicit owner approval, fresh identity/resource/stage/maintenance checks
+passed before one ContinueUpdateRollback skipped only
+`BackendApiHttpApiDefaultStage89B5186D`. It reached UPDATE_ROLLBACK_COMPLETE at the
+second bounded status observation. The Original template matched the old rollback
+target; all nine checked stage properties and all 26 original physical resource
+identities reconciled. The separate mutation quarantine, backend concurrency zero
+and old backend remained intact. This is not complete stack drift detection.
+
+The narrow source fix retains the existing dedicated route in a local variable
+and adds `stage.addDependency(demoIssuanceRoute)`. Two environment regressions
+failed before the fix and passed afterward, alongside the existing acyclic graph
+checks. Typechecking, all 166 infrastructure tests, four real-artifact CLI tests,
+13 hosting/projection tests, both repeatable offline synths and both DynamoDB
+schema-parity checks passed. An initial schema command failed before reading the
+schema because npm misquoted a Windows absolute path; its log was preserved and
+the corrected relative-path invocation passed. The pinned CDK emits a nonblocking
+`addDependency` deprecation warning. No dependency upgrade or backend rebuild.
+
+Against each previously qualified candidate, the sole template delta is the
+stage's DependsOn edge. The new staging template is 48,850 bytes, SHA-256
+`8536423bc7e59b4143ce6a27263f8e29ced2ee0f80b69551c840d2389467c9d5`.
+The original selected ZIP/manifest and already-published S3 destination are reused;
+no upload. Fresh reads verified original role/trust/default policy, exact guard,
+concurrency zero, old backend and CLOSED/deletion-protected Cognito pool.
+
+One new `hireflux-staging-a2-44540308-route-8536423b-review` UPDATE change set
+reached CREATE_COMPLETE / AVAILABLE. Actual scope is 1 Add / 5 Modify: Demo route,
+Lambda, default policy, integration, invocation permission and stage. Only the
+previously reviewed permission is Conditional; all other modifications are
+nonreplacing. No App/Branch or protected data-resource changes. Its stored Original
+template matches the qualified file, previous parameters remain, and STANDARD
+rollback is enabled. It was **not executed**.
+
+New receipt: 29/38 CLI commands (16/18 reconciliation, 13/20 preparation), one
+continuation and one CreateChangeSet, zero ExecuteChangeSet/public requests/new
+accounts/Demos/uploads/builds/Git publication. No login was needed. Earlier
+failed sets, receipts and counters remain intact. Local evidence and full copyable
+handoff: `.tools/assignment2-20261110/stage-ordering-recovery-20261111/`.
+
+Assignment 2 remains incomplete under protected maintenance, awaiting separate
+review/authorization for the exact new set's execution and conditional restoration;
+application acceptance is still unverified. Assignment 1 stays complete and
+Assignments 3/4 remain pending. No financial re-investigation: $0 usable-credit
+assumption and manual spending controls remain; retained charges continue.
+
+## 2026-11-11 — Assignment 2 recovery execution blocked by route ordering
+
+The owner separately authorized one execution of the reviewed header-recovery
+change set and conditional safe restoration. Fresh preflight matched the exact
+qualified local delta/template, existing asset version/full checksum, operator,
+stable stack, old code, concurrency zero, exact guard and CLOSED registration.
+No new verifier, token, artifact upload, build or Git publication was involved.
+
+The update began at 19:48:42 EST on November 11 (00:48:42 UTC November 12).
+Amplify App/Branch were absent from this update. The API stage instead failed
+with 404 because `POST /api/v1/demo-sessions` did not yet exist. The template's
+route-settings map is a literal key and establishes no dependency on the new
+route; the stage has no explicit DependsOn. The route waits for integration,
+Lambda and the IAM policy, allowing the stage update to run first. IAM's update
+was cancelled and rolled back. Stage rollback then returned 404 because those
+route settings did not exist; the stack reached UPDATE_ROLLBACK_FAILED.
+
+Read-only failure verification found the old Lambda and default IAM policy,
+all 26 original physical identities and CLOSED signup preserved. The dedicated
+route is absent; only `$default` remains. The stage's checked modeled settings
+already match the old rollback target: empty route settings, auto-deploy,
+original 10/20 global throttles, access logging and declared tags. This manual
+comparison is not a complete drift-detection result. The stage is the only
+rollback-failed resource.
+
+Execution stopped with backend concurrency zero and the exact quarantine still
+installed. No guard removal, concurrency restoration, Demo-control read/write,
+hosted request or account/Demo test occurred. The execution used 24/45 CLI
+commands, including one ExecuteChangeSet and bounded failure reads. The API remains
+intentionally unavailable. No ContinueUpdateRollback, resource skip, force flag,
+new change set or further infrastructure repair was attempted.
+
+The next decision is a narrowly reviewed rollback recovery, followed by the
+minimal source ordering fix: make the stage depend on the dedicated route and
+add an ordering/acyclic regression before preparing another reviewed update.
+Skipping the sole failed stage is only a candidate for explicit owner review
+after reconciling its actual configuration with the rollback template; it is
+outside the current normal-rollback authorization. Preserve maintenance until an
+admission-aware backend is deployed and its CLOSED/PAUSED restoration gates pass.
+Evidence is retained under `.tools/assignment2-20261110/recovery-execution-20261111/`.
+
+## 2026-11-11 — Assignment 2 Amplify header recovery prepared
+
+Executed the previously reviewed staging UPDATE once under owner supervision at
+the accepted `44540308` application revision. The qualified backend ZIP and S3
+object stayed unchanged. The private same-role verifier passed its impossible-write
+baseline and live Deny sample; backend concurrency zero, health throttling and the
+40-second drain established initial maintenance. The separate role quarantine
+survived the update/rollback and again returned live AccessDenied afterward.
+
+Amplify App UPDATE_FAILED with repository-authentication rejection/upstream GitHub
+401. IAM's update was cancelled secondarily; normal rollback reached
+UPDATE_ROLLBACK_COMPLETE. All 26 original physical identities, old Lambda code and
+old default policy were preserved/restored. No new route or Amplify build was
+observed. The exact rejected credential and expiry/revocation/scope cause were not
+established; malformed header YAML was not the demonstrated failure. The canary
+was deleted, while backend zero and the exact quarantine remain installed to
+contain the admission-ignorant old binary. The failed execution used 47 CLI
+commands plus three canary DynamoDB calls; no live accounts or Demos were created.
+
+Implemented the separately authorized staging-only correction in the existing
+hosting construct: omit optional stored App.CustomHeaders for staging, preserving
+the unchanged root `customHttp.yml` and complete shared header contract. Production's
+stored policy/publication guard are unchanged; production binding and header
+migration remain separate gates. No backend/frontend source, dependency/lock,
+accepted ZIP, S3 object or historical template changed. The correction remains
+uncommitted and is not remotely CI-qualified.
+
+Local qualification passed infrastructure typecheck, all 164 infra tests, four
+real-artifact CLI tests, 13 focused header/projection tests and schema parity for
+both environments. Two account-bound staging synths were byte-identical; the
+production template was byte-identical to its accepted baseline. The only
+substantive template delta from the failed candidate removes staging's stored
+header property. An initially incomplete workspace installation lacked the already
+pinned js-yaml; restoring locked dependencies from the local cache resolved the
+module-load failure without changing versions or locks. Root-header source is
+present at the accepted hosted revision, but delivered headers were not freshly
+requested during maintenance.
+
+Prepared one new unexecuted recovery UPDATE change set using the same execution
+role, existing asset and previous NoEcho/bootstrap parameters. Fresh bounded
+preflight confirmed the rolled-back stack, old backend, concurrency zero, exact
+quarantine, closed registration and unchanged App. Actual scope is one Demo-route
+Add/five Modify/no Remove: Lambda, managed default policy, integration, permission
+and stage. App and Branch changes are absent; only the expected dynamic
+Lambda-permission Conditional remains. CREATE_COMPLETE/AVAILABLE and stored
+Original-template semantic identity were verified in 13/20 service commands.
+Recovery template SHA-256 is
+`e6bf8d1258b025e01b7f2cf29480e05d9da15ecabda7c75ddb04f9434c4f7ba3`.
+
+Evidence is retained under `.tools/assignment2-20261110/execution-20261111/` and
+`recovery-amplify-20261111/`; the [release procedure](assignment1-staging-release-procedure.md#assignment-2-staging-header-recovery--november-11-2026)
+records the current recovery boundary. No second execution, maintenance
+restoration, token action, artifact upload, Git publication, hosted request or
+signup occurred. Assignment 2 remains in progress: separately authorize the exact
+reviewed recovery change set, verify the new backend/CLOSED/PAUSED state, restore
+staging safely, then approve bounded real Demo/Personal Account acceptance.
 
 ## 2026-11-10 — Assignment 1 locally qualified; remote CI publication pending
 

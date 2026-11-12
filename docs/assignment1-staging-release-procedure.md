@@ -9,6 +9,86 @@ readiness, (4) production acceptance and explicitly controlled public launch.
 Production signup activation, binding, header migration and public launch are
 not Assignment 1 work.
 
+## Assignment 2 staging-header recovery — November 11, 2026
+
+Assignment 1 was subsequently published as `44540308d154d60cf3e12897479da87f3257b041`
+with all five required jobs passing. Assignment 2's first backend UPDATE failed
+at the Amplify App with repository-authentication rejection/upstream GitHub 401
+and reached UPDATE_ROLLBACK_COMPLETE. The original selected ZIP/S3 version and
+account-bound template below remain frozen historical evidence; the template is
+not edited in place and the failed change set must not be executed again.
+
+The local recovery omits staging's optional stored `App.CustomHeaders` property
+from the shared construct. Root `customHttp.yml`, its security values, the staging
+build, backend ZIP and production's stored policy/guard stay unchanged. This
+supersedes only the stored-staging-header step of the earlier proposal. Production
+still needs its separately approved binding/header migration. No token rotation
+or speculative header-serializer change is part of this correction.
+
+Synthesize a new account-bound staging candidate under the ignored
+`.tools/assignment2-20261110/recovery-amplify-20261111/` evidence directory. Require
+the App definition to match the active baseline and the actual new change set to
+exclude App/Branch modifications; review any remaining Lambda-permission
+Conditional classification explicitly. Preparation authorizes one unexecuted
+recovery change set, not deployment or maintenance restoration. Published
+application HEAD, the local infrastructure delta and derived template have
+separate identities; this correction is not remotely CI-qualified or published.
+
+Keep the existing named mutation quarantine and backend concurrency zero while
+the old binary is active. The temporary verifier was deleted after rollback;
+do not recreate it automatically or repeat already accepted tests. A later
+execution approval must preserve the guard through update/rollback, verify the
+new binary and CLOSED registration, establish PAUSED admission, and explicitly
+authorize safe guard removal/concurrency restoration and bounded hosted checks.
+Real Demo/Cognito acceptance remains a separately approved subsequent checkpoint
+within Assignment 2. No Git push or Amplify build follows this local correction.
+
+## Assignment 2 stage-ordering reconciliation — November 11, 2026
+
+The November 11 ordering-recovery addendum below supersedes the earlier
+staging-header preparation as the next execution candidate; the original release
+and its artifacts remain historical evidence.
+
+The owner explicitly approved one ContinueUpdateRollback skipping only
+`BackendApiHttpApiDefaultStage89B5186D`, after fresh checks established it was the
+sole rollback-failed resource and its modeled configuration matched the rollback
+target. Reconciliation reached UPDATE_ROLLBACK_COMPLETE. The Original template,
+stage properties and all 26 original physical resource IDs matched; concurrency
+zero, the exact quarantine, old backend and CLOSED registration were retained.
+This is bounded modeled verification, not complete stack drift detection.
+
+The subsequent local correction adds only the explicit stage-to-Demo-route
+dependency in both environments. Properties, identities, IAM, route throttles,
+root headers and the selected ZIP/S3 destination remain unchanged. Two new
+regressions fail on the prior source and pass with the fix; the affected infra,
+hosting, artifact, repeatable synth and schema gates pass. Preserve the original
+failed change sets; do not execute either again.
+
+Current candidate: `hireflux-staging-a2-44540308-route-8536423b-review`, template
+SHA-256 `8536423bc7e59b4143ce6a27263f8e29ced2ee0f80b69551c840d2389467c9d5`.
+Its actual CREATE_COMPLETE / AVAILABLE plan is 1 Add / 5 Modify, with only the
+previously reviewed Lambda-permission Conditional and no App/Branch or protected
+data-resource change. The stored Original template matches the qualified file.
+All three parameters use previous values; the two NoEcho values remain masked,
+and the historical blank notification-email baseline is preserved without
+claiming that masked metadata reveals its value. STANDARD rollback is enabled.
+
+One owner-authorized continuation and one CreateChangeSet used 29/38 CLI commands
+(16/18 reconciliation, 13/20 preparation); ExecuteChangeSet was not called. No
+upload, Git publication, Amplify build, hosted test or maintenance release occurred.
+Full evidence is retained locally under
+`.tools/assignment2-20261110/stage-ordering-recovery-20261111/`.
+
+A later explicit approval must identify this actual new ARN and separately bound
+its single execution, failure handling and conditional restoration. Require fresh
+source/template/artifact/target/maintenance checks, retain quarantine through
+update/rollback, and verify the selected new backend, CLOSED registration and
+PAUSED admission before any approved release of maintenance. Do not assume that
+rollback reconciliation or an AVAILABLE change set makes the old binary safe
+for writes. Do not recreate the deleted verifier or repeat accepted tests unless
+specifically authorized. Real Demo/account acceptance remains Assignment 2's later
+checkpoint; the four-assignment roadmap is unchanged.
+
 ## Selected local release
 
 Base commit is `a1b4df4d2f4f8de676eae7151b44dd26777b31c5`, plus the
