@@ -9,6 +9,38 @@ readiness, (4) production acceptance and explicitly controlled public launch.
 Production signup activation, binding, header migration and public launch are
 not Assignment 1 work.
 
+## Assignment 2 service restoration — November 13, 2026
+
+The corrected staging release is deployed and service is restored. CloudFormation
+is UPDATE_COMPLETE, selected Lambda ZIP remains `08933f7b…`, all 27 mappings and
+protected identities reconciled, quarantine is removed, and reserved concurrency
+is 5. An absent operator control was initialized conditionally as PAUSED schema/
+version 1, 10/day and 2/minute; a live rejected issuance returned 429 with no new
+workspace. Cognito/provider and public backend signup remain CLOSED. The deleted
+private canary was confirmed absent; no replacement probe was created.
+
+Source HEAD/remote main/successful Amplify job 12 agree at `502303e7…`. Frontend
+CI, Python 3.14 CI, delivered shell/client API binding and eight headers passed.
+Full remote release CI remains unqualified because the Python 3.13 audit hit a
+PyPI timeout and downstream jobs were skipped. The reported rerun is not yet
+machine-verified; Actions-write integration access was denied, not escalated.
+Do not describe the whole release as green or ready for production on that basis.
+
+Initial HTTPS smoke passed in 11 requests; a read-only guest browser and a closed
+admission negative check passed. Real two-Demo/two-Personal-Account acceptance,
+identity isolation, persistence, export and returning login remain NOT VERIFIED.
+The task's exact test identities/opening-window approvals were not supplied; no
+opening was inferred from staging status or the instruction to avoid questions.
+No new release change set, artifact, push or Amplify build is needed merely to
+resume those checks. Use the original finite acceptance matrix and its explicit
+window/closure gates when those prerequisites are supplied. Preserve the existing
+PAUSED item/version and counters; do not reset them or invent addresses.
+
+Evidence: `.tools/assignment2-completion-20261113/`; historical preparation and
+failed executions below remain frozen. Further documentation publication needs
+separate deliberate approval because main auto-build remains enabled. Assignment
+2 is operational but incomplete; Assignments 3/4 are not authorized to start.
+
 ## Assignment 2 staging-header recovery — November 11, 2026
 
 Assignment 1 was subsequently published as `44540308d154d60cf3e12897479da87f3257b041`

@@ -2,45 +2,235 @@
 
 ## Current documented checkpoint
 
-As of November 11, 2026, published `main` is
-`44540308d154d60cf3e12897479da87f3257b041`, with Assignment 1's five required CI jobs
-passed, plus local, uncommitted staging-header and route-ordering recoveries. The first Assignment 2
-backend UPDATE failed at Amplify repository authorization and rolled back. The
-original 26 stack identities and old backend remain; concurrency zero and the
-separate mutation quarantine deliberately keep the staging API in maintenance.
-Registration is CLOSED and the temporary verifier was deleted.
+As of November 13, 2026, staging is operational with the selected backend ZIP
+`08933f7b…`, CloudFormation UPDATE_COMPLETE and 27 reconciled active resources.
+The exact temporary mutation quarantine was removed under a verified zero hold
+and bounded drain; reserved concurrency is restored to 5. Cognito/provider and
+public backend registration are CLOSED. The explicit operator Demo policy is
+PAUSED, schema/version 1 with 10/day and 2/minute limits; one live negative request
+returned 429 DEMO_ISSUANCE_PAUSED and created no workspace.
 
-The header-corrected recovery change set was subsequently executed once under
-separate approval. Its API stage attempted route settings before the new Demo
-route existed; rollback also failed removing those nonexistent settings. The stack
-reached UPDATE_ROLLBACK_FAILED, with the stage as the sole rollback-failed resource.
-After separate owner approval, one ContinueUpdateRollback skipped only that stage
-and reached UPDATE_ROLLBACK_COMPLETE. The Original template, checked stage
-configuration and all 26 original physical identities reconciled. The old backend,
-concurrency zero, exact quarantine and CLOSED registration remain. The local
-stage-to-route dependency correction passed its affected gates, and one new
-change set is CREATE_COMPLETE / AVAILABLE with 1 Add / 5 Modify and no App/Branch
-change. It is unexecuted; no maintenance restoration occurred. Production browser bindings
-remain unbound and publication blocked. Real Demo and
-two-account acceptance remains incomplete. Published source, local correction,
-build/job metadata and live backend identity are separate facts. These are dated
-observations, not continuous monitoring or new operational authorization.
+Local HEAD, remote main and successful Amplify job 12 all match
+`502303e7aded4baebb7702b03ca5214e75c21743`. Its parent is the prior green published
+baseline `44540308`. The eight-file header/route-ordering correction is already
+published; no new push or Amplify build was initiated here. Current local changes
+are documentation only. The published frontend and Python 3.14 CI jobs passed.
+Overall CI run 43141153239 remains machine-visible as failed: Python 3.13's audit
+hit a PyPI TLS/read timeout, and dependent artifact/infra jobs were skipped. No
+vulnerability finding was produced by that failed audit. The owner reported a
+rerun, but attempt 2 could not be independently verified. The integration denied
+Actions write with 403, and no alternative credential path was used. Full release
+qualification remains incomplete; source promotion is not approved.
 
-Recent milestones: [rollback reconciliation and ordering preparation](#2026-11-11--assignment-2-rollback-reconciled-and-ordering-fix-prepared),
-[route-ordering failure](#2026-11-11--assignment-2-recovery-execution-blocked-by-route-ordering),
-[staging recovery](#2026-11-11--assignment-2-amplify-header-recovery-prepared),
-[read-only preflight](#2026-11-04--phase-7b-authorization-1-read-only-preflight-completed-conditionally),
-[shared-production direction](#2026-11-03--phase-7-direction-recorded-before-shared-production-implementation),
-[registration closure](#2026-10-27--gate-c-registration-closure-recovered-and-independently-verified),
-and [managed signup](#2026-10-23--phase-5f-managed-signup-and-onboarding-qualified-locally).
-The **Next recommended work** section near the bottom is an earlier historical
-checkpoint, not the current roadmap or permission to resume its operations.
+The initial 11/12 read-only HTTPS checks passed, as did an isolated guest browser
+at desktop and 390px narrow width. Browser API/static traffic was measured, with
+no sign-in or account action. One split-bundle checker assumption was corrected
+locally: the delivered API origin lives in the imported client chunk, not the
+entry bundle. All eight security headers match the unchanged root policy.
 
-The November 4 backfill used Codex-assisted comparison of the existing journal, local Git
-diffs, tracked contracts and sanitized handoffs. Original event dates and test
-results are attributed to those records; no new application qualification or live
-verification was performed for that documentation backfill. Ignored operational handoffs
-are identified below as locally retained evidence, not public repository links.
+Assignment 2 is **STAGING OPERATIONAL — ACCEPTANCE INCOMPLETE**. No independent
+Demo workspace or Cognito Personal Account was created, no registration/admission
+window opened, and no destructive lifecycle test ran. The prompt reserved exact
+identities and a supervised finite opening approval; those details were not
+supplied, and the later instruction prohibited further questions. No historical
+private addresses were read or guessed. Real persistence, cross-account/Demo
+isolation, idempotency, export, returning login and natural expiry remain NOT
+VERIFIED. Public illustrations and offline tests are not live acceptance evidence.
+
+Assignment 1 remains complete; Assignments 3/4 remain pending. Production remains
+unbound/undeployed. Earlier Amplify/rollback failures and reconciliation below are
+preserved dated incidents, not current maintenance status or standing authority.
+
+Recent milestones: [restoration and bounded hosted verification](#2026-11-13--assignment-2-service-restored-hosted-smoke-and-guest-browser-verified),
+[authentication recovery](#2026-11-13--assignment-2-continuation-awaiting-operator-authentication),
+[successful backend execution](#2026-11-11--assignment-2-corrected-backend-deployed-hosting-verification-stopped),
+and [rollback reconciliation](#2026-11-11--assignment-2-rollback-reconciled-and-ordering-fix-prepared).
+The later **Next recommended work** section is an older historical checkpoint,
+not the current roadmap or permission to resume its operations.
+
+## 2026-11-13 — Assignment 2 service restored; hosted smoke and guest browser verified
+
+Continued the existing assignment under a new 100-operation allowance, preserving
+the earlier 38-call execution ledger and all prior evidence. Initial STS found an
+expired session. Two personal browser attempts failed with immediate 404 (the
+first timed out, the second was interrupted). After the owner confirmed ordinary
+IAM sign-in worked, the third normal CLI login completed and STS matched the exact
+approved non-root operator/account. No static keys, profile substitution, MFA
+bypass, credential-cache inspection or AWS permission change. A process-check/
+ordinary-page-launch command was blocked by policy and not retried through another
+launcher; authentication later succeeded through the permitted normal CLI path.
+
+ListJobs and one summary-only GetJob confirmed job 12 SUCCEED at `502303e7`,
+starting November 11 21:24:11 EST and ending 21:26:27 EST. jobType was not returned
+by either projection; it is UNKNOWN, not fabricated. Read-only remote main agrees.
+All 294 frontend/workflow/root-header inputs are unchanged from parent `44540308`.
+Frontend CI and deployed-runtime Python 3.14 CI passed at the exact new revision.
+The Python 3.13 audit failed on a 15-second PyPI TLS/read timeout; its tests, lint
+and typing passed, with artifact upload secondary to missing audit outputs.
+No application/dependency repair was justified. One connector rerun attempt was
+rejected with 403 Resource not accessible by integration. The owner reported
+attempt 2 queued/running, but bounded API/public reads continued to show attempt 1
+failed and attempt 2 not found. No repeated mutation or permission expansion.
+A read-only browser lookup found no accessible CI tab/window; the AWS sign-in
+window was not inspected. Relevant frontend/runtime and exact accepted local
+infra evidence supported staging restoration; global CI qualification was not
+waived or falsely marked green.
+
+Fresh focused AWS checks matched the exact deployed template `8536423b…`, ZIP
+`08933f7b…`, complete expected environment/runtime/logging, default policy, API
+routes/integration/stage/permission, table/schema/TTL, Cognito pool/client/domain,
+role ID/trust and App/Branch. All 27 active resource mappings reconciled; every
+original physical ID, including the permission, was preserved. Managed attachments
+are empty. The exact old canary was confirmed absent. No new backend build, upload,
+release change set, execution, Git publication or production operation.
+
+The exact CONTROL/POLICY item was absent. Following the accepted operator contract,
+one conditional absence-only PutItem initialized explicit PAUSED version 1 with
+finite 10/2 limits, without TTL/GSI/user fields; consistent readback matched.
+After final exact guard and zero checks plus a 20-second timeout-plus-margin drain,
+only HireFluxStagingA2MutationQuarantine was deleted. Role-policy inventory confirmed
+only the unchanged default policy. Concurrency was set to 5 once and read back;
+no unnecessary zero write occurred. Configuration absence does not prove instant
+universal IAM propagation, and no canary was recreated to claim that effect.
+
+Four initial frontend GETs included one diagnostic repeat: the initial API-origin
+assertion assumed a monolithic entry bundle. The actual entry imports a separate
+client chunk with the correct origin; the helper was fixed and three offline
+cases passed. No source or hosting change. The complete initial smoke used 11/12
+requests: root, entry, diagnostic entry/client, health 200, auth config 200 with
+CLOSED/exact pool/client binding/no-store, two native CORS OPTIONS, protected route
+401, SPA 200 and missing asset 404. An isolated read-only guest browser rendered
+the landing page at 1440px and 390px without horizontal overflow, with Demo/Sign In
+controls and a CLOSED notice. No identity, cookies, headers or credentials were
+captured. Generic anonymous 401 and PAUSED 429 errors lacked explicit no-store;
+no private record/token was returned. Auth-config no-store passed; authenticated
+response/export cache behavior remains unverified, with error-cache hardening a
+nonblocking follow-up. Marketing mockups are not seeded database records. One additional
+bounded negative POST under PAUSED returned 429, no token and zero new workspace.
+
+Final fresh AWS reads confirmed UPDATE_COMPLETE, original selected code, reserved
+concurrency 5, exact remaining inline-policy inventory, provider CLOSED and PAUSED
+version 1. Final totals: 42 service-CLI attempts plus three login attempts =
+45/100 known command attempts; one expired authentication result and one expected
+ResourceNotFoundException (deleted canary), all other command results successful.
+Writes: one conditional operator-control initialization, one exact quarantine
+delete, one concurrency-five write. There were no CloudFormation mutations.
+
+Application HTTP: 7/160 including 2 OPTIONS (5 initial smoke, one browser public
+config GET, one PAUSED negative POST). Static requests conservatively charged
+27/100 (6 initial, 21 browser forwardings; browser Network observed 19 static
+requests, so both measurements are retained). Initial smoke 11/12 overlaps these
+categories. Cognito application network actions 0/60, new Demos 0/2, users 0/2,
+deletions 0. No auth tokens, passwords, addresses, HAR, storageState or traces.
+Internal provider exchanges/external traffic are not exhaustively counted.
+
+No Billing/Cost Explorer, new paid monitoring or assumed promotional credits.
+Only the existing resources and one tiny operator-policy record remain; request/
+transfer/logging charges and the accepted recurring baseline continue. The manual
+$2/$5/~$1-day/>$10-month controls remain review thresholds, not caps. Full evidence,
+screenshots and the copyable handoff are retained in
+`.tools/assignment2-completion-20261113/`. Documentation stays local; no commit/push.
+Actual Demo/Personal workflows and complete remote CI remain the precise unfinished
+acceptance requirements. No new phase or architecture work was introduced.
+
+## 2026-11-13 — Assignment 2 continuation awaiting operator authentication
+
+The owner authorized one continuous restoration and live-acceptance workflow,
+with a new 100-operation allowance and separate finite browser/application limits.
+Previous deployment, correction, source and operation receipts were preserved.
+Local HEAD remains `502303e7`, with only the existing devlog dirty. The eight-file
+correction and 294 frontend/workflow/root-header inputs were reconciled locally;
+no GitHub network check, publication, build or artifact rebuild occurred.
+
+The first STS attempt returned LOGIN_EXPIRED. One normal existing-profile browser
+login was initiated; it timed out after 300 seconds before CLI completion. No
+post-login STS, Amplify ListJobs or AWS resource read/mutation followed. The old
+login URL must not be reused. Owner availability for a fresh login is pending.
+The owner subsequently reported an immediate browser 404 and confirmed readiness
+for one fresh normal login. That second attempt also returned an immediate 404
+before sign-in, and its pending execution session was interrupted. Local CLI
+version is 2.36.47; the non-secret profile binding and explicit us-east-1 selection
+match. No credential cache was inspected or AWS configuration altered. The exact
+browser failure cause remains unknown; the ordinary IAM sign-in check is pending.
+
+A tool command to check matching pending login processes and open the ordinary
+IAM page was rejected as "blocked by policy", without further reason. It was not
+retried through another launcher. The owner was given the official ordinary IAM
+sign-in link for personal use; no authentication URL/code was exposed.
+
+Known CLI attempts are conservatively three (one STS plus two logins); internal
+Sign-In exchanges are not exhaustively observable. The prior 38-call ledger is
+unchanged. No public HTTP, Demo, account/email, control-item or staging-restoration
+operation occurred. The previously recorded new backend/concurrency-zero/
+quarantine/CLOSED configuration has not been freshly verified in this window.
+
+Installed Chromium/Firefox executable presence was checked locally, without
+launching a test browser. Test identities, finite opening/deadline and optional
+deletion/publication approvals remain pending; no acceptance success is inferred.
+Evidence: `.tools/assignment2-completion-20261113/`. This is an authentication
+blocker within Assignment 2, not a new phase or a failed backend deployment.
+
+## 2026-11-11 — Assignment 2 corrected backend deployed; hosting verification stopped
+
+The owner authorized exactly the corrected route-ordering set ending
+`08c2ff9a-55aa-4ffa-ad8f-770a8ab30dab`, bounded verification and conditional
+restoration. Owner supervision was explicitly confirmed. One STS matched the
+approved account/non-root operator; no login was necessary. An initial local
+HEAD assertion found the qualified eight-file delta already committed as
+`502303e7`; all source bytes and the exact parent/scope matched the accepted
+snapshot. No source content was substituted and no Git network operation ran.
+
+Twelve preflight calls verified the original stack, reconciled stage, old backend,
+concurrency zero, exact quarantine, CLOSED registration, role and exact available
+1 Add / 5 Modify plan. The stored Original template matched SHA-256
+`8536423bc7e59b4143ce6a27263f8e29ced2ee0f80b69551c840d2389467c9d5`.
+One ExecuteChangeSet was submitted normally. Four bounded observations were
+UPDATE_IN_PROGRESS; the fifth was UPDATE_COMPLETE. No rollback or retry.
+
+The selected ZIP SHA-256
+`08933f7b30edc158e09ac2528bc6c66554087a6706694bcf8f0e7a320da45066`
+was verified live in the original Lambda, Active/Successful, Python 3.14/x86_64,
+1024 MB/15 seconds, exact role/environment/logging, with Demo TTL 24 hours and
+signup false. The expected IAM default policy and unchanged quarantine matched.
+Both API routes, existing integration and new 1 RPS/burst 2 route settings passed;
+original 10/20 throttles and logging remain. The invoke grant's SID and scoped
+source ARN were unchanged. Original table identity/schema/TTL and Cognito
+pool/client/domain/callback/token checks passed; provider signup remains CLOSED.
+The full 27-resource physical inventory has not yet been verified.
+
+App metadata matched, but the Branch comparator stopped before retaining its
+selected projection. The owner explicitly approved one additional sanitized
+GetBranch read and guarded continuation under the unchanged 60-call ceiling.
+That repeat established the sole differing field: activeJobId was
+`0000000012`, expected `0000000011`. All other selected Branch settings match.
+The new job's commit/status/timing are unknown: the conditional continuation gate
+failed, so ListJobs and the unattempted resource/managed-policy reads did not run.
+This is a concrete metadata deviation, not proof of a broken site or a job caused
+by this task. Public readiness remains unverified.
+
+Concurrency was already zero after deployment. An unnecessary idempotent zero
+write was nevertheless submitted during the maintenance hold, counted and read
+back as zero; a 20-second timeout-plus-margin drain completed. The value did not
+change. Quarantine remains installed. No policy deletion, concurrency-five write,
+Demo CONTROL read/create, public request, account/email/Demo test, artifact upload,
+Git publication, new build request or production action occurred. PAUSED has not
+been established. Earlier canary absence/denial evidence remains dated; no new
+canary was created.
+
+Final new count: 38/60 CLI calls, including one ExecuteChangeSet, one idempotent
+concurrency-zero write and one expressly approved repeated Branch read. All live
+command responses succeeded; both Branch comparison STOPs are preserved.
+Public HTTP: 0/12. No Billing/Cost Explorer or fresh spend estimate; the cash-funded
+$0-credit assumption/manual controls remain, with retained costs continuing.
+Operational evidence/full handoff is under
+`.tools/assignment2-20261110/corrected-execution-20261111/`. The devlog is local;
+no automatic commit/push. Assignment 1 stays complete, Assignment 2 deployed but
+verification/restoration/acceptance incomplete, Assignments 3/4 pending.
+
+Smallest next owner decision: authorize one bounded ListJobs read for the existing
+App/main to identify job 12's actual revision/status/timing and review its hosting
+baseline. Preserve maintenance and current counters; no new deployment, build,
+source repair, broad audit or account testing is justified by the metadata alone.
 
 ## 2026-11-11 — Assignment 2 rollback reconciled and ordering fix prepared
 
