@@ -1,5 +1,23 @@
 # Backend Lambda packaging (Phase 3B)
 
+## Assignment 2 dependency security correction — November 16, 2026
+
+The current local lock changes only the transitive runtime dependency dnspython
+2.9.0 → 2.9.2 for CVE-2026-128089. Its attacker-controlled WKS zone-text parser
+could exhaust resources; no corresponding application entry point was identified.
+The current remote audit failure is a real advisory, not the earlier PyPI timeout.
+The patched locked graph passes the pinned audit with 35 packages and zero findings,
+811 backend tests, lint, formatting, typing and dependency consistency checks.
+
+A separate local Python 3.14/Linux x86_64 ZIP is qualified at
+`.tools/assignment2-final-acceptance-20261116/hireflux-backend-security-candidate.zip`,
+SHA-256 `796d44695c99d9be673ecb4485cc0b450df026314ae7f0e6bc825abf96a29bb9`.
+Two clean builds match. The isolated, network-disabled, non-root runtime probe
+requires the patched version and verifies the bounded WKS service-number parser.
+The deployed ZIP `08933f7b…` and its evidence remain unchanged; the new candidate
+has not been uploaded or deployed. Publication and replacement need separate
+owner approval. See the [upstream advisory](https://github.com/rthalley/dnspython/security/advisories/GHSA-vvf4-9x63-8xvv).
+
 ## Phase 7B Batch 3 package qualification — November 3, 2026
 
 The current source/lock was packaged twice into identical Linux x86_64 Python 3.14

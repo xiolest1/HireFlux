@@ -75,8 +75,28 @@ describe("public authentication metadata", () => {
     for (const provider of [
       { issuer: cognito.issuer }, { client_id: cognito.client_id },
       { domain: "https://other.auth.us-east-1.amazoncognito.com" },
-      { self_registration_enabled: true },
     ]) invalid({ ...stage, cognito: { ...stage.cognito, ...provider } }, STAGING_SITE, STAGING_API);
+  });
+
+  it("follows staging runtime registration CLOSED, OPEN and CLOSED with the same trusted binding", () => {
+    vi.stubEnv("VITE_PUBLIC_SITE_URL", STAGING_SITE);
+    expect(stagingPublicDeployment.selfRegistrationEnabled).toBe(false);
+    for (const enabled of [false, true, false]) {
+      const stage = config({ environment: "staging", account_data_policy: "disposable_staging", cognito: {
+        ...cognito, issuer: stagingPublicDeployment.cognito.issuer, client_id: stagingPublicDeployment.cognito.clientId,
+        self_registration_enabled: enabled,
+      } });
+      expect(validateAuthConfiguration(stage, STAGING_SITE, STAGING_API).cognito?.self_registration_enabled).toBe(enabled);
+      for (const provider of [
+        { issuer: cognito.issuer }, { client_id: cognito.client_id },
+        { domain: "https://other.auth.us-east-1.amazoncognito.com" },
+        { self_registration_enabled: "true" },
+      ]) invalid({ ...stage, cognito: { ...stage.cognito, ...provider } }, STAGING_SITE, STAGING_API);
+      invalid(stage, STAGING_SITE, "https://other.execute-api.us-east-1.amazonaws.com");
+      invalid(stage, "https://main.other.amplifyapp.com", STAGING_API);
+      invalid({ ...stage, environment: "production", account_data_policy: "production" }, STAGING_SITE, STAGING_API);
+      invalid({ ...stage, capabilities: ["cognito"] }, STAGING_SITE, STAGING_API);
+    }
   });
 
   it("requires agreement between compiled site, selected frontend environment and backend", () => {

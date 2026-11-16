@@ -1,5 +1,18 @@
 # HireFlux frontend build and hosting
 
+## Assignment 2 staging registration correction — November 16, 2026
+
+The trusted staging site/API/provider tuple remains fixed, while its validated
+`self_registration_enabled` boolean follows the operator-controlled backend
+configuration. The same staging frontend therefore supports CLOSED → OPEN →
+CLOSED without a rebuild for each temporary signup window. Production continues
+to require the exact compiled registration value; unknown sites, APIs, providers,
+capabilities and malformed metadata still fail closed. The compiled staging
+default remains false. This UI behavior does not enable Cognito signup: provider
+and backend changes still require the separately approved opening/closure process.
+This correction is locally qualified and unpublished; live signup acceptance is
+not implied by its tests or by the existing hosted build.
+
 ## Phase 7B local trust and hosting contract
 
 Batch 2 additionally preserves the same Demo operation key through admission

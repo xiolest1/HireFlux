@@ -645,7 +645,18 @@ def main() -> None:
     assert importlib.metadata.version("cryptography") == "50.0.2"
     assert importlib.metadata.version("boto3") == "1.43.53"
     assert importlib.metadata.version("botocore") == "1.43.78"
-    assert importlib.metadata.version("dnspython") == "2.9.0"
+    assert importlib.metadata.version("dnspython") == "2.9.2"
+    import dns.exception
+    import dns.rdata
+
+    # CVE-2026-128089: reject an out-of-range service before resizing its bitmap.
+    dns.rdata.from_text("IN", "WKS", "192.0.2.1 17 65535")
+    try:
+        dns.rdata.from_text("IN", "WKS", "192.0.2.1 17 65536")
+    except dns.exception.SyntaxError:
+        pass
+    else:
+        raise AssertionError("Packaged WKS parser accepted an out-of-range service.")
     assert not NETWORK_ATTEMPTS, NETWORK_ATTEMPTS
     print(
         json.dumps(
@@ -658,6 +669,7 @@ def main() -> None:
                 "native_modules": list(native_modules),
                 "synthetic_cognito_rs256_admission": True,
                 "runtime_distributions": len(distributions),
+                "dnspython_wks_service_bound": True,
                 "cold_health": cold["statusCode"],
                 "warm_health": warm["statusCode"],
                 "not_found": missing["statusCode"],

@@ -45,13 +45,16 @@ export function validateAuthConfiguration(value: unknown, siteOrigin = window.lo
   try {
     const binding = resolvePublicDeployment(siteOrigin, backendOrigin, import.meta.env.VITE_PUBLIC_SITE_URL?.trim(), bindings);
     if (binding) {
+      // Staging signup follows operator-controlled runtime policy; production stays pinned.
+      const registrationMatches = binding.environment === "staging" ||
+        config.cognito?.self_registration_enabled === binding.selfRegistrationEnabled;
       if (config.environment !== binding.environment ||
           config.capabilities.length !== binding.capabilities.length ||
           !config.capabilities.every((capability) => binding.capabilities.includes(capability)) ||
           config.cognito?.issuer !== binding.cognito.issuer ||
           config.cognito.client_id !== binding.cognito.clientId ||
           config.cognito.domain !== binding.cognito.domain ||
-          config.cognito.self_registration_enabled !== binding.selfRegistrationEnabled) throw new Error("Untrusted metadata.");
+          !registrationMatches) throw new Error("Untrusted metadata.");
     } else if (!["local", "test"].includes(config.environment) ||
         (config.cognito && config.cognito.domain !== STAGING_COGNITO_ORIGIN)) {
       throw new Error("Untrusted development metadata.");

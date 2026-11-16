@@ -2,51 +2,86 @@
 
 ## Current documented checkpoint
 
-As of November 13, 2026, staging is operational with the selected backend ZIP
-`08933f7b…`, CloudFormation UPDATE_COMPLETE and 27 reconciled active resources.
-The exact temporary mutation quarantine was removed under a verified zero hold
-and bounded drain; reserved concurrency is restored to 5. Cognito/provider and
-public backend registration are CLOSED. The explicit operator Demo policy is
-PAUSED, schema/version 1 with 10/day and 2/minute limits; one live negative request
-returned 429 DEMO_ISSUANCE_PAUSED and created no workspace.
+As of November 16, 2026, Assignment 2 staging remains operational, while positive
+Demo/Personal acceptance and release qualification are incomplete. One fresh normal
+CLI login and exact STS match restored the approved operator session. Minimal live
+reads confirm UPDATE_COMPLETE, selected deployed ZIP `08933f7b…`, concurrency 5,
+quarantine absent, signup CLOSED and explicit Demo PAUSED version 1. Public health
+and auth configuration pass; no admission window was opened.
 
-Local HEAD, remote main and successful Amplify job 12 all match
-`502303e7aded4baebb7702b03ca5214e75c21743`. Its parent is the prior green published
-baseline `44540308`. The eight-file header/route-ordering correction is already
-published; no new push or Amplify build was initiated here. Current local changes
-are documentation only. The published frontend and Python 3.14 CI jobs passed.
-Overall CI run 43141153239 remains machine-visible as failed: Python 3.13's audit
-hit a PyPI TLS/read timeout, and dependent artifact/infra jobs were skipped. No
-vulnerability finding was produced by that failed audit. The owner reported a
-rerun, but attempt 2 could not be independently verified. The integration denied
-Actions write with 403, and no alternative credential path was used. Full release
-qualification remains incomplete; source promotion is not approved.
+Remote main and successful Amplify job 13 now reference `4b28384d…`, the exact
+November 13 documentation-only successor to `502303e7…`; all application/infra/
+build/CI inputs are unchanged. Current CI run 43941391918 fails on a newly reported
+runtime dnspython vulnerability. This is not the earlier registry timeout.
 
-The initial 11/12 read-only HTTPS checks passed, as did an isolated guest browser
-at desktop and 390px narrow width. Browser API/static traffic was measured, with
-no sign-in or account action. One split-bundle checker assumption was corrected
-locally: the delivered API origin lives in the imported client chunk, not the
-entry bundle. All eight security headers match the unchanged root policy.
+A narrowly scoped local repair updates only dnspython to 2.9.2, with 811 backend
+tests, audit of 35 runtime packages with zero findings, lint/typing/consistency and
+a reproducible separate Linux candidate `796d4469…` qualified. The frontend's
+staging registration validator also required a local correction: the exact trusted
+staging backend can now advertise CLOSED/OPEN/CLOSED without rebuilding, while
+production remains pinned. All 673 frontend tests and its exact staging build
+pass. These local corrections are unpublished; the deployed binary is unchanged.
 
-Assignment 2 is **STAGING OPERATIONAL — ACCEPTANCE INCOMPLETE**. No independent
-Demo workspace or Cognito Personal Account was created, no registration/admission
-window opened, and no destructive lifecycle test ran. The prompt reserved exact
-identities and a supervised finite opening approval; those details were not
-supplied, and the later instruction prohibited further questions. No historical
-private addresses were read or guessed. Real persistence, cross-account/Demo
-isolation, idempotency, export, returning login and natural expiry remain NOT
-VERIFIED. Public illustrations and offline tests are not live acceptance evidence.
+Registration/Demo opening, two private owner-approved account identities and the
+new repair publication/replacement still await the one consolidated authorization
+specified by the current request. No user, Demo workspace, release change set,
+AWS mutation, push or Amplify build was initiated in this continuation. The
+original four-assignment roadmap remains: Assignment 1 COMPLETE; Assignment 2
+CURRENT; Assignments 3/4 PENDING. Historical entries below remain dated evidence.
 
-Assignment 1 remains complete; Assignments 3/4 remain pending. Production remains
-unbound/undeployed. Earlier Amplify/rollback failures and reconciliation below are
-preserved dated incidents, not current maintenance status or standing authority.
+## 2026-11-16 — Assignment 2 acceptance resumed; focused local repairs qualified
 
-Recent milestones: [restoration and bounded hosted verification](#2026-11-13--assignment-2-service-restored-hosted-smoke-and-guest-browser-verified),
-[authentication recovery](#2026-11-13--assignment-2-continuation-awaiting-operator-authentication),
-[successful backend execution](#2026-11-11--assignment-2-corrected-backend-deployed-hosting-verification-stopped),
-and [rollback reconciliation](#2026-11-11--assignment-2-rollback-reconciled-and-ordering-fix-prepared).
-The later **Next recommended work** section is an older historical checkpoint,
-not the current roadmap or permission to resume its operations.
+Preserved all 94 November 13 evidence files and the previous append-only ledgers.
+Initial STS reported expired credentials. One normal existing-profile login
+completed with personal owner authorization; the following STS matched the exact
+approved non-root identity. No cache inspection, static keys, profile substitution,
+root use or permission changes. Seven targeted safety/hosting reads confirmed the
+original stable stack/binary, concurrency 5, exact remaining inline-policy inventory,
+CLOSED provider, PAUSED control version 1 and Amplify job 13 at the documentation
+successor. Two bounded public GETs confirmed health and CLOSED/no-store auth config.
+Current continuation counts: nine service attempts plus one login; two API GETs;
+no new static/Cognito test traffic, users, Demos or AWS resource mutations.
+
+Local Git proves `4b28384d` contains only the two documentation files frozen in the
+November 13 receipt. Fresh remote main agrees; job 13 SUCCEED used that revision.
+No publication actor/authorization is inferred from reflog or job metadata. Current
+quality run 43941391918 at that revision has frontend success, backend 3.13 audit
+failure, backend 3.14 cancellation and skipped dependent packaging/infra. Its audit
+artifact identifies dnspython 2.9.0 / CVE-2026-128089, patched by 2.9.2. The package
+is a production transitive dependency through pydantic[email]/email-validator and
+is present in the immutable deployed ZIP. No zone-text parser entry point was
+identified in application source; this does not waive the security gate. No rerun
+was attempted for an actual finding.
+
+The targeted lock update changes only that package's entry; all 65 other entries,
+direct dependencies and lock metadata remain unchanged. The existing environment
+was synchronized to the accepted patched graph. Full backend: 811 passing tests;
+Ruff, format, mypy, lock/pip checks and pinned pip-audit pass. The separate ZIP
+`796d44695c99d9be673ecb4485cc0b450df026314ae7f0e6bc825abf96a29bb9`
+reproduced identically twice. Docker's Linux engine started through its normal
+local launch, with no owner command or installation. The first runtime probe
+stopped at its obsolete exact 2.9.0 assertion; a diagnostic local repeat identified
+that assertion. Updating it to 2.9.2 and adding bounded WKS 65535/65536 checks made
+the existing non-root/read-only/network-disabled Linux probe pass. Failed evidence
+is retained; no production application failure is claimed from that verifier pin.
+
+Frontend validation had pinned staging registration false as an identity field,
+so the approved two-flag provider/backend opening would deterministically fail
+AUTH_CONFIGURATION_INVALID. A failing CLOSED/OPEN/CLOSED regression demonstrated
+it locally. The small correction allows only the already trusted staging tuple's
+validated runtime boolean; production and all immutable bindings remain strict.
+The 70 auth-config and 63 adjacent regressions, full 673-test frontend suite,
+lint/typecheck and exact staging build/publication scanner pass. No dependency,
+header, provider, PKCE or ownership change was made by this frontend correction.
+
+Credential-isolated, child-network-blocked real CDK synthesis qualified CLOSED
+security template `0c1e7566…` (only Lambda code/asset metadata), OPEN `10dbcf2f…`
+(two registration flags) and an identical reproducible CLOSED closure. No IAM,
+App/Branch, resource identity or graph change. No live change set was created.
+The deployed 089 ZIP, ca6 manifest, 853 template and historical receipts remain
+untouched. Source/docs stay local pending the concrete consolidated approval;
+no backend or frontend publication, user/email, positive acceptance or new phase.
+Evidence and qualification receipts: `.tools/assignment2-final-acceptance-20261116/`.
 
 ## 2026-11-13 — Assignment 2 service restored; hosted smoke and guest browser verified
 

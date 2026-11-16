@@ -9,6 +9,45 @@ readiness, (4) production acceptance and explicitly controlled public launch.
 Production signup activation, binding, header migration and public launch are
 not Assignment 1 work.
 
+## Assignment 2 acceptance continuation — November 16, 2026
+
+The fresh operator identity matches the existing account/non-root principal after
+one normal login renewal. Minimal current reads confirm UPDATE_COMPLETE, deployed
+ZIP `08933f7b…`, concurrency 5, no quarantine, provider/backend CLOSED and Demo
+PAUSED version 1. Public health/auth configuration passed. The documentation-only
+successor `4b28384d…` is remote main and Amplify job 13 SUCCEED; its application,
+infrastructure, build and CI inputs match `502303e7…`.
+
+Current remote CI is not green: run 43941391918 reports the newly published
+dnspython advisory, not a transient timeout. The narrow local 2.9.2 lock repair
+passes audit and backend qualification. A separate reproducible candidate
+`796d4469…` passes the isolated Lambda probe. Preserve the original ZIP/template;
+any replacement requires explicit review and publication/deployment approval.
+
+Local frontend validation also now permits the exact trusted staging provider's
+runtime registration boolean to transition CLOSED/OPEN/CLOSED. Previously its
+compiled false pin rejected the required opening. Production's pin and immutable
+trust tuple remain enforced; 673 frontend tests and the staging build/scanner pass.
+Nothing in this correction opens provider signup or Demo issuance.
+
+The qualified CLOSED security template `0c1e7566…` changes only existing Lambda
+code/asset metadata relative to deployed `8536423b…`. OPEN `10dbcf2f…` changes only
+the pool creation policy and backend advertisement relative to that new CLOSED
+template. Closure restores the same CLOSED bytes and retains the patched ZIP.
+Actual change sets must exclude replacements, resource additions/deletions, IAM,
+App/Branch and unrelated changes. Create the actual closure set after OPEN is
+stable; do not reuse a set invalidated by the opening update.
+
+Positive acceptance remains unstarted. Obtain the single consolidated identity,
+email, public opening/window, publication/repair and sufficient budget approval
+required by the current request. Reserve closure operations before any opening.
+No scheduler or policy TTL closes either mechanism automatically; finite Demo
+allowance can be consumed by other visitors and public signup admits third parties.
+Do not reset counters or delete unexpected users. Keep both mechanisms closed
+until the reviewed repaired release and observable browser workflow are ready.
+Evidence: `.tools/assignment2-final-acceptance-20261116/`. No commit, push, AWS
+mutation, user or new Demo has occurred in this continuation at this checkpoint.
+
 ## Assignment 2 service restoration — November 13, 2026
 
 The corrected staging release is deployed and service is restored. CloudFormation
