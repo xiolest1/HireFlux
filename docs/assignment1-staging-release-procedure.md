@@ -11,6 +11,72 @@ not Assignment 1 work.
 
 ## Assignment 2 acceptance continuation — November 16, 2026
 
+**Current final checkpoint, 9:35 PM EST:** source53a5714/CI43949349774 allfive/
+Amplify14/patched796d4469 remain accepted. Both actual accounts returned and have
+distinct PERSISTENT proofs. Personal read isolation, a denied foreign write with
+unchanged target, both CSV exports and B's recent-auth JSON export passed. No
+payload or credentials were saved. One separately approved third Demo was issued;
+admission is PAUSEDv5 with restored2/2 limits, and provider/backend signup CLOSED.
+
+The required cross-kind authorization result was not obtained: public-response
+verification stopped first, then an unhandled pending-response timeout terminated
+the harness. Same-browser switching/logout/cache clearing is also unverified.
+Paired/synthetic/loopback local hardening passes; no application source fix or live
+replay was performed. Version3 full handoff preserves exact outcomes and receipts.
+
+Current cumulative conservative counts are169 control/login,467 API,1476 static,
+39 application-Cognito; three Demos/two accounts/zero deletions. The new45-minute
+window expired9:42 PM, its16 control attempts are consumed, and no fourth Demo is
+authorized. Do not replay the v3 opening plan against PAUSEDv5, reset counters,
+reuse the expired receipt, push/build/redeploy or start Assignment3. Qualify/review
+the exact remaining-test plan and obtain new bounded owner authorization first.
+The older preparation/checkpoint paragraphs below remain dated history.
+
+
+**Later verified checkpoint, November 16:** the approved eight-file repair is
+published at `53a5714345aafdd89d7f6f830e17e5b2c4296e26`. CI 43949349774
+attempt 1 passes all five jobs; Amplify job 14 SUCCEED hosts that revision. Lambda
+now runs patched ZIP `796d4469…`; CLOSED template `0c1e7566…` is active. The
+earlier preparation observations below remain historical, not current state.
+
+The owner separately approved the actual CloudFormation reference rows before
+execution: the exact unchanged API integration/invocation grant, including only
+the named permission's Conditional replacement possibility, and the nonreplacing
+backend policy reference re-evaluation with unchanged effective hash `32e01764…`.
+These exceptions do not permit other replacements or permission expansion. All
+three reviewed security/OPEN/CLOSE updates completed once, with no retry; the
+permission SID actually remained unchanged.
+
+Two Demos were issued, then admission was PAUSED v3 at 20:52:21 UTC without
+resetting counters. Two owner-approved accounts self-registered and confirmed
+their emails; signup was verified CLOSED at 21:24:25 UTC. Final reads confirm
+two enabled CONFIRMED users, stable stack, all 27 physical mappings preserved,
+concurrency 5, no quarantine and the corrected hosting revision. No further
+opening or account creation is needed for returning-login, persistence, isolation
+or export checks. Browser-session loss is not proof of application persistence
+failure, and successful signup is not proof of the remaining acceptance matrix.
+
+Before the original 22:00 UTC deadline, Account A completed returning Cognito
+login in a new context and read its known saved APPLIED record (200). CSV returned
+200/no-store but its content verifier observed empty text and failed closed.
+No export payload was retained, so actual empty output versus response-observation
+defect remains unresolved. Live traffic is stopped. Do not clear the STOP or
+extend the deadline implicitly; qualify any narrow verifier correction offline
+and obtain a bounded continuation before Account B/isolation/export live checks.
+The original observer passed subsequent native-CORS attachment fixtures in three
+local browser modes, so a deterministic parser defect is not demonstrated. The
+historical cause remains inconclusive. The separately qualified task-local fetch
+clone observer distinguishes actual browser bytes from observer bytes without
+retaining payloads. The proposed continuation is not yet approved; do not reuse
+the expired receipt, unlock the old STOP or issue another Demo without that
+separate decision. Current cumulative counts are153 control/login,286 API,
+825 static and23 application-Cognito requests; no live call followed the deadline.
+
+Preserve request ledgers and the 22:00 UTC browser deadline during recovery.
+Record actual test results and any unperformed checks before Assignment 2 can be
+accepted. No account deletion or Assignment 3 execution is authorized. Final
+documentation may remain unpublished rather than triggering another hosting build.
+
 The fresh operator identity matches the existing account/non-root principal after
 one normal login renewal. Minimal current reads confirm UPDATE_COMPLETE, deployed
 ZIP `08933f7b…`, concurrency 5, no quarantine, provider/backend CLOSED and Demo

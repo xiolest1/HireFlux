@@ -2,32 +2,110 @@
 
 ## Current documented checkpoint
 
-As of November 16, 2026, Assignment 2 staging remains operational, while positive
-Demo/Personal acceptance and release qualification are incomplete. One fresh normal
-CLI login and exact STS match restored the approved operator session. Minimal live
-reads confirm UPDATE_COMPLETE, selected deployed ZIP `08933f7b…`, concurrency 5,
-quarantine absent, signup CLOSED and explicit Demo PAUSED version 1. Public health
-and auth configuration pass; no admission window was opened.
+As of November 16, 2026, **STAGING OPERATIONAL — SPECIFIC ACCEPTANCE REQUIREMENTS
+REMAIN**. Published source `53a5714345aafdd89d7f6f830e17e5b2c4296e26` has all five
+CI jobs green (run 43949349774 attempt 1), Amplify job 14 SUCCEED, and patched
+Lambda ZIP `796d4469…` deployed. The runtime dnspython 2.9.2 repair, trusted
+staging CLOSED/OPEN/CLOSED validator correction and immutable evidence are accepted.
 
-Remote main and successful Amplify job 13 now reference `4b28384d…`, the exact
-November 13 documentation-only successor to `502303e7…`; all application/infra/
-build/CI inputs are unchanged. Current CI run 43941391918 fails on a newly reported
-runtime dnspython vulnerability. This is not the earlier registry timeout.
+Three fictional Demo workspaces and two genuinely self-registered/confirmed
+Personal Accounts were tested. Both accounts returned to their saved records;
+explicit PERSISTENT/distinct-identity proofs passed. Personal A↔B reads were
+concealed 404s; a foreign PATCH was denied and its target fingerprint stayed
+unchanged. Both CSVs and B's freshly reauthenticated full JSON export passed
+own-record, foreign-exclusion and no-store checks without saving private payloads.
 
-A narrowly scoped local repair updates only dnspython to 2.9.2, with 811 backend
-tests, audit of 35 runtime packages with zero findings, lint/typing/consistency and
-a reproducible separate Linux candidate `796d4469…` qualified. The frontend's
-staging registration validator also required a local correction: the exact trusted
-staging backend can now advertise CLOSED/OPEN/CLOSED without rebuilding, while
-production remains pinned. All 673 frontend tests and its exact staging build
-pass. These local corrections are unpublished; the deployed binary is unchanged.
+Final selected AWS reads at **9:35:25 PM EST / 02:35:25 UTC November 17** confirm
+provider/backend signup CLOSED, Demo PAUSED version 5 at the original 2/day and
+2/minute limits, and patched backend Active/Successful. Last explicit concurrency
+5/no-quarantine/all-27-identity checks remain accepted; no later operation changed
+those settings. The third Demo opening used one slot, paused promptly, and did not
+reset counters. There was no additional code publication, build or deployment.
 
-Registration/Demo opening, two private owner-approved account identities and the
-new repair publication/replacement still await the one consolidated authorization
-specified by the current request. No user, Demo workspace, release change set,
-AWS mutation, push or Amplify build was initiated in this continuation. The
-original four-assignment roadmap remains: Assignment 1 COMPLETE; Assignment 2
-CURRENT; Assignments 3/4 PENDING. Historical entries below remain dated evidence.
+The cross-kind Demo/Personal check stopped in public-configuration response
+verification before its authorization result. A separate pending-response promise
+then terminated the test controller. This does not demonstrate an application
+disclosure, but neither cross-kind direction can be marked PASS. Same-browser
+identity-switch/logout/cache-clearing acceptance also remains unverified.
+
+Local-only test-tool hardening now handles pending rejection without swallowing
+failure/retrying, preserves STOP against later live commands, classifies safe
+response errors, validates the browser-consumed public bytes and pins reviewed
+helper hashes/cumulative identity allowance. Paired old/new crash-path, eight
+synthetic safety cases and ten loopback public-response cases pass. No live replay
+followed; all historical STOPs, receipts and handoff versions remain preserved.
+
+Cumulative conservative counts: **169 control/login, 467 API including OPTIONS,
+1476 static, 39 application-Cognito**. The renewed window ended at 9:42 PM EST;
+all 16 approved control attempts and all three Demo allowances are used. No further
+live attempt is authorized merely by remaining larger-budget capacity. Cash-funded
+planning assumes $0 usable credit; no new Billing query or paid monitoring.
+
+Full handoff: `.tools/assignment2-final-acceptance-20261116/` version 3. These latest
+DevLog/release-procedure changes are local and unpublished. Roadmap unchanged:
+Assignment 1 COMPLETE; Assignment 2 CURRENT/incomplete; Assignments 3/4 PENDING.
+
+## 2026-11-16 — Returning accounts and exports passed; cross-kind verifier STOP preserved
+
+The owner approved one additional supervised 45-minute continuation and a single
+additional fictional Demo after the original window expired. Prior counts were
+carried forward, static allowance became 1500, and API/Cognito/control ceilings
+remained 500/180/180. Both existing accounts authenticated privately; no new real
+account, verification email, password reset or deletion was created.
+
+Account B's initial Active listing excluded its saved DRAFT; Home exposed the
+expected Maple Testworks / Frontend Engineer record. This was a test lookup issue,
+not lost persistence. Hidden Optional details also prevented a location-field
+selector; the negative mutation used the visible follow-up field. A foreign write
+returned 404 with B unchanged; A's later normal own edit returned 200.
+
+CSV dual observations agreed on 338 bytes for A and 325 for B, one owned row each.
+The earlier empty CSV observation was not reproduced and remains historically
+inconclusive. B's first sensitive verification was followed by the owner's Return
+to workspace click before export; no JSON request was submitted. After clarifying
+that action, one fresh verified intent produced the successful JSON export.
+
+A UTC minute rollover blocked the Demo OPEN locally before any write. Two fresh
+control/minute reads within the approved aggregate budget preserved that STOP and
+the old plan. One OPEN v3→v4 then granted exactly one available slot; the new UTC
+day counter rose 0→1. One PAUSE v4→v5 restored the original limits without counter
+reset, verified at 9:28:27 PM EST. Signup stayed CLOSED throughout.
+
+At 9:32:22 PM the response-proof handler stopped while inspecting public auth
+configuration, before the cross-kind result. Its original low-level exception was
+not retained. Subsequent requests were blocked. The unhandled wait then crashed
+the controller; local inventory afterward showed no testing windows. No automatic
+retry or fourth workspace was attempted. The corrected wait path reports the same
+failure with one attempt and zero unhandled rejections; the preserved original
+produces one. New browser-side public metadata proof rejects empty/malformed/open/
+foreign bindings across reload tests. These ignored local helpers change no
+application code and were not deployed. Full acceptance remains incomplete.
+
+## 2026-11-16 — Corrected release deployed; public creation closed after bounded acceptance
+
+Publication followed exact eight-file manifest `781007f2…`, with one commit and
+normal fast-forward push, one automatic Amplify build and no CI rerun. The
+patched ZIP was published once at its new immutable bootstrap key. Each reviewed
+CloudFormation leg reached UPDATE_COMPLETE; the Conditional invocation-permission
+row did not change its SID, function, API-specific source or grant. The additional
+IAM reference row left the canonical effective policy hash `32e01764…` unchanged.
+Original STOPs and explicit exception approvals remain append-only evidence.
+
+Demo opening was limited to two reservations, paused promptly, and did not reset
+its daily counter. Owner-entered passwords and email codes stayed on Cognito;
+mailbox values and tokens are excluded from the public evidence. Account A created
+a fictional application, moved it to APPLIED, scheduled an interview and added a
+note. Account B created its own fictional application. The browser automation
+runtime was lost during a later B edit; no successful edit is inferred from that
+interrupted operation. Returning-login recovery must reuse these existing accounts,
+with signup CLOSED and no replacement users. No account deletion is authorized.
+
+Final metadata evidence is in `final-AWS-state-20261116.json` and
+`final-resource-hosting-proof.json`; detailed receipts remain under
+`.tools/assignment2-final-acceptance-20261116/`. Cash-funded planning assumes $0
+usable promotional credit; the approved incremental model is $0.05–$0.50, not a
+cap or measured bill. Manual $2/$5, unexplained ~$1/day and >$10/month controls
+remain. No new Billing query or production deployment is included.
 
 ## 2026-11-16 — Assignment 2 acceptance resumed; focused local repairs qualified
 
