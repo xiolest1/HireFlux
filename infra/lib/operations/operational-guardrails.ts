@@ -19,7 +19,7 @@ export const HTTP_ACCESS_LOG_FORMAT = JSON.stringify({
 
 // The deployed adapters use these API operations. Table-only SystemErrors has no data.
 export const DYNAMODB_OPERATIONS = Object.freeze([
-  'GetItem', 'PutItem', 'DeleteItem', 'Query', 'BatchWriteItem', 'TransactWriteItems',
+  'GetItem', 'PutItem', 'DeleteItem', 'Query', 'BatchWriteItem', 'TransactWriteItems', 'UpdateItem',
 ]);
 const PERIOD = Duration.minutes(5);
 

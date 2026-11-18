@@ -1,5 +1,185 @@
 # Production account readiness — Phase 1
 
+## Assignment 3 Execution 2 — local monitoring correction, November 18, 2026
+
+**LOCAL OPERATIONAL CORRECTION QUALIFIED — DEPLOYMENT NOT AUTHORIZED.** The
+Execution 1 `UpdateItem` omission is corrected in local shared infrastructure
+source. It remains a historical failure in its original frozen receipt; no live
+staging or production monitoring was changed. Assignment 3 remains in progress.
+
+The two existing DynamoDB math alarms now each cover GetItem, PutItem, DeleteItem,
+Query, BatchWriteItem, TransactWriteItems and UpdateItem. All inputs retain
+AWS/DynamoDB, the correct metric name, same-stack TableName, exact Operation,
+Sum and 300 seconds. Exact input IDs and expression references are validated;
+duplicates/orphans are rejected. Five alarm resources remain, monitoring 17
+underlying metric units. Staging retains six widgets/fourteen visible series/26
+native inputs; production has no dashboard. Marginal modeled alarm cost is
+$0.20/month per environment before allowances; no account costs were queried.
+
+Tracked regression failed for missing UpdateItem in both environments before the
+one-line implementation fix, then passed. The 26 operations tests and all 170
+infrastructure tests pass, as do typecheck, four isolated CLI cases/repeatability,
+both actual synths, backend schema parity and existing CREATE contract checks.
+Semantic differences are limited to Metrics on the two existing DynamoDB alarms
+and the staging dashboard DynamoDB graph's metric inputs. No resource was added,
+removed or given a new logical ID; IAM, backend ZIP, schema/data protections,
+registration flags, Demo admission, API/Lambda/Amplify, logs and budgets are unchanged.
+
+New production template SHA-256:
+`f769e98b9314b8d53d6ea50bbda10c51ee2ef938beb8885f903ce88250a023ce`.
+New staging template SHA-256:
+`92265eadad1477ca355eed1a62192f0100fe35643f2bab2758a179d2140c8e1e`.
+IAM policy remains `9764f3d7…f944`; backend ZIP `796d4469…bb9` and manifest
+`0e61449b…29b` remain unchanged. Execution 1's template hash and cost scenarios
+below describe its pre-correction snapshot; add the modeled $0.20/month alarm
+delta to those scenarios if this correction is later deployed. No revised live
+release or final production publication packet is claimed.
+
+All prior source/evidence and the unpublished frontend dependency repair remain
+preserved. There were zero AWS/login calls, mutations, change sets, uploads,
+Amplify builds, Git commits/pushes, CI triggers, Cognito/Demo operations or live
+application requests. Picomatch GHSA-fc5q-39xc-vjpf still blocks all production
+mutations. Remaining gates are security clearance, specifically approved fresh
+AWS/financial preflight and unexecuted CREATE preparation, actual CREATE approval,
+real production binding/header qualification and operational verification.
+
+The complete A–L handoff and exact before/after source, test, template/IAM/artifact
+and cost receipts are in `.tools/assignment3-monitoring-correction-20261118/`.
+The Execution 1 section below is retained as dated preparation evidence, including
+its original monitoring gap; this addendum supersedes that gap's local-source
+status without claiming it has been fixed in AWS.
+
+## Assignment 3 production preparation — November 18, 2026
+
+**PREPARATION COMPLETE — DEPLOYMENT BLOCKED PENDING SECURITY CLEARANCE AND OWNER
+APPROVAL.** Assignment 1 and staging Assignment 2 remain complete; Assignment 3
+has not deployed production or established live operational readiness. Assignment
+4 owns production user acceptance and the launch decision. The October phase
+records below are retained history, superseded for current planning by this section.
+
+The owner selected account `155079499465` / `us-east-1`, separate
+`hireflux-production` resources and a separate Amplify-generated HTTPS domain.
+No new account, DNS/custom certificate, architecture replacement or staging-data
+copy is required. The production endpoint will be public even while admissions
+are closed; rejected traffic can still incur cost. Same-account administrators
+and bootstrap roles remain a shared administrative risk boundary.
+
+### Baseline and verified offline state
+
+Local/observed GitHub main is `517d5c69d98be91117b5e18540013189961e00b5`.
+Historical five-green application `53a5714…`, accepted documentation successor
+`71ec8f2…` / Amplify job 15 and November 17 staging acceptance remain preserved.
+They do not prove current production resources, current remote CI or today's
+latest Amplify job. The unpublished frontend lint-dependency partial repair is
+unchanged. Picomatch GHSA-fc5q-39xc-vjpf remains the hard production-mutation block;
+a risk proposal is not an approved exception. No new audit/upgrade was needed here.
+
+The existing backend ZIP verifies at
+`796d44695c99d9be673ecb4485cc0b450df026314ae7f0e6bc825abf96a29bb9`, with manifest
+`0e61449bc2a654fd0b5bd17acf3983a8e8379aa1f18f5c79534c7c7dbd18829b`.
+No rebuild/upload occurred. Offline typecheck, 166 infrastructure tests, four
+real-artifact CLI cases, both account-bound synths/schema parity and 94 targeted
+Demo-admission/session tests passed; fourteen frozen-input negative cases passed.
+The deployment reviewer must pin the independently reviewed template/IAM/source
+hashes: its shape helper alone cannot authorize changed policy/callback content
+when a caller substitutes a different expected hash.
+
+Production template candidate SHA-256 is
+`28278398bb8058f7b2a67b7db0eaee34f32ce2812ffd3388a89f2d1bf702c157`.
+It declares **29 resources, 26 with blank alert email**, no production dashboard
+and no Outputs. Production has independent resources and stack-local references:
+table; Cognito pool/client/domain; Lambda/API; Amplify App/branch; two signing
+secrets; two retained 30-day log groups; five alarms; budget; conditional SNS.
+PITR, deletion protection and stateful RETAIN policies are present. Stack-level
+termination protection is not enabled in the assembly and needs an explicit
+future approved setting. Application IAM is scoped to its own resources; this
+does not constrain the shared CloudFormation administrator execution role.
+
+### CLOSED/PAUSED deployment and publication order
+
+Production defaults retain `AUTH_CAPABILITIES=demo,cognito`, account management,
+24-hour Demo TTL and signup CLOSED. An absent/disabled admission policy rejects
+new Demos. An initial approved CREATE can provision this closed infrastructure
+before production frontend binding: production target stays `null`, auto-build
+is false, and publication reviewers reject the unbound frontend. Initial provider
+job behavior still needs a bounded real observation after CREATE; do not infer
+that source settings alone prove no unexpected build occurred.
+
+Future order: release-security clearance → selected live preflight and financial
+acceptance → safe exact asset reuse/publication and **unexecuted CREATE review** →
+owner approval of its actual ARN/additions/protection → single execution and exact
+physical-ID reconciliation → real frontend binding/header migration and affected
+qualification → approved source publication and explicit production build →
+CLOSED/PAUSED health/operational acceptance. No standing authority is created here.
+Normalize any Amplify ARN physical ID before using an App ID. Derive origins from
+actual resources; never guess IDs/domains. Root `customHttp.yml` currently overrides
+stored headers and contains staging-specific authority. Qualify migration to
+equivalent staging stored headers and production's actual binding before removal.
+Both branches currently use `main`; future source publication can trigger a
+staging build even with production auto-build disabled. Approve that bounded
+effect separately. No staging auto-build setting was changed.
+
+### Operations, protection and recovery qualifications
+
+Production API limits are 20 RPS/burst 40, dedicated Demo 1 RPS/burst 2 and Lambda
+reserved concurrency 10. These are not spending caps; actual account headroom is
+unverified. Five alarms cover Lambda errors/throttles, API 5xx and two DynamoDB
+operation sums. **Important gap:** DynamoDB `UpdateItem` is absent although the
+deployed account-finalization adapter uses it. A new focused source check fails;
+the pre-existing 166 tests pass. Proposed correction: append that operation to
+the existing two alarms and qualify it; two extra metric units model about
+$0.20/month before allowances. No implementation or paid monitoring was added.
+Correction or explicit disposition is needed before operational acceptance.
+
+Blank alert email produces no SNS delivery. Before operational acceptance select
+and verify a private destination or explicitly accept a manual posture. The
+$30 production budget's 80%/100% actual alerts are notifications, not enforcement.
+Project/environment tag activation and coverage need separate live verification.
+Default Cognito email delivery is account-limited (documented 50 messages/day);
+MFA is OFF. This needs launch-scale/security review, not an automatic SES/MFA change.
+
+PITR restores into a new table, not in place; restore TTL, protections, tags, IAM
+and monitoring explicitly. Source currently lacks a restore-table cutover selector.
+Preserve the existing Cognito pool and trusted `sub` ownership. Before cutover,
+reconcile legitimate writes after the chosen recovery point and all accepted
+erasures. An older backup can revive pre-erasure data; no independent restore-safe
+erasure journal is implemented. Privacy-safe restore/cutover design and a bounded
+approved rehearsal are required before relying on recovery promises. RETAIN can
+leave chargeable orphan resources after failed CREATE; never retry or delete them
+blindly. Infrastructure rollback, frontend/backend rollback and data restore are
+different procedures. Existing [finalization reconciliation](account-finalization-operations.md)
+remains authoritative for provider deletion uncertainty.
+
+### Owner-funded model and remaining live prerequisites
+
+Using current official AWS public prices and zero assumed usable credits,
+modeled incremental production monthly cost is approximately **$2.11–$2.41 idle**,
+**$2.18–$2.66 for 10 users**, **$2.78–$4.88 for 100**, and **$8.79–$27.09 for
+1,000**, with 80% Personal/20% Demo and bounded activity/storage. Shared allowances
+are conditional and unverified; heavier Lambda time, abusive requests, more Demo
+issuance, build/storage/egress and email can increase cost. Staging/labs/tax are
+excluded. Preserve the manual $2 review, $5 initial-test stop, unexplained ~$1/day
+investigation and >$10/month hosting review. The prospective UpdateItem correction
+adds about $0.20/month before allowances and is not in the current-source model.
+
+Live bootstrap/role scope, quota/headroom, name/domain availability, repository
+authorization, private parameters, alert delivery and fresh financial baseline
+remain **LIVE AWS PREFLIGHT REQUIRED — NOT AUTHORIZED IN THIS EXECUTION**.
+Production creation/publication remains blocked until security clearance and
+specific owner approvals. Real users, Demo issuance and public launch belong to
+Assignment 4. No production resource identity or change-set ARN exists in this review.
+
+Separately authorized authentication succeeded at 09:08:40 EST / 14:08:40 UTC:
+two STS CLI invocations (initial expiry, then approved account/principal match)
+and one official login. No subsequent AWS service read, mutation, artifact upload,
+change set, build, source publication, app request, user, Demo or email occurred.
+Authentication does not establish cloud readiness. The complete A–N handoff,
+inventory, IAM/template/source hashes, tests, cost arithmetic and incident/restore
+runbooks are preserved in:
+`.tools/assignment3-preparation-20261118/HireFlux-Assignment-3-Production-Preparation-Handoff-2026-11-18.md`.
+
+## Historical Phase 1–4 checkpoints
+
 Current October 16 provider remediation is authorized and locally qualified;
 new CI, credential and AWS deployment gates remain pending. See the
 [provider recovery checkpoint](phase4d-provider-recovery-outcome.md).

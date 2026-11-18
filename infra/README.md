@@ -1,5 +1,39 @@
 # HireFlux infrastructure
 
+## Assignment 3 monitoring correction — November 18, 2026
+
+The shared DynamoDB operation inventory now includes `UpdateItem`, used by the
+workspace provider-finalization adapter. Both existing ThrottledRequests and
+SystemErrors math alarms include all seven reviewed API operations. Five alarm
+resources remain; their underlying metric units increase from 15 to 17. The
+staging dashboard keeps six widgets/fourteen visible series, with 26 native inputs;
+production still has no dashboard. All alarm semantics and logical IDs are unchanged.
+
+Tracked red-green regressions cover both environments and reject an omitted
+UpdateItem, duplicate IDs/operations, orphan inputs and table-only metrics.
+Typecheck, 26 operations tests, all 170 infra tests, four isolated real-ZIP CLI
+tests, repeatable synths, schema parity and the existing production CREATE reviewer
+pass. Direct comparison with Execution 1 permits only the two alarm Metrics
+properties and the staging dashboard's DynamoDB graph inputs to differ. IAM,
+stateful protection, Cognito, API/Lambda/Amplify, budget and inventory are unchanged.
+
+The corrected production template is
+`f769e98b9314b8d53d6ea50bbda10c51ee2ef938beb8885f903ce88250a023ce`;
+staging is `92265eadad1477ca355eed1a62192f0100fe35643f2bab2758a179d2140c8e1e`.
+The exact existing backend ZIP remains `796d4469…bb9`, with manifest `0e61449b…29b`.
+No backend rebuild occurred. This is local source qualification, not a deployed
+update or a claim that remote CI passed. Earlier sections below retain historical
+checkpoints and their then-current artifacts/counts.
+
+Modeled marginal alarm cost is $0.20/month per environment before allowances
+($0.10 × two added metric units); see [CloudWatch pricing](https://aws.amazon.com/cloudwatch/pricing/).
+No current AWS charge was measured or incurred by deploying this correction:
+AWS requests/mutations, change sets, uploads, builds and Git publication are zero.
+Live staging alarms remain untouched. Picomatch still blocks production mutation;
+Assignment 3 remains in progress, with registration CLOSED and Demo admission
+fail-closed in the production source. Full evidence:
+`.tools/assignment3-monitoring-correction-20261118/`.
+
 ## Assignment 2 stage-ordering reconciliation — November 11, 2026
 
 The header-corrected update subsequently exposed a separate ordering defect:
@@ -726,9 +760,10 @@ for missing data. Names are hireflux-<environment>-<suffix>:
   AWS/DynamoDB SystemErrors, TableName+Operation, 2 of 3 (persistent events
   across two windows within fifteen minutes).
 
-Both DynamoDB sums cover GetItem, PutItem, DeleteItem, Query, BatchWriteItem and
-TransactWriteItems, the actual deployed adapter API operations. Transaction
-Update/ConditionCheck IAM operations are not separate API metric operations.
+Both DynamoDB sums cover GetItem, PutItem, DeleteItem, Query, BatchWriteItem,
+TransactWriteItems and UpdateItem. The last is a direct API call in workspace
+provider-finalization persistence. Transaction component Update/ConditionCheck
+IAM actions are not separate API metric operations.
 [DynamoDB documents these metric dimensions](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/metrics-dimensions.html);
 table-only SystemErrors would silently select no data. Missing data avoids
 idle-demo alarm noise; it is not proof that telemetry is healthy. 4xx,
@@ -739,14 +774,14 @@ alarm. Partial BatchWriteItem throttling can return unprocessed items without
 incrementing ThrottledRequests; ReadThrottleEvents/WriteThrottleEvents are
 manual diagnostic follow-ups, not claimed complete coverage by this alarm.
 
-OperationalDashboard → OperationsOperationalDashboard098A469E is named
-hireflux-<environment>-operations. Six graphs use a six-hour default view and
+The staging-only OperationalDashboard → OperationsOperationalDashboard098A469E
+is named hireflux-staging-operations. Six graphs use a six-hour default view and
 five-minute period: HTTP Count/4xx/5xx Sum; HTTP Latency/IntegrationLatency
 Average; Lambda Invocations/Errors/Throttles Sum; Duration p95 and
 ConcurrentExecutions Maximum with the reservation annotation; the two DynamoDB
 error/throttle sums; Query SuccessfulRequestLatency Average and
-TransactionConflict Sum. There are 14 visible series and 24 underlying native
-metrics (including twelve inputs to the two sums). All use only the same-stack
+TransactionConflict Sum. There are 14 visible series and 26 underlying native
+metrics (including fourteen inputs to the two sums). All use only the same-stack
 API ID, function name and table name in the current region. No Logs Insights
 query, custom metric or cross-environment reference is present.
 
@@ -792,7 +827,7 @@ No billing/tag activation or notification subscription has been performed.
 Cost posture: finite STANDARD log storage plus volume-dependent ingestion;
 native metrics without paid detailed-route/custom collection; one compact
 dashboard; five alarms priced according to their underlying metrics (three
-single metrics plus two six-metric math alarms = 15 standard-resolution alarm
+single metrics plus two seven-metric math alarms = 17 standard-resolution alarm
 metrics, not five). Retained production logs still expire events after 30 days.
 Dashboard/alarm charges and email-topic use depend on account allowances and
 current pricing; SNS delivery is optional. Monitoring-only budgets do not add

@@ -12,6 +12,8 @@ snapshots, not fresh AWS inventory or permission to repeat operations.
 
 Detailed supporting contracts remain in this directory:
 
+- [Assignment 3 protected-production preparation — November 18; deployment blocked](production-account-readiness.md#assignment-3-production-preparation--november-18-2026)
+
 - [Shared production infrastructure, headers and offline release qualification — Phase 7B Batch 3](phase7b-batch3-local-handoff.md)
 
 - [Atomic Demo admission and guarded failure cleanup — Phase 7B Batch 2, local only](phase7b-batch2-local-handoff.md)

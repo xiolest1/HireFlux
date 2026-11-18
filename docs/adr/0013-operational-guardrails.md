@@ -1,5 +1,30 @@
 # ADR 0013: Proportionate operational guardrails
 
+## November 18, 2026 addendum — qualified local operation coverage
+
+Assignment 3 Execution 2 corrects the shared operation list to include the direct
+`UpdateItem` API call in workspace provider-finalization persistence. The existing
+two DynamoDB alarms now aggregate seven operations each. Namespace, TableName and
+Operation dimensions, Sum/300-second metrics, thresholds, evaluation, missing-data
+behavior, names and SNS wiring remain unchanged. Five alarm resources monitor
+seventeen underlying metric units. No new resource or IAM grant was introduced.
+
+The staging-only dashboard retains six widgets/fourteen visible series with
+twenty-six native inputs; production has no dashboard. This supersedes the counts
+and per-environment dashboard description in the preserved original decision below.
+Permanent independent-contract tests prove red/green coverage in both environments
+and reject omitted UpdateItem, duplicate/orphan inputs and table-only dimensions.
+All 170 infrastructure tests and four isolated CLI cases pass. Both real-artifact
+synths/parity and exact semantic comparison preserve all unrelated configuration.
+
+Two added standard alarm metric units model $0.20/month per environment before
+allowances under [current CloudWatch pricing](https://aws.amazon.com/cloudwatch/pricing/).
+This is not a measured bill. No live monitoring change, AWS request/mutation,
+publication or build occurred. Picomatch security clearance and separate owner
+deployment approval remain required; Assignment 3 is still in progress.
+
+## Original October 6, 2026 decision — historical record
+
 Date: 2026-10-06
 
 Status: accepted for local Phase 3F definition, synthesis and tests only.

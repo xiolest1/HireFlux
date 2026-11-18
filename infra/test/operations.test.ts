@@ -4,6 +4,7 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { loadEnvironmentConfig } from '../lib/config/environment';
 import { HireFluxStack } from '../lib/hireflux-stack';
+import { DYNAMODB_OPERATIONS } from '../lib/operations/operational-guardrails';
 import { fixtureArtifact } from './fixture';
 import { reviewedResources, reviewedResourceCount } from './resource-inventory';
 
@@ -20,7 +21,9 @@ const alarmIds = [
   'OperationsDynamoDBThrottlesAF8DF63F', 'OperationsDynamoDBSystemErrorsB63796D3',
 ];
 const suffixes = ['lambda-errors', 'lambda-throttles', 'api-5xx', 'dynamodb-throttles', 'dynamodb-system-errors'];
-const operations = ['GetItem', 'PutItem', 'DeleteItem', 'Query', 'BatchWriteItem', 'TransactWriteItems'];
+// Independent adapter API contract; provider-finalization persistence calls UpdateItem.
+// See backend/src/hireflux_backend/infrastructure/dynamodb/workspace_finalization_repository.py.
+const operations = ['GetItem', 'PutItem', 'DeleteItem', 'Query', 'BatchWriteItem', 'TransactWriteItems', 'UpdateItem'];
 const ref = (id: string) => ({ Ref: id });
 const arn = (id: string) => ({ 'Fn::GetAtt': [id, 'Arn'] });
 const ABSENT = Symbol('AWS::NoValue');
@@ -78,8 +81,12 @@ function assertOperationAlarm(properties: any, metricName: string): void {
   const visible = properties.Metrics.filter((metric: any) => metric.ReturnData === true);
   assert.equal(visible.length, 1);
   const sources = properties.Metrics.filter((metric: any) => metric.MetricStat);
-  assert.equal(sources.length, operations.length);
-  assert.equal(visible[0].Expression, `SUM([${sources.map((metric: any) => metric.Id).join(',')}])`);
+  assert.equal(sources.length, operations.length, 'All seven adapter operations, including UpdateItem, must be monitored.');
+  assert.equal(properties.Metrics.length, operations.length + 1);
+  const expectedIds = operations.map((_, index) => `${metricName === 'ThrottledRequests' ? 't' : 'e'}${index}`);
+  assert.deepEqual(sources.map((metric: any) => metric.Id), expectedIds);
+  assert.equal(new Set(properties.Metrics.map((metric: any) => metric.Id)).size, properties.Metrics.length);
+  assert.equal(visible[0].Expression, `SUM([${expectedIds.join(',')}])`);
   assert.deepEqual(sources.map((metric: any) => metric.MetricStat.Metric.Dimensions.find((dimension: any) => dimension.Name === 'Operation').Value), operations);
   for (const source of sources) {
     assert.equal(source.ReturnData, false);
@@ -100,6 +107,38 @@ for (const environment of ['staging', 'production'] as const) {
   const stack = new HireFluxStack(new App(), `HireFlux-${environment}`, config, fixtureArtifact);
   const template = Template.fromStack(stack).toJSON();
   const resources = template.Resources;
+
+  test(`${environment} UpdateItem finalization is covered by both DynamoDB alarm expressions`, () => {
+    assert.deepEqual(DYNAMODB_OPERATIONS, operations, 'Reviewed adapter inventory must include UpdateItem.');
+    assert.equal(new Set(DYNAMODB_OPERATIONS).size, 7);
+    assertOperationAlarm(resources[alarmIds[3]!].Properties, 'ThrottledRequests');
+    assertOperationAlarm(resources[alarmIds[4]!].Properties, 'SystemErrors');
+  });
+
+  test(`${environment} DynamoDB alarm coverage rejects a missing UpdateItem, duplicate or orphan input`, () => {
+    for (const [id, name] of [[alarmIds[3]!, 'ThrottledRequests'], [alarmIds[4]!, 'SystemErrors']]) {
+      const original = resources[id!].Properties;
+      const missing = structuredClone(original);
+      const removed = missing.Metrics.find((metric: any) => metric.MetricStat?.Metric.Dimensions
+        .some((dimension: any) => dimension.Name === 'Operation' && dimension.Value === 'UpdateItem'));
+      assert.ok(removed, 'UpdateItem must exist before testing its omission.');
+      missing.Metrics = missing.Metrics.filter((metric: any) => metric !== removed);
+      missing.Metrics.find((metric: any) => metric.ReturnData === true).Expression =
+        `SUM([${missing.Metrics.filter((metric: any) => metric.MetricStat).map((metric: any) => metric.Id).join(',')}])`;
+      assert.throws(() => assertOperationAlarm(missing, name!), /All seven adapter operations/);
+
+      const duplicateId = structuredClone(original);
+      duplicateId.Metrics[2].Id = duplicateId.Metrics[1].Id;
+      assert.throws(() => assertOperationAlarm(duplicateId, name!));
+      const duplicateOperation = structuredClone(original);
+      duplicateOperation.Metrics[2].MetricStat.Metric.Dimensions = duplicateOperation.Metrics[1].MetricStat.Metric.Dimensions;
+      assert.throws(() => assertOperationAlarm(duplicateOperation, name!));
+      const orphan = structuredClone(original);
+      orphan.Metrics.find((metric: any) => metric.ReturnData === true).Expression =
+        `SUM([${original.Metrics.filter((metric: any) => metric.MetricStat).slice(0, -1).map((metric: any) => metric.Id).join(',')}])`;
+      assert.throws(() => assertOperationAlarm(orphan, name!));
+    }
+  });
 
   test(`${environment} operational resources have stable identities and no unexpected family`, () => {
     assert.deepEqual(Object.fromEntries(Object.entries(resources).map(([id, resource]: [string, any]) => [id, resource.Type])), reviewedResources(environment));
@@ -245,6 +284,7 @@ for (const environment of ['staging', 'production'] as const) {
     assert.equal(body.periodOverride, 'inherit');
     assert.equal(body.widgets.length, 6);
     const names = new Set<string>();
+    const operationInputs: Record<string, string[]> = { ThrottledRequests: [], SystemErrors: [] };
     let underlyingMetrics = 0;
     let visibleSeries = 0;
     for (const widget of body.widgets) {
@@ -256,7 +296,8 @@ for (const environment of ['staging', 'production'] as const) {
       for (const entry of widget.properties.metrics) {
         assert.ok(Array.isArray(entry));
         if (typeof entry[0] !== 'string') {
-          assert.match(entry[0].expression, /^SUM\(\[(?:[te]\d,){5}[te]\d\]\)$/);
+          assert.ok(['t', 'e'].map((prefix) => `SUM([${operations.map((_, index) => `${prefix}${index}`).join(',')}])`)
+            .includes(entry[0].expression));
           visibleSeries += 1;
           continue;
         }
@@ -279,11 +320,13 @@ for (const environment of ['staging', 'production'] as const) {
           }, []));
           assert.equal(dimensionMap.TableName, `resource:${ids.table}`);
           if (['ThrottledRequests', 'SystemErrors', 'SuccessfulRequestLatency'].includes(metric)) assert.ok(operations.includes(dimensionMap.Operation));
+          if (operationInputs[metric]) operationInputs[metric]!.push(dimensionMap.Operation);
         }
       }
     }
-    assert.equal(underlyingMetrics, 24);
+    assert.equal(underlyingMetrics, 26);
     assert.equal(visibleSeries, 14);
+    for (const inputs of Object.values(operationInputs)) assert.deepEqual(inputs.sort(), [...operations].sort());
     assert.deepEqual(body.widgets[3].properties.annotations.horizontal, [{
       value: config.operations.lambdaReservedConcurrency, label: 'Reserved concurrency', yAxis: 'right',
     }]);

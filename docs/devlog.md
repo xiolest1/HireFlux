@@ -2,6 +2,31 @@
 
 ## Current documented checkpoint
 
+**November 18 Assignment 3 Execution 2:** the DynamoDB `UpdateItem` monitoring
+omission is corrected and qualified locally. Both existing math alarms cover
+seven operations; the architecture still has five alarms. All 170 infrastructure
+tests and four isolated CLI cases pass. No AWS calls or deployment occurred;
+live staging remains untouched. Picomatch still blocks production mutation and
+Assignment 3 remains in progress. See the [current monitoring addendum](production-account-readiness.md#assignment-3-execution-2--local-monitoring-correction-november-18-2026).
+The checkpoints below preserve earlier source/qualification states.
+
+**November 18 Assignment 3 preparation:** offline production preparation is
+complete; **deployment remains BLOCKED pending release-security clearance and
+owner approval**. Assignment 1 and accepted Assignment 2 staging remain complete.
+Assignment 3 is current/preparation, not deployed or operationally accepted;
+Assignment 4 production acceptance/launch remains pending. The same-account,
+separate-resource production design is suitable for a small initial cohort.
+See [current production preparation](production-account-readiness.md#assignment-3-production-preparation--november-18-2026).
+The release-maintenance checkpoint immediately below predates this preparation.
+
+**November 18 release-maintenance update:** Assignment 2 remains accepted;
+Assignment 3 has not started. The frontend audit is currently **BLOCKED — UPSTREAM
+PATCH OR OWNER RISK DECISION REQUIRED**. A locally qualified same-major lint-tool
+update removes the Minimatch advisory, but the unchanged Picomatch dependency has
+no published patch. The high-severity audit remains enabled and fails. No new
+publication, CI run, Amplify build or AWS operation was initiated by this work.
+The dated November 17 staging acceptance below remains preserved.
+
 As of **November 17, 2026, 1:04:55 PM EST / 18:04:55 UTC**, **ASSIGNMENT 2
 COMPLETE — AWS STAGING LIVE ACCEPTED**. Assignment 1 remains complete;
 Assignments 3 and 4 have not started. Production promotion requires separate
@@ -60,6 +85,189 @@ refresh requirement is supported by the fresh server list GET and rendered state
 Full A–M handoff and frozen evidence:
 `.tools/assignment2-final-security-20261117/HireFlux-Assignment-2-Final-Security-Acceptance-Handoff-2026-11-17.md`.
 These final documentation updates are local and unpublished.
+
+## 2026-11-18 — Assignment 3 Execution 2: DynamoDB monitoring correction, offline only
+
+Preserved local HEAD `517d5c6…`, all five pre-existing dirty files, the unpublished
+frontend manifest/lock repair and 215 frozen historical evidence files. The
+Execution 1 failure remains unchanged in its original folder. Added permanent
+independent-contract tests to `infra/test/operations.test.ts` before changing
+implementation. Both environment regressions failed for the exact missing
+`UpdateItem` operation, then passed after appending it to the shared inventory.
+
+The backend finalization adapter already calls `client.update_item`; no runtime
+or IAM change was needed. Both existing DynamoDB ThrottledRequests/SystemErrors
+alarms now aggregate seven uniquely identified inputs, preserving AWS/DynamoDB,
+TableName/Operation, Sum, 300 seconds, alarm names, thresholds and SNS policy.
+Negative tests reject omission from either alarm, duplicate IDs/operations and
+orphan expression inputs; the table-only metric rejection remains intact.
+
+Typecheck, 26 focused operations tests, all 170 infrastructure unit tests, four
+isolated CLI cases including repeatability, staging/production synths, backend
+schema parity and the existing production CREATE reviewer passed. Template
+comparison allows only the two alarm Metrics properties and the staging
+dashboard's embedded DynamoDB metric inputs to differ. Logical IDs/resource
+types, IAM, Lambda artifact/environment, Cognito, API, Amplify, log retention,
+budgets and stateful protections are unchanged. This is a local semantic
+comparison, not a live change-set or physical-replacement result.
+
+Five alarm resources now account for 17 underlying metric units. Staging keeps
+six widgets and fourteen visible series, with 26 native inputs; production still
+has no dashboard. Reviewed current official CloudWatch pricing: the two added
+alarm units model $0.20/month per environment before allowances. No bill or
+shared allowance headroom was queried; the $30 production budget is unchanged.
+
+Production template changed from `28278398…c157` to `f769e98b…23ce`; staging is
+`92265ead…8e1e`. IAM remains `9764f3d7…f944`, backend ZIP `796d4469…bb9`, manifest
+`0e61449b…29b`. No backend rebuild or frontend audit/test campaign was repeated.
+Updated the existing readiness document, operational ADR and infra guide through
+dated addenda/current contract corrections, preserving historical receipts and
+DevLog lines. Full A–L handoff and evidence:
+`.tools/assignment3-monitoring-correction-20261118/`.
+
+AWS/login requests, mutations, change sets, uploads, builds, commits/pushes, CI
+triggers, Cognito users, Demo operations and hosted traffic were all zero. Local
+source is not deployed state. Picomatch remains unresolved with its audit gate
+enabled; no risk exception was granted. Assignment 3 is still in progress and
+production deployment remains unauthorized. Next work must clear the security
+gate before specifically approved production preflight/CREATE preparation;
+Assignment 4 acceptance/launch remains pending.
+
+## 2026-11-18 — Assignment 3 protected-production preparation; no deployment
+
+Started Assignment 3 against local/observed GitHub main `517d5c6…`. Preserved the
+unpublished frontend manifest/lock partial repair byte-for-byte, the existing
+release procedure and both prior frozen evidence indexes. Historical application
+`53a5714…`, five-green CI 43949349774 and accepted Amplify job 15 / documentation
+successor `71ec8f2…` remain dated staging evidence, not current production readiness.
+Picomatch GHSA-fc5q-39xc-vjpf remains unresolved; no new audit campaign, audit bypass,
+dependency change or risk approval occurred.
+
+The separately authorized authentication maintenance required one official login
+after the initial STS invocation reported expiry. One post-login STS confirmed
+account `155079499465`, approved non-root `iamadmin`, `hireflux-operator` and
+`us-east-1` at 09:08:40 EST / 14:08:40 UTC. Counts: two STS CLI invocations and one
+login; provider-internal exchanges were not independently counted. No credential
+cache or secret was inspected. Subsequent production preparation made zero AWS
+service requests and zero mutations.
+
+Qualified the existing backend ZIP `796d4469…bb9` and manifest `0e61449b…29b`
+without rebuilding. Network-isolated infrastructure typecheck, 166 unit tests,
+four real-artifact CLI cases, account-bound staging/production synths, both schema
+parity checks and 94 targeted backend Demo-admission/session tests passed.
+Fourteen negative cases reject invalid frozen release inputs. The shape reviewer
+is not an authorization system: changing an expected template hash can accept
+otherwise altered IAM/callback/domain contents, so future deployment must preserve
+the independently reviewed full template, source, identity and IAM hashes.
+
+Actual production synthesis declares 29 resources, or 26 with blank alert email:
+independent table, pool/client/domain, Lambda/API, Amplify App/branch, secrets,
+logs, five alarms and budget, plus three conditional SNS resources. Production
+keeps Demo+Cognito capabilities, signup CLOSED and Demo admission fail-closed.
+PITR/deletion protection and RETAIN protect stateful resources. The assembly does
+not enable stack termination protection. No dashboard is declared for production.
+
+Found an important operational gap: the two DynamoDB metric-math alarms omit
+`UpdateItem`, used by provider-finalization persistence. A focused source regression
+fails and is retained honestly; the existing 166 tests pass. The proposed smallest
+fix adds that operation to the existing list, costing about $0.20/month before
+allowances. No infrastructure/paid-monitoring correction was applied. Require
+correction or explicit disposition before Assignment 3 operational acceptance.
+
+Preserved the owner-selected existing account with separate production resources
+and generated Amplify HTTPS domain. Initial CLOSED/PAUSED CREATE can precede
+frontend binding; `deployment-targets.json` production remains `null`. Actual IDs
+must come from a future approved CREATE. Documented the root-header migration,
+private repository authorization, post-CREATE binding, expected staging auto-build
+side effect of a future main push, source qualification and explicit production
+publication approval. No fake IDs or silent auto-build changes were introduced.
+
+Documented PITR restore/cutover, retained-resource recovery, Cognito identity
+preservation, restore-safe erasure reconciliation, alert delivery, incident
+containment and production deployment/rollback sequencing. These are designs,
+not rehearsed recovery or live operational PASS results. Stack protection,
+notification destination, default Cognito email limits and privacy/recovery
+decisions remain explicit future gates.
+
+Current public AWS pricing models incremental production at about $2.11–$2.41/month
+published idle, $2.18–$2.66 for 10 mostly Personal users, $2.78–$4.88 for 100 and
+$8.79–$27.09 for 1,000 at the documented request/storage assumptions. Shared Free
+Tier headroom is unverified; credits assumed usable $0. These are estimates,
+excluding staging, labs, tax and heavier usage; latency/admission abuse can raise
+them materially. Existing $2 review/$5 initial-test stop/~$1/day investigation and
+>$10/month review controls are manual, not caps. No Billing query occurred.
+
+Updated only this log, production readiness and its architecture-index link.
+No application/infra/release-source change, Git commit/push, CI trigger, upload,
+change set, build, account, Demo, email or hosted request occurred. Full A–N
+handoff, source inventory, synthesis, cost model and local evidence:
+`.tools/assignment3-preparation-20261118/HireFlux-Assignment-3-Production-Preparation-Handoff-2026-11-18.md`.
+Next: security clearance, scoped monitoring disposition, then separately approved
+live production preflight and unexecuted CREATE preparation; actual execution and
+publication require subsequent review. Do not repeat this architecture campaign.
+
+## 2026-11-18 — Targeted frontend audit repair; unpatched Picomatch still blocks CI recovery
+
+Read-only GitHub evidence confirms run 44137786248 at `71ec8f2…`: frontend audit
+failed after lint/typecheck/tests/build/artifact checks passed; both backend jobs,
+Lambda artifact and infra passed. Actual local/remote main is now `517d5c6…`, a
+documentation-only successor containing the November 17 acceptance records.
+Those records were already committed when this task began; the working tree was
+clean. No application/dependency change separates these two documentation commits.
+No publication actor or standing deployment authorization is inferred.
+
+Existing Node 22.20.0/npm 10.9.3 reproduced the locked install and exact high audit:
+13 affected dependency nodes, seven high/six moderate, from two advisory roots.
+GHSA-fc5q-39xc-vjpf / CVE-2026-112366 affects Picomatch through 4.0.7 with no
+published patch. GHSA-g3hv-75wg-m249 / CVE-2026-118764 affects Minimatch >=7,<11.0.1.
+The unchanged dependency graph becoming newly flagged is consistent with updated
+advisory data; the exact npm ingestion time is not established.
+
+Updated only direct dev pin `typescript-eslint` 8.48.0 → 8.73.0 and its npm-generated
+lock closure. Upstream explicitly supports Minimatch ^11.0.1; resolved 9.0.9 →
+11.0.9 removes that advisory without forcing an incompatible override. The eleven
+coordinated TypeScript-ESLint packages and their required child entries changed;
+all production dependencies and other tools are unchanged. Lock format 3, project
+engine declarations, global tooling, audit threshold and workflow remain unchanged.
+
+The candidate installs cleanly with npm 10; no invalid/missing peer edge is
+reported. `npm ls --all` retains five extraneous optional WASM-helper warnings;
+their exact lock entries predate this change and are unchanged. No cleanup or
+unrelated dependency repair was attempted. Existing transitive requirements
+already excluded Node 22.12 despite the broader root declaration; the tested
+22.20 environment and original CI 22.23.4 meet those requirements.
+
+Local lint/typecheck, all **673 tests in 68 files**, nine hosting-header tests,
+six hosting-build tests, four public-projection tests, exact staging build and
+CLOSED/target/provider publication guard pass. SBOM generation passes. A local
+write-disabled build attributed 293 contributing modules and found no Picomatch,
+Minimatch, tinyglobby or fdir in browser chunks. This is local build evidence,
+not a fresh inspection of deployed assets or proof that dev-tool exposure is safe.
+No public user-input-to-glob compilation path was identified; repository/CI patterns
+remain a tooling threat boundary, particularly for untrusted pull requests.
+
+The final unchanged CI audit command still exits **1: twelve high affected nodes
+from the one remaining Picomatch advisory**, zero moderate/critical. The higher
+high-node count reflects recalculated parent severity, not twelve new advisory
+roots. Vite 8.1.6, Vitest 4.1.12, tinyglobby 0.2.17 and fdir 6.5.0 still reach
+Picomatch 4.0.5. Current upstream Vite/Vitest metadata also retains affected
+Picomatch ranges. No force downgrade, invented patch, override, audit suppression
+or risk exception was applied. Remote CI recovery is **not** claimed.
+
+All 69 frozen November 17 evidence hashes and the existing release-procedure file
+verify unchanged. Only frontend package/lock and this additive DevLog entry are
+modified locally. No Git commit/push, workflow rerun, AWS authentication/API read,
+hosted traffic, deployment, new user, signup opening or Demo issuance occurred.
+No new cloud usage was intentionally initiated; existing hosting costs remain
+unmeasured and are not claimed to be zero.
+
+Full copyable handoff, exact graph delta, audit outputs, validation and a proposed
+(unapproved/unimplemented) time-limited risk disposition are under
+`.tools/frontend-ci-security-20261118/`. Retain the local partial repair and wait
+for a supported upstream Picomatch fix. Any owner-selected exception or publication
+needs separate concrete approval; a push of this partial repair would still fail
+the high audit and main publication can trigger an Amplify build. Assignment 3
+remains unstarted; staging acceptance is not reopened.
 
 ## 2026-11-16 — Previous recorded checkpoint (superseded November 17)
 
