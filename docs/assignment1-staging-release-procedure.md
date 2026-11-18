@@ -9,7 +9,65 @@ readiness, (4) production acceptance and explicitly controlled public launch.
 Production signup activation, binding, header migration and public launch are
 not Assignment 1 work.
 
-## Assignment 2 acceptance continuation — November 16, 2026
+## Assignment 2 final acceptance — November 17, 2026
+
+**ASSIGNMENT 2 COMPLETE — AWS STAGING LIVE ACCEPTED.** The original qualified
+application commit `53a5714345aafdd89d7f6f830e17e5b2c4296e26`, five-green CI run
+43949349774 and patched ZIP `796d4469…` remain the application release baseline.
+The owner accepted the discovered documentation-only successor
+`71ec8f2cd72195bebbd0280fc07c2fbae232a6ea` / Amplify job 15 SUCCEED after exact
+local source comparison and selected hosting/binding reads. All application,
+dependency, infrastructure, CI and hosting inputs are identical. The successor's
+publisher is not attributed and its separate CI status was not queried. No push,
+build or deployment was initiated by this campaign.
+
+The remaining live security requirements passed: Demo → Personal A and Personal
+A → Demo returned real concealed 404s without private fields. In one actual
+browser context, A logout removed private state, Back/protected-route navigation
+did not restore it, B authenticated as a distinct PERSISTENT principal, saw its
+saved Draft record and received 404 for A's record. B logout and both anonymous
+backend checks passed (401). Use the attributable logical aliases in
+`ATTRIBUTED_FOREIGN_RESULT`; the retained generic helper's `AccountB` target slot
+is an internal mapping, not evidence of a third authenticated context.
+
+One authorized new Demo had a verified 24-hour signed lifetime. Versioned
+admission moved v5 PAUSED → v6 one-slot OPEN → v7 PAUSED, with a day reservation
+delta of one, no reset and original 2/day, 2/minute limits restored at 12:44:59 PM
+EST. All later tests ran paused. Demo edit/status/follow-up/search passed, and a
+fresh server list GET after SPA remount rendered the saved Applied status and
+November 18 follow-up. This verifies server-backed refresh/persistence; it is not
+a post-edit full-document/F5 assertion or independent location-detail re-read.
+
+Final nine selected reads at **1:04:55 PM EST / 18:04:55 UTC** confirm
+UPDATE_COMPLETE, exact patched Lambda Active/Successful, concurrency 5, no
+quarantine, original pool/client, two estimated users, provider/backend CLOSED,
+Demo PAUSED v7, all 27 protected mappings unchanged and accepted job 15 SUCCEED.
+Both Personal accounts signed out and both owned test contexts closed normally.
+
+Fresh counts: control/login 31/40 (30 service invocations plus one login, including
+the preserved expired STS), API 174/180 including 77 OPTIONS, static 440/450
+conservatively observed, application-Cognito 12/60, Demo one, new/deleted users
+zero. Prior 169/467/1476/39 counts and three Demo receipts remain frozen.
+The 60-minute window began 12:42:04 PM EST and testing closed early. No remaining
+allowance authorizes more activity. Keep cash-funded/$0-credit planning and all
+manual spending controls; this campaign made no financial query.
+
+Natural expiry/physical TTL cleanup, destructive erasure, the historical CSV
+observer cause and the new successor's separate CI remain explicit qualifications,
+not invented PASS results. None demonstrates a remaining critical defect in the
+accepted application. The auxiliary logout-control label predicate is not relied
+on alone: actual logout/revoke, signed-out UI, private-route behavior and anonymous
+401 responses establish the result.
+
+Full handoff, evidence index and reconciled counters are under
+`.tools/assignment2-final-security-20261117/`. Preserve old STOPs and handoff
+versions. Final DevLog/procedure edits remain local; do not push documentation
+merely to publish this result because main auto-build remains enabled.
+Assignment 3 (protected production/operational readiness) and Assignment 4
+(production acceptance/controlled launch) still require their separate owner
+authorizations. No new roadmap phase is introduced.
+
+## Assignment 2 acceptance continuation — November 16, 2026 (historical)
 
 **Current final checkpoint, 9:35 PM EST:** source53a5714/CI43949349774 allfive/
 Amplify14/patched796d4469 remain accepted. Both actual accounts returned and have

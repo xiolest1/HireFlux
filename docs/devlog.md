@@ -2,6 +2,67 @@
 
 ## Current documented checkpoint
 
+As of **November 17, 2026, 1:04:55 PM EST / 18:04:55 UTC**, **ASSIGNMENT 2
+COMPLETE — AWS STAGING LIVE ACCEPTED**. Assignment 1 remains complete;
+Assignments 3 and 4 have not started. Production promotion requires separate
+owner authorization. This is dated acceptance evidence, not standing permission
+to reopen admission, test accounts, publish or deploy.
+
+The qualified application remains `53a5714345aafdd89d7f6f830e17e5b2c4296e26`,
+five-green-job CI run 43949349774, and deployed ZIP `796d4469…`. During preparation,
+Amplify job 15 / `71ec8f2cd72195bebbd0280fc07c2fbae232a6ea` was discovered. Local
+Git comparison proves that successor changed only this DevLog and the existing
+release procedure; all application, infrastructure, dependency, CI and hosting
+inputs match the qualified release. The owner explicitly accepted the successor.
+Its publication actor is not established; its CI was not separately queried.
+This campaign initiated no commit, push, build, upload or deployment.
+
+Both missing cross-kind checks now reached the deployed backend: Demo → Personal
+A and Personal A → Demo returned concealed **404 NOT_FOUND**, without private
+record fields. Own-record positive controls passed. In the **same actual browser
+context**, A signed out, Back/protected-route checks exposed no A data, B signed
+in with a distinct PERSISTENT identity and saw its saved Draft record, B → A
+returned 404, and Back still exposed no A data. B then signed out. Anonymous
+backend checks after each logout returned **401 AUTHENTICATION_REQUIRED**.
+
+One additional fictional Demo was issued with a verified 86,400-second signed
+lifetime. Admission moved PAUSED v5 → one-slot OPEN v6 → **PAUSED v7**, restoring
+2/day and 2/minute without resetting counters; the day reservation increased
+1 → 2. PAUSE was verified at **12:44:59 PM EST**, about 17 seconds after the
+observed 201 response. All subsequent security/workflow tests ran while paused.
+The Demo application edit, DRAFT → APPLIED transition, November 18 follow-up and
+company search passed. A fresh server-backed SPA list refresh rendered the saved
+Applied status and follow-up. No post-edit full-document/F5 reload is claimed;
+the location PATCH returned 200 but was not separately re-read in a detail GET.
+
+Nine final selected reads confirm UPDATE_COMPLETE, the unchanged patched backend
+Active/Successful, reserved concurrency 5, no quarantine, original pool/client,
+two estimated users, provider/backend signup **CLOSED**, admission **PAUSED v7**,
+all 27 physical resource identities unchanged and accepted Amplify job 15 SUCCEED.
+Both Personal users signed out; campaign browser contexts closed normally.
+
+Fresh, separately authorized counts: **31/40 control/login attempts**, **174/180
+API including 77 OPTIONS**, **440/450 static** and **12/60 application-Cognito**.
+Static counting conservatively charges 440 observed versus 405 forwarded requests.
+One new Demo; zero new/deleted users. Frozen historical totals remain 169/467/
+1476/39 and three Demos; combined context totals are 200/641/1916/51 and four
+Demos, not a reused historical authorization. Cash-funded planning still assumes
+$0 usable credit; manual $2/$5, unexplained ~$1/day and >$10/month review controls
+remain. No new Billing query or measured spending claim.
+
+The prior response-observer STOP and all failed/local qualification evidence remain
+preserved. Paired old/new rejection, eight safety, ten loopback response and ten
+campaign-adapter cases passed before live use; no response-proof STOP recurred.
+Natural 24-hour passage/TTL deletion, destructive account erasure and a post-edit
+F5 remain unverified and are not fabricated PASS results. The essential Demo
+refresh requirement is supported by the fresh server list GET and rendered state.
+
+Full A–M handoff and frozen evidence:
+`.tools/assignment2-final-security-20261117/HireFlux-Assignment-2-Final-Security-Acceptance-Handoff-2026-11-17.md`.
+These final documentation updates are local and unpublished.
+
+## 2026-11-16 — Previous recorded checkpoint (superseded November 17)
+
 As of November 16, 2026, **STAGING OPERATIONAL — SPECIFIC ACCEPTANCE REQUIREMENTS
 REMAIN**. Published source `53a5714345aafdd89d7f6f830e17e5b2c4296e26` has all five
 CI jobs green (run 43949349774 attempt 1), Amplify job 14 SUCCEED, and patched
