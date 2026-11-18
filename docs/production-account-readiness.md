@@ -1,5 +1,70 @@
 # Production account readiness — Phase 1
 
+## Assignment 3 Execution 3 — advisory reconciliation, November 18, 2026
+
+**BLOCKED — NPM AUDIT STILL FAILS.** GitHub's official
+[advisory record](https://raw.githubusercontent.com/github/advisory-database/main/advisories/github-reviewed/2026/10/GHSA-fc5q-39xc-vjpf/GHSA-fc5q-39xc-vjpf.json)
+confirms `withdrawn` and `modified` at `2026-11-18T15:38:56Z`. It retains the affected
+range through Picomatch 4.0.7 with no fixed-version event. Installed Picomatch is
+still 4.0.5; registry latest remains 4.0.7. Withdrawal is not a code patch, a waiver
+or proof that all untrusted glob patterns are safe. Historical failures below
+remain preserved as observations at their original dates/times.
+
+The existing locked frontend install passes on Node 22.20.0/npm 10.9.3. However,
+the exact `npm --prefix frontend audit --audit-level=high` exits 1 with 12 high
+affected dependency nodes, zero critical/moderate and one root:
+GHSA-fc5q-39xc-vjpf. Structured output agrees. The public registry, manifest/lock
+identity and installed graph were verified; the prior TypeScript-ESLint 8.73.0 /
+Minimatch 11.0.9 repair is intact. No dependency or audit-policy change occurred.
+
+One justified recheck, preserving the threshold and adding `--prefer-online
+--json`, ended **17:07:25 UTC / 12:07:25 EST**, also exit 1 with the same findings.
+[npm audit](https://docs.npmjs.com/cli/v10/commands/npm-audit/) uses registry
+advisories and cached metavulnerability calculations;
+[prefer-online](https://docs.npmjs.com/cli/v10/using-npm/config/#prefer-online)
+requests cache revalidation. Neither observation identifies conclusively whether
+registry synchronization or another cache layer is responsible. No configuration
+was persisted or cache deleted, and no further retry was performed. The actual
+red gate remains binding despite GitHub's withdrawn status.
+
+Current local HEAD/cached `origin/main` are
+`c8694954f3d36308bc871739ea23769e095084c4`; the worktree initially was clean. Its
+nine-file commit contains the prior qualified dependency/monitoring/docs packet,
+and all 557 source bytes match Execution 2's final snapshot. A local remote-tracking
+ref is dated evidence, not fresh remote-tip verification or proof of who authorized
+publication. No repository network operation or new remote CI was requested here.
+
+Because the audit-pass condition failed, the full frontend/infra requalification
+campaign was not run in this execution. Prior 673 frontend tests, 170 infra tests,
+four isolated CLI cases and synth/parity remain retained historical qualifications
+for unchanged code, not fresh results. Backend ZIP verification requires no rebuild.
+Production template `f769e98b…23ce`, staging `92265ead…8e1e`, IAM `9764f3d7…f944`,
+backend ZIP `796d4469…bb9` and manifest `0e61449b…29b` remain unchanged.
+The seven-operation monitoring correction, stateful protection, closed signup,
+Demo fail-closed configuration, staging header authority and production target
+`null` are preserved. No live AWS state was inspected or changed.
+
+Only the DevLog and this document are changed in the current worktree. A later
+publication proposal must avoid recreating the already-committed nine-file packet.
+After the audit naturally passes and local qualification completes, a reviewed
+`codex/assignment3-release-security` branch/PR can qualify all five existing jobs;
+normal branch push alone does not match the workflow's main-only push trigger.
+Source/historical Amplify settings disable automatic branch creation and PR
+previews, but fresh authorized verification is needed before claiming zero AWS
+build effects. Merging to main separately risks the expected staging auto-build
+and requires its own explicit approval/bounded acceptance. No branch/commit/PR was
+created here and no ready-to-publish/green-CI claim is made.
+
+Next: allow npm advisory data to reconcile, then authorize a bounded fresh exact
+audit and conditional local requalification. No bypass or repeated polling is
+recommended. Production mutations remain blocked by the failing gate, pending
+actual CI and separately approved production preflight/CREATE/binding/operations.
+AWS/login requests, resource mutations, change sets, uploads, Git publication,
+CI triggers, Amplify builds, production requests/resources and Cognito/Demo
+operations were all zero. Assignment 3 remains in progress; Assignment 4 has not
+started. Full A–L handoff and exact evidence:
+`.tools/assignment3-release-security-20261118/`.
+
 ## Assignment 3 Execution 2 — local monitoring correction, November 18, 2026
 
 **LOCAL OPERATIONAL CORRECTION QUALIFIED — DEPLOYMENT NOT AUTHORIZED.** The

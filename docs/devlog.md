@@ -2,6 +2,17 @@
 
 ## Current documented checkpoint
 
+**November 18 Assignment 3 Execution 3:** **BLOCKED — NPM AUDIT STILL FAILS**.
+GitHub officially withdrew Picomatch GHSA-fc5q-39xc-vjpf at 15:38:56 UTC, but the
+exact unchanged high-severity npm audit and one cache-revalidation recheck still
+exit 1 with 12 high affected dependency nodes from that one root. No patch or
+dependency change occurred. The local worktree started clean at `c869495…`, with
+all 557 source files identical to Execution 2's qualified candidate; the earlier
+repair is now in a local commit/cached origin ref, not an uncommitted change.
+Live remote state/publication provenance and green CI are not established here.
+Production mutation and new publication remain unauthorized. See the
+[current advisory reconciliation](production-account-readiness.md#assignment-3-execution-3--advisory-reconciliation-november-18-2026).
+
 **November 18 Assignment 3 Execution 2:** the DynamoDB `UpdateItem` monitoring
 omission is corrected and qualified locally. Both existing math alarms cover
 seven operations; the architecture still has five alarms. All 170 infrastructure
@@ -85,6 +96,64 @@ refresh requirement is supported by the fresh server list GET and rendered state
 Full A–M handoff and frozen evidence:
 `.tools/assignment2-final-security-20261117/HireFlux-Assignment-2-Final-Security-Acceptance-Handoff-2026-11-17.md`.
 These final documentation updates are local and unpublished.
+
+## 2026-11-18 — Assignment 3 Execution 3: withdrawn Picomatch advisory still reported by npm
+
+Current local main and cached `origin/main` are `c8694954f3d36308bc871739ea23769e095084c4`,
+whose nine-file commit contains the previously qualified frontend/monitoring and
+documentation changes. The worktree began clean. All 557 nonignored source bytes
+match Execution 2's final snapshot; all 263 indexed historical evidence files and
+their indexes remain unchanged. No fetch, remote-tip query, commit attribution or
+publication authorization is inferred from local refs. This execution made no
+commit/push/PR/CI/build request.
+
+Independently read GitHub's advisory page and machine-readable official record.
+`withdrawn` and `modified` both equal **2026-11-18T15:38:56Z**. The record still
+retains HIGH severity, affected versions through 4.0.7 and no fixed-version event;
+the public npm registry still reports latest 4.0.7. Withdrawal is a new advisory
+event, not a Picomatch code patch or proof that malicious glob patterns are safe.
+Earlier audit failures and risk assessments remain historically valid records.
+
+Existing Node 22.20.0/npm 10.9.3 reproduced the locked install (`npm ci`, exit 0).
+Installed dependency inspection and explain output confirm TypeScript-ESLint
+8.73.0, nested Minimatch 11.0.9, separate unaffected Minimatch 3.1.5 and unchanged
+Picomatch 4.0.5 through Vite/Vitest/tinyglobby. No invalid/missing peers were found;
+the five previously recorded optional extraneous WASM packages remain warnings.
+
+The exact command `npm --prefix frontend audit --audit-level=high` ran at
+17:05:57–17:06:26 UTC and exited **1**. Structured audit agrees: **12 high,
+0 critical, 0 moderate**, one advisory root, still Picomatch. The intended public
+npm registry and unchanged manifest/lock hashes were checked without exposing npm
+configuration secrets. No new independent advisory root appeared.
+
+Official npm documentation describes registry advisory responses and cached
+metavulnerability calculations. One justified non-destructive recheck with
+`--prefer-online --json`, retaining `--audit-level=high`, ended at
+**17:07:25 UTC / 12:07:25 EST**: exit **1**, same findings. No cache was deleted,
+registry/threshold changed or persisted config modified. Provider synchronization
+or caching can explain this discrepancy, but the responsible layer and resolution
+time are not established. No further audit retry was performed.
+
+The audit-pass prerequisite was not met, so the conditional full frontend/infra
+requalification was not run. Prior 673 frontend, 170 infrastructure and four
+isolated CLI passes remain dated qualifications, not newly executed tests or
+green remote CI. The exact backend artifact is locally verified without rebuilding;
+UpdateItem coverage, staging/production template/IAM hashes, header authority,
+closed signup, fail-closed Demo and unbound production remain unchanged in source.
+
+Updated only this DevLog and production readiness. The full A–L handoff and exact
+source/audit/advisory/publication-plan receipts are in
+`.tools/assignment3-release-security-20261118/`. No security bypass, application,
+dependency, workflow, infrastructure or release-policy change occurred. AWS/login
+calls, resource mutations, uploads, change sets, users/Demos, hosted traffic,
+Git publication, CI triggers and Amplify builds are all zero.
+
+The smallest next step is to wait for npm advisory data to reconcile, then obtain
+a fresh bounded audit/requalification authorization. No speculative dependency
+change or publication is justified while the actual gate is red. A future review
+branch/PR plan must account for already-committed prior fixes, fresh target/remote
+and Amplify preview verification, all five CI jobs and separate main-merge/build
+approval. Assignment 3 remains in progress; Assignment 4 remains pending.
 
 ## 2026-11-18 — Assignment 3 Execution 2: DynamoDB monitoring correction, offline only
 
